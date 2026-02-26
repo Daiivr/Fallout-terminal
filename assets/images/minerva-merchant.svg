@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 900" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f2918" />
+      <stop offset="100%" stop-color="#06110b" />
+    </linearGradient>
+    <linearGradient id="hoodGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#153f25" />
+      <stop offset="100%" stop-color="#0a1f14" />
+    </linearGradient>
+    <linearGradient id="clothGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#174a2c" />
+      <stop offset="100%" stop-color="#0a2317" />
+    </linearGradient>
+    <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4.5" result="b" />
+      <feMerge>
+        <feMergeNode in="b" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="720" height="900" rx="24" fill="url(#bgGrad)" />
+
+  <g opacity="0.2">
+    <path d="M64 130h592M64 186h592M64 242h592M64 298h592M64 354h592M64 410h592M64 466h592M64 522h592M64 578h592M64 634h592M64 690h592M64 746h592" stroke="#8bff8b" stroke-width="1.2" />
+    <path d="M116 88v724M184 88v724M252 88v724M320 88v724M388 88v724M456 88v724M524 88v724M592 88v724" stroke="#8bff8b" stroke-width="0.8" stroke-dasharray="4 8" />
+  </g>
+
+  <g filter="url(#softGlow)">
+    <path d="M360 122c-116 0-196 76-219 192l-28 150 92-61 54 261h202l54-261 92 61-28-150c-23-116-103-192-219-192Z" fill="url(#hoodGrad)" />
+    <path d="M360 250c-74 0-122 48-122 122s48 134 122 134 122-60 122-134-48-122-122-122Z" fill="#1b5a35" />
+    <path d="M308 376c16-18 30-28 52-28s36 10 52 28" stroke="#8bff8b" stroke-opacity="0.45" stroke-width="8" stroke-linecap="round" />
+    <circle cx="322" cy="332" r="12" fill="#8bff8b" fill-opacity="0.55" />
+    <circle cx="398" cy="332" r="12" fill="#8bff8b" fill-opacity="0.55" />
+    <path d="M212 673c24-56 86-97 148-97s124 41 148 97" fill="url(#clothGrad)" />
+    <path d="M360 535v179" stroke="#8bff8b" stroke-opacity="0.34" stroke-width="7" />
+    <path d="M286 606h148" stroke="#8bff8b" stroke-opacity="0.3" stroke-width="6" stroke-linecap="round" />
+  </g>
+
+  <g opacity="0.72">
+    <rect x="98" y="78" width="524" height="742" rx="16" stroke="#8bff8b" stroke-opacity="0.32" stroke-width="2" />
+    <path d="M126 106h468" stroke="#8bff8b" stroke-opacity="0.3" stroke-width="2" />
+    <path d="M126 792h468" stroke="#8bff8b" stroke-opacity="0.3" stroke-width="2" />
+  </g>
+</svg>

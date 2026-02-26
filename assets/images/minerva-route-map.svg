@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 620" fill="none">
+  <defs>
+    <linearGradient id="mapBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f2718" />
+      <stop offset="100%" stop-color="#06120b" />
+    </linearGradient>
+    <linearGradient id="landGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1b4d2f" stop-opacity="0.78" />
+      <stop offset="100%" stop-color="#0d2a1a" stop-opacity="0.46" />
+    </linearGradient>
+    <filter id="mapSoft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.1" />
+    </filter>
+  </defs>
+
+  <rect width="980" height="620" rx="18" fill="url(#mapBg)" />
+
+  <path d="M82 164l92-58 124 26 96-38 125 36 96-41 128 51 88 92-16 88-62 106-120 63-162 46-130 51-126-24-112-86-42-106 24-79 17-79z" fill="url(#landGrad)" filter="url(#mapSoft)" />
+
+  <g stroke="#8bff8b" stroke-opacity="0.18" stroke-width="2">
+    <path d="M132 206c114-31 217-37 309-20 91 17 173 57 273 66 90 8 176-11 267-39" />
+    <path d="M126 258c131-27 245-20 343 10 102 31 195 92 309 104 89 9 164-6 253-27" />
+    <path d="M130 318c125-20 235-7 334 28 106 38 208 111 331 124 90 10 162-2 241-16" />
+    <path d="M152 382c113-8 214 16 306 56 101 44 209 114 335 129 88 11 159 6 223-3" />
+  </g>
+
+  <g stroke="#8bff8b" stroke-opacity="0.15" stroke-width="2.4" stroke-dasharray="6 8">
+    <path d="M458 474c56-14 118-72 160-120 44-50 108-149 135-232" />
+    <path d="M458 474c-41-18-96-62-136-100-40-37-117-131-152-196" />
+    <path d="M458 474c64 3 137-22 193-51 64-33 143-93 188-141" />
+  </g>
+
+  <g stroke="#8bff8b" stroke-opacity="0.24" stroke-width="1.3">
+    <path d="M66 72h848M66 118h848M66 164h848M66 210h848M66 256h848M66 302h848M66 348h848M66 394h848M66 440h848M66 486h848M66 532h848" />
+    <path d="M96 44v534M158 44v534M220 44v534M282 44v534M344 44v534M406 44v534M468 44v534M530 44v534M592 44v534M654 44v534M716 44v534M778 44v534M840 44v534" />
+  </g>
+
+  <g opacity="0.84">
+    <rect x="24" y="24" width="932" height="572" rx="14" stroke="#8bff8b" stroke-opacity="0.3" stroke-width="2" />
+    <path d="M50 52h880" stroke="#8bff8b" stroke-opacity="0.26" stroke-width="2" />
+    <path d="M50 568h880" stroke="#8bff8b" stroke-opacity="0.26" stroke-width="2" />
+  </g>
+</svg>

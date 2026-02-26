@@ -1,0 +1,338 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fallout Codex | Pip-Boy Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.cdnfonts.com" />
+  <link href="https://fonts.cdnfonts.com/css/overseer" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="is-booting">
+  <div id="bootOverlay" class="boot-overlay">
+    <div class="boot-core">
+      <p id="bootTitle" class="boot-title">PIP-BOY 3000 MK IV</p>
+      <p id="bootSubtitle" class="boot-subtitle">VAULT-TEC PERSONAL INFORMATION PROCESSOR</p>
+      <div id="bootLog" class="boot-log" aria-live="polite" aria-atomic="false"></div>
+      <div class="boot-progress"><span id="bootBar"></span></div>
+      <p id="bootHint" class="boot-hint">Initializing...</p>
+      <div class="boot-lines-source" aria-hidden="true">
+        <p id="bootLine1" class="boot-line">Initializing transceiver link...</p>
+        <p id="bootLine2" class="boot-line">Loading Wasteland intelligence feed...</p>
+        <p id="bootLine3" class="boot-line">Calibrating radiation-resistant display...</p>
+        <p id="bootReady" class="boot-ready">SYSTEM READY</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-vignette" aria-hidden="true"></div>
+  <div class="screen-map" aria-hidden="true"></div>
+  <div class="screen-grid" aria-hidden="true"></div>
+  <div class="screen-scanlines" aria-hidden="true"></div>
+  <div class="screen-noise" aria-hidden="true"></div>
+
+  <main class="pipboy-terminal">
+    <div id="syncOverlay" class="sync-overlay" aria-hidden="true">
+      <div class="sync-core">
+        <p id="syncTitle" class="sync-title">SYNCING FIELD DATA...</p>
+        <div class="sync-bar"><span></span></div>
+      </div>
+    </div>
+    <div id="classifiedLoadOverlay" class="classified-load-overlay" aria-hidden="true">
+      <div class="classified-load-core">
+        <p id="classifiedLoadTitle" class="classified-load-title">LOADING CLASSIFIED ARCHIVES...</p>
+        <div class="classified-load-bar"><span></span></div>
+      </div>
+    </div>
+    <div id="hackOverlay" class="hack-overlay" aria-hidden="true">
+      <div class="hack-core">
+        <div class="hack-frame">
+          <div class="hack-head">
+            <p id="hackTitle" class="hack-title">ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL</p>
+            <p id="hackSubtitle" class="hack-subtitle">UNAUTHORIZED TERMINAL ACCESS</p>
+          </div>
+          <div class="hack-status">
+            <span id="hackAttemptsLabel">ATTEMPTS LEFT:</span>
+            <span id="hackAttempts">4</span>
+          </div>
+          <div class="hack-grid">
+            <section class="hack-panel hack-memory-panel">
+              <p class="hack-panel-title">MEMORY DUMP</p>
+              <div id="hackMemory" class="hack-memory"></div>
+            </section>
+            <section class="hack-panel hack-log-panel">
+              <p class="hack-panel-title">TERMINAL FEED</p>
+              <pre id="hackLog" class="hack-log"></pre>
+            </section>
+          </div>
+          <div class="hack-actions">
+            <button id="hackAbortBtn" class="hack-btn" type="button">ABORT</button>
+            <button id="hackRetryBtn" class="hack-btn" type="button" hidden>RETRY</button>
+            <button id="hackOpenClassifiedBtn" class="hack-btn" type="button" hidden>OPEN FILES</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <p id="microText" class="micro">ROBCO INDUSTRIES (TM) TERMLINK V2.6</p>
+        <h1 id="mainTitle">PIP-BOY INTEL TERMINAL</h1>
+      </div>
+      <div class="topbar-right">
+        <div class="tab-strip" aria-hidden="true">
+          <span id="tabStatus" class="tab">STATUS</span>
+          <span id="tabIntel" class="tab active">INTEL</span>
+          <span id="tabData" class="tab">DATA</span>
+        </div>
+        <div class="utility-controls">
+          <div class="lang-wrap">
+            <label id="langLabel" class="lang-label" for="langToggleBtn">LANG</label>
+            <div id="langDropdown" class="lang-dropdown">
+              <button
+                id="langToggleBtn"
+                class="lang-trigger"
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-labelledby="langLabel"
+              >
+                <span id="langCurrent">EN</span>
+                <span class="lang-caret" aria-hidden="true">▾</span>
+              </button>
+              <ul id="langMenu" class="lang-menu" role="listbox" aria-labelledby="langLabel" hidden>
+                <li><button class="lang-option" type="button" role="option" data-lang="en">EN</button></li>
+                <li><button class="lang-option" type="button" role="option" data-lang="es">ES</button></li>
+              </ul>
+            </div>
+            <select id="langSelect" aria-label="Language selector" hidden>
+              <option value="en">EN</option>
+              <option value="es">ES</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section id="statusStrip" class="status-strip">
+      <div class="status-item">
+        <span id="labelUtc" class="label">UTC CLOCK</span>
+        <span id="utcTime" class="mono-value">--:--:--</span>
+      </div>
+      <div class="status-item">
+        <span id="labelLastSync" class="label">LAST SYNC</span>
+        <span id="lastRefresh" class="mono-value">--</span>
+      </div>
+      <div class="status-item">
+        <span id="labelDataLink" class="label">DATA LINK</span>
+        <span id="dataSignal" class="mono-value">BOOTING</span>
+      </div>
+      <button id="refreshBtn" class="refresh-btn" type="button">MANUAL SYNC</button>
+    </section>
+
+    <section id="intelGrid" class="grid">
+      <article class="panel silo-panel">
+        <h2 id="siloTitle">SILO CODES</h2>
+        <p id="siloHint" class="hint">Weekly reset target: Monday 00:00 UTC</p>
+        <div id="siloExpiry" class="expiry">Reset in: --</div>
+        <div class="code-grid" id="siloCodes"></div>
+        <p class="source">
+          <span id="siloSourcePrefix">Source:</span>
+          <a href="https://nukacrypt.com/" target="_blank" rel="noopener noreferrer">NukaCrypt</a>
+          <span id="siloSourceSuffix">via CORS proxy</span>
+        </p>
+      </article>
+
+      <article id="minervaPanel" class="panel">
+        <h2 id="minervaTitle">MINERVA INTEL</h2>
+        <div id="minervaSummary" class="summary">Scanning trade routes...</div>
+        <div class="meta-grid">
+          <button id="minervaLocationCardBtn" class="meta-card-btn" type="button">
+            <span id="minervaLocationLabel" class="meta-label">Location</span>
+            <span id="minervaLocation">--</span>
+          </button>
+          <div>
+            <span id="minervaListLabel" class="meta-label">List</span>
+            <span id="minervaList">--</span>
+          </div>
+          <div>
+            <span id="minervaWindowLabel" class="meta-label">Window</span>
+            <span id="minervaWindow">--</span>
+          </div>
+        </div>
+        <h3 id="minervaInventoryTitle">Inventory + Price</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th id="tableItemHeader">Plan / Item</th>
+                <th id="tablePriceHeader">Gold Bullion</th>
+              </tr>
+            </thead>
+            <tbody id="minervaItems">
+              <tr><td colspan="2" id="minervaAwaiting">Awaiting response...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="source">
+          <span id="minervaSourcePrefix">Sources:</span>
+          <a href="https://www.whereisminerva.com/" target="_blank" rel="noopener noreferrer">WhereIsMinerva</a>
+          <span id="minervaSourceSuffix">+ local fallback list</span>
+        </p>
+        <section id="minervaDetailView" class="minerva-detail-view minerva-subview" hidden>
+          <div class="minerva-detail-top">
+            <button id="minervaDetailBackBtn" class="minerva-detail-back" type="button">RETURN TO LIST</button>
+            <a
+              id="minervaDetailWikiLink"
+              class="minerva-detail-wiki"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+            >OPEN SOURCE PAGE</a>
+          </div>
+          <h3 id="minervaDetailName" class="minerva-detail-name">--</h3>
+          <p id="minervaDetailStatus" class="minerva-detail-status">Loading plan dossier...</p>
+          <div id="minervaDetailContent" class="minerva-detail-content" hidden>
+            <figure class="minerva-detail-figure">
+              <img id="minervaDetailImage" class="minerva-detail-image" alt="" loading="lazy" />
+            </figure>
+            <div class="minerva-detail-sections">
+              <section class="minerva-detail-block">
+                <h4 id="minervaDetailWhereLabel" class="minerva-detail-label">Where Else To Get It</h4>
+                <ul id="minervaDetailWhereList" class="minerva-detail-list"></ul>
+              </section>
+              <section class="minerva-detail-block">
+                <h4 id="minervaDetailUnlocksLabel" class="minerva-detail-label">What This Plan Unlocks</h4>
+                <p id="minervaDetailUnlocks" class="minerva-detail-unlocks"></p>
+              </section>
+            </div>
+          </div>
+        </section>
+        <section id="minervaLocationView" class="minerva-location-view minerva-subview" hidden>
+          <div class="minerva-location-top">
+            <button id="minervaLocationBackBtn" class="minerva-detail-back" type="button">RETURN TO INTEL</button>
+          </div>
+          <h3 id="minervaLocationTitle" class="minerva-location-title">MINERVA LOCATION TRACKER</h3>
+          <p id="minervaLocationStatus" class="minerva-location-status">Location data unavailable.</p>
+
+          <div class="minerva-location-layout">
+            <figure class="minerva-location-figure">
+              <img
+                id="minervaLocationPortrait"
+                class="minerva-location-portrait"
+                src="assets/images/where-is-minerva.png"
+                alt="Minerva portrait"
+                loading="lazy"
+              />
+            </figure>
+
+            <section class="minerva-location-map-card">
+              <h4 id="minervaLocationMapLabel" class="minerva-detail-label">Known Route Map</h4>
+              <div id="minervaLocationMapWrap" class="minerva-location-map-wrap">
+                <img
+                  id="minervaLocationMapImage"
+                  class="minerva-location-map-image"
+                  src="assets/images/minerva-route-map.svg"
+                  alt="Appalachia route map"
+                  loading="lazy"
+                />
+                <div id="minervaLocationPins" class="minerva-location-pins" aria-hidden="true">
+                  <span class="minerva-loc-pin" data-location="Crater">CRATER</span>
+                  <span class="minerva-loc-pin" data-location="Foundation">FOUNDATION</span>
+                  <span class="minerva-loc-pin" data-location="Fort Atlas">FORT ATLAS</span>
+                  <span class="minerva-loc-pin" data-location="The Whitespring">WHITESPRING</span>
+                </div>
+                <p id="minervaLocationMapName" class="minerva-location-map-name" hidden>--</p>
+              </div>
+            </section>
+          </div>
+
+          <div class="minerva-location-window">
+            <div class="minerva-location-row">
+              <span id="minervaLocationArrivesLabel" class="meta-label">Arrives</span>
+              <span id="minervaLocationArrives" class="minerva-location-value">--</span>
+            </div>
+            <div class="minerva-location-row">
+              <span id="minervaLocationLeavesLabel" class="meta-label">Leaves</span>
+              <span id="minervaLocationLeaves" class="minerva-location-value">--</span>
+            </div>
+            <div class="minerva-location-row is-countdown">
+              <span id="minervaLocationCountdownLabel" class="meta-label">Arrives in</span>
+              <span id="minervaLocationCountdown" class="minerva-location-countdown">--</span>
+            </div>
+          </div>
+        </section>
+      </article>
+    </section>
+    <section id="classifiedPage" class="classified-page" hidden>
+      <div class="classified-hero">
+        <div class="classified-hero-copy">
+          <p class="classified-chip">TOP SECRET</p>
+          <h2 id="classifiedTitle">[CLASSIFIED] ENCLAVE RELAY ARCHIVE</h2>
+          <p id="classifiedWarning" class="classified-warning">
+            Unauthorized eyes detected. This archive is restricted to overseer-level clearances.
+          </p>
+        </div>
+        <button id="classifiedBackBtn" class="classified-back" type="button">RETURN TO INTEL</button>
+      </div>
+      <div class="classified-layout">
+        <aside class="classified-sidebar">
+          <article class="classified-card">
+            <h3 id="classifiedCard1Title">FILE: OPERATION CINDER TRACE</h3>
+            <p id="classifiedCard1Body">
+              Satellite telemetry indicates repeated launch prep drills near Appalachian silos. Civilian chatter appears unsuspicious.
+            </p>
+          </article>
+          <article class="classified-card">
+            <h3 id="classifiedCard2Title">FILE: MINERVA CONTACT CHAIN</h3>
+            <p id="classifiedCard2Body">
+              Merchant route traffic intersects former responder relay nodes. Trade schedule may hide encrypted dead drops.
+            </p>
+          </article>
+          <article class="classified-card">
+            <h3 id="classifiedCard3Title">FILE: VAULT-TEC BLACKLIST</h3>
+            <p id="classifiedCard3Body">
+              Access key fragments recovered from deprecated Pip-Boy firmware. Any complete key grants archive-level command injection.
+            </p>
+          </article>
+        </aside>
+        <section class="classified-main">
+          <article class="classified-card classified-card-archive">
+            <h3 id="classifiedMinervaTitle">FILE: MINERVA MASTER LISTS</h3>
+            <p id="classifiedMinervaHint">
+              Decrypted vendor rotation archive. Includes every known list and bullion cost.
+            </p>
+            <div class="classified-search-wrap">
+              <label id="classifiedSearchLabel" class="classified-search-label" for="classifiedSearchInput">Search item</label>
+              <input
+                id="classifiedSearchInput"
+                class="classified-search-input"
+                type="search"
+                inputmode="search"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Type item name..."
+              />
+              <p id="classifiedSearchHint" class="classified-search-hint">Search the archive for next sale availability.</p>
+              <div id="classifiedSearchResults" class="classified-search-results"></div>
+            </div>
+            <div id="classifiedMinervaLists" class="classified-minerva-lists"></div>
+          </article>
+        </section>
+      </div>
+    </section>
+
+    <footer id="footerText" class="footer-note">
+      Community data only. Not affiliated with Bethesda.
+    </footer>
+  </main>
+
+  <script src="data/minerva-lists.js"></script>
+  <script src="data/minerva-detail-fallback.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
