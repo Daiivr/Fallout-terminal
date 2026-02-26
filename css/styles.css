@@ -1237,6 +1237,83 @@ a:hover {
   text-transform: uppercase;
 }
 
+body.error-page .pipboy-terminal {
+  max-width: 860px;
+  padding-top: 28px;
+}
+
+.error-topbar {
+  align-items: center;
+}
+
+.error-chip {
+  margin: 0;
+  padding: 8px 12px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.26);
+  color: var(--fg-dim);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+#errorTitle {
+  font-size: clamp(1.35rem, 3.8vw, 2.1rem);
+}
+
+.error-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.error-panel {
+  padding-bottom: var(--panel-pad);
+}
+
+.error-panel > h2 {
+  font-size: 14px;
+}
+
+.error-path {
+  margin: 0 var(--panel-pad) 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.32);
+  color: var(--fg-bright);
+  font-family: inherit;
+  font-size: 13px;
+  min-height: 42px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.error-actions {
+  margin: 0 var(--panel-pad);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.error-actions .refresh-btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.error-page.is-unauthorized #errorTitle,
+body.error-page.is-unauthorized #errorCode {
+  color: var(--warn);
+  text-shadow: 0 0 18px rgba(255, 225, 122, 0.28);
+}
+
+body.error-page.is-unauthorized .error-path {
+  border-color: rgba(255, 225, 122, 0.4);
+  background: rgba(255, 225, 122, 0.08);
+  color: #ffefaf;
+}
+
 .sync-overlay,
 .hack-overlay,
 .classified-load-overlay,

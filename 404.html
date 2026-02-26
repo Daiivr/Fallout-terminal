@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>404 | Fallout Codex Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.cdnfonts.com" />
+  <link href="https://fonts.cdnfonts.com/css/overseer" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/terminal-favicon.svg" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body class="is-ready error-page">
+  <div class="screen-vignette" aria-hidden="true"></div>
+  <div class="screen-map" aria-hidden="true"></div>
+  <div class="screen-grid" aria-hidden="true"></div>
+  <div class="screen-scanlines" aria-hidden="true"></div>
+  <div class="screen-noise" aria-hidden="true"></div>
+
+  <main class="pipboy-terminal">
+    <header class="topbar error-topbar">
+      <div class="topbar-left">
+        <p class="micro">ROBCO SECURITY SUBSYSTEM</p>
+        <h1 id="errorTitle">404 // ARCHIVE NODE NOT FOUND</h1>
+      </div>
+      <div class="topbar-right">
+        <p class="error-chip">TERMLINK SECURITY</p>
+      </div>
+    </header>
+
+    <section class="grid error-grid">
+      <article class="panel error-panel">
+        <h2 id="errorCode">FILE NOT FOUND</h2>
+        <p id="errorSummary" class="summary">Requested terminal record could not be resolved.</p>
+        <p class="hint">Requested path</p>
+        <pre id="errorPath" class="error-path">/</pre>
+        <div class="error-actions">
+          <a class="refresh-btn" href="/">Return to terminal</a>
+          <button id="errorBackBtn" class="refresh-btn" type="button">Go back</button>
+        </div>
+      </article>
+    </section>
+
+    <p class="footer-note">Unauthorized probing may be logged by the terminal.</p>
+  </main>
+
+  <script>
+    (() => {
+      const LANG_STORAGE_KEY = "pipboy_lang";
+      const STRINGS = {
+        en: {
+          pageTitleDefault: "404 | Fallout Codex Terminal",
+          pageTitleUnauthorized: "404 // Unauthorized Access",
+          micro: "ROBCO SECURITY SUBSYSTEM",
+          chip: "TERMLINK SECURITY",
+          titleDefault: "404 // ARCHIVE NODE NOT FOUND",
+          titleUnauthorized: "404 // UNAUTHORIZED ACCESS DETECTED",
+          codeDefault: "FILE NOT FOUND",
+          codeUnauthorized: "ACCESS DENIED",
+          summaryDefault: "Requested terminal record could not be resolved.",
+          summaryUnauthorized: "This asset node is restricted. Directory probing is disabled.",
+          pathLabel: "Requested path",
+          homeBtn: "Return to terminal",
+          backBtn: "Go back",
+          footer: "Unauthorized probing may be logged by the terminal."
+        },
+        es: {
+          pageTitleDefault: "404 | Terminal Fallout Codex",
+          pageTitleUnauthorized: "404 // Acceso no autorizado",
+          micro: "SUBSISTEMA DE SEGURIDAD ROBCO",
+          chip: "SEGURIDAD TERMLINK",
+          titleDefault: "404 // NODO DE ARCHIVO NO ENCONTRADO",
+          titleUnauthorized: "404 // ACCESO NO AUTORIZADO DETECTADO",
+          codeDefault: "ARCHIVO NO ENCONTRADO",
+          codeUnauthorized: "ACCESO DENEGADO",
+          summaryDefault: "No se pudo resolver el registro solicitado del terminal.",
+          summaryUnauthorized: "Este nodo de assets esta restringido. El escaneo de directorios esta deshabilitado.",
+          pathLabel: "Ruta solicitada",
+          homeBtn: "Volver al terminal",
+          backBtn: "Regresar",
+          footer: "El sondeo no autorizado puede quedar registrado por el terminal."
+        }
+      };
+
+      const detectLang = () => {
+        try {
+          const stored = localStorage.getItem(LANG_STORAGE_KEY);
+          if (stored === "en" || stored === "es") {
+            return stored;
+          }
+        } catch (error) {
+          // ignore storage access errors
+        }
+
+        return navigator.language?.toLowerCase().startsWith("es") ? "es" : "en";
+      };
+
+      const lang = detectLang();
+      const tr = STRINGS[lang] || STRINGS.en;
+      document.documentElement.lang = lang;
+
+      const pathName = String(window.location.pathname || "/");
+      const pathValue = `${pathName}${window.location.search || ""}`;
+      const isAssetProbe = /^\/assets(?:\/|$)/i.test(pathName);
+
+      const microEl = document.querySelector(".micro");
+      const chipEl = document.querySelector(".error-chip");
+      const titleEl = document.getElementById("errorTitle");
+      const codeEl = document.getElementById("errorCode");
+      const summaryEl = document.getElementById("errorSummary");
+      const pathLabelEl = document.querySelector(".hint");
+      const pathEl = document.getElementById("errorPath");
+      const homeBtn = document.querySelector(".error-actions a.refresh-btn");
+      const backBtn = document.getElementById("errorBackBtn");
+      const footerEl = document.querySelector(".footer-note");
+
+      if (microEl) {
+        microEl.textContent = tr.micro;
+      }
+      if (chipEl) {
+        chipEl.textContent = tr.chip;
+      }
+      if (titleEl) {
+        titleEl.textContent = tr.titleDefault;
+      }
+      if (codeEl) {
+        codeEl.textContent = tr.codeDefault;
+      }
+      if (summaryEl) {
+        summaryEl.textContent = tr.summaryDefault;
+      }
+      if (pathLabelEl) {
+        pathLabelEl.textContent = tr.pathLabel;
+      }
+      if (homeBtn) {
+        homeBtn.textContent = tr.homeBtn;
+      }
+      if (backBtn) {
+        backBtn.textContent = tr.backBtn;
+      }
+      if (footerEl) {
+        footerEl.textContent = tr.footer;
+      }
+      document.title = tr.pageTitleDefault;
+
+      if (pathEl) {
+        pathEl.textContent = pathValue || "/";
+      }
+
+      if (isAssetProbe) {
+        document.body.classList.add("is-unauthorized");
+        document.title = tr.pageTitleUnauthorized;
+        if (titleEl) {
+          titleEl.textContent = tr.titleUnauthorized;
+        }
+        if (codeEl) {
+          codeEl.textContent = tr.codeUnauthorized;
+        }
+        if (summaryEl) {
+          summaryEl.textContent = tr.summaryUnauthorized;
+        }
+      }
+
+      if (backBtn) {
+        backBtn.addEventListener("click", () => {
+          if (window.history.length > 1) {
+            window.history.back();
+            return;
+          }
+          window.location.href = "/";
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
