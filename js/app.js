@@ -407,7 +407,8 @@ const state = {
   classifiedSearch: {
     query: "",
     entries: [],
-    open: false
+    open: false,
+    baseArchiveWidth: 0
   },
   easterEgg: {
     unlocked: false,
@@ -2010,21 +2011,45 @@ function setClassifiedSearchCount(text = "") {
   elements.classifiedSearchCount.textContent = hasText ? text : "";
 }
 
-function lockClassifiedArchiveCardHeight() {
-  if (!elements.classifiedArchiveCard) {
+function refreshClassifiedArchiveCardBaseSize(force = false) {
+  if (!elements.classifiedArchiveCard || (state.classifiedSearch.open && !force)) {
     return;
   }
-  const cardHeight = Math.round(elements.classifiedArchiveCard.getBoundingClientRect().height);
-  if (cardHeight > 0) {
-    elements.classifiedArchiveCard.style.height = `${cardHeight}px`;
+
+  const rect = elements.classifiedArchiveCard.getBoundingClientRect();
+  const cardWidth = Math.round(rect.width);
+  if (cardWidth > 0) {
+    state.classifiedSearch.baseArchiveWidth = cardWidth;
   }
 }
 
-function unlockClassifiedArchiveCardHeight() {
+function lockClassifiedArchiveCardSize() {
   if (!elements.classifiedArchiveCard) {
     return;
   }
-  elements.classifiedArchiveCard.style.removeProperty("height");
+
+  const rect = elements.classifiedArchiveCard.getBoundingClientRect();
+  const measuredWidth = Math.round(rect.width);
+  if (measuredWidth > 0 && !state.classifiedSearch.baseArchiveWidth) {
+    state.classifiedSearch.baseArchiveWidth = measuredWidth;
+  }
+
+  const targetWidth = state.classifiedSearch.baseArchiveWidth || measuredWidth || 0;
+  if (targetWidth > 0) {
+    const nextWidth = `${targetWidth}px`;
+    elements.classifiedArchiveCard.style.width = nextWidth;
+    elements.classifiedArchiveCard.style.minWidth = nextWidth;
+    elements.classifiedArchiveCard.style.maxWidth = nextWidth;
+  }
+}
+
+function unlockClassifiedArchiveCardSize() {
+  if (!elements.classifiedArchiveCard) {
+    return;
+  }
+  elements.classifiedArchiveCard.style.removeProperty("width");
+  elements.classifiedArchiveCard.style.removeProperty("min-width");
+  elements.classifiedArchiveCard.style.removeProperty("max-width");
 }
 
 function setClassifiedSearchOpen(active, { focusInput = false, clearQuery = false } = {}) {
@@ -2033,7 +2058,8 @@ function setClassifiedSearchOpen(active, { focusInput = false, clearQuery = fals
   state.classifiedSearch.open = open;
 
   if (open && !wasOpen) {
-    lockClassifiedArchiveCardHeight();
+    refreshClassifiedArchiveCardBaseSize(true);
+    lockClassifiedArchiveCardSize();
   }
 
   if (elements.classifiedSearchWrap) {
@@ -2048,7 +2074,10 @@ function setClassifiedSearchOpen(active, { focusInput = false, clearQuery = fals
   if (!open) {
     setClassifiedSearchCount("");
     if (wasOpen) {
-      unlockClassifiedArchiveCardHeight();
+      unlockClassifiedArchiveCardSize();
+      requestAnimationFrame(() => {
+        refreshClassifiedArchiveCardBaseSize();
+      });
     }
   }
 
@@ -2302,6 +2331,7 @@ function renderClassifiedMinervaLists(lists = state.minervaLists || []) {
 
   elements.classifiedMinervaLists.innerHTML = "";
   elements.classifiedMinervaLists.appendChild(fragment);
+  refreshClassifiedArchiveCardBaseSize();
 }
 
 async function ensureClassifiedMinervaArchive() {
@@ -4126,6 +4156,15 @@ function wireEvents() {
     if (document.body.classList.contains("is-classified")) {
       hideClassifiedPage();
     }
+  });
+  window.addEventListener("resize", () => {
+    if (state.classifiedSearch.open) {
+      unlockClassifiedArchiveCardSize();
+      refreshClassifiedArchiveCardBaseSize(true);
+      lockClassifiedArchiveCardSize();
+      return;
+    }
+    refreshClassifiedArchiveCardBaseSize();
   });
 }
 
