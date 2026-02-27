@@ -59,7 +59,7 @@ const SILO_SITE_GLYPHS = {
   Bravo: "\uF24C",
   Charlie: "\uF24D"
 };
-const HACK_TRIGGER_CLICKS = 5;
+const HACK_TRIGGER_CLICKS = 4;
 const HACK_TRIGGER_WINDOW_MS = 4200;
 const HACK_ATTEMPTS_MAX = 4;
 const HACK_COLUMN_LINE_COUNT = 16;
@@ -224,6 +224,10 @@ const STRINGS = {
     classified_search_label: "Search Item",
     classified_search_placeholder: "Type item name (e.g. gauss minigun)",
     classified_search_hint: "Find the next Minerva sale window for any known item.",
+    classified_search_toggle_open: "SEARCH",
+    classified_search_toggle_close: "CLOSE",
+    classified_search_toggle_open_label: "Open search mode",
+    classified_search_toggle_close_label: "Close search mode",
     classified_search_prompt: "Enter an item name to search the archive.",
     classified_search_no_results: "No matching item found in the archive.",
     classified_search_results_count: "Matches: {n}",
@@ -348,6 +352,10 @@ const STRINGS = {
     classified_search_label: "Buscar item",
     classified_search_placeholder: "Escribe el nombre del item (ej. gauss minigun)",
     classified_search_hint: "Encuentra la proxima ventana de venta de Minerva para cualquier item.",
+    classified_search_toggle_open: "BUSCAR",
+    classified_search_toggle_close: "CERRAR",
+    classified_search_toggle_open_label: "Abrir modo de busqueda",
+    classified_search_toggle_close_label: "Cerrar modo de busqueda",
     classified_search_prompt: "Escribe un nombre para buscar en el archivo.",
     classified_search_no_results: "No se encontro ningun item coincidente en el archivo.",
     classified_search_results_count: "Coincidencias: {n}",
@@ -397,7 +405,8 @@ const state = {
   },
   classifiedSearch: {
     query: "",
-    entries: []
+    entries: [],
+    open: false
   },
   easterEgg: {
     unlocked: false,
@@ -523,7 +532,11 @@ const elements = {
   classifiedCard3Body: document.getElementById("classifiedCard3Body"),
   classifiedMinervaTitle: document.getElementById("classifiedMinervaTitle"),
   classifiedMinervaHint: document.getElementById("classifiedMinervaHint"),
+  classifiedSearchToggleBtn: document.getElementById("classifiedSearchToggleBtn"),
+  classifiedSearchToggleText: document.getElementById("classifiedSearchToggleText"),
+  classifiedSearchWrap: document.getElementById("classifiedSearchWrap"),
   classifiedSearchLabel: document.getElementById("classifiedSearchLabel"),
+  classifiedSearchCount: document.getElementById("classifiedSearchCount"),
   classifiedSearchInput: document.getElementById("classifiedSearchInput"),
   classifiedSearchHint: document.getElementById("classifiedSearchHint"),
   classifiedSearchResults: document.getElementById("classifiedSearchResults"),
@@ -1664,11 +1677,6 @@ function renderHackOverlay() {
   enterLine.textContent = t("hack_enter_password");
   memoryFragment.appendChild(enterLine);
 
-  const hintLine = document.createElement("p");
-  hintLine.className = "hack-hint-line";
-  hintLine.textContent = t("hack_pick_password");
-  memoryFragment.appendChild(hintLine);
-
   const columnsWrap = document.createElement("div");
   columnsWrap.className = "hack-columns";
   for (const column of session.columns || []) {
@@ -1915,8 +1923,66 @@ function nextAvailabilityForList(listNumber, now = new Date()) {
   };
 }
 
+function setClassifiedSearchCount(text = "") {
+  if (!elements.classifiedSearchCount) {
+    return;
+  }
+  const hasText = Boolean(text);
+  elements.classifiedSearchCount.hidden = !hasText;
+  elements.classifiedSearchCount.textContent = hasText ? text : "";
+}
+
+function setClassifiedSearchOpen(active, { focusInput = false, clearQuery = false } = {}) {
+  const open = Boolean(active);
+  state.classifiedSearch.open = open;
+
+  if (elements.classifiedSearchWrap) {
+    elements.classifiedSearchWrap.hidden = !open;
+  }
+  if (elements.classifiedSearchResults) {
+    elements.classifiedSearchResults.hidden = !open;
+  }
+  if (elements.classifiedMinervaLists) {
+    elements.classifiedMinervaLists.hidden = open;
+  }
+  if (!open) {
+    setClassifiedSearchCount("");
+  }
+
+  if (elements.classifiedSearchToggleBtn) {
+    elements.classifiedSearchToggleBtn.classList.toggle("is-active", open);
+    elements.classifiedSearchToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    const titleKey = open ? "classified_search_toggle_close_label" : "classified_search_toggle_open_label";
+    elements.classifiedSearchToggleBtn.title = t(titleKey);
+    elements.classifiedSearchToggleBtn.setAttribute("aria-label", t(titleKey));
+  }
+  if (elements.classifiedSearchToggleText) {
+    const textKey = open ? "classified_search_toggle_close" : "classified_search_toggle_open";
+    elements.classifiedSearchToggleText.textContent = t(textKey);
+  }
+
+  if (!open && clearQuery && elements.classifiedSearchInput) {
+    elements.classifiedSearchInput.value = "";
+    state.classifiedSearch.query = "";
+  }
+
+  if (open) {
+    renderClassifiedMinervaSearchResults();
+    if (focusInput && elements.classifiedSearchInput) {
+      elements.classifiedSearchInput.focus();
+      elements.classifiedSearchInput.select();
+    }
+  }
+}
+
 function renderClassifiedMinervaSearchResults() {
   if (!elements.classifiedSearchResults || !elements.classifiedSearchInput) {
+    return;
+  }
+
+  if (!state.classifiedSearch.open) {
+    elements.classifiedSearchResults.innerHTML = "";
+    setClassifiedSearchCount("");
     return;
   }
 
@@ -1924,6 +1990,7 @@ function renderClassifiedMinervaSearchResults() {
   state.classifiedSearch.query = query;
 
   if (!query) {
+    setClassifiedSearchCount("");
     elements.classifiedSearchResults.innerHTML = `<p class="classified-search-empty">${t("classified_search_prompt")}</p>`;
     return;
   }
@@ -1976,6 +2043,7 @@ function renderClassifiedMinervaSearchResults() {
   const matches = [...bestMatchByItem.values()];
 
   if (!matches.length) {
+    setClassifiedSearchCount(t("classified_search_results_count", { n: "0" }));
     elements.classifiedSearchResults.innerHTML = `<p class="classified-search-empty">${t("classified_search_no_results")}</p>`;
     return;
   }
@@ -1991,11 +2059,7 @@ function renderClassifiedMinervaSearchResults() {
 
   const limited = matches.slice(0, 40);
   const fragment = document.createDocumentFragment();
-
-  const count = document.createElement("p");
-  count.className = "classified-search-meta";
-  count.textContent = t("classified_search_results_count", { n: String(limited.length) });
-  fragment.appendChild(count);
+  setClassifiedSearchCount(t("classified_search_results_count", { n: String(matches.length) }));
 
   for (const match of limited) {
     const row = document.createElement("article");
@@ -2141,7 +2205,7 @@ async function ensureClassifiedMinervaArchive() {
   const lists = await loadMinervaLists();
   renderClassifiedMinervaLists(lists);
   buildClassifiedSearchCatalog(lists);
-  renderClassifiedMinervaSearchResults();
+  setClassifiedSearchOpen(state.classifiedSearch.open);
 }
 
 function showClassifiedPage() {
@@ -2168,12 +2232,14 @@ function showClassifiedPage() {
   elements.tabIntel.classList.remove("active");
   elements.tabStatus.classList.remove("active");
   elements.tabData.classList.add("active");
+  setClassifiedSearchOpen(false, { clearQuery: true });
   void ensureClassifiedMinervaArchive();
 }
 
 function hideClassifiedPage() {
   showClassifiedLoadOverlay(false);
   document.body.classList.remove("is-classified");
+  setClassifiedSearchOpen(false, { clearQuery: true });
   if (elements.classifiedPage) {
     elements.classifiedPage.classList.remove("is-entering");
     elements.classifiedPage.hidden = true;
@@ -3680,6 +3746,7 @@ function applyLanguage(lang, persist = true) {
   elements.classifiedSearchLabel.textContent = t("classified_search_label");
   elements.classifiedSearchInput.placeholder = t("classified_search_placeholder");
   elements.classifiedSearchHint.textContent = t("classified_search_hint");
+  setClassifiedSearchOpen(state.classifiedSearch.open);
 
   if (elements.minervaAwaiting) {
     elements.minervaAwaiting.textContent = t("minerva_awaiting");
@@ -3708,8 +3775,6 @@ function applyLanguage(lang, persist = true) {
     renderClassifiedMinervaLists([]);
     buildClassifiedSearchCatalog([]);
   }
-  renderClassifiedMinervaSearchResults();
-
   if (document.body.classList.contains("is-classified")) {
     elements.mainTitle.textContent = t("classified_main_title");
   }
@@ -3844,7 +3909,10 @@ function wireEvents() {
   });
   elements.minervaLocationCardBtn?.addEventListener("click", openMinervaLocationView);
   elements.minervaLocationBackBtn?.addEventListener("click", closeMinervaLocationView);
-  elements.microText.addEventListener("click", handleSecretTriggerTap);
+  if (elements.tabData) {
+    elements.tabData.classList.add("secret-trigger");
+    elements.tabData.addEventListener("click", handleSecretTriggerTap);
+  }
   elements.hackAbortBtn.addEventListener("click", hideHackOverlay);
   elements.hackRetryBtn.addEventListener("click", startNewHackSession);
   elements.hackOpenClassifiedBtn.addEventListener("click", showClassifiedPage);
@@ -3875,6 +3943,16 @@ function wireEvents() {
   });
   elements.classifiedSearchInput.addEventListener("input", () => {
     renderClassifiedMinervaSearchResults();
+  });
+  elements.classifiedSearchToggleBtn?.addEventListener("click", () => {
+    const nextOpen = !state.classifiedSearch.open;
+    setClassifiedSearchOpen(nextOpen, { focusInput: nextOpen, clearQuery: !nextOpen });
+  });
+  elements.classifiedSearchInput.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setClassifiedSearchOpen(false, { clearQuery: true });
+    }
   });
   document.addEventListener("beforeinput", (event) => {
     if (!isTypingTarget(event.target)) {

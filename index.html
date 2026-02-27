@@ -328,12 +328,28 @@
         </aside>
         <section class="classified-main">
           <article class="classified-card classified-card-archive">
-            <h3 id="classifiedMinervaTitle">FILE: MINERVA MASTER LISTS</h3>
+            <div class="classified-archive-top">
+              <h3 id="classifiedMinervaTitle">FILE: MINERVA MASTER LISTS</h3>
+              <button
+                id="classifiedSearchToggleBtn"
+                class="classified-search-toggle"
+                type="button"
+                aria-expanded="false"
+                aria-controls="classifiedSearchWrap"
+                title="Search archive"
+              >
+                <span class="classified-search-toggle-icon" aria-hidden="true">&#8981;</span>
+                <span id="classifiedSearchToggleText" class="classified-search-toggle-text">SEARCH</span>
+              </button>
+            </div>
             <p id="classifiedMinervaHint">
               Decrypted vendor rotation archive. Includes every known list and bullion cost.
             </p>
-            <div class="classified-search-wrap">
-              <label id="classifiedSearchLabel" class="classified-search-label" for="classifiedSearchInput">Search item</label>
+            <div id="classifiedSearchWrap" class="classified-search-wrap" hidden>
+              <div class="classified-search-head">
+                <label id="classifiedSearchLabel" class="classified-search-label" for="classifiedSearchInput">Search item</label>
+                <span id="classifiedSearchCount" class="classified-search-count" hidden></span>
+              </div>
               <input
                 id="classifiedSearchInput"
                 class="classified-search-input"
@@ -344,8 +360,8 @@
                 placeholder="Type item name..."
               />
               <p id="classifiedSearchHint" class="classified-search-hint">Search the archive for next sale availability.</p>
-              <div id="classifiedSearchResults" class="classified-search-results"></div>
             </div>
+            <div id="classifiedSearchResults" class="classified-search-results" hidden></div>
             <div id="classifiedMinervaLists" class="classified-minerva-lists"></div>
           </article>
         </section>
