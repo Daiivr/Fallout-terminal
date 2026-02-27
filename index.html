@@ -104,6 +104,22 @@
         </div>
       </div>
     </div>
+    <div id="filesDeleteOverlay" class="files-delete-overlay" aria-hidden="true">
+      <div
+        class="files-delete-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesDeleteTitle"
+        aria-describedby="filesDeleteMessage"
+      >
+        <p id="filesDeleteTitle" class="files-delete-title">CONFIRM FILE PURGE</p>
+        <p id="filesDeleteMessage" class="files-delete-message">Delete this file from secure storage?</p>
+        <div class="files-delete-actions">
+          <button id="filesDeleteCancelBtn" class="files-btn" type="button">CANCEL</button>
+          <button id="filesDeleteConfirmBtn" class="files-btn is-delete" type="button">DELETE FILE</button>
+        </div>
+      </div>
+    </div>
 
     <header class="topbar">
       <div class="topbar-left">
@@ -112,7 +128,7 @@
       </div>
       <div class="topbar-right">
         <div class="tab-strip" aria-hidden="true">
-          <span id="tabStatus" class="tab">STATUS</span>
+          <span id="tabStatus" class="tab">FILES</span>
           <span id="tabIntel" class="tab active">INTEL</span>
           <span id="tabData" class="tab">DATA</span>
         </div>
@@ -294,6 +310,103 @@
           </div>
         </section>
       </article>
+    </section>
+    <section id="filesPage" class="files-page" hidden>
+      <article id="filesUnauthorizedPanel" class="panel files-access-panel">
+        <h2 id="filesUnauthorizedTitle">UNAUTHORIZED ACCESS TO FILE SYSTEM</h2>
+        <p id="filesUnauthorizedSubtitle" class="files-access-subtitle">IDENTITY VERIFICATION REQUIRED</p>
+        <p id="filesNotAuthorizedMessage" class="files-notice" hidden>
+          Sorry, you are not authorized to access the file system.
+        </p>
+        <div class="files-access-actions">
+          <form id="filesLoginForm" class="files-auth-form" method="post" action="/auth/discord">
+            <button id="filesLoginBtn" class="files-btn" type="submit">LOGIN WITH DISCORD</button>
+          </form>
+          <button id="filesLogoutBtn" class="files-btn" type="button" hidden>LOGOUT</button>
+        </div>
+      </article>
+
+      <section id="filesAuthorizedView" class="files-authorized-view" hidden>
+        <article id="filesSessionPanel" class="panel files-session-panel">
+          <div class="files-session-head">
+            <h2 id="filesSessionTitle">SESSION PROFILE</h2>
+            <span id="filesSessionBadge" class="files-session-badge">AUTHORIZED</span>
+          </div>
+          <div id="filesSessionIdentity" class="files-session-identity">
+            <div class="files-session-row">
+              <span id="filesSessionUserLabel" class="files-session-label">CALLSIGN</span>
+              <span id="filesSessionUser" class="files-session-value">--</span>
+            </div>
+            <div class="files-session-row">
+              <span id="filesSessionIdLabel" class="files-session-label">DISCORD ID</span>
+              <span id="filesSessionId" class="files-session-value">--</span>
+            </div>
+            <div class="files-session-row">
+              <span id="filesSessionClearanceLabel" class="files-session-label">CLEARANCE</span>
+              <span id="filesSessionClearance" class="files-session-value">--</span>
+            </div>
+            <div class="files-session-row">
+              <span id="filesSessionStateLabel" class="files-session-label">SESSION STATE</span>
+              <span id="filesSessionState" class="files-session-value">--</span>
+            </div>
+          </div>
+          <button id="filesSessionLogoutBtn" class="files-btn" type="button">LOGOUT</button>
+        </article>
+
+        <article id="filesUploadPanel" class="panel files-upload-panel" hidden>
+          <h2 id="filesUploadTitle">ADMIN CONSOLE</h2>
+          <form id="filesUploadForm" class="files-upload-form" novalidate>
+            <label id="filesUploadFileLabel" for="filesUploadInput">File</label>
+            <input id="filesUploadInput" class="files-upload-input" type="file" name="file" />
+            <label id="filesUploadDescLabel" for="filesDescriptionInput">Description</label>
+            <textarea
+              id="filesDescriptionInput"
+              name="description"
+              class="files-upload-description"
+              rows="3"
+              maxlength="500"
+              placeholder="Optional dossier note..."
+            ></textarea>
+            <button id="filesUploadBtn" class="files-btn" type="submit">UPLOAD FILE</button>
+          </form>
+          <p id="filesUploadFeedback" class="files-upload-feedback" aria-live="polite" hidden></p>
+        </article>
+
+        <article class="panel files-browser-panel">
+          <div class="files-browser-top">
+            <h2 id="filesBrowserTitle">FILE INDEX</h2>
+            <button
+              id="filesSearchToggleBtn"
+              class="files-search-toggle"
+              type="button"
+              aria-expanded="false"
+              aria-controls="filesSearchWrap"
+              title="Search files"
+            >
+              <span class="files-search-toggle-icon" aria-hidden="true">&#8981;</span>
+              <span id="filesSearchToggleText" class="files-search-toggle-text">SEARCH</span>
+            </button>
+          </div>
+          <div id="filesSearchWrap" class="files-search-wrap" hidden>
+            <div class="files-search-head">
+              <label id="filesSearchLabel" class="files-search-label" for="filesSearchInput">Search file</label>
+              <span id="filesSearchCount" class="files-search-count" hidden></span>
+            </div>
+            <input
+              id="filesSearchInput"
+              class="files-search-input"
+              type="search"
+              inputmode="search"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Type file name..."
+            />
+            <p id="filesSearchHint" class="files-search-hint">Filter files by name, type, description, or uploader.</p>
+          </div>
+          <p id="filesEmptyState" class="files-empty-state" hidden>No files available.</p>
+          <div id="filesList" class="files-list" aria-live="polite"></div>
+        </article>
+      </section>
     </section>
     <section id="classifiedPage" class="classified-page" hidden>
       <div class="classified-hero">

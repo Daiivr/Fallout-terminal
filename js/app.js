@@ -126,15 +126,72 @@ const HACK_BRACKET_PAIRS = [
   ["{", "}"],
   ["<", ">"]
 ];
+const VIEW_HASHES = {
+  intel: "#intel",
+  files: "#files"
+};
 
 const STRINGS = {
   en: {
     title_doc: "Fallout Codex | Pip-Boy Terminal",
     micro_text: "ROBCO INDUSTRIES (TM) TERMLINK V2.6",
     main_title: "PIP-BOY INTEL TERMINAL",
-    tab_status: "STATUS",
+    tab_status: "FILES",
     tab_intel: "INTEL",
     tab_data: "DATA",
+    files_main_title: "PIP-BOY FILE SYSTEM ACCESS",
+    files_unauthorized_title: "UNAUTHORIZED ACCESS TO FILE SYSTEM",
+    files_unauthorized_subtitle: "IDENTITY VERIFICATION REQUIRED",
+    files_login_button: "LOGIN WITH DISCORD",
+    files_logout_button: "LOGOUT",
+    files_not_authorized_message: "Sorry, you are not authorized to access the file system.",
+    files_server_required_message: "Server required: open via http://localhost:3000 (or your deployed URL), not file://.",
+    files_upload_button: "UPLOAD FILE",
+    files_download_button: "DOWNLOAD FILE",
+    files_empty_state: "No files available.",
+    files_search_label: "Search File",
+    files_search_placeholder: "Type file name...",
+    files_search_hint: "Filter files by name, type, description, or uploader.",
+    files_search_toggle_open: "SEARCH",
+    files_search_toggle_close: "CLOSE",
+    files_search_toggle_open_label: "Open file search",
+    files_search_toggle_close_label: "Close file search",
+    files_search_results_count: "Matches: {n}",
+    files_search_no_results: "No matching file found.",
+    files_profile_title: "SESSION PROFILE",
+    files_session_user_label: "CALLSIGN",
+    files_session_id_label: "DISCORD ID",
+    files_session_clearance_label: "CLEARANCE",
+    files_session_state_label: "SESSION STATE",
+    files_session_state_online: "LINK ESTABLISHED",
+    files_session_badge_authorized: "AUTHORIZED",
+    files_session_badge_admin: "ADMIN",
+    files_session_clearance_authorized: "AUTHORIZED USER",
+    files_session_clearance_admin: "ADMINISTRATOR",
+    files_admin_console_title: "ADMIN CONSOLE",
+    files_file_index_title: "FILE INDEX",
+    files_upload_file_label: "File",
+    files_upload_description_label: "Description",
+    files_upload_description_placeholder: "Optional dossier note...",
+    files_upload_success: "Upload complete.",
+    files_upload_error: "Upload failed.",
+    files_upload_missing_file: "Select a file before upload.",
+    files_loading_state: "Loading file index...",
+    files_delete_button: "DELETE FILE",
+    files_delete_confirm: "Delete this file from storage?",
+    files_delete_modal_title: "CONFIRM FILE PURGE",
+    files_delete_modal_body: "Delete file \"{name}\" from secure storage? This action cannot be undone.",
+    files_delete_modal_cancel: "CANCEL",
+    files_delete_modal_confirm: "DELETE FILE",
+    files_delete_success: "File deleted.",
+    files_delete_error: "Unable to delete file.",
+    files_name_label: "File Name",
+    files_type_label: "Type",
+    files_size_label: "Size",
+    files_uploaded_label: "Uploaded",
+    files_description_label: "Description",
+    files_uploader_label: "Uploaded By",
+    files_unknown_value: "--",
     lang_label: "LANG",
     label_utc: "UTC CLOCK",
     label_last_sync: "LAST SYNC",
@@ -260,9 +317,62 @@ const STRINGS = {
     title_doc: "Fallout Codex | Terminal Pip-Boy",
     micro_text: "ROBCO INDUSTRIES (TM) TERMLINK V2.6",
     main_title: "TERMINAL DE INTEL PIP-BOY",
-    tab_status: "ESTADO",
+    tab_status: "ARCHIVOS",
     tab_intel: "INTEL",
     tab_data: "DATOS",
+    files_main_title: "ACCESO AL SISTEMA DE ARCHIVOS PIP-BOY",
+    files_unauthorized_title: "ACCESO NO AUTORIZADO AL SISTEMA DE ARCHIVOS",
+    files_unauthorized_subtitle: "SE REQUIERE VERIFICACION DE IDENTIDAD",
+    files_login_button: "INICIAR CON DISCORD",
+    files_logout_button: "CERRAR SESION",
+    files_not_authorized_message: "Lo sentimos, no estas autorizado para acceder al sistema de archivos.",
+    files_server_required_message: "Se requiere servidor: abre via http://localhost:3000 (o tu URL desplegada), no file://.",
+    files_upload_button: "SUBIR ARCHIVO",
+    files_download_button: "DESCARGAR ARCHIVO",
+    files_empty_state: "No hay archivos disponibles.",
+    files_search_label: "Buscar Archivo",
+    files_search_placeholder: "Escribe nombre del archivo...",
+    files_search_hint: "Filtra archivos por nombre, tipo, descripcion o autor.",
+    files_search_toggle_open: "BUSCAR",
+    files_search_toggle_close: "CERRAR",
+    files_search_toggle_open_label: "Abrir busqueda de archivos",
+    files_search_toggle_close_label: "Cerrar busqueda de archivos",
+    files_search_results_count: "Coincidencias: {n}",
+    files_search_no_results: "No se encontro ningun archivo coincidente.",
+    files_profile_title: "PERFIL DE SESION",
+    files_session_user_label: "IDENTIDAD",
+    files_session_id_label: "DISCORD ID",
+    files_session_clearance_label: "NIVEL",
+    files_session_state_label: "ESTADO DE SESION",
+    files_session_state_online: "ENLACE ESTABLECIDO",
+    files_session_badge_authorized: "AUTORIZADO",
+    files_session_badge_admin: "ADMIN",
+    files_session_clearance_authorized: "USUARIO AUTORIZADO",
+    files_session_clearance_admin: "ADMINISTRADOR",
+    files_admin_console_title: "CONSOLA ADMIN",
+    files_file_index_title: "INDICE DE ARCHIVOS",
+    files_upload_file_label: "Archivo",
+    files_upload_description_label: "Descripcion",
+    files_upload_description_placeholder: "Nota opcional del expediente...",
+    files_upload_success: "Carga completada.",
+    files_upload_error: "La carga fallo.",
+    files_upload_missing_file: "Selecciona un archivo antes de subirlo.",
+    files_loading_state: "Cargando indice de archivos...",
+    files_delete_button: "ELIMINAR ARCHIVO",
+    files_delete_confirm: "Eliminar este archivo del almacenamiento?",
+    files_delete_modal_title: "CONFIRMAR PURGA DE ARCHIVO",
+    files_delete_modal_body: "Eliminar el archivo \"{name}\" del almacenamiento seguro? Esta accion no se puede deshacer.",
+    files_delete_modal_cancel: "CANCELAR",
+    files_delete_modal_confirm: "ELIMINAR ARCHIVO",
+    files_delete_success: "Archivo eliminado.",
+    files_delete_error: "No se pudo eliminar el archivo.",
+    files_name_label: "Nombre",
+    files_type_label: "Tipo",
+    files_size_label: "Tamano",
+    files_uploaded_label: "Subido",
+    files_description_label: "Descripcion",
+    files_uploader_label: "Subido Por",
+    files_unknown_value: "--",
     lang_label: "IDIOMA",
     label_utc: "RELOJ UTC",
     label_last_sync: "ULTIMA SINCRONIZACION",
@@ -389,6 +499,7 @@ const STRINGS = {
 const state = {
   lang: "en",
   signalKey: "booting",
+  view: "intel",
   minervaLists: null,
   silo: {
     error: false,
@@ -423,6 +534,30 @@ const state = {
     entries: [],
     open: false,
     baseArchiveWidth: 0
+  },
+  files: {
+    me: null,
+    list: [],
+    loadingMe: false,
+    loadingList: false,
+    meError: "",
+    listError: "",
+    expandedId: "",
+    uploadBusy: false,
+    uploadMessage: "",
+    uploadMessageKind: "",
+    uploadFieldInvalid: false,
+    uploadMissingFileError: false,
+    search: {
+      open: false,
+      query: ""
+    },
+    deleteModal: {
+      open: false,
+      fileId: "",
+      fileName: "",
+      deleting: false
+    }
   },
   easterEgg: {
     unlocked: false,
@@ -462,6 +597,11 @@ const elements = {
   hackAbortBtn: document.getElementById("hackAbortBtn"),
   hackRetryBtn: document.getElementById("hackRetryBtn"),
   hackOpenClassifiedBtn: document.getElementById("hackOpenClassifiedBtn"),
+  filesDeleteOverlay: document.getElementById("filesDeleteOverlay"),
+  filesDeleteTitle: document.getElementById("filesDeleteTitle"),
+  filesDeleteMessage: document.getElementById("filesDeleteMessage"),
+  filesDeleteCancelBtn: document.getElementById("filesDeleteCancelBtn"),
+  filesDeleteConfirmBtn: document.getElementById("filesDeleteConfirmBtn"),
   syncOverlay: document.getElementById("syncOverlay"),
   syncTitle: document.getElementById("syncTitle"),
   classifiedLoadOverlay: document.getElementById("classifiedLoadOverlay"),
@@ -487,6 +627,46 @@ const elements = {
   dataSignal: document.getElementById("dataSignal"),
   refreshBtn: document.getElementById("refreshBtn"),
   intelGrid: document.getElementById("intelGrid"),
+  filesPage: document.getElementById("filesPage"),
+  filesUnauthorizedPanel: document.getElementById("filesUnauthorizedPanel"),
+  filesUnauthorizedTitle: document.getElementById("filesUnauthorizedTitle"),
+  filesUnauthorizedSubtitle: document.getElementById("filesUnauthorizedSubtitle"),
+  filesNotAuthorizedMessage: document.getElementById("filesNotAuthorizedMessage"),
+  filesLoginForm: document.getElementById("filesLoginForm"),
+  filesLoginBtn: document.getElementById("filesLoginBtn"),
+  filesLogoutBtn: document.getElementById("filesLogoutBtn"),
+  filesAuthorizedView: document.getElementById("filesAuthorizedView"),
+  filesSessionTitle: document.getElementById("filesSessionTitle"),
+  filesSessionBadge: document.getElementById("filesSessionBadge"),
+  filesSessionIdentity: document.getElementById("filesSessionIdentity"),
+  filesSessionUserLabel: document.getElementById("filesSessionUserLabel"),
+  filesSessionUser: document.getElementById("filesSessionUser"),
+  filesSessionIdLabel: document.getElementById("filesSessionIdLabel"),
+  filesSessionId: document.getElementById("filesSessionId"),
+  filesSessionClearanceLabel: document.getElementById("filesSessionClearanceLabel"),
+  filesSessionClearance: document.getElementById("filesSessionClearance"),
+  filesSessionStateLabel: document.getElementById("filesSessionStateLabel"),
+  filesSessionState: document.getElementById("filesSessionState"),
+  filesSessionLogoutBtn: document.getElementById("filesSessionLogoutBtn"),
+  filesUploadPanel: document.getElementById("filesUploadPanel"),
+  filesUploadTitle: document.getElementById("filesUploadTitle"),
+  filesUploadForm: document.getElementById("filesUploadForm"),
+  filesUploadFileLabel: document.getElementById("filesUploadFileLabel"),
+  filesUploadInput: document.getElementById("filesUploadInput"),
+  filesUploadDescLabel: document.getElementById("filesUploadDescLabel"),
+  filesDescriptionInput: document.getElementById("filesDescriptionInput"),
+  filesUploadBtn: document.getElementById("filesUploadBtn"),
+  filesUploadFeedback: document.getElementById("filesUploadFeedback"),
+  filesBrowserTitle: document.getElementById("filesBrowserTitle"),
+  filesSearchToggleBtn: document.getElementById("filesSearchToggleBtn"),
+  filesSearchToggleText: document.getElementById("filesSearchToggleText"),
+  filesSearchWrap: document.getElementById("filesSearchWrap"),
+  filesSearchLabel: document.getElementById("filesSearchLabel"),
+  filesSearchCount: document.getElementById("filesSearchCount"),
+  filesSearchInput: document.getElementById("filesSearchInput"),
+  filesSearchHint: document.getElementById("filesSearchHint"),
+  filesEmptyState: document.getElementById("filesEmptyState"),
+  filesList: document.getElementById("filesList"),
   siloTitle: document.getElementById("siloTitle"),
   siloHint: document.getElementById("siloHint"),
   siloExpiry: document.getElementById("siloExpiry"),
@@ -567,6 +747,859 @@ function t(key, vars = {}) {
   const dictionary = STRINGS[state.lang] || STRINGS.en;
   const template = dictionary[key] || STRINGS.en[key] || key;
   return template.replace(/\{(\w+)\}/g, (_, name) => String(vars[name] ?? ""));
+}
+
+function getHashView() {
+  const hash = String(window.location.hash || "").trim().toLowerCase();
+  if (hash === VIEW_HASHES.files) {
+    return "files";
+  }
+  if (!hash || hash === VIEW_HASHES.intel) {
+    return "intel";
+  }
+  return "";
+}
+
+function setHashView(view, { replace = false } = {}) {
+  const targetHash = view === "files" ? VIEW_HASHES.files : VIEW_HASHES.intel;
+  const currentHash = String(window.location.hash || "").trim().toLowerCase();
+  if (currentHash === targetHash) {
+    return;
+  }
+
+  if (replace && window.history?.replaceState) {
+    const nextUrl = `${window.location.pathname}${window.location.search}${targetHash}`;
+    window.history.replaceState(null, "", nextUrl);
+    return;
+  }
+
+  window.location.hash = targetHash;
+}
+
+function setTopTabActive(view) {
+  elements.tabIntel?.classList.toggle("active", view === "intel");
+  elements.tabStatus?.classList.toggle("active", view === "files");
+  elements.tabData?.classList.toggle("active", view === "data");
+}
+
+function hideFilesPage() {
+  document.body.classList.remove("is-files");
+  closeFilesDeleteModal({ force: true });
+  if (state.files.search.open || state.files.search.query) {
+    setFilesSearchOpen(false, { clearQuery: true });
+  }
+  if (elements.filesPage) {
+    elements.filesPage.classList.remove("is-entering");
+    elements.filesPage.hidden = true;
+  }
+}
+
+function closeClassifiedPageForNavigation() {
+  showClassifiedLoadOverlay(false);
+  document.body.classList.remove("is-classified");
+  setClassifiedSearchOpen(false, { clearQuery: true });
+  if (elements.classifiedPage) {
+    elements.classifiedPage.classList.remove("is-entering");
+    elements.classifiedPage.hidden = true;
+  }
+}
+
+function showIntelPage({ updateHash = true } = {}) {
+  closeClassifiedPageForNavigation();
+  hideFilesPage();
+  state.view = "intel";
+  elements.mainTitle.textContent = t("main_title");
+  setTopTabActive("intel");
+  if (updateHash) {
+    setHashView("intel");
+  }
+}
+
+function showFilesPage({ updateHash = true } = {}) {
+  closeClassifiedPageForNavigation();
+  document.body.classList.add("is-files");
+  if (elements.filesPage) {
+    elements.filesPage.hidden = false;
+    elements.filesPage.classList.remove("is-entering");
+    void elements.filesPage.offsetWidth;
+    elements.filesPage.classList.add("is-entering");
+    setTimeout(() => {
+      elements.filesPage?.classList.remove("is-entering");
+    }, 540);
+  }
+
+  state.view = "files";
+  elements.mainTitle.textContent = t("files_main_title");
+  setTopTabActive("files");
+  renderFilesAccessView();
+  void refreshFilesIdentity();
+  if (updateHash) {
+    setHashView("files");
+  }
+}
+
+function applyViewFromHash() {
+  const hashView = getHashView();
+  if (!hashView) {
+    setHashView("intel", { replace: true });
+    showIntelPage({ updateHash: false });
+    return;
+  }
+
+  if (hashView === "files") {
+    if (state.view === "files" && document.body.classList.contains("is-files")) {
+      return;
+    }
+    showFilesPage({ updateHash: false });
+    return;
+  }
+
+  if (state.view === "intel" && !document.body.classList.contains("is-classified") && !document.body.classList.contains("is-files")) {
+    return;
+  }
+  showIntelPage({ updateHash: false });
+}
+
+function buildGuestFilesProfile() {
+  return {
+    loggedIn: false,
+    discordId: "",
+    username: "",
+    isAdmin: false,
+    isAuthorized: false
+  };
+}
+
+function normalizeFilesProfile(payload) {
+  const fallback = buildGuestFilesProfile();
+  if (!payload || typeof payload !== "object") {
+    return fallback;
+  }
+
+  return {
+    loggedIn: Boolean(payload.loggedIn),
+    discordId: String(payload.discordId || ""),
+    username: String(payload.username || ""),
+    isAdmin: Boolean(payload.isAdmin),
+    isAuthorized: Boolean(payload.isAuthorized)
+  };
+}
+
+function formatFileSize(byteValue) {
+  const bytes = Number(byteValue);
+  if (!Number.isFinite(bytes) || bytes < 0) {
+    return t("files_unknown_value");
+  }
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  const units = ["KB", "MB", "GB", "TB"];
+  let size = bytes / 1024;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+
+  const precision = size >= 100 ? 0 : size >= 10 ? 1 : 2;
+  return `${size.toFixed(precision)} ${units[unitIndex]}`;
+}
+
+function formatFileDateTime(value) {
+  if (!value) {
+    return t("files_unknown_value");
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return t("files_unknown_value");
+  }
+
+  try {
+    const locale = state.lang === "es" ? "es-ES" : "en-US";
+    return new Intl.DateTimeFormat(locale, {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(date);
+  } catch {
+    return date.toISOString();
+  }
+}
+
+function resolveFileTypeLabel(file) {
+  const fileName = String(file.name || file.originalName || "");
+  const extensionMatch = /\.([A-Za-z0-9]+)$/.exec(fileName);
+  const extension = extensionMatch ? extensionMatch[1].toUpperCase() : "";
+  const mimeType = String(file.mimeType || file.type || "").trim();
+
+  if (extension && mimeType) {
+    return `${extension} / ${mimeType}`;
+  }
+  if (extension) {
+    return extension;
+  }
+  if (mimeType) {
+    return mimeType;
+  }
+  return t("files_unknown_value");
+}
+
+function setFilesUploadFeedback(message = "", kind = "") {
+  state.files.uploadMessage = String(message || "");
+  state.files.uploadMessageKind = kind === "success" ? "success" : kind === "error" ? "error" : "";
+}
+
+function setFilesUploadInputInvalid(isInvalid, { isMissingFileError = false } = {}) {
+  state.files.uploadFieldInvalid = Boolean(isInvalid);
+  state.files.uploadMissingFileError = Boolean(isMissingFileError) && state.files.uploadFieldInvalid;
+}
+
+function renderFilesDeleteModal() {
+  const modalState = state.files.deleteModal;
+  const isOpen = Boolean(modalState.open);
+  const displayName = modalState.fileName || t("files_unknown_value");
+
+  if (elements.filesDeleteTitle) {
+    elements.filesDeleteTitle.textContent = t("files_delete_modal_title");
+  }
+  if (elements.filesDeleteMessage) {
+    elements.filesDeleteMessage.textContent = t("files_delete_modal_body", { name: displayName });
+  }
+  if (elements.filesDeleteCancelBtn) {
+    elements.filesDeleteCancelBtn.textContent = t("files_delete_modal_cancel");
+    elements.filesDeleteCancelBtn.disabled = modalState.deleting;
+  }
+  if (elements.filesDeleteConfirmBtn) {
+    elements.filesDeleteConfirmBtn.textContent = t("files_delete_modal_confirm");
+    elements.filesDeleteConfirmBtn.disabled = modalState.deleting;
+  }
+  if (elements.filesDeleteOverlay) {
+    elements.filesDeleteOverlay.classList.toggle("is-active", isOpen);
+    elements.filesDeleteOverlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  }
+}
+
+function closeFilesDeleteModal({ force = false } = {}) {
+  if (state.files.deleteModal.deleting && !force) {
+    return;
+  }
+
+  state.files.deleteModal.open = false;
+  state.files.deleteModal.fileId = "";
+  state.files.deleteModal.fileName = "";
+  state.files.deleteModal.deleting = false;
+  renderFilesDeleteModal();
+}
+
+function setFilesSearchCount(text = "") {
+  if (!elements.filesSearchCount) {
+    return;
+  }
+  const hasText = Boolean(text);
+  elements.filesSearchCount.hidden = !hasText;
+  elements.filesSearchCount.textContent = hasText ? text : "";
+}
+
+function setFilesSearchOpen(active, { focusInput = false, clearQuery = false } = {}) {
+  const open = Boolean(active);
+  state.files.search.open = open;
+
+  if (elements.filesSearchWrap) {
+    elements.filesSearchWrap.hidden = !open;
+  }
+  if (elements.filesSearchToggleBtn) {
+    elements.filesSearchToggleBtn.classList.toggle("is-active", open);
+    elements.filesSearchToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    const titleKey = open ? "files_search_toggle_close_label" : "files_search_toggle_open_label";
+    elements.filesSearchToggleBtn.title = t(titleKey);
+    elements.filesSearchToggleBtn.setAttribute("aria-label", t(titleKey));
+  }
+  if (elements.filesSearchToggleText) {
+    const textKey = open ? "files_search_toggle_close" : "files_search_toggle_open";
+    elements.filesSearchToggleText.textContent = t(textKey);
+  }
+
+  if (!open && clearQuery && elements.filesSearchInput) {
+    elements.filesSearchInput.value = "";
+    state.files.search.query = "";
+  }
+
+  renderFilesList();
+
+  if (open && focusInput && elements.filesSearchInput) {
+    elements.filesSearchInput.focus();
+    elements.filesSearchInput.select();
+  }
+}
+
+function getFilteredFilesList(files = []) {
+  const source = Array.isArray(files) ? files : [];
+  const isSearchOpen = Boolean(state.files.search.open);
+  const rawQuery = isSearchOpen
+    ? String(state.files.search.query || "")
+    : "";
+  const query = normalizeSearchText(rawQuery);
+  if (!isSearchOpen || !query) {
+    return source;
+  }
+
+  const queryTokens = query.split(" ").filter(Boolean);
+  if (!queryTokens.length) {
+    return source;
+  }
+
+  return source.filter((file) => {
+    const name = normalizeSearchText(file.name || file.originalName || "");
+    const type = normalizeSearchText(file.mimeType || file.type || resolveFileTypeLabel(file));
+    const description = normalizeSearchText(file.description || "");
+    const uploader = normalizeSearchText(file.uploader || file.uploaderDiscordId || "");
+    const haystack = `${name} ${type} ${description} ${uploader}`;
+    return queryTokens.every((token) => haystack.includes(token));
+  });
+}
+
+function openFilesDeleteModal(fileId) {
+  if (!state.files.me?.isAdmin) {
+    return;
+  }
+
+  const matchedFile = state.files.list.find((entry) => String(entry.id || "") === String(fileId || ""));
+  if (!matchedFile) {
+    return;
+  }
+
+  state.files.deleteModal.open = true;
+  state.files.deleteModal.fileId = String(fileId);
+  state.files.deleteModal.fileName = String(
+    matchedFile.name
+    || matchedFile.originalName
+    || t("files_unknown_value")
+  );
+  state.files.deleteModal.deleting = false;
+  renderFilesDeleteModal();
+  setTimeout(() => {
+    elements.filesDeleteConfirmBtn?.focus();
+  }, 0);
+}
+
+async function confirmFilesDeleteModal() {
+  if (!state.files.me?.isAdmin) {
+    closeFilesDeleteModal({ force: true });
+    return;
+  }
+
+  const fileId = state.files.deleteModal.fileId;
+  if (!fileId) {
+    closeFilesDeleteModal({ force: true });
+    return;
+  }
+
+  state.files.deleteModal.deleting = true;
+  renderFilesDeleteModal();
+
+  try {
+    await requestJson(`/api/files/${encodeURIComponent(fileId)}`, {
+      method: "DELETE"
+    });
+    closeFilesDeleteModal({ force: true });
+    setFilesUploadFeedback(t("files_delete_success"), "success");
+    await refreshFilesList();
+  } catch (error) {
+    closeFilesDeleteModal({ force: true });
+    setFilesUploadFeedback(String(error?.message || t("files_delete_error")), "error");
+    renderFilesAccessView();
+  }
+}
+
+function createFilesMetaItem(label, value) {
+  const wrap = document.createElement("div");
+  wrap.className = "files-meta-item";
+
+  const labelEl = document.createElement("span");
+  labelEl.className = "files-meta-label";
+  labelEl.textContent = label;
+
+  const valueEl = document.createElement("span");
+  valueEl.className = "files-meta-value";
+  valueEl.textContent = value || t("files_unknown_value");
+
+  wrap.appendChild(labelEl);
+  wrap.appendChild(valueEl);
+  return wrap;
+}
+
+function renderFilesSessionProfile({ authorized, isAdmin, username, discordId } = {}) {
+  const unknown = t("files_unknown_value");
+  const resolvedAuthorized = Boolean(authorized);
+  const resolvedAdmin = Boolean(isAdmin) && resolvedAuthorized;
+  const resolvedUsername = resolvedAuthorized ? (String(username || "").trim() || unknown) : unknown;
+  const resolvedDiscordId = resolvedAuthorized ? (String(discordId || "").trim() || unknown) : unknown;
+  const resolvedClearance = !resolvedAuthorized
+    ? unknown
+    : resolvedAdmin
+      ? t("files_session_clearance_admin")
+      : t("files_session_clearance_authorized");
+  const resolvedState = resolvedAuthorized ? t("files_session_state_online") : unknown;
+  const badgeText = !resolvedAuthorized
+    ? unknown
+    : resolvedAdmin
+      ? t("files_session_badge_admin")
+      : t("files_session_badge_authorized");
+
+  if (elements.filesSessionUser) {
+    elements.filesSessionUser.textContent = resolvedUsername;
+  }
+  if (elements.filesSessionId) {
+    elements.filesSessionId.textContent = resolvedDiscordId;
+  }
+  if (elements.filesSessionClearance) {
+    elements.filesSessionClearance.textContent = resolvedClearance;
+    elements.filesSessionClearance.classList.toggle("is-admin", resolvedAdmin);
+  }
+  if (elements.filesSessionState) {
+    elements.filesSessionState.textContent = resolvedState;
+  }
+  if (elements.filesSessionBadge) {
+    elements.filesSessionBadge.textContent = badgeText;
+    elements.filesSessionBadge.classList.toggle("is-admin", resolvedAdmin);
+  }
+}
+
+function renderFilesList() {
+  if (!elements.filesList || !elements.filesEmptyState) {
+    return;
+  }
+
+  const canReadFiles = Boolean(state.files.me?.isAuthorized);
+  elements.filesList.replaceChildren();
+
+  if (!canReadFiles) {
+    setFilesSearchCount("");
+    elements.filesEmptyState.hidden = true;
+    return;
+  }
+
+  const searchQuery = String(state.files.search.query || "").trim();
+  const isSearchMode = Boolean(state.files.search.open);
+  const filteredFiles = getFilteredFilesList(state.files.list);
+
+  if (isSearchMode && searchQuery) {
+    setFilesSearchCount(t("files_search_results_count", { n: filteredFiles.length }));
+  } else {
+    setFilesSearchCount("");
+  }
+
+  let emptyMessage = "";
+  if (state.files.loadingList) {
+    emptyMessage = t("files_loading_state");
+  } else if (state.files.listError) {
+    emptyMessage = state.files.listError;
+  } else if (!state.files.list.length) {
+    emptyMessage = t("files_empty_state");
+  } else if (isSearchMode && searchQuery && !filteredFiles.length) {
+    emptyMessage = t("files_search_no_results");
+  }
+
+  if (emptyMessage) {
+    elements.filesEmptyState.hidden = false;
+    elements.filesEmptyState.textContent = emptyMessage;
+    return;
+  }
+
+  elements.filesEmptyState.hidden = true;
+  const fragment = document.createDocumentFragment();
+
+  for (const file of filteredFiles) {
+    const fileId = String(file.id || "");
+    const fileName = String(file.name || file.originalName || t("files_unknown_value"));
+    const fileType = resolveFileTypeLabel(file);
+    const fileSize = formatFileSize(file.size);
+    const uploadDate = formatFileDateTime(file.uploadedAt || file.uploaded_at);
+    const description = String(file.description || "").trim() || t("files_unknown_value");
+    const uploader = String(file.uploader || file.uploaderDiscordId || t("files_unknown_value"));
+    const isExpanded = state.files.expandedId === fileId;
+
+    const card = document.createElement("article");
+    card.className = `panel files-file-card${isExpanded ? " is-open" : ""}`;
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "files-file-toggle";
+    toggle.setAttribute("data-files-action", "toggle");
+    toggle.setAttribute("data-file-id", fileId);
+
+    const title = document.createElement("p");
+    title.className = "files-file-name";
+    title.textContent = fileName;
+
+    const summary = document.createElement("div");
+    summary.className = "files-file-summary";
+
+    const typeSummary = document.createElement("span");
+    typeSummary.textContent = `${t("files_type_label")}: ${fileType}`;
+    const sizeSummary = document.createElement("span");
+    sizeSummary.textContent = `${t("files_size_label")}: ${fileSize}`;
+    const dateSummary = document.createElement("span");
+    dateSummary.textContent = `${t("files_uploaded_label")}: ${uploadDate}`;
+
+    summary.appendChild(typeSummary);
+    summary.appendChild(sizeSummary);
+    summary.appendChild(dateSummary);
+
+    toggle.appendChild(title);
+    toggle.appendChild(summary);
+    card.appendChild(toggle);
+
+    if (isExpanded) {
+      const details = document.createElement("div");
+      details.className = "files-file-details";
+
+      const metadata = document.createElement("div");
+      metadata.className = "files-meta-grid";
+      metadata.appendChild(createFilesMetaItem(t("files_name_label"), fileName));
+      metadata.appendChild(createFilesMetaItem(t("files_type_label"), fileType));
+      metadata.appendChild(createFilesMetaItem(t("files_size_label"), fileSize));
+      metadata.appendChild(createFilesMetaItem(t("files_uploaded_label"), uploadDate));
+      metadata.appendChild(createFilesMetaItem(t("files_uploader_label"), uploader));
+      metadata.appendChild(createFilesMetaItem(t("files_description_label"), description));
+
+      const actions = document.createElement("div");
+      actions.className = "files-card-actions";
+
+      const downloadButton = document.createElement("button");
+      downloadButton.type = "button";
+      downloadButton.className = "files-card-action";
+      downloadButton.textContent = t("files_download_button");
+      downloadButton.setAttribute("data-files-action", "download");
+      downloadButton.setAttribute("data-file-id", fileId);
+      actions.appendChild(downloadButton);
+
+      if (state.files.me?.isAdmin) {
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "files-card-action is-delete";
+        deleteButton.textContent = t("files_delete_button");
+        deleteButton.setAttribute("data-files-action", "delete");
+        deleteButton.setAttribute("data-file-id", fileId);
+        actions.appendChild(deleteButton);
+      }
+
+      details.appendChild(metadata);
+      details.appendChild(actions);
+      card.appendChild(details);
+    }
+
+    fragment.appendChild(card);
+  }
+
+  elements.filesList.appendChild(fragment);
+}
+
+function renderFilesAccessView() {
+  const isFileProtocol = window.location.protocol === "file:";
+  const me = normalizeFilesProfile(state.files.me);
+  const loggedIn = me.loggedIn;
+  const authorized = me.isAuthorized;
+  const isAdmin = me.isAdmin;
+  const showUploadPanel = authorized && isAdmin;
+
+  if ((!authorized || !isAdmin) && state.files.deleteModal.open) {
+    closeFilesDeleteModal({ force: true });
+  }
+
+  if (isFileProtocol) {
+    if (elements.filesAuthorizedView) {
+      elements.filesAuthorizedView.classList.add("is-upload-hidden");
+    }
+    renderFilesSessionProfile({
+      authorized: false,
+      isAdmin: false,
+      username: "",
+      discordId: ""
+    });
+    if (elements.filesUnauthorizedPanel) {
+      elements.filesUnauthorizedPanel.hidden = false;
+    }
+    if (elements.filesAuthorizedView) {
+      elements.filesAuthorizedView.hidden = true;
+    }
+    if (elements.filesNotAuthorizedMessage) {
+      elements.filesNotAuthorizedMessage.hidden = false;
+      elements.filesNotAuthorizedMessage.textContent = t("files_server_required_message");
+    }
+    if (elements.filesLoginForm) {
+      elements.filesLoginForm.hidden = true;
+    }
+    if (elements.filesLogoutBtn) {
+      elements.filesLogoutBtn.hidden = true;
+    }
+    if (elements.filesSessionLogoutBtn) {
+      elements.filesSessionLogoutBtn.hidden = true;
+    }
+    if (elements.filesUploadPanel) {
+      elements.filesUploadPanel.hidden = true;
+    }
+    renderFilesList();
+    return;
+  }
+
+  if (elements.filesUnauthorizedPanel) {
+    elements.filesUnauthorizedPanel.hidden = authorized;
+  }
+  if (elements.filesAuthorizedView) {
+    elements.filesAuthorizedView.hidden = !authorized;
+  }
+  if (elements.filesNotAuthorizedMessage) {
+    elements.filesNotAuthorizedMessage.hidden = !(loggedIn && !authorized);
+  }
+  if (elements.filesLoginForm) {
+    elements.filesLoginForm.hidden = loggedIn;
+  }
+  if (elements.filesLogoutBtn) {
+    elements.filesLogoutBtn.hidden = !loggedIn || authorized;
+  }
+  if (elements.filesSessionLogoutBtn) {
+    elements.filesSessionLogoutBtn.hidden = !authorized;
+  }
+  if (elements.filesUploadPanel) {
+    elements.filesUploadPanel.hidden = !showUploadPanel;
+  }
+  if (elements.filesAuthorizedView) {
+    elements.filesAuthorizedView.classList.toggle("is-upload-hidden", !showUploadPanel);
+  }
+
+  renderFilesSessionProfile({
+    authorized,
+    isAdmin,
+    username: me.username,
+    discordId: me.discordId
+  });
+
+  if (elements.filesUploadBtn) {
+    elements.filesUploadBtn.disabled = state.files.uploadBusy;
+  }
+  if (elements.filesUploadInput) {
+    elements.filesUploadInput.classList.toggle("is-invalid", state.files.uploadFieldInvalid);
+  }
+  if (elements.filesUploadFeedback) {
+    if (state.files.uploadMissingFileError) {
+      state.files.uploadMessage = t("files_upload_missing_file");
+      state.files.uploadMessageKind = "error";
+    }
+
+    elements.filesUploadFeedback.classList.remove("is-error", "is-success");
+    if (state.files.uploadMessageKind === "error") {
+      elements.filesUploadFeedback.classList.add("is-error");
+    } else if (state.files.uploadMessageKind === "success") {
+      elements.filesUploadFeedback.classList.add("is-success");
+    }
+
+    const hasMessage = Boolean(state.files.uploadMessage);
+    elements.filesUploadFeedback.hidden = !hasMessage;
+    elements.filesUploadFeedback.textContent = hasMessage ? state.files.uploadMessage : "";
+  }
+
+  renderFilesList();
+}
+
+async function requestJson(url, options = {}) {
+  const response = await fetch(url, {
+    cache: "no-store",
+    ...options
+  });
+
+  let payload = null;
+  const text = await response.text();
+  if (text) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (!response.ok) {
+    const error = new Error(payload?.error || payload?.message || `HTTP ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+
+  return payload || {};
+}
+
+async function refreshFilesList() {
+  if (!state.files.me?.isAuthorized) {
+    state.files.list = [];
+    state.files.listError = "";
+    state.files.expandedId = "";
+    renderFilesAccessView();
+    return;
+  }
+
+  state.files.loadingList = true;
+  state.files.listError = "";
+  renderFilesAccessView();
+
+  try {
+    const payload = await requestJson("/api/files");
+    state.files.list = Array.isArray(payload.files) ? payload.files : [];
+    if (!state.files.list.some((file) => String(file.id || "") === state.files.expandedId)) {
+      state.files.expandedId = "";
+    }
+  } catch (error) {
+    if (error?.status === 401 || error?.status === 403) {
+      await refreshFilesIdentity({ loadFiles: false });
+      return;
+    }
+    state.files.list = [];
+    state.files.listError = String(error?.message || t("files_empty_state"));
+  } finally {
+    state.files.loadingList = false;
+  }
+
+  renderFilesAccessView();
+}
+
+async function refreshFilesIdentity({ loadFiles = true } = {}) {
+  state.files.loadingMe = true;
+  state.files.meError = "";
+  renderFilesAccessView();
+
+  try {
+    const payload = await requestJson("/api/me");
+    state.files.me = normalizeFilesProfile(payload);
+  } catch (error) {
+    state.files.me = buildGuestFilesProfile();
+    state.files.meError = String(error?.message || "");
+  } finally {
+    state.files.loadingMe = false;
+  }
+
+  if (state.files.me.isAuthorized && loadFiles) {
+    await refreshFilesList();
+    return;
+  }
+
+  if (!state.files.me.isAuthorized) {
+    state.files.list = [];
+    state.files.listError = "";
+    state.files.loadingList = false;
+    state.files.expandedId = "";
+  }
+
+  renderFilesAccessView();
+}
+
+async function handleFilesLogout() {
+  try {
+    await requestJson("/auth/logout", { method: "POST" });
+  } catch {
+    // Ignore logout transport errors and still clear local state.
+  }
+
+  state.files.me = buildGuestFilesProfile();
+  state.files.list = [];
+  state.files.listError = "";
+  state.files.expandedId = "";
+  state.files.uploadBusy = false;
+  setFilesUploadFeedback("", "");
+  setFilesUploadInputInvalid(false, { isMissingFileError: false });
+  state.files.search.query = "";
+  state.files.search.open = false;
+  renderFilesAccessView();
+  await refreshFilesIdentity({ loadFiles: false });
+}
+
+async function handleFilesUpload(event) {
+  event.preventDefault();
+  if (!state.files.me?.isAdmin) {
+    setFilesUploadFeedback(t("files_upload_error"), "error");
+    setFilesUploadInputInvalid(false, { isMissingFileError: false });
+    renderFilesAccessView();
+    return;
+  }
+
+  if (!elements.filesUploadInput?.files?.length) {
+    setFilesUploadFeedback(t("files_upload_missing_file"), "error");
+    setFilesUploadInputInvalid(true, { isMissingFileError: true });
+    elements.filesUploadInput?.focus();
+    renderFilesAccessView();
+    return;
+  }
+
+  const selectedFile = elements.filesUploadInput.files[0];
+  const description = String(elements.filesDescriptionInput?.value || "").trim();
+  const formData = new FormData();
+  formData.append("file", selectedFile);
+  if (description) {
+    formData.append("description", description);
+  }
+
+  state.files.uploadBusy = true;
+  setFilesUploadFeedback("", "");
+  setFilesUploadInputInvalid(false, { isMissingFileError: false });
+  renderFilesAccessView();
+
+  try {
+    await requestJson("/api/files/upload", {
+      method: "POST",
+      body: formData
+    });
+    elements.filesUploadForm?.reset();
+    state.files.uploadBusy = false;
+    setFilesUploadFeedback(t("files_upload_success"), "success");
+    setFilesUploadInputInvalid(false, { isMissingFileError: false });
+    await refreshFilesList();
+  } catch (error) {
+    state.files.uploadBusy = false;
+    setFilesUploadFeedback(String(error?.message || t("files_upload_error")), "error");
+    setFilesUploadInputInvalid(false, { isMissingFileError: false });
+    renderFilesAccessView();
+  }
+}
+
+async function handleFilesDelete(fileId) {
+  if (!state.files.me?.isAdmin) {
+    return;
+  }
+  openFilesDeleteModal(fileId);
+}
+
+function handleFilesListClick(event) {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return;
+  }
+
+  const actionTarget = target.closest("[data-files-action]");
+  if (!(actionTarget instanceof HTMLElement)) {
+    return;
+  }
+
+  const action = actionTarget.getAttribute("data-files-action") || "";
+  const fileId = actionTarget.getAttribute("data-file-id") || "";
+  if (!fileId) {
+    return;
+  }
+
+  if (action === "toggle") {
+    state.files.expandedId = state.files.expandedId === fileId ? "" : fileId;
+    renderFilesAccessView();
+    return;
+  }
+
+  if (action === "download") {
+    window.location.href = `/api/files/${encodeURIComponent(fileId)}/download`;
+    return;
+  }
+
+  if (action === "delete") {
+    void handleFilesDelete(fileId);
+  }
 }
 
 function queueImagePreload(url, { highPriority = false } = {}) {
@@ -2378,6 +3411,7 @@ function showClassifiedPage() {
   state.easterEgg.unlocked = true;
   showClassifiedLoadOverlay(false);
   hideHackOverlay();
+  hideFilesPage();
 
   if (elements.classifiedPage) {
     elements.classifiedPage.hidden = false;
@@ -2389,28 +3423,16 @@ function showClassifiedPage() {
     }, 780);
   }
 
+  state.view = "classified";
   document.body.classList.add("is-classified");
   elements.mainTitle.textContent = t("classified_main_title");
-  elements.tabIntel.classList.remove("active");
-  elements.tabStatus.classList.remove("active");
-  elements.tabData.classList.add("active");
+  setTopTabActive("data");
   setClassifiedSearchOpen(false, { clearQuery: true });
   void ensureClassifiedMinervaArchive();
 }
 
 function hideClassifiedPage() {
-  showClassifiedLoadOverlay(false);
-  document.body.classList.remove("is-classified");
-  setClassifiedSearchOpen(false, { clearQuery: true });
-  if (elements.classifiedPage) {
-    elements.classifiedPage.classList.remove("is-entering");
-    elements.classifiedPage.hidden = true;
-  }
-
-  elements.mainTitle.textContent = t("main_title");
-  elements.tabData.classList.remove("active");
-  elements.tabStatus.classList.remove("active");
-  elements.tabIntel.classList.add("active");
+  showIntelPage({ updateHash: true });
 }
 
 function handleSecretTriggerTap() {
@@ -3865,7 +4887,6 @@ function applyLanguage(lang, persist = true) {
   elements.hackOpenClassifiedBtn.textContent = t("hack_open_files");
 
   elements.microText.textContent = t("micro_text");
-  elements.mainTitle.textContent = t("main_title");
   elements.tabStatus.textContent = t("tab_status");
   elements.tabIntel.textContent = t("tab_intel");
   elements.tabData.textContent = t("tab_data");
@@ -3925,6 +4946,39 @@ function applyLanguage(lang, persist = true) {
   elements.classifiedSearchHint.textContent = t("classified_search_hint");
   setClassifiedSearchOpen(state.classifiedSearch.open);
 
+  elements.filesUnauthorizedTitle.textContent = t("files_unauthorized_title");
+  elements.filesUnauthorizedSubtitle.textContent = t("files_unauthorized_subtitle");
+  elements.filesNotAuthorizedMessage.textContent = t("files_not_authorized_message");
+  elements.filesLoginBtn.textContent = t("files_login_button");
+  elements.filesLogoutBtn.textContent = t("files_logout_button");
+  elements.filesSessionLogoutBtn.textContent = t("files_logout_button");
+  elements.filesSessionTitle.textContent = t("files_profile_title");
+  elements.filesSessionUserLabel.textContent = t("files_session_user_label");
+  elements.filesSessionIdLabel.textContent = t("files_session_id_label");
+  elements.filesSessionClearanceLabel.textContent = t("files_session_clearance_label");
+  elements.filesSessionStateLabel.textContent = t("files_session_state_label");
+  elements.filesSessionBadge.textContent = t("files_unknown_value");
+  elements.filesSessionUser.textContent = t("files_unknown_value");
+  elements.filesSessionId.textContent = t("files_unknown_value");
+  elements.filesSessionClearance.textContent = t("files_unknown_value");
+  elements.filesSessionState.textContent = t("files_unknown_value");
+  elements.filesSessionBadge.classList.remove("is-admin");
+  elements.filesSessionClearance.classList.remove("is-admin");
+  elements.filesUploadTitle.textContent = t("files_admin_console_title");
+  elements.filesBrowserTitle.textContent = t("files_file_index_title");
+  elements.filesSearchLabel.textContent = t("files_search_label");
+  elements.filesSearchInput.placeholder = t("files_search_placeholder");
+  elements.filesSearchHint.textContent = t("files_search_hint");
+  elements.filesUploadFileLabel.textContent = t("files_upload_file_label");
+  elements.filesUploadDescLabel.textContent = t("files_upload_description_label");
+  elements.filesUploadBtn.textContent = t("files_upload_button");
+  elements.filesDescriptionInput.placeholder = t("files_upload_description_placeholder");
+  elements.filesEmptyState.textContent = t("files_empty_state");
+  elements.filesDeleteTitle.textContent = t("files_delete_modal_title");
+  elements.filesDeleteMessage.textContent = t("files_delete_modal_body", { name: t("files_unknown_value") });
+  elements.filesDeleteCancelBtn.textContent = t("files_delete_modal_cancel");
+  elements.filesDeleteConfirmBtn.textContent = t("files_delete_modal_confirm");
+
   if (elements.minervaAwaiting) {
     elements.minervaAwaiting.textContent = t("minerva_awaiting");
   }
@@ -3952,8 +5006,23 @@ function applyLanguage(lang, persist = true) {
     renderClassifiedMinervaLists([]);
     buildClassifiedSearchCatalog([]);
   }
+  renderFilesAccessView();
+  setFilesSearchOpen(state.files.search.open);
+  renderFilesDeleteModal();
   if (document.body.classList.contains("is-classified")) {
     elements.mainTitle.textContent = t("classified_main_title");
+  } else if (document.body.classList.contains("is-files")) {
+    elements.mainTitle.textContent = t("files_main_title");
+  } else {
+    elements.mainTitle.textContent = t("main_title");
+  }
+
+  if (state.view === "classified") {
+    setTopTabActive("data");
+  } else if (state.view === "files") {
+    setTopTabActive("files");
+  } else {
+    setTopTabActive("intel");
   }
 
   elements.langSelect.value = state.lang;
@@ -4086,10 +5155,67 @@ function wireEvents() {
   });
   elements.minervaLocationCardBtn?.addEventListener("click", openMinervaLocationView);
   elements.minervaLocationBackBtn?.addEventListener("click", closeMinervaLocationView);
+  if (elements.tabStatus) {
+    elements.tabStatus.classList.add("secret-trigger");
+    elements.tabStatus.addEventListener("click", () => {
+      showFilesPage({ updateHash: true });
+    });
+  }
+  if (elements.tabIntel) {
+    elements.tabIntel.classList.add("secret-trigger");
+    elements.tabIntel.addEventListener("click", () => {
+      showIntelPage({ updateHash: true });
+    });
+  }
   if (elements.tabData) {
     elements.tabData.classList.add("secret-trigger");
     elements.tabData.addEventListener("click", handleSecretTriggerTap);
   }
+  elements.filesLogoutBtn?.addEventListener("click", () => {
+    void handleFilesLogout();
+  });
+  elements.filesSessionLogoutBtn?.addEventListener("click", () => {
+    void handleFilesLogout();
+  });
+  elements.filesUploadForm?.addEventListener("submit", (event) => {
+    void handleFilesUpload(event);
+  });
+  elements.filesSearchToggleBtn?.addEventListener("click", () => {
+    const nextOpen = !state.files.search.open;
+    setFilesSearchOpen(nextOpen, { focusInput: nextOpen, clearQuery: !nextOpen });
+  });
+  elements.filesSearchInput?.addEventListener("input", () => {
+    state.files.search.query = String(elements.filesSearchInput.value || "");
+    renderFilesList();
+  });
+  elements.filesSearchInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setFilesSearchOpen(false, { clearQuery: true });
+    }
+  });
+  elements.filesUploadInput?.addEventListener("change", () => {
+    if (elements.filesUploadInput?.files?.length) {
+      const hadMissingFileError = state.files.uploadMissingFileError;
+      setFilesUploadInputInvalid(false, { isMissingFileError: false });
+      if (hadMissingFileError) {
+        setFilesUploadFeedback("", "");
+      }
+      renderFilesAccessView();
+    }
+  });
+  elements.filesList?.addEventListener("click", handleFilesListClick);
+  elements.filesDeleteCancelBtn?.addEventListener("click", () => {
+    closeFilesDeleteModal();
+  });
+  elements.filesDeleteConfirmBtn?.addEventListener("click", () => {
+    void confirmFilesDeleteModal();
+  });
+  elements.filesDeleteOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.filesDeleteOverlay) {
+      closeFilesDeleteModal();
+    }
+  });
   elements.hackAbortBtn.addEventListener("click", hideHackOverlay);
   elements.hackRetryBtn.addEventListener("click", startNewHackSession);
   elements.hackOpenClassifiedBtn.addEventListener("click", showClassifiedPage);
@@ -4183,6 +5309,16 @@ function wireEvents() {
       return;
     }
 
+    if (elements.filesDeleteOverlay?.classList.contains("is-active")) {
+      closeFilesDeleteModal();
+      return;
+    }
+
+    if (document.body.classList.contains("is-files") && state.files.search.open) {
+      setFilesSearchOpen(false, { clearQuery: true });
+      return;
+    }
+
     if (document.body.classList.contains("is-classified")) {
       hideClassifiedPage();
     }
@@ -4196,6 +5332,9 @@ function wireEvents() {
     }
     refreshClassifiedArchiveCardBaseSize();
   });
+  window.addEventListener("hashchange", () => {
+    applyViewFromHash();
+  });
 }
 
 async function init() {
@@ -4204,6 +5343,11 @@ async function init() {
 
   const initialLang = detectInitialLanguage();
   applyLanguage(initialLang, false);
+  state.files.me = buildGuestFilesProfile();
+  if (!getHashView()) {
+    setHashView("intel", { replace: true });
+  }
+  applyViewFromHash();
   prewarmStaticSiteImages();
   prewarmMinervaDetailImages();
   void loadMinervaDetailFallback();
