@@ -51,6 +51,20 @@ const MINERVA_LOCATION_IMAGE_HINTS = [
   { token: "atlas", location: "Fort Atlas" },
   { token: "whitespring", location: "The Whitespring" }
 ];
+const STATIC_SITE_IMAGE_PRELOAD_URLS = [
+  "assets/images/appalachia-map-texture.svg",
+  "assets/images/output-onlinegiftools.gif",
+  "assets/images/minerva-plan-fallback.png",
+  "assets/images/where-is-minerva.png",
+  "assets/images/minerva-route-map.svg",
+  "assets/images/minerva-merchant.svg",
+  "assets/images/image.png",
+  ...Object.values(MINERVA_LOCATION_MAP_BY_LOCATION),
+  `${MINERVA_INFO_LOCAL_IMAGE_BASE}/store_minerva_foundation.png`,
+  `${MINERVA_INFO_LOCAL_IMAGE_BASE}/store_minerva_crater.png`,
+  `${MINERVA_INFO_LOCAL_IMAGE_BASE}/store_minerva_atlas.png`,
+  `${MINERVA_INFO_LOCAL_IMAGE_BASE}/store_minerva_whitespring.jpg`
+];
 const CYCLE_LOCATIONS = ["Foundation", "Crater", "Fort Atlas", "The Whitespring"];
 const STORAGE_LANG_KEY = "pipboy_lang";
 const PLAN_ITEM_GLYPH = "\uF246";
@@ -598,6 +612,18 @@ function queueImagePreload(url, { highPriority = false } = {}) {
   return preloadPromise;
 }
 
+function prewarmStaticSiteImages() {
+  const uniqueUrls = [...new Set(
+    STATIC_SITE_IMAGE_PRELOAD_URLS
+      .map((url) => String(url || "").trim())
+      .filter(Boolean)
+  )];
+
+  uniqueUrls.forEach((url, index) => {
+    void queueImagePreload(url, { highPriority: index < 4 });
+  });
+}
+
 function prewarmMinervaDetailImages(byKey = state.minervaDetail.fallbackByKey) {
   const urls = new Set();
   const fallbackImageUrl = String(state.minervaDetail.fallbackImageUrl || MINERVA_DETAIL_FALLBACK_IMAGE).trim();
@@ -1055,7 +1081,9 @@ function renderMinervaLocationView() {
     elements.minervaLocationArrives.textContent = "--";
     elements.minervaLocationLeaves.textContent = "--";
     if (elements.minervaLocationMapImage) {
-      elements.minervaLocationMapImage.src = "assets/images/minerva-route-map.svg";
+      const defaultMapImage = "assets/images/minerva-route-map.svg";
+      void queueImagePreload(defaultMapImage);
+      elements.minervaLocationMapImage.src = defaultMapImage;
       elements.minervaLocationMapImage.alt = "Appalachia route map";
     }
     if (elements.minervaLocationPinsWrap) {
@@ -1103,6 +1131,7 @@ function renderMinervaLocationView() {
     const mapImageSrc = String(data.locationMapImage || "").trim();
     const useLocationImage = Boolean(mapImageSrc);
     const finalMapSrc = useLocationImage ? mapImageSrc : defaultMapImage;
+    void queueImagePreload(finalMapSrc);
 
     if ((elements.minervaLocationMapImage.getAttribute("src") || "") !== finalMapSrc) {
       elements.minervaLocationMapImage.src = finalMapSrc;
@@ -3223,6 +3252,7 @@ function renderMinervaDetailView() {
   const detailImageUrl = detail.imageUrl || fallbackImageUrl;
 
   if (detailImageUrl) {
+    void queueImagePreload(detailImageUrl, { highPriority: true });
     elements.minervaDetailImage.hidden = false;
     elements.minervaDetailImage.dataset.fallbackSrc = fallbackImageUrl || detailImageUrl;
     elements.minervaDetailImage.src = detailImageUrl;
@@ -4174,6 +4204,7 @@ async function init() {
 
   const initialLang = detectInitialLanguage();
   applyLanguage(initialLang, false);
+  prewarmStaticSiteImages();
   prewarmMinervaDetailImages();
   void loadMinervaDetailFallback();
   setSignal("booting");
