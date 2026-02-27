@@ -536,6 +536,7 @@ const elements = {
   classifiedSearchToggleBtn: document.getElementById("classifiedSearchToggleBtn"),
   classifiedSearchToggleText: document.getElementById("classifiedSearchToggleText"),
   classifiedSearchWrap: document.getElementById("classifiedSearchWrap"),
+  classifiedArchiveCard: document.querySelector(".classified-card-archive"),
   classifiedSearchLabel: document.getElementById("classifiedSearchLabel"),
   classifiedSearchCount: document.getElementById("classifiedSearchCount"),
   classifiedSearchInput: document.getElementById("classifiedSearchInput"),
@@ -1776,6 +1777,9 @@ function showHackOverlay() {
     return;
   }
 
+  state.easterEgg.triggerClicks = 0;
+  state.easterEgg.triggerWindowStart = 0;
+
   if (document.body.classList.contains("is-classified")) {
     hideClassifiedPage();
   }
@@ -2006,9 +2010,31 @@ function setClassifiedSearchCount(text = "") {
   elements.classifiedSearchCount.textContent = hasText ? text : "";
 }
 
+function lockClassifiedArchiveCardHeight() {
+  if (!elements.classifiedArchiveCard) {
+    return;
+  }
+  const cardHeight = Math.round(elements.classifiedArchiveCard.getBoundingClientRect().height);
+  if (cardHeight > 0) {
+    elements.classifiedArchiveCard.style.height = `${cardHeight}px`;
+  }
+}
+
+function unlockClassifiedArchiveCardHeight() {
+  if (!elements.classifiedArchiveCard) {
+    return;
+  }
+  elements.classifiedArchiveCard.style.removeProperty("height");
+}
+
 function setClassifiedSearchOpen(active, { focusInput = false, clearQuery = false } = {}) {
+  const wasOpen = state.classifiedSearch.open;
   const open = Boolean(active);
   state.classifiedSearch.open = open;
+
+  if (open && !wasOpen) {
+    lockClassifiedArchiveCardHeight();
+  }
 
   if (elements.classifiedSearchWrap) {
     elements.classifiedSearchWrap.hidden = !open;
@@ -2021,6 +2047,9 @@ function setClassifiedSearchOpen(active, { focusInput = false, clearQuery = fals
   }
   if (!open) {
     setClassifiedSearchCount("");
+    if (wasOpen) {
+      unlockClassifiedArchiveCardHeight();
+    }
   }
 
   if (elements.classifiedSearchToggleBtn) {
@@ -2326,6 +2355,12 @@ function hideClassifiedPage() {
 }
 
 function handleSecretTriggerTap() {
+  if (elements.hackOverlay?.classList.contains("is-active")) {
+    state.easterEgg.triggerClicks = 0;
+    state.easterEgg.triggerWindowStart = 0;
+    return;
+  }
+
   const now = Date.now();
   if (!state.easterEgg.triggerWindowStart || now - state.easterEgg.triggerWindowStart > HACK_TRIGGER_WINDOW_MS) {
     state.easterEgg.triggerWindowStart = now;
@@ -4062,11 +4097,6 @@ function wireEvents() {
     const key = String(event.key || "");
     if (key.length === 1 || key === "Backspace" || key === "Delete" || key === "Enter") {
       playTypeTickSound();
-    }
-  });
-  elements.hackOverlay.addEventListener("click", (event) => {
-    if (event.target === elements.hackOverlay) {
-      hideHackOverlay();
     }
   });
   document.addEventListener("click", (event) => {

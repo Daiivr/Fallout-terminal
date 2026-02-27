@@ -2022,8 +2022,13 @@ body.is-classified .classified-layout {
   min-height: 0;
   flex: 1 1 auto;
   overflow: auto;
+  overflow-x: hidden;
   display: grid;
   gap: 8px;
+  align-content: start;
+  grid-auto-rows: max-content;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
 }
 
 .classified-search-wrap[hidden],
