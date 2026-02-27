@@ -35,6 +35,7 @@
   <link rel="preconnect" href="https://fonts.cdnfonts.com" />
   <link href="https://fonts.cdnfonts.com/css/overseer" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
+  <link rel="preload" as="image" href="assets/images/minerva-plan-fallback.png" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
@@ -224,7 +225,7 @@
           <p id="minervaDetailStatus" class="minerva-detail-status">Loading plan dossier...</p>
           <div id="minervaDetailContent" class="minerva-detail-content" hidden>
             <figure class="minerva-detail-figure">
-              <img id="minervaDetailImage" class="minerva-detail-image" alt="" loading="lazy" />
+              <img id="minervaDetailImage" class="minerva-detail-image" alt="" loading="eager" decoding="async" fetchpriority="high" />
             </figure>
             <div class="minerva-detail-sections">
               <section class="minerva-detail-block">

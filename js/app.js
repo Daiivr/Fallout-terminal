@@ -36,6 +36,7 @@ const DETAIL_SECTION_TITLES = {
 const GOOGLE_TRANSLATE_BASE = "https://translate.googleapis.com/translate_a/single";
 const MINERVA_DETAIL_FALLBACK_PATH = "data/minerva-detail-fallback.json";
 const MINERVA_DETAIL_FALLBACK_IMAGE = "assets/images/minerva-plan-fallback.png";
+const MINERVA_DETAIL_IMAGE_PRELOAD_LIMIT = 24;
 const MINERVA_INFO_LOCAL_IMAGE_BASE = "assets/images/minerva-locations";
 const MINERVA_INFO_REMOTE_IMAGE_BASE = "https://whereisminerva.info/assets/images";
 const MINERVA_LOCATION_MAP_BY_LOCATION = {
@@ -544,10 +545,83 @@ const elements = {
   footerText: document.getElementById("footerText")
 };
 
+const minervaImagePreloadCache = new Map();
+
 function t(key, vars = {}) {
   const dictionary = STRINGS[state.lang] || STRINGS.en;
   const template = dictionary[key] || STRINGS.en[key] || key;
   return template.replace(/\{(\w+)\}/g, (_, name) => String(vars[name] ?? ""));
+}
+
+function queueImagePreload(url, { highPriority = false } = {}) {
+  const normalizedUrl = String(url || "").trim();
+  if (!normalizedUrl) {
+    return Promise.resolve(false);
+  }
+
+  const cached = minervaImagePreloadCache.get(normalizedUrl);
+  if (cached) {
+    return cached;
+  }
+
+  const preloadPromise = new Promise((resolve) => {
+    const image = new Image();
+    image.decoding = "async";
+    if ("loading" in image) {
+      image.loading = "eager";
+    }
+    if (highPriority && "fetchPriority" in image) {
+      image.fetchPriority = "high";
+    }
+
+    let settled = false;
+    const finalize = (ok) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      resolve(ok);
+    };
+
+    image.addEventListener("load", () => finalize(true), { once: true });
+    image.addEventListener("error", () => finalize(false), { once: true });
+    image.src = normalizedUrl;
+
+    if (image.complete) {
+      finalize(true);
+    }
+  });
+
+  minervaImagePreloadCache.set(normalizedUrl, preloadPromise);
+  return preloadPromise;
+}
+
+function prewarmMinervaDetailImages(byKey = state.minervaDetail.fallbackByKey) {
+  const urls = new Set();
+  const fallbackImageUrl = String(state.minervaDetail.fallbackImageUrl || MINERVA_DETAIL_FALLBACK_IMAGE).trim();
+  if (fallbackImageUrl) {
+    urls.add(fallbackImageUrl);
+  }
+
+  if (byKey && typeof byKey === "object") {
+    for (const entry of Object.values(byKey)) {
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+      const imageUrl = String(entry.imageUrl || "").trim();
+      if (imageUrl) {
+        urls.add(imageUrl);
+      }
+      if (urls.size >= MINERVA_DETAIL_IMAGE_PRELOAD_LIMIT) {
+        break;
+      }
+    }
+  }
+
+  const preloadUrls = [...urls];
+  preloadUrls.forEach((url, index) => {
+    void queueImagePreload(url, { highPriority: index === 0 });
+  });
 }
 
 function proxied(url) {
@@ -2771,6 +2845,7 @@ async function loadMinervaDetailFallback() {
       state.minervaDetail.fallbackImageUrl = embeddedPayload.defaultImageUrl.trim();
     }
     state.minervaDetail.fallbackByKey = embeddedByKey;
+    prewarmMinervaDetailImages(embeddedByKey);
     return embeddedByKey;
   }
 
@@ -2797,9 +2872,11 @@ async function loadMinervaDetailFallback() {
 
       const byKey = payload && typeof payload.byKey === "object" && payload.byKey ? payload.byKey : {};
       state.minervaDetail.fallbackByKey = byKey;
+      prewarmMinervaDetailImages(byKey);
       return byKey;
     } catch (error) {
       state.minervaDetail.fallbackByKey = {};
+      prewarmMinervaDetailImages({});
       return state.minervaDetail.fallbackByKey;
     } finally {
       state.minervaDetail.fallbackPromise = null;
@@ -2857,6 +2934,8 @@ function prewarmMinervaDetailCache(items = []) {
     return;
   }
 
+  prewarmMinervaDetailImages(byKey);
+
   for (const item of items) {
     const normalizedUrl = normalizeWikiUrl(item?.url || item?.WikiUrl || "");
     if (!normalizedUrl) {
@@ -2872,6 +2951,9 @@ function prewarmMinervaDetailCache(items = []) {
       const detail = resolveOfflineMinervaDetailFromMap({ ...item, url: normalizedUrl }, lang, byKey);
       if (detail) {
         state.minervaDetail.cache[cacheKey] = detail;
+        if (detail.imageUrl) {
+          void queueImagePreload(detail.imageUrl);
+        }
       }
     }
   }
@@ -4023,6 +4105,7 @@ async function init() {
 
   const initialLang = detectInitialLanguage();
   applyLanguage(initialLang, false);
+  prewarmMinervaDetailImages();
   void loadMinervaDetailFallback();
   setSignal("booting");
 
