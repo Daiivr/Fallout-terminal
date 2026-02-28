@@ -1962,6 +1962,7 @@ body.is-files .files-page {
   margin: 0;
   gap: 10px;
   padding: calc(var(--panel-pad) + 2px) var(--panel-pad) 12px;
+  overflow-x: clip;
   background:
     linear-gradient(to bottom, rgba(139, 255, 139, 0.08), rgba(139, 255, 139, 0.02) 52%, rgba(0, 0, 0, 0.18)),
     rgba(0, 0, 0, 0.22);
@@ -2054,6 +2055,23 @@ body.is-files .files-page {
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
+}
+
+#filesLogoutBtn,
+#filesSessionLogoutBtn,
+#filesUploadBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 9px 12px 8px;
+  min-height: 38px;
+  margin: 0;
+  justify-self: stretch;
+  align-self: stretch;
 }
 
 .files-authorized-view {
@@ -2322,19 +2340,19 @@ body.is-files .files-page {
 }
 
 .files-session-identity {
-  margin: 2px 0 0;
+  margin: 2px calc(var(--panel-pad) + 4px) 0;
   display: grid;
   gap: 6px;
   border: 1px solid rgba(139, 255, 139, 0.2);
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.28);
-  padding: 10px 11px;
+  padding: 12px 18px;
 }
 
 .files-session-row {
   display: grid;
   grid-template-columns: minmax(96px, 110px) 1fr;
-  gap: 10px;
+  gap: 12px;
   align-items: baseline;
 }
 
@@ -2357,8 +2375,9 @@ body.is-files .files-page {
 }
 
 #filesSessionLogoutBtn {
-  justify-self: start;
-  margin-top: 2px;
+  justify-self: stretch;
+  width: calc(100% - (var(--panel-pad) * 2));
+  margin: 2px var(--panel-pad) 0;
 }
 
 .files-upload-form {
@@ -2828,7 +2847,8 @@ body.is-files .files-detail-card {
 }
 
 body.is-files .files-list.is-detail-mode {
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 body.is-files .files-list.is-detail-mode .files-detail-card {
@@ -3677,7 +3697,13 @@ body.is-classified .classified-layout {
     grid-template-columns: 1fr;
     grid-template-rows: auto minmax(0, 1fr);
     height: 100%;
+    min-height: 0;
     max-width: 100%;
+    overflow: hidden;
+  }
+
+  body.is-files .files-page {
+    overflow: hidden;
   }
 
   .files-upload-panel,
@@ -3694,6 +3720,8 @@ body.is-classified .classified-layout {
   body.is-files .files-browser-panel {
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
   }
 
   body.is-files .files-list {
@@ -3800,14 +3828,26 @@ body.is-classified .classified-layout {
 
   .files-auth-form .files-btn,
   .files-card-action,
+  #filesLogoutBtn,
   #filesSessionLogoutBtn,
   #filesUploadBtn {
     width: 100%;
     min-width: 0;
+    max-width: 100%;
+  }
+
+  #filesSessionLogoutBtn {
+    width: calc(100% - (var(--panel-pad) * 2));
   }
 
   .files-file-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.is-files .files-list:not(.is-detail-mode) {
+    max-height: min(520px, 62svh);
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   body.is-files .files-file-toggle {
@@ -3936,16 +3976,39 @@ body.is-classified .classified-layout {
 
   body.is-files .files-page {
     gap: 10px;
+    min-height: auto;
+    overflow: visible;
   }
 
   body.is-files .files-authorized-view {
     gap: 10px;
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+    grid-template-rows: auto auto;
+  }
+
+  body.is-files .pipboy-terminal {
+    grid-template-rows: auto auto auto;
+  }
+
+  body.is-ready.is-files:not(.error-page) .pipboy-terminal {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.is-files .files-browser-panel {
+    min-height: clamp(260px, 42svh, 420px);
+    overflow: visible;
   }
 
   body.is-files .files-list {
     min-height: 0;
-    max-height: none;
+    max-height: min(500px, 60svh);
     flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding-right: 0;
     padding-bottom: 2px;
   }
@@ -3985,6 +4048,13 @@ body.is-classified .classified-layout {
   .files-session-row {
     grid-template-columns: 1fr;
     gap: 2px;
+  }
+
+  .files-session-identity {
+    margin-left: calc(var(--panel-pad) + 2px);
+    margin-right: calc(var(--panel-pad) + 2px);
+    padding-left: 16px;
+    padding-right: 16px;
   }
 
   .files-upload-feedback {
