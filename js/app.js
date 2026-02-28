@@ -812,6 +812,7 @@ function setTopTabActive(view) {
 
 function hideFilesPage() {
   document.body.classList.remove("is-files");
+  document.body.classList.remove("is-files-unauthorized", "is-files-guest");
   closeFilesDeleteModal({ force: true });
   if (state.files.search.open || state.files.search.query) {
     setFilesSearchOpen(false, { clearQuery: true });
@@ -1552,6 +1553,9 @@ function renderFilesAccessView() {
   if ((!authorized || !isAdmin) && state.files.deleteModal.open) {
     closeFilesDeleteModal({ force: true });
   }
+
+  document.body.classList.toggle("is-files-unauthorized", !authorized);
+  document.body.classList.toggle("is-files-guest", !loggedIn && !authorized);
 
   if (isFileProtocol) {
     renderFilesSessionProfile({

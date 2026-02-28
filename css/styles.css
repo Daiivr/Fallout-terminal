@@ -1934,6 +1934,25 @@ body.is-ready.is-files:not(.error-page) .pipboy-terminal {
   overscroll-behavior-y: none;
 }
 
+body.is-files.is-files-guest .pipboy-terminal {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+body.is-ready.is-files.is-files-guest:not(.error-page) .pipboy-terminal {
+  height: 100vh;
+  height: 100svh;
+  height: 100dvh;
+  min-height: 0;
+  overflow-y: hidden;
+  overscroll-behavior-y: none;
+}
+
+body.is-files.is-files-guest .files-page {
+  overflow: hidden;
+  min-height: 0;
+}
+
 body.is-files .files-page {
   margin-top: 0;
   min-height: 0;
@@ -3747,6 +3766,12 @@ body.is-classified .classified-layout {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     touch-action: pan-y;
+  }
+
+  body.is-ready.is-files:not(.error-page) .pipboy-terminal {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
