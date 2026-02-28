@@ -74,7 +74,7 @@ const SILO_SITE_GLYPHS = {
   Bravo: "\uF24C",
   Charlie: "\uF24D"
 };
-const HACK_TRIGGER_CLICKS = 4;
+const HACK_TRIGGER_CLICKS = 1;
 const HACK_TRIGGER_WINDOW_MS = 4200;
 const HACK_ATTEMPTS_MAX = 4;
 const HACK_COLUMN_LINE_COUNT = 16;
@@ -149,6 +149,7 @@ const STRINGS = {
     files_upload_button: "UPLOAD FILE",
     files_download_button: "DOWNLOAD FILE",
     files_empty_state: "No files available.",
+    files_back_to_index_button: "BACK TO INDEX",
     files_search_label: "Search File",
     files_search_placeholder: "Type file name...",
     files_search_hint: "Filter files by name, type, description, or uploader.",
@@ -157,7 +158,9 @@ const STRINGS = {
     files_search_toggle_open_label: "Open file search",
     files_search_toggle_close_label: "Close file search",
     files_search_results_count: "Matches: {n}",
+    files_search_prompt: "Enter a file name to search the index.",
     files_search_no_results: "No matching file found.",
+    files_search_open_file: "OPEN FILE",
     files_profile_title: "SESSION PROFILE",
     files_session_user_label: "CALLSIGN",
     files_session_id_label: "DISCORD ID",
@@ -330,6 +333,7 @@ const STRINGS = {
     files_upload_button: "SUBIR ARCHIVO",
     files_download_button: "DESCARGAR ARCHIVO",
     files_empty_state: "No hay archivos disponibles.",
+    files_back_to_index_button: "VOLVER AL INDICE",
     files_search_label: "Buscar Archivo",
     files_search_placeholder: "Escribe nombre del archivo...",
     files_search_hint: "Filtra archivos por nombre, tipo, descripcion o autor.",
@@ -338,7 +342,9 @@ const STRINGS = {
     files_search_toggle_open_label: "Abrir busqueda de archivos",
     files_search_toggle_close_label: "Cerrar busqueda de archivos",
     files_search_results_count: "Coincidencias: {n}",
+    files_search_prompt: "Escribe un nombre para buscar en el indice.",
     files_search_no_results: "No se encontro ningun archivo coincidente.",
+    files_search_open_file: "ABRIR ARCHIVO",
     files_profile_title: "PERFIL DE SESION",
     files_session_user_label: "IDENTIDAD",
     files_session_id_label: "DISCORD ID",
@@ -535,6 +541,14 @@ const state = {
     open: false,
     baseArchiveWidth: 0
   },
+  classifiedDetail: {
+    open: false,
+    loading: false,
+    error: "",
+    item: null,
+    data: null,
+    requestId: 0
+  },
   files: {
     me: null,
     list: [],
@@ -542,7 +556,9 @@ const state = {
     loadingList: false,
     meError: "",
     listError: "",
-    expandedId: "",
+    selectedId: "",
+    detailOrigin: "",
+    transition: "",
     uploadBusy: false,
     uploadMessage: "",
     uploadMessageKind: "",
@@ -665,6 +681,7 @@ const elements = {
   filesSearchCount: document.getElementById("filesSearchCount"),
   filesSearchInput: document.getElementById("filesSearchInput"),
   filesSearchHint: document.getElementById("filesSearchHint"),
+  filesSearchResults: document.getElementById("filesSearchResults"),
   filesEmptyState: document.getElementById("filesEmptyState"),
   filesList: document.getElementById("filesList"),
   siloTitle: document.getElementById("siloTitle"),
@@ -738,6 +755,17 @@ const elements = {
   classifiedSearchHint: document.getElementById("classifiedSearchHint"),
   classifiedSearchResults: document.getElementById("classifiedSearchResults"),
   classifiedMinervaLists: document.getElementById("classifiedMinervaLists"),
+  classifiedInlineDetail: document.getElementById("classifiedInlineDetail"),
+  classifiedInlineName: document.getElementById("classifiedInlineName"),
+  classifiedInlineWikiLink: document.getElementById("classifiedInlineWikiLink"),
+  classifiedInlineCloseBtn: document.getElementById("classifiedInlineCloseBtn"),
+  classifiedInlineStatus: document.getElementById("classifiedInlineStatus"),
+  classifiedInlineContent: document.getElementById("classifiedInlineContent"),
+  classifiedInlineImage: document.getElementById("classifiedInlineImage"),
+  classifiedInlineWhereLabel: document.getElementById("classifiedInlineWhereLabel"),
+  classifiedInlineWhereList: document.getElementById("classifiedInlineWhereList"),
+  classifiedInlineUnlocksLabel: document.getElementById("classifiedInlineUnlocksLabel"),
+  classifiedInlineUnlocks: document.getElementById("classifiedInlineUnlocks"),
   footerText: document.getElementById("footerText")
 };
 
@@ -1008,6 +1036,12 @@ function setFilesSearchOpen(active, { focusInput = false, clearQuery = false } =
   const open = Boolean(active);
   state.files.search.open = open;
 
+  if (open) {
+    state.files.selectedId = "";
+    state.files.detailOrigin = "";
+    state.files.transition = "";
+  }
+
   if (elements.filesSearchWrap) {
     elements.filesSearchWrap.hidden = !open;
   }
@@ -1132,6 +1166,97 @@ function createFilesMetaItem(label, value) {
   return wrap;
 }
 
+function createFilesDescriptionBlock(description) {
+  const wrap = document.createElement("div");
+  wrap.className = "files-description-block";
+
+  const labelEl = document.createElement("span");
+  labelEl.className = "files-meta-label";
+  labelEl.textContent = t("files_description_label");
+
+  const valueEl = document.createElement("p");
+  valueEl.className = "files-description-value";
+  valueEl.textContent = description || t("files_unknown_value");
+
+  wrap.appendChild(labelEl);
+  wrap.appendChild(valueEl);
+  return wrap;
+}
+
+function renderFilesDetailCard(file) {
+  if (!elements.filesList) {
+    return;
+  }
+
+  const fileId = String(file.id || "");
+  const fileName = String(file.name || file.originalName || t("files_unknown_value"));
+  const fileType = resolveFileTypeLabel(file);
+  const fileSize = formatFileSize(file.size);
+  const uploadDate = formatFileDateTime(file.uploadedAt || file.uploaded_at);
+  const description = String(file.description || "").trim() || t("files_unknown_value");
+  const uploader = String(file.uploader || file.uploaderDiscordId || t("files_unknown_value"));
+
+  const detailCard = document.createElement("article");
+  detailCard.className = "panel files-detail-card";
+
+  const detailTop = document.createElement("div");
+  detailTop.className = "files-detail-top";
+
+  const backButton = document.createElement("button");
+  backButton.type = "button";
+  backButton.className = "files-btn files-detail-back";
+  backButton.textContent = t("files_back_to_index_button");
+  backButton.setAttribute("data-files-action", "back-to-index");
+  detailTop.appendChild(backButton);
+
+  const title = document.createElement("p");
+  title.className = "files-detail-title";
+  title.textContent = fileName;
+  detailTop.appendChild(title);
+
+  const detailBody = document.createElement("div");
+  detailBody.className = "files-detail-body";
+
+  const metadata = document.createElement("div");
+  metadata.className = "files-meta-grid";
+  metadata.appendChild(createFilesMetaItem(t("files_name_label"), fileName));
+  metadata.appendChild(createFilesMetaItem(t("files_type_label"), fileType));
+  metadata.appendChild(createFilesMetaItem(t("files_size_label"), fileSize));
+  metadata.appendChild(createFilesMetaItem(t("files_uploaded_label"), uploadDate));
+  metadata.appendChild(createFilesMetaItem(t("files_uploader_label"), uploader));
+
+  const descriptionBlock = createFilesDescriptionBlock(description);
+
+  const actions = document.createElement("div");
+  actions.className = "files-card-actions files-detail-actions";
+
+  const downloadButton = document.createElement("button");
+  downloadButton.type = "button";
+  downloadButton.className = "files-card-action";
+  downloadButton.textContent = t("files_download_button");
+  downloadButton.setAttribute("data-files-action", "download");
+  downloadButton.setAttribute("data-file-id", fileId);
+  actions.appendChild(downloadButton);
+
+  if (state.files.me?.isAdmin) {
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "files-card-action is-delete";
+    deleteButton.textContent = t("files_delete_button");
+    deleteButton.setAttribute("data-files-action", "delete");
+    deleteButton.setAttribute("data-file-id", fileId);
+    actions.appendChild(deleteButton);
+  }
+
+  detailBody.appendChild(metadata);
+  detailBody.appendChild(descriptionBlock);
+  detailBody.appendChild(actions);
+
+  detailCard.appendChild(detailTop);
+  detailCard.appendChild(detailBody);
+  elements.filesList.appendChild(detailCard);
+}
+
 function renderFilesSessionProfile({ authorized, isAdmin, username, discordId } = {}) {
   const unknown = t("files_unknown_value");
   const resolvedAuthorized = Boolean(authorized);
@@ -1169,6 +1294,122 @@ function renderFilesSessionProfile({ authorized, isAdmin, username, discordId } 
   }
 }
 
+function renderFilesSearchResults() {
+  if (!elements.filesSearchResults || !elements.filesSearchInput) {
+    return;
+  }
+
+  if (!state.files.search.open || !state.files.me?.isAuthorized) {
+    elements.filesSearchResults.innerHTML = "";
+    elements.filesSearchResults.hidden = true;
+    setFilesSearchCount("");
+    return;
+  }
+
+  const query = String(elements.filesSearchInput.value || "").trim();
+  state.files.search.query = query;
+  elements.filesSearchResults.hidden = false;
+
+  const setSearchMessage = (message) => {
+    elements.filesSearchResults.innerHTML = `<p class="files-search-empty">${message}</p>`;
+  };
+
+  if (state.files.loadingList) {
+    setFilesSearchCount("");
+    setSearchMessage(t("files_loading_state"));
+    return;
+  }
+
+  if (state.files.listError) {
+    setFilesSearchCount("");
+    setSearchMessage(state.files.listError);
+    return;
+  }
+
+  if (!query) {
+    setFilesSearchCount("");
+    setSearchMessage(t("files_search_prompt"));
+    return;
+  }
+
+  const matches = getFilteredFilesList(state.files.list);
+  if (!matches.length) {
+    setFilesSearchCount(t("files_search_results_count", { n: "0" }));
+    setSearchMessage(t("files_search_no_results"));
+    return;
+  }
+
+  setFilesSearchCount(t("files_search_results_count", { n: String(matches.length) }));
+  const fragment = document.createDocumentFragment();
+  const limitedMatches = matches.slice(0, 200);
+
+  for (let index = 0; index < limitedMatches.length; index += 1) {
+    const file = limitedMatches[index];
+    const fileId = String(file.id || "");
+    const fileName = String(file.name || file.originalName || t("files_unknown_value"));
+    const fileType = resolveFileTypeLabel(file);
+    const fileSize = formatFileSize(file.size);
+    const uploadDate = formatFileDateTime(file.uploadedAt || file.uploaded_at);
+
+    const row = document.createElement("article");
+    row.className = "files-search-row";
+    row.style.setProperty("--files-search-index", String(Math.min(index, 9)));
+
+    const itemField = document.createElement("div");
+    itemField.className = "files-search-cell files-search-item";
+    itemField.innerHTML = `<span class="files-search-k">${t("files_name_label")}</span>`;
+
+    const itemValue = document.createElement("span");
+    itemValue.className = "files-search-v";
+    itemValue.textContent = fileName;
+    itemField.appendChild(itemValue);
+
+    const typeField = document.createElement("div");
+    typeField.className = "files-search-cell";
+    typeField.innerHTML = `<span class="files-search-k">${t("files_type_label")}</span>`;
+    const typeValue = document.createElement("span");
+    typeValue.className = "files-search-v";
+    typeValue.textContent = fileType;
+    typeField.appendChild(typeValue);
+
+    const sizeField = document.createElement("div");
+    sizeField.className = "files-search-cell";
+    sizeField.innerHTML = `<span class="files-search-k">${t("files_size_label")}</span>`;
+    const sizeValue = document.createElement("span");
+    sizeValue.className = "files-search-v";
+    sizeValue.textContent = fileSize;
+    sizeField.appendChild(sizeValue);
+
+    const uploadedField = document.createElement("div");
+    uploadedField.className = "files-search-cell";
+    uploadedField.innerHTML = `<span class="files-search-k">${t("files_uploaded_label")}</span>`;
+    const uploadedValue = document.createElement("span");
+    uploadedValue.className = "files-search-v";
+    uploadedValue.textContent = uploadDate;
+    uploadedField.appendChild(uploadedValue);
+
+    const actionField = document.createElement("div");
+    actionField.className = "files-search-cell files-search-action";
+    const openButton = document.createElement("button");
+    openButton.type = "button";
+    openButton.className = "files-search-open";
+    openButton.textContent = t("files_search_open_file");
+    openButton.setAttribute("data-files-action", "open-detail-search");
+    openButton.setAttribute("data-file-id", fileId);
+    actionField.appendChild(openButton);
+
+    row.appendChild(itemField);
+    row.appendChild(typeField);
+    row.appendChild(sizeField);
+    row.appendChild(uploadedField);
+    row.appendChild(actionField);
+    fragment.appendChild(row);
+  }
+
+  elements.filesSearchResults.innerHTML = "";
+  elements.filesSearchResults.appendChild(fragment);
+}
+
 function renderFilesList() {
   if (!elements.filesList || !elements.filesEmptyState) {
     return;
@@ -1176,21 +1417,59 @@ function renderFilesList() {
 
   const canReadFiles = Boolean(state.files.me?.isAuthorized);
   elements.filesList.replaceChildren();
+  elements.filesList.classList.remove("is-detail-mode", "is-transition-to-detail", "is-transition-to-list");
+  const transition = String(state.files.transition || "");
+  state.files.transition = "";
 
   if (!canReadFiles) {
     setFilesSearchCount("");
     elements.filesEmptyState.hidden = true;
+    elements.filesList.hidden = false;
+    if (elements.filesSearchResults) {
+      elements.filesSearchResults.innerHTML = "";
+      elements.filesSearchResults.hidden = true;
+    }
     return;
   }
 
-  const searchQuery = String(state.files.search.query || "").trim();
   const isSearchMode = Boolean(state.files.search.open);
-  const filteredFiles = getFilteredFilesList(state.files.list);
+  const selectedId = String(state.files.selectedId || "");
+  const selectedFile = selectedId
+    ? state.files.list.find((entry) => String(entry.id || "") === selectedId) || null
+    : null;
 
-  if (isSearchMode && searchQuery) {
-    setFilesSearchCount(t("files_search_results_count", { n: filteredFiles.length }));
-  } else {
-    setFilesSearchCount("");
+  if (selectedId && !selectedFile) {
+    state.files.selectedId = "";
+    state.files.detailOrigin = "";
+  }
+
+  if (selectedFile) {
+    elements.filesList.hidden = false;
+    if (elements.filesSearchResults) {
+      elements.filesSearchResults.innerHTML = "";
+      elements.filesSearchResults.hidden = true;
+    }
+    elements.filesList.classList.add("is-detail-mode");
+    if (transition === "to-detail") {
+      elements.filesList.classList.add("is-transition-to-detail");
+    }
+    elements.filesEmptyState.hidden = true;
+    renderFilesDetailCard(selectedFile);
+    return;
+  }
+
+  if (isSearchMode) {
+    elements.filesList.hidden = true;
+    elements.filesEmptyState.hidden = true;
+    renderFilesSearchResults();
+    return;
+  }
+
+  elements.filesList.hidden = false;
+  setFilesSearchCount("");
+  if (elements.filesSearchResults) {
+    elements.filesSearchResults.innerHTML = "";
+    elements.filesSearchResults.hidden = true;
   }
 
   let emptyMessage = "";
@@ -1200,8 +1479,6 @@ function renderFilesList() {
     emptyMessage = state.files.listError;
   } else if (!state.files.list.length) {
     emptyMessage = t("files_empty_state");
-  } else if (isSearchMode && searchQuery && !filteredFiles.length) {
-    emptyMessage = t("files_search_no_results");
   }
 
   if (emptyMessage) {
@@ -1210,27 +1487,31 @@ function renderFilesList() {
     return;
   }
 
+  if (transition === "to-list") {
+    elements.filesList.classList.add("is-transition-to-list");
+  }
+
   elements.filesEmptyState.hidden = true;
   const fragment = document.createDocumentFragment();
+  const baseFiles = Array.isArray(state.files.list) ? state.files.list : [];
 
-  for (const file of filteredFiles) {
+  for (let index = 0; index < baseFiles.length; index += 1) {
+    const file = baseFiles[index];
     const fileId = String(file.id || "");
     const fileName = String(file.name || file.originalName || t("files_unknown_value"));
     const fileType = resolveFileTypeLabel(file);
     const fileSize = formatFileSize(file.size);
     const uploadDate = formatFileDateTime(file.uploadedAt || file.uploaded_at);
-    const description = String(file.description || "").trim() || t("files_unknown_value");
-    const uploader = String(file.uploader || file.uploaderDiscordId || t("files_unknown_value"));
-    const isExpanded = state.files.expandedId === fileId;
 
     const card = document.createElement("article");
-    card.className = `panel files-file-card${isExpanded ? " is-open" : ""}`;
+    card.className = "panel files-file-card";
+    card.style.setProperty("--files-item-index", String(Math.min(index, 9)));
 
-    const toggle = document.createElement("button");
-    toggle.type = "button";
-    toggle.className = "files-file-toggle";
-    toggle.setAttribute("data-files-action", "toggle");
-    toggle.setAttribute("data-file-id", fileId);
+    const openButton = document.createElement("button");
+    openButton.type = "button";
+    openButton.className = "files-file-toggle";
+    openButton.setAttribute("data-files-action", "open-detail");
+    openButton.setAttribute("data-file-id", fileId);
 
     const title = document.createElement("p");
     title.className = "files-file-name";
@@ -1250,48 +1531,9 @@ function renderFilesList() {
     summary.appendChild(sizeSummary);
     summary.appendChild(dateSummary);
 
-    toggle.appendChild(title);
-    toggle.appendChild(summary);
-    card.appendChild(toggle);
-
-    if (isExpanded) {
-      const details = document.createElement("div");
-      details.className = "files-file-details";
-
-      const metadata = document.createElement("div");
-      metadata.className = "files-meta-grid";
-      metadata.appendChild(createFilesMetaItem(t("files_name_label"), fileName));
-      metadata.appendChild(createFilesMetaItem(t("files_type_label"), fileType));
-      metadata.appendChild(createFilesMetaItem(t("files_size_label"), fileSize));
-      metadata.appendChild(createFilesMetaItem(t("files_uploaded_label"), uploadDate));
-      metadata.appendChild(createFilesMetaItem(t("files_uploader_label"), uploader));
-      metadata.appendChild(createFilesMetaItem(t("files_description_label"), description));
-
-      const actions = document.createElement("div");
-      actions.className = "files-card-actions";
-
-      const downloadButton = document.createElement("button");
-      downloadButton.type = "button";
-      downloadButton.className = "files-card-action";
-      downloadButton.textContent = t("files_download_button");
-      downloadButton.setAttribute("data-files-action", "download");
-      downloadButton.setAttribute("data-file-id", fileId);
-      actions.appendChild(downloadButton);
-
-      if (state.files.me?.isAdmin) {
-        const deleteButton = document.createElement("button");
-        deleteButton.type = "button";
-        deleteButton.className = "files-card-action is-delete";
-        deleteButton.textContent = t("files_delete_button");
-        deleteButton.setAttribute("data-files-action", "delete");
-        deleteButton.setAttribute("data-file-id", fileId);
-        actions.appendChild(deleteButton);
-      }
-
-      details.appendChild(metadata);
-      details.appendChild(actions);
-      card.appendChild(details);
-    }
+    openButton.appendChild(title);
+    openButton.appendChild(summary);
+    card.appendChild(openButton);
 
     fragment.appendChild(card);
   }
@@ -1435,7 +1677,9 @@ async function refreshFilesList() {
   if (!state.files.me?.isAuthorized) {
     state.files.list = [];
     state.files.listError = "";
-    state.files.expandedId = "";
+    state.files.selectedId = "";
+    state.files.detailOrigin = "";
+    state.files.transition = "";
     renderFilesAccessView();
     return;
   }
@@ -1447,8 +1691,10 @@ async function refreshFilesList() {
   try {
     const payload = await requestJson("/api/files");
     state.files.list = Array.isArray(payload.files) ? payload.files : [];
-    if (!state.files.list.some((file) => String(file.id || "") === state.files.expandedId)) {
-      state.files.expandedId = "";
+    if (!state.files.list.some((file) => String(file.id || "") === state.files.selectedId)) {
+      state.files.selectedId = "";
+      state.files.detailOrigin = "";
+      state.files.transition = "";
     }
   } catch (error) {
     if (error?.status === 401 || error?.status === 403) {
@@ -1488,7 +1734,9 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
     state.files.list = [];
     state.files.listError = "";
     state.files.loadingList = false;
-    state.files.expandedId = "";
+    state.files.selectedId = "";
+    state.files.detailOrigin = "";
+    state.files.transition = "";
   }
 
   renderFilesAccessView();
@@ -1504,7 +1752,9 @@ async function handleFilesLogout() {
   state.files.me = buildGuestFilesProfile();
   state.files.list = [];
   state.files.listError = "";
-  state.files.expandedId = "";
+  state.files.selectedId = "";
+  state.files.detailOrigin = "";
+  state.files.transition = "";
   state.files.uploadBusy = false;
   setFilesUploadFeedback("", "");
   setFilesUploadInputInvalid(false, { isMissingFileError: false });
@@ -1581,14 +1831,40 @@ function handleFilesListClick(event) {
   }
 
   const action = actionTarget.getAttribute("data-files-action") || "";
+  if (action === "back-to-index") {
+    const returnToSearch = state.files.detailOrigin === "search" && String(state.files.search.query || "").trim();
+    state.files.selectedId = "";
+    state.files.detailOrigin = "";
+    if (returnToSearch) {
+      state.files.transition = "";
+      setFilesSearchOpen(true, { clearQuery: false });
+    } else {
+      state.files.transition = "to-list";
+      renderFilesAccessView();
+    }
+    return;
+  }
+
   const fileId = actionTarget.getAttribute("data-file-id") || "";
   if (!fileId) {
     return;
   }
 
-  if (action === "toggle") {
-    state.files.expandedId = state.files.expandedId === fileId ? "" : fileId;
+  if (action === "open-detail-search") {
+    state.files.selectedId = fileId;
+    state.files.detailOrigin = "search";
+    state.files.transition = "to-detail";
+    setFilesSearchOpen(false, { clearQuery: false });
+    elements.filesList?.scrollTo({ top: 0 });
+    return;
+  }
+
+  if (action === "open-detail") {
+    state.files.selectedId = fileId;
+    state.files.detailOrigin = "list";
+    state.files.transition = "to-detail";
     renderFilesAccessView();
+    elements.filesList?.scrollTo({ top: 0 });
     return;
   }
 
@@ -2985,14 +3261,14 @@ function buildClassifiedSearchCatalog(lists = state.minervaLists || []) {
       }
 
       const price = Number(item?.Price);
-      const wikiUrl = item?.WikiUrl ? `${WIKI_BASE}${item.WikiUrl}` : null;
+      const wikiUrl = normalizeWikiUrl(item?.WikiUrl || "");
       entries.push({
         listNumber,
         name,
         normalizedName: normalizePlanName(name),
         normalizedRaw: normalizeSearchText(name),
         price: Number.isFinite(price) ? price : null,
-        wikiUrl
+        wikiUrl: wikiUrl || null
       });
     }
   }
@@ -3073,6 +3349,24 @@ function setClassifiedSearchCount(text = "") {
   elements.classifiedSearchCount.textContent = hasText ? text : "";
 }
 
+function syncClassifiedArchiveVisibility() {
+  const detailOpen = Boolean(state.classifiedDetail.open && state.classifiedDetail.item);
+  const searchOpen = Boolean(state.classifiedSearch.open);
+
+  if (elements.classifiedSearchWrap) {
+    elements.classifiedSearchWrap.hidden = detailOpen || !searchOpen;
+  }
+  if (elements.classifiedSearchResults) {
+    elements.classifiedSearchResults.hidden = detailOpen || !searchOpen;
+  }
+  if (elements.classifiedMinervaLists) {
+    elements.classifiedMinervaLists.hidden = detailOpen || searchOpen;
+  }
+  if (elements.classifiedInlineDetail) {
+    elements.classifiedInlineDetail.hidden = !detailOpen;
+  }
+}
+
 function refreshClassifiedArchiveCardBaseSize(force = false) {
   if (!elements.classifiedArchiveCard || (state.classifiedSearch.open && !force)) {
     return;
@@ -3124,15 +3418,8 @@ function setClassifiedSearchOpen(active, { focusInput = false, clearQuery = fals
     lockClassifiedArchiveCardSize();
   }
 
-  if (elements.classifiedSearchWrap) {
-    elements.classifiedSearchWrap.hidden = !open;
-  }
-  if (elements.classifiedSearchResults) {
-    elements.classifiedSearchResults.hidden = !open;
-  }
-  if (elements.classifiedMinervaLists) {
-    elements.classifiedMinervaLists.hidden = open;
-  }
+  syncClassifiedArchiveVisibility();
+
   if (!open) {
     setClassifiedSearchCount("");
     if (wasOpen) {
@@ -3160,7 +3447,7 @@ function setClassifiedSearchOpen(active, { focusInput = false, clearQuery = fals
     state.classifiedSearch.query = "";
   }
 
-  if (open) {
+  if (open && !(state.classifiedDetail.open && state.classifiedDetail.item)) {
     renderClassifiedMinervaSearchResults();
     if (focusInput && elements.classifiedSearchInput) {
       elements.classifiedSearchInput.focus();
@@ -3273,12 +3560,19 @@ function renderClassifiedMinervaSearchResults() {
       itemValue.appendChild(createIconTag(PLAN_ITEM_GLYPH));
     }
     if (match.wikiUrl) {
-      const link = document.createElement("a");
-      link.href = match.wikiUrl;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = match.name;
-      itemValue.appendChild(link);
+      const trigger = document.createElement("button");
+      trigger.type = "button";
+      trigger.className = "minerva-item-trigger classified-item-trigger";
+      trigger.textContent = match.name;
+      trigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        void openClassifiedInlineDetail({
+          name: match.name,
+          price: match.price,
+          wikiUrl: match.wikiUrl
+        });
+      });
+      itemValue.appendChild(trigger);
     } else {
       itemValue.append(match.name);
     }
@@ -3332,6 +3626,216 @@ function renderClassifiedMinervaSearchResults() {
   elements.classifiedSearchResults.appendChild(fragment);
 }
 
+function renderClassifiedInlineDetail() {
+  if (
+    !elements.classifiedInlineDetail
+    || !elements.classifiedInlineName
+    || !elements.classifiedInlineWikiLink
+    || !elements.classifiedInlineStatus
+    || !elements.classifiedInlineContent
+    || !elements.classifiedInlineImage
+    || !elements.classifiedInlineWhereLabel
+    || !elements.classifiedInlineWhereList
+    || !elements.classifiedInlineUnlocksLabel
+    || !elements.classifiedInlineUnlocks
+  ) {
+    return;
+  }
+
+  const isOpen = Boolean(state.classifiedDetail.open && state.classifiedDetail.item);
+  syncClassifiedArchiveVisibility();
+  if (!isOpen) {
+    return;
+  }
+
+  const item = state.classifiedDetail.item || {};
+  const detail = state.classifiedDetail.data;
+  const itemName = String(item.name || item.Name || t("files_unknown_value"));
+  const wikiUrl = normalizeWikiUrl(detail?.wikiUrl || item.url || item.WikiUrl || "");
+
+  elements.classifiedInlineName.textContent = itemName;
+  elements.classifiedInlineWikiLink.textContent = t("minerva_detail_open_source");
+  elements.classifiedInlineWikiLink.href = wikiUrl || "#";
+  elements.classifiedInlineWikiLink.hidden = !wikiUrl;
+  elements.classifiedInlineWhereLabel.textContent = t("minerva_detail_where_label");
+  elements.classifiedInlineUnlocksLabel.textContent = t("minerva_detail_unlocks_label");
+  if (elements.classifiedInlineCloseBtn) {
+    elements.classifiedInlineCloseBtn.textContent = t("minerva_detail_back");
+  }
+
+  if (state.classifiedDetail.loading) {
+    elements.classifiedInlineStatus.hidden = false;
+    elements.classifiedInlineStatus.textContent = t("minerva_detail_loading");
+    elements.classifiedInlineContent.classList.remove("is-revealing");
+    elements.classifiedInlineContent.hidden = true;
+    return;
+  }
+
+  if (state.classifiedDetail.error || !detail) {
+    elements.classifiedInlineStatus.hidden = false;
+    elements.classifiedInlineStatus.textContent = state.classifiedDetail.error || t("minerva_detail_error");
+    elements.classifiedInlineContent.classList.remove("is-revealing");
+    elements.classifiedInlineContent.hidden = true;
+    return;
+  }
+
+  const shouldAnimateContent = elements.classifiedInlineContent.hidden;
+  elements.classifiedInlineStatus.hidden = true;
+  elements.classifiedInlineContent.hidden = false;
+
+  const fallbackImageUrl = state.minervaDetail.fallbackImageUrl || MINERVA_DETAIL_FALLBACK_IMAGE;
+  const detailImageUrl = detail.imageUrl || fallbackImageUrl;
+
+  if (detailImageUrl) {
+    void queueImagePreload(detailImageUrl, { highPriority: true });
+    elements.classifiedInlineImage.hidden = false;
+    elements.classifiedInlineImage.dataset.fallbackSrc = fallbackImageUrl || detailImageUrl;
+    elements.classifiedInlineImage.src = detailImageUrl;
+    elements.classifiedInlineImage.alt = `${itemName} image`;
+  } else {
+    elements.classifiedInlineImage.hidden = true;
+    elements.classifiedInlineImage.removeAttribute("data-fallback-src");
+    elements.classifiedInlineImage.removeAttribute("src");
+    elements.classifiedInlineImage.alt = "";
+  }
+
+  const whereElse = Array.isArray(detail.whereElse) && detail.whereElse.length
+    ? detail.whereElse
+    : [t("minerva_detail_no_other_sources")];
+  const whereFragment = document.createDocumentFragment();
+  for (const sourceLine of whereElse) {
+    const li = document.createElement("li");
+    li.textContent = sourceLine;
+    whereFragment.appendChild(li);
+  }
+  elements.classifiedInlineWhereList.innerHTML = "";
+  elements.classifiedInlineWhereList.appendChild(whereFragment);
+
+  elements.classifiedInlineUnlocks.textContent = detail.unlocks || t("minerva_detail_no_unlocks");
+
+  if (shouldAnimateContent) {
+    restartMinervaDetailAnimation(elements.classifiedInlineContent, "is-revealing", 320);
+  }
+}
+
+function closeClassifiedInlineDetail() {
+  state.classifiedDetail.requestId += 1;
+  state.classifiedDetail.loading = false;
+  state.classifiedDetail.error = "";
+  state.classifiedDetail.item = null;
+  state.classifiedDetail.data = null;
+  state.classifiedDetail.open = false;
+  renderClassifiedInlineDetail();
+  syncClassifiedArchiveVisibility();
+  if (state.classifiedSearch.open) {
+    renderClassifiedMinervaSearchResults();
+  }
+}
+
+async function openClassifiedInlineDetail(item = {}) {
+  const itemName = String(item?.name || item?.Name || "").trim();
+  const itemUrl = normalizeWikiUrl(item?.url || item?.WikiUrl || item?.wikiUrl || "");
+  if (!itemName || !itemUrl) {
+    return;
+  }
+
+  const numericPrice = Number(item?.price ?? item?.Price);
+  const safePrice = Number.isFinite(numericPrice) ? numericPrice : null;
+
+  const normalizedItem = {
+    name: itemName,
+    Name: itemName,
+    price: safePrice,
+    Price: safePrice,
+    url: itemUrl,
+    WikiUrl: itemUrl
+  };
+
+  const detailKey = minervaDetailKeyFromUrl(itemUrl);
+  const cacheKey = `${state.lang}:${detailKey}`;
+  const requestId = state.classifiedDetail.requestId + 1;
+  state.classifiedDetail.requestId = requestId;
+  state.classifiedDetail.error = "";
+  state.classifiedDetail.item = normalizedItem;
+  state.classifiedDetail.open = true;
+  state.classifiedDetail.loading = false;
+  renderClassifiedInlineDetail();
+  syncClassifiedArchiveVisibility();
+
+  const cachedDetail = state.minervaDetail.cache[cacheKey];
+  if (cachedDetail) {
+    if (state.classifiedDetail.requestId !== requestId) {
+      return;
+    }
+    state.classifiedDetail.data = cachedDetail;
+    renderClassifiedInlineDetail();
+    return;
+  }
+
+  const immediateOffline = resolveOfflineMinervaDetailFromMap(normalizedItem, state.lang);
+  if (immediateOffline) {
+    if (state.classifiedDetail.requestId !== requestId) {
+      return;
+    }
+    state.classifiedDetail.data = immediateOffline;
+    state.minervaDetail.cache[cacheKey] = immediateOffline;
+    renderClassifiedInlineDetail();
+    return;
+  }
+
+  state.classifiedDetail.loading = true;
+  state.classifiedDetail.data = null;
+  renderClassifiedInlineDetail();
+
+  let offlineDetail = null;
+  try {
+    offlineDetail = await resolveOfflineMinervaDetail(normalizedItem, state.lang);
+    if (state.classifiedDetail.requestId !== requestId) {
+      return;
+    }
+    if (offlineDetail) {
+      state.classifiedDetail.loading = false;
+      state.classifiedDetail.error = "";
+      state.classifiedDetail.data = offlineDetail;
+      state.minervaDetail.cache[cacheKey] = offlineDetail;
+      renderClassifiedInlineDetail();
+      return;
+    }
+  } catch {
+    // Continue with online fallback.
+  }
+
+  try {
+    const liveDetail = await fetchMinervaPlanDetail(normalizedItem, state.lang);
+    if (state.classifiedDetail.requestId !== requestId) {
+      return;
+    }
+
+    const normalizedLive = {
+      wikiUrl: normalizeWikiUrl(liveDetail?.wikiUrl || itemUrl),
+      imageUrl: liveDetail?.imageUrl || state.minervaDetail.fallbackImageUrl || MINERVA_DETAIL_FALLBACK_IMAGE,
+      whereElse: Array.isArray(liveDetail?.whereElse)
+        ? liveDetail.whereElse.map((line) => sanitizeDetailText(line)).filter(Boolean)
+        : [],
+      unlocks: sanitizeDetailText(liveDetail?.unlocks || "")
+    };
+
+    state.classifiedDetail.loading = false;
+    state.classifiedDetail.error = "";
+    state.classifiedDetail.data = normalizedLive;
+    state.minervaDetail.cache[cacheKey] = normalizedLive;
+    renderClassifiedInlineDetail();
+  } catch {
+    if (state.classifiedDetail.requestId !== requestId) {
+      return;
+    }
+    state.classifiedDetail.loading = false;
+    state.classifiedDetail.error = t("minerva_detail_error");
+    state.classifiedDetail.data = null;
+    renderClassifiedInlineDetail();
+  }
+}
+
 function renderClassifiedMinervaLists(lists = state.minervaLists || []) {
   if (!elements.classifiedMinervaLists) {
     return;
@@ -3367,13 +3871,21 @@ function renderClassifiedMinervaLists(lists = state.minervaLists || []) {
         nameWrap.appendChild(createIconTag(PLAN_ITEM_GLYPH));
       }
 
-      if (item.WikiUrl) {
-        const link = document.createElement("a");
-        link.href = `${WIKI_BASE}${item.WikiUrl}`;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        link.textContent = item.Name;
-        nameWrap.appendChild(link);
+      const itemUrl = normalizeWikiUrl(item?.WikiUrl || "");
+      if (itemUrl) {
+        const trigger = document.createElement("button");
+        trigger.type = "button";
+        trigger.className = "minerva-item-trigger classified-item-trigger";
+        trigger.textContent = item.Name;
+        trigger.addEventListener("click", (event) => {
+          event.preventDefault();
+          void openClassifiedInlineDetail({
+            Name: item.Name,
+            Price: item.Price,
+            WikiUrl: itemUrl
+          });
+        });
+        nameWrap.appendChild(trigger);
       } else {
         nameWrap.append(item.Name);
       }
@@ -4945,6 +5457,9 @@ function applyLanguage(lang, persist = true) {
   elements.classifiedSearchInput.placeholder = t("classified_search_placeholder");
   elements.classifiedSearchHint.textContent = t("classified_search_hint");
   setClassifiedSearchOpen(state.classifiedSearch.open);
+  if (elements.classifiedInlineStatus && !state.classifiedDetail.open) {
+    elements.classifiedInlineStatus.textContent = t("minerva_detail_loading");
+  }
 
   elements.filesUnauthorizedTitle.textContent = t("files_unauthorized_title");
   elements.filesUnauthorizedSubtitle.textContent = t("files_unauthorized_subtitle");
@@ -5005,6 +5520,11 @@ function applyLanguage(lang, persist = true) {
   } else {
     renderClassifiedMinervaLists([]);
     buildClassifiedSearchCatalog([]);
+  }
+  if (state.classifiedDetail.open && state.classifiedDetail.item) {
+    void openClassifiedInlineDetail(state.classifiedDetail.item);
+  } else {
+    renderClassifiedInlineDetail();
   }
   renderFilesAccessView();
   setFilesSearchOpen(state.files.search.open);
@@ -5205,6 +5725,7 @@ function wireEvents() {
     }
   });
   elements.filesList?.addEventListener("click", handleFilesListClick);
+  elements.filesSearchResults?.addEventListener("click", handleFilesListClick);
   elements.filesDeleteCancelBtn?.addEventListener("click", () => {
     closeFilesDeleteModal();
   });
@@ -5256,6 +5777,24 @@ function wireEvents() {
       event.preventDefault();
       setClassifiedSearchOpen(false, { clearQuery: true });
     }
+  });
+  elements.classifiedInlineCloseBtn?.addEventListener("click", () => {
+    closeClassifiedInlineDetail();
+  });
+  elements.classifiedInlineImage?.addEventListener("error", () => {
+    const fallbackSrc = elements.classifiedInlineImage?.dataset?.fallbackSrc
+      || state.minervaDetail.fallbackImageUrl
+      || MINERVA_DETAIL_FALLBACK_IMAGE;
+    if (!fallbackSrc) {
+      return;
+    }
+
+    const currentSrc = elements.classifiedInlineImage.getAttribute("src") || "";
+    if (currentSrc === fallbackSrc) {
+      return;
+    }
+
+    elements.classifiedInlineImage.src = fallbackSrc;
   });
   document.addEventListener("beforeinput", (event) => {
     if (!isTypingTarget(event.target)) {

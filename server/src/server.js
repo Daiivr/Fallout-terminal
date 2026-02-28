@@ -22,6 +22,7 @@ const STORAGE_DIR = configuredStorageDir
 const UPLOAD_DIR = path.join(STORAGE_DIR, "uploads");
 const METADATA_PATH = path.join(STORAGE_DIR, "files-metadata.json");
 const PORT = Number(process.env.PORT || 3000);
+const NODE_ENV = String(process.env.NODE_ENV || "development").trim() || "development";
 const SESSION_SECRET = String(process.env.SESSION_SECRET || "").trim() || "replace-me-in-production";
 const DISCORD_CLIENT_ID = String(process.env.DISCORD_CLIENT_ID || "").trim();
 const DISCORD_CLIENT_SECRET = String(process.env.DISCORD_CLIENT_SECRET || "").trim();
@@ -226,6 +227,7 @@ function uploadSingleFile(req, res, next) {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
 app.use(session({
   name: SESSION_COOKIE_NAME,
   secret: SESSION_SECRET,
@@ -234,7 +236,7 @@ app.use(session({
   cookie: {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: NODE_ENV === "production",
     maxAge: 1000 * 60 * 60 * 24 * 7
   }
 }));
@@ -507,6 +509,7 @@ app.listen(PORT, () => {
   console.log(`[server] Static root: ${SITE_ROOT}`);
   console.log(`[server] Storage directory: ${STORAGE_DIR}`);
   console.log(`[server] Metadata file: ${METADATA_PATH}`);
+  console.log("[session] Store: MemoryStore");
   if (!oauthConfigured()) {
     console.warn("[server] Discord OAuth env vars missing: DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI");
   }

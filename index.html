@@ -327,50 +327,52 @@
       </article>
 
       <section id="filesAuthorizedView" class="files-authorized-view" hidden>
-        <article id="filesSessionPanel" class="panel files-session-panel">
-          <div class="files-session-head">
-            <h2 id="filesSessionTitle">SESSION PROFILE</h2>
-            <span id="filesSessionBadge" class="files-session-badge">AUTHORIZED</span>
-          </div>
-          <div id="filesSessionIdentity" class="files-session-identity">
-            <div class="files-session-row">
-              <span id="filesSessionUserLabel" class="files-session-label">CALLSIGN</span>
-              <span id="filesSessionUser" class="files-session-value">--</span>
+        <div class="files-side-stack">
+          <article id="filesSessionPanel" class="panel files-session-panel">
+            <div class="files-session-head">
+              <h2 id="filesSessionTitle">SESSION PROFILE</h2>
+              <span id="filesSessionBadge" class="files-session-badge">AUTHORIZED</span>
             </div>
-            <div class="files-session-row">
-              <span id="filesSessionIdLabel" class="files-session-label">DISCORD ID</span>
-              <span id="filesSessionId" class="files-session-value">--</span>
+            <div id="filesSessionIdentity" class="files-session-identity">
+              <div class="files-session-row">
+                <span id="filesSessionUserLabel" class="files-session-label">CALLSIGN</span>
+                <span id="filesSessionUser" class="files-session-value">--</span>
+              </div>
+              <div class="files-session-row">
+                <span id="filesSessionIdLabel" class="files-session-label">DISCORD ID</span>
+                <span id="filesSessionId" class="files-session-value">--</span>
+              </div>
+              <div class="files-session-row">
+                <span id="filesSessionClearanceLabel" class="files-session-label">CLEARANCE</span>
+                <span id="filesSessionClearance" class="files-session-value">--</span>
+              </div>
+              <div class="files-session-row">
+                <span id="filesSessionStateLabel" class="files-session-label">SESSION STATE</span>
+                <span id="filesSessionState" class="files-session-value">--</span>
+              </div>
             </div>
-            <div class="files-session-row">
-              <span id="filesSessionClearanceLabel" class="files-session-label">CLEARANCE</span>
-              <span id="filesSessionClearance" class="files-session-value">--</span>
-            </div>
-            <div class="files-session-row">
-              <span id="filesSessionStateLabel" class="files-session-label">SESSION STATE</span>
-              <span id="filesSessionState" class="files-session-value">--</span>
-            </div>
-          </div>
-          <button id="filesSessionLogoutBtn" class="files-btn" type="button">LOGOUT</button>
-        </article>
+            <button id="filesSessionLogoutBtn" class="files-btn" type="button">LOGOUT</button>
+          </article>
 
-        <article id="filesUploadPanel" class="panel files-upload-panel" hidden>
-          <h2 id="filesUploadTitle">ADMIN CONSOLE</h2>
-          <form id="filesUploadForm" class="files-upload-form" novalidate>
-            <label id="filesUploadFileLabel" for="filesUploadInput">File</label>
-            <input id="filesUploadInput" class="files-upload-input" type="file" name="file" />
-            <label id="filesUploadDescLabel" for="filesDescriptionInput">Description</label>
-            <textarea
-              id="filesDescriptionInput"
-              name="description"
-              class="files-upload-description"
-              rows="3"
-              maxlength="500"
-              placeholder="Optional dossier note..."
-            ></textarea>
-            <button id="filesUploadBtn" class="files-btn" type="submit">UPLOAD FILE</button>
-          </form>
-          <p id="filesUploadFeedback" class="files-upload-feedback" aria-live="polite" hidden></p>
-        </article>
+          <article id="filesUploadPanel" class="panel files-upload-panel" hidden>
+            <h2 id="filesUploadTitle">ADMIN CONSOLE</h2>
+            <form id="filesUploadForm" class="files-upload-form" novalidate>
+              <label id="filesUploadFileLabel" for="filesUploadInput">File</label>
+              <input id="filesUploadInput" class="files-upload-input" type="file" name="file" />
+              <label id="filesUploadDescLabel" for="filesDescriptionInput">Description</label>
+              <textarea
+                id="filesDescriptionInput"
+                name="description"
+                class="files-upload-description"
+                rows="3"
+                maxlength="500"
+                placeholder="Optional dossier note..."
+              ></textarea>
+              <button id="filesUploadBtn" class="files-btn" type="submit">UPLOAD FILE</button>
+            </form>
+            <p id="filesUploadFeedback" class="files-upload-feedback" aria-live="polite" hidden></p>
+          </article>
+        </div>
 
         <article class="panel files-browser-panel">
           <div class="files-browser-top">
@@ -403,6 +405,7 @@
             />
             <p id="filesSearchHint" class="files-search-hint">Filter files by name, type, description, or uploader.</p>
           </div>
+          <div id="filesSearchResults" class="files-search-results" hidden></div>
           <p id="filesEmptyState" class="files-empty-state" hidden>No files available.</p>
           <div id="filesList" class="files-list" aria-live="polite"></div>
         </article>
@@ -477,6 +480,40 @@
             </div>
             <div id="classifiedSearchResults" class="classified-search-results" hidden></div>
             <div id="classifiedMinervaLists" class="classified-minerva-lists"></div>
+            <section id="classifiedInlineDetail" class="minerva-detail-view classified-inline-detail" hidden>
+              <div class="minerva-detail-top">
+                <h4 id="classifiedInlineName" class="minerva-detail-name">--</h4>
+                <div class="classified-inline-actions">
+                  <a
+                    id="classifiedInlineWikiLink"
+                    class="minerva-detail-back minerva-detail-wiki"
+                    href="#"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    hidden
+                  >
+                    OPEN SOURCE PAGE
+                  </a>
+                  <button id="classifiedInlineCloseBtn" class="minerva-detail-back" type="button">RETURN TO LIST</button>
+                </div>
+              </div>
+              <p id="classifiedInlineStatus" class="minerva-detail-status">Loading plan dossier...</p>
+              <div id="classifiedInlineContent" class="minerva-detail-content" hidden>
+                <figure class="minerva-detail-figure">
+                  <img id="classifiedInlineImage" class="minerva-detail-image" alt="" loading="lazy" decoding="async" />
+                </figure>
+                <div class="minerva-detail-sections">
+                  <section class="minerva-detail-block">
+                    <h4 id="classifiedInlineWhereLabel" class="minerva-detail-label">Where Else To Get It</h4>
+                    <ul id="classifiedInlineWhereList" class="minerva-detail-list"></ul>
+                  </section>
+                  <section class="minerva-detail-block">
+                    <h4 id="classifiedInlineUnlocksLabel" class="minerva-detail-label">What This Plan Unlocks</h4>
+                    <p id="classifiedInlineUnlocks" class="minerva-detail-unlocks"></p>
+                  </section>
+                </div>
+              </div>
+            </section>
           </article>
         </section>
       </div>
