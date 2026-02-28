@@ -2641,16 +2641,6 @@ body.is-files .files-browser-panel {
   overflow: hidden;
 }
 
-body.is-files .files-authorized-view.is-upload-hidden {
-  grid-template-columns: 1fr;
-}
-
-body.is-files .files-authorized-view.is-upload-hidden .files-side-stack,
-body.is-files .files-authorized-view.is-upload-hidden .files-browser-panel {
-  grid-column: 1;
-  grid-row: auto;
-}
-
 body.is-files .files-browser-top {
   gap: 10px;
   margin-top: 1px;
@@ -3683,8 +3673,7 @@ body.is-classified .classified-layout {
   }
 
   .files-authorized-view,
-  body.is-files .files-authorized-view,
-  body.is-files .files-authorized-view.is-upload-hidden {
+  body.is-files .files-authorized-view {
     grid-template-columns: 1fr;
     grid-template-rows: auto minmax(0, 1fr);
     height: 100%;

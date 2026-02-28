@@ -1554,9 +1554,6 @@ function renderFilesAccessView() {
   }
 
   if (isFileProtocol) {
-    if (elements.filesAuthorizedView) {
-      elements.filesAuthorizedView.classList.add("is-upload-hidden");
-    }
     renderFilesSessionProfile({
       authorized: false,
       isAdmin: false,
@@ -1609,9 +1606,6 @@ function renderFilesAccessView() {
   }
   if (elements.filesUploadPanel) {
     elements.filesUploadPanel.hidden = !showUploadPanel;
-  }
-  if (elements.filesAuthorizedView) {
-    elements.filesAuthorizedView.classList.toggle("is-upload-hidden", !showUploadPanel);
   }
 
   renderFilesSessionProfile({
