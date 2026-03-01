@@ -12,9 +12,11 @@
     "node": ">=20"
   },
   "dependencies": {
+    "connect-redis": "^9.0.0",
     "dotenv": "^16.5.0",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "redis": "^5.11.0"
   }
 }

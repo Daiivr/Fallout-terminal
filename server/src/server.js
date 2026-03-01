@@ -5,6 +5,8 @@ const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const session = require("express-session");
+const { createClient } = require("redis");
+const { RedisStore } = require("connect-redis");
 const multer = require("multer");
 
 require("dotenv").config({
@@ -29,6 +31,20 @@ const DISCORD_CLIENT_SECRET = String(process.env.DISCORD_CLIENT_SECRET || "").tr
 const DISCORD_REDIRECT_URI = String(process.env.DISCORD_REDIRECT_URI || "").trim();
 const ADMIN_DISCORD_ID = String(process.env.ADMIN_DISCORD_ID || "271701484922601472").trim();
 const SESSION_COOKIE_NAME = "fallout_codex_sid";
+const REDIS_URL = String(process.env.REDIS_URL || "").trim();
+const SESSION_REDIS_PREFIX = String(process.env.SESSION_REDIS_PREFIX || "fallout_codex:sess:").trim() || "fallout_codex:sess:";
+const SESSION_COOKIE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
+const DEFAULT_SESSION_TTL_SECONDS = Math.floor(SESSION_COOKIE_MAX_AGE_MS / 1000);
+
+function parsePositiveInteger(value, fallback) {
+  const parsed = Number.parseInt(String(value || "").trim(), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return parsed;
+}
+
+const SESSION_TTL_SECONDS = parsePositiveInteger(process.env.SESSION_TTL_SECONDS, DEFAULT_SESSION_TTL_SECONDS);
 
 function parseDiscordIdList(raw) {
   return String(raw || "")
@@ -228,7 +244,27 @@ function uploadSingleFile(req, res, next) {
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use(session({
+let redisClient = null;
+let sessionStore = null;
+let sessionStoreLabel = "MemoryStore";
+
+if (REDIS_URL) {
+  redisClient = createClient({
+    url: REDIS_URL
+  });
+  redisClient.on("error", (error) => {
+    const message = error && error.message ? error.message : String(error || "Unknown Redis error");
+    console.error("[redis] client error:", message);
+  });
+  sessionStore = new RedisStore({
+    client: redisClient,
+    prefix: SESSION_REDIS_PREFIX,
+    ttl: SESSION_TTL_SECONDS
+  });
+  sessionStoreLabel = `Redis (${SESSION_REDIS_PREFIX})`;
+}
+
+const sessionOptions = {
   name: SESSION_COOKIE_NAME,
   secret: SESSION_SECRET,
   resave: false,
@@ -237,9 +273,15 @@ app.use(session({
     httpOnly: true,
     sameSite: "lax",
     secure: NODE_ENV === "production",
-    maxAge: 1000 * 60 * 60 * 24 * 7
+    maxAge: SESSION_COOKIE_MAX_AGE_MS
   }
-}));
+};
+
+if (sessionStore) {
+  sessionOptions.store = sessionStore;
+}
+
+app.use(session(sessionOptions));
 
 app.get("/api/me", (req, res) => {
   res.json(buildMePayload(req));
@@ -504,16 +546,56 @@ app.get("/", (_req, res) => {
   res.sendFile(path.join(SITE_ROOT, "index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`[server] Fallout Codex listening on http://localhost:${PORT}`);
-  console.log(`[server] Static root: ${SITE_ROOT}`);
-  console.log(`[server] Storage directory: ${STORAGE_DIR}`);
-  console.log(`[server] Metadata file: ${METADATA_PATH}`);
-  console.log("[session] Store: MemoryStore");
-  if (!oauthConfigured()) {
-    console.warn("[server] Discord OAuth env vars missing: DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI");
+async function startServer() {
+  if (redisClient) {
+    try {
+      await redisClient.connect();
+    } catch (error) {
+      console.error("[session] Failed to connect to Redis using REDIS_URL. Server startup aborted.");
+      console.error(error);
+      process.exit(1);
+      return;
+    }
   }
-  if (SESSION_SECRET === "replace-me-in-production") {
-    console.warn("[server] SESSION_SECRET is using the default fallback. Set SESSION_SECRET in production.");
-  }
-});
+
+  const server = app.listen(PORT, () => {
+    console.log(`[server] Fallout Codex listening on http://localhost:${PORT}`);
+    console.log(`[server] Static root: ${SITE_ROOT}`);
+    console.log(`[server] Storage directory: ${STORAGE_DIR}`);
+    console.log(`[server] Metadata file: ${METADATA_PATH}`);
+    console.log(`[session] Store: ${sessionStoreLabel}`);
+    if (!REDIS_URL && NODE_ENV === "production") {
+      console.warn("[session] REDIS_URL is not set. Production is using MemoryStore (not recommended).");
+    }
+    if (!oauthConfigured()) {
+      console.warn("[server] Discord OAuth env vars missing: DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI");
+    }
+    if (SESSION_SECRET === "replace-me-in-production") {
+      console.warn("[server] SESSION_SECRET is using the default fallback. Set SESSION_SECRET in production.");
+    }
+  });
+
+  const shutdown = async (signal) => {
+    console.log(`[server] ${signal} received, shutting down...`);
+    if (redisClient && redisClient.isOpen) {
+      try {
+        await redisClient.quit();
+      } catch (error) {
+        console.error("[redis] quit error:", error);
+      }
+    }
+    server.close(() => {
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 5000).unref();
+  };
+
+  process.on("SIGINT", () => {
+    void shutdown("SIGINT");
+  });
+  process.on("SIGTERM", () => {
+    void shutdown("SIGTERM");
+  });
+}
+
+void startServer();
