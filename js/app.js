@@ -144,7 +144,7 @@ const STRINGS = {
     files_unauthorized_subtitle: "IDENTITY VERIFICATION REQUIRED",
     files_login_button: "LOGIN WITH DISCORD",
     files_logout_button: "LOGOUT",
-    files_not_authorized_message: "Sorry, you are not authorized to access the file system.",
+    files_not_authorized_message: "Sorry, you are not authorized to view the file index.",
     files_server_required_message: "Server required: open via http://localhost:3000 (or your deployed URL), not file://.",
     files_upload_button: "UPLOAD FILE",
     files_download_button: "DOWNLOAD FILE",
@@ -169,8 +169,10 @@ const STRINGS = {
     files_session_state_online: "LINK ESTABLISHED",
     files_session_badge_authorized: "AUTHORIZED",
     files_session_badge_admin: "ADMIN",
+    files_session_badge_unauthorized: "UNAUTHORIZED",
     files_session_clearance_authorized: "AUTHORIZED USER",
     files_session_clearance_admin: "ADMINISTRATOR",
+    files_session_clearance_unauthorized: "USUARIO NO AUTORIZADO",
     files_admin_console_title: "ADMIN CONSOLE",
     files_file_index_title: "FILE INDEX",
     files_upload_file_label: "File",
@@ -328,7 +330,7 @@ const STRINGS = {
     files_unauthorized_subtitle: "SE REQUIERE VERIFICACION DE IDENTIDAD",
     files_login_button: "INICIAR CON DISCORD",
     files_logout_button: "CERRAR SESION",
-    files_not_authorized_message: "Lo sentimos, no estas autorizado para acceder al sistema de archivos.",
+    files_not_authorized_message: "Lo sentimos, no estas autorizado para ver la lista de archivos.",
     files_server_required_message: "Se requiere servidor: abre via http://localhost:3000 (o tu URL desplegada), no file://.",
     files_upload_button: "SUBIR ARCHIVO",
     files_download_button: "DESCARGAR ARCHIVO",
@@ -353,8 +355,10 @@ const STRINGS = {
     files_session_state_online: "ENLACE ESTABLECIDO",
     files_session_badge_authorized: "AUTORIZADO",
     files_session_badge_admin: "ADMIN",
+    files_session_badge_unauthorized: "NO AUTORIZADO",
     files_session_clearance_authorized: "USUARIO AUTORIZADO",
     files_session_clearance_admin: "ADMINISTRADOR",
+    files_session_clearance_unauthorized: "USUARIO NO AUTORIZADO",
     files_admin_console_title: "CONSOLA ADMIN",
     files_file_index_title: "INDICE DE ARCHIVOS",
     files_upload_file_label: "Archivo",
@@ -673,6 +677,7 @@ const elements = {
   filesDescriptionInput: document.getElementById("filesDescriptionInput"),
   filesUploadBtn: document.getElementById("filesUploadBtn"),
   filesUploadFeedback: document.getElementById("filesUploadFeedback"),
+  filesBrowserPanel: document.querySelector("#filesAuthorizedView .files-browser-panel"),
   filesBrowserTitle: document.getElementById("filesBrowserTitle"),
   filesSearchToggleBtn: document.getElementById("filesSearchToggleBtn"),
   filesSearchToggleText: document.getElementById("filesSearchToggleText"),
@@ -1258,23 +1263,28 @@ function renderFilesDetailCard(file) {
   elements.filesList.appendChild(detailCard);
 }
 
-function renderFilesSessionProfile({ authorized, isAdmin, username, discordId } = {}) {
+function renderFilesSessionProfile({ loggedIn, authorized, isAdmin, username, discordId } = {}) {
   const unknown = t("files_unknown_value");
-  const resolvedAuthorized = Boolean(authorized);
+  const resolvedLoggedIn = Boolean(loggedIn);
+  const resolvedAuthorized = Boolean(authorized) && resolvedLoggedIn;
   const resolvedAdmin = Boolean(isAdmin) && resolvedAuthorized;
-  const resolvedUsername = resolvedAuthorized ? (String(username || "").trim() || unknown) : unknown;
-  const resolvedDiscordId = resolvedAuthorized ? (String(discordId || "").trim() || unknown) : unknown;
-  const resolvedClearance = !resolvedAuthorized
+  const resolvedUsername = resolvedLoggedIn ? (String(username || "").trim() || unknown) : unknown;
+  const resolvedDiscordId = resolvedLoggedIn ? (String(discordId || "").trim() || unknown) : unknown;
+  const resolvedClearance = !resolvedLoggedIn
     ? unknown
     : resolvedAdmin
       ? t("files_session_clearance_admin")
-      : t("files_session_clearance_authorized");
-  const resolvedState = resolvedAuthorized ? t("files_session_state_online") : unknown;
-  const badgeText = !resolvedAuthorized
+      : resolvedAuthorized
+        ? t("files_session_clearance_authorized")
+        : t("files_session_clearance_unauthorized");
+  const resolvedState = resolvedLoggedIn ? t("files_session_state_online") : unknown;
+  const badgeText = !resolvedLoggedIn
     ? unknown
     : resolvedAdmin
       ? t("files_session_badge_admin")
-      : t("files_session_badge_authorized");
+      : resolvedAuthorized
+        ? t("files_session_badge_authorized")
+        : t("files_session_badge_unauthorized");
 
   if (elements.filesSessionUser) {
     elements.filesSessionUser.textContent = resolvedUsername;
@@ -1416,16 +1426,34 @@ function renderFilesList() {
     return;
   }
 
-  const canReadFiles = Boolean(state.files.me?.isAuthorized);
+  const me = normalizeFilesProfile(state.files.me);
+  const canReadFiles = Boolean(me.isAuthorized);
+  const showRestrictedNotice = me.loggedIn && !canReadFiles;
   elements.filesList.replaceChildren();
   elements.filesList.classList.remove("is-detail-mode", "is-transition-to-detail", "is-transition-to-list");
+  elements.filesEmptyState.classList.remove("is-restricted");
+  elements.filesBrowserPanel?.classList.toggle("is-restricted", showRestrictedNotice);
   const transition = String(state.files.transition || "");
   state.files.transition = "";
 
   if (!canReadFiles) {
+    if (state.files.search.open || state.files.search.query) {
+      setFilesSearchOpen(false, { clearQuery: true });
+      return;
+    }
+
     setFilesSearchCount("");
-    elements.filesEmptyState.hidden = true;
-    elements.filesList.hidden = false;
+    elements.filesList.hidden = true;
+    elements.filesEmptyState.hidden = !showRestrictedNotice;
+    elements.filesEmptyState.textContent = showRestrictedNotice ? t("files_not_authorized_message") : "";
+    elements.filesEmptyState.classList.toggle("is-restricted", showRestrictedNotice);
+    if (showRestrictedNotice) {
+      const warningIcon = document.createElement("span");
+      warningIcon.className = "fo76-icon files-empty-icon";
+      warningIcon.setAttribute("aria-hidden", "true");
+      warningIcon.textContent = "\uF743";
+      elements.filesEmptyState.appendChild(warningIcon);
+    }
     if (elements.filesSearchResults) {
       elements.filesSearchResults.innerHTML = "";
       elements.filesSearchResults.hidden = true;
@@ -1548,6 +1576,8 @@ function renderFilesAccessView() {
   const loggedIn = me.loggedIn;
   const authorized = me.isAuthorized;
   const isAdmin = me.isAdmin;
+  const showRestrictedLayout = loggedIn && !authorized;
+  const showAuthorizedLayout = authorized || showRestrictedLayout;
   const showUploadPanel = authorized && isAdmin;
 
   if ((!authorized || !isAdmin) && state.files.deleteModal.open) {
@@ -1559,6 +1589,7 @@ function renderFilesAccessView() {
 
   if (isFileProtocol) {
     renderFilesSessionProfile({
+      loggedIn: false,
       authorized: false,
       isAdmin: false,
       username: "",
@@ -1590,29 +1621,53 @@ function renderFilesAccessView() {
     return;
   }
 
+  if (!authorized) {
+    state.files.search.open = false;
+    state.files.search.query = "";
+    if (elements.filesSearchInput) {
+      elements.filesSearchInput.value = "";
+    }
+    if (elements.filesSearchWrap) {
+      elements.filesSearchWrap.hidden = true;
+    }
+    if (elements.filesSearchToggleBtn) {
+      elements.filesSearchToggleBtn.classList.remove("is-active");
+      elements.filesSearchToggleBtn.setAttribute("aria-expanded", "false");
+      elements.filesSearchToggleBtn.title = t("files_search_toggle_open_label");
+      elements.filesSearchToggleBtn.setAttribute("aria-label", t("files_search_toggle_open_label"));
+    }
+    if (elements.filesSearchToggleText) {
+      elements.filesSearchToggleText.textContent = t("files_search_toggle_open");
+    }
+  }
+
   if (elements.filesUnauthorizedPanel) {
-    elements.filesUnauthorizedPanel.hidden = authorized;
+    elements.filesUnauthorizedPanel.hidden = showAuthorizedLayout;
   }
   if (elements.filesAuthorizedView) {
-    elements.filesAuthorizedView.hidden = !authorized;
+    elements.filesAuthorizedView.hidden = !showAuthorizedLayout;
   }
   if (elements.filesNotAuthorizedMessage) {
-    elements.filesNotAuthorizedMessage.hidden = !(loggedIn && !authorized);
+    elements.filesNotAuthorizedMessage.hidden = true;
   }
   if (elements.filesLoginForm) {
-    elements.filesLoginForm.hidden = loggedIn;
+    elements.filesLoginForm.hidden = loggedIn || showAuthorizedLayout;
   }
   if (elements.filesLogoutBtn) {
-    elements.filesLogoutBtn.hidden = !loggedIn || authorized;
+    elements.filesLogoutBtn.hidden = !loggedIn || showAuthorizedLayout;
   }
   if (elements.filesSessionLogoutBtn) {
-    elements.filesSessionLogoutBtn.hidden = !authorized;
+    elements.filesSessionLogoutBtn.hidden = !loggedIn || !showAuthorizedLayout;
   }
   if (elements.filesUploadPanel) {
     elements.filesUploadPanel.hidden = !showUploadPanel;
   }
+  if (elements.filesSearchToggleBtn) {
+    elements.filesSearchToggleBtn.hidden = !authorized;
+  }
 
   renderFilesSessionProfile({
+    loggedIn,
     authorized,
     isAdmin,
     username: me.username,

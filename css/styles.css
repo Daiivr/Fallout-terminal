@@ -2108,6 +2108,43 @@ body.is-files .files-page {
 
 .files-browser-panel {
   grid-column: 1 / -1;
+  position: relative;
+  isolation: isolate;
+}
+
+body.is-files .files-browser-panel.is-restricted::before {
+  content: "";
+  position: absolute;
+  inset: 56px 0 0;
+  background-image: url("../assets/images/vaultboy1.gif");
+  background-repeat: no-repeat;
+  background-position: center 62%;
+  background-size: min(460px, 58%);
+  opacity: 0.38;
+  filter: saturate(0.86) brightness(0.9);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.is-files .files-browser-panel.is-restricted::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(5, 10, 6, 0.86) 0%,
+      rgba(8, 20, 12, 0.64) 34%,
+      rgba(7, 16, 10, 0.86) 100%
+    ),
+    radial-gradient(84% 68% at 50% 68%, rgba(139, 255, 139, 0.09), rgba(5, 10, 6, 0) 72%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+body.is-files .files-browser-panel.is-restricted > * {
+  position: relative;
+  z-index: 2;
 }
 
 .files-browser-top {
@@ -2491,6 +2528,34 @@ body.is-files .files-page {
 .files-empty-state {
   margin-top: 2px;
   color: var(--fg-dim);
+}
+
+.files-empty-state.is-restricted {
+  margin: 0;
+  min-height: clamp(210px, 35vh, 360px);
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 3;
+  text-align: center;
+  color: var(--warn);
+  font-size: clamp(1.02rem, 1.7vw, 1.26rem);
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 14px rgba(255, 225, 122, 0.28);
+}
+
+.files-empty-icon {
+  display: block;
+  margin-right: 0;
+  font-family: "Fallout76IconTags", var(--font-main);
+  font-size: clamp(1.5rem, 2.6vw, 2.2rem);
+  line-height: 1;
+  color: var(--warn);
+  text-shadow: 0 0 14px rgba(255, 225, 122, 0.28);
+  transform: none;
 }
 
 .files-file-card {
