@@ -172,7 +172,7 @@ const STRINGS = {
     files_session_badge_unauthorized: "UNAUTHORIZED",
     files_session_clearance_authorized: "AUTHORIZED USER",
     files_session_clearance_admin: "ADMINISTRATOR",
-    files_session_clearance_unauthorized: "USUARIO NO AUTORIZADO",
+    files_session_clearance_unauthorized: "UNAUTHORIZED USER",
     files_admin_console_title: "ADMIN CONSOLE",
     files_file_index_title: "FILE INDEX",
     files_upload_file_label: "File",

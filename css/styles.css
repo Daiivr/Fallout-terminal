@@ -2118,8 +2118,8 @@ body.is-files .files-browser-panel.is-restricted::before {
   inset: 56px 0 0;
   background-image: url("../assets/images/vaultboy1.gif");
   background-repeat: no-repeat;
-  background-position: center 62%;
-  background-size: min(460px, 58%);
+  background-position: center 54%;
+  background-size: min(360px, 44%);
   opacity: 0.38;
   filter: saturate(0.86) brightness(0.9);
   pointer-events: none;
