@@ -130,6 +130,14 @@ const VIEW_HASHES = {
   intel: "#intel",
   files: "#files"
 };
+const FILES_ACCESS_REQUEST_REASON_MAX = 1200;
+const FILES_ACCESS_DECLINED_REAPPLY_MS = 7 * 24 * 60 * 60 * 1000;
+const FILES_LIVE_IDENTITY_POLL_INTERVAL_MS = 5000;
+const FILES_ADMIN_REQUESTS_FEEDBACK_AUTO_HIDE_MS = 4200;
+
+let filesLiveIdentityPollTimer = null;
+let filesLiveIdentityPollInFlight = false;
+let filesAdminRequestsFeedbackTimer = null;
 
 const STRINGS = {
   en: {
@@ -142,6 +150,65 @@ const STRINGS = {
     files_main_title: "PIP-BOY FILE SYSTEM ACCESS",
     files_unauthorized_title: "UNAUTHORIZED ACCESS TO FILE SYSTEM",
     files_unauthorized_subtitle: "IDENTITY VERIFICATION REQUIRED",
+    files_restricted_browser_title: "RESTRICTED ARCHIVE",
+    files_restricted_badge: "RESTRICTED ACCOUNT",
+    files_restricted_incident: "INCIDENT {code}",
+    files_restricted_title: "ARCHIVE ACCESS IS CURRENTLY BLOCKED",
+    files_restricted_subtitle: "This account is authenticated but not approved for file index access.",
+    files_restricted_identity_label: "Callsign",
+    files_restricted_discord_label: "Discord ID",
+    files_restricted_clearance_label: "Clearance",
+    files_restricted_status_label: "Gate status",
+    files_restricted_time_label: "Checkpoint time",
+    files_restricted_status_none: "No request submitted",
+    files_restricted_status_pending: "Awaiting admin approval",
+    files_restricted_status_approved: "Approved",
+    files_restricted_status_declined: "Declined",
+    files_restricted_status_value: "Awaiting admin approval",
+    files_restricted_reason_label: "Why do you need access?",
+    files_restricted_reason_placeholder: "Write why you need access to the file index...",
+    files_restricted_reason_hint: "This reason is required and will be sent in the access request email.",
+    files_restricted_directive_title: "Access directives",
+    files_restricted_directive_line_1: "Request whitelist approval from terminal admin.",
+    files_restricted_directive_line_2: "Keep this session open and re-run clearance check.",
+    files_restricted_directive_line_3: "Or log out and sign in with an authorized account.",
+    files_restricted_retry_button: "REQUEST ACCESS",
+    files_restricted_request_button_pending: "REQUEST PENDING",
+    files_restricted_request_button_busy: "SENDING REQUEST...",
+    files_restricted_request_success: "Access request sent. An admin will review your account.",
+    files_restricted_request_error: "Unable to send access request. Try again in a moment.",
+    files_restricted_request_rate_limited: "Request already sent recently. Please wait before trying again.",
+    files_restricted_request_pending_error: "Your request is already pending admin review.",
+    files_restricted_request_login_required: "Login is required before requesting access.",
+    files_restricted_request_unavailable: "Access request service is unavailable. Contact admin directly.",
+    files_restricted_reason_required: "Write why you need access before sending the request.",
+    files_restricted_reason_too_long: "Your reason is too long. Keep it under 1200 characters.",
+    files_restricted_request_already_authorized: "This account already has access.",
+    files_restricted_request_declined_cooldown: "Application was denied. You can submit a new request after the cooldown expires.",
+    files_denied_badge: "APPLICATION DENIED",
+    files_denied_title: "ACCESS REQUEST DECLINED",
+    files_denied_subtitle: "This request was declined by an administrator.",
+    files_denied_countdown_label: "Reapply cooldown",
+    files_denied_next_window_label: "Next request window",
+    files_denied_status_label: "Application status",
+    files_denied_status_value: "Denied",
+    files_denied_countdown_ready: "Cooldown finished. You can apply again now.",
+    files_denied_directive_title: "Next steps",
+    files_denied_directive_line_1: "Wait until the cooldown reaches zero.",
+    files_denied_directive_line_2: "Then reopen this panel and submit a new reason.",
+    files_denied_directive_line_3: "Or log out and return later.",
+    files_unauthorized_badge: "LOCKDOWN PROTOCOL",
+    files_unauthorized_kicker: "Archive index remains sealed until terminal identity is validated.",
+    files_unauthorized_state_label: "Identity state",
+    files_unauthorized_state_value: "Unverified session",
+    files_unauthorized_gate_label: "Gate control",
+    files_unauthorized_gate_value: "Biometric handshake required",
+    files_unauthorized_trace_label: "Intrusion trace",
+    files_unauthorized_trace_value: "Active monitoring",
+    files_unauthorized_directive_title: "Recovery directives",
+    files_unauthorized_directive_line_1: "Authenticate with an approved Discord account.",
+    files_unauthorized_directive_line_2: "Wait for clearance handshake confirmation.",
+    files_unauthorized_directive_line_3: "Re-open Files once authorization is granted.",
     files_login_button: "LOGIN WITH DISCORD",
     files_logout_button: "LOGOUT",
     files_not_authorized_message: "Sorry, you are not authorized to view the file index.",
@@ -167,6 +234,9 @@ const STRINGS = {
     files_session_clearance_label: "CLEARANCE",
     files_session_state_label: "SESSION STATE",
     files_session_state_online: "LINK ESTABLISHED",
+    files_session_state_pending: "REQUEST PENDING",
+    files_session_state_approved: "REQUEST APPROVED",
+    files_session_state_declined: "REQUEST DECLINED",
     files_session_badge_authorized: "AUTHORIZED",
     files_session_badge_admin: "ADMIN",
     files_session_badge_unauthorized: "UNAUTHORIZED",
@@ -174,6 +244,39 @@ const STRINGS = {
     files_session_clearance_admin: "ADMINISTRATOR",
     files_session_clearance_unauthorized: "UNAUTHORIZED USER",
     files_admin_console_title: "ADMIN CONSOLE",
+    files_admin_requests_title: "ACCESS CONTROL",
+    files_admin_requests_hint: "Search authorized users and pending requests. Approve, deny, or remove access in real time.",
+    files_admin_requests_search_label: "Search",
+    files_admin_requests_search_placeholder: "Search by nick, username, Discord ID, or email...",
+    files_admin_requests_filter_label: "Filter",
+    files_admin_requests_filter_pending: "Pending",
+    files_admin_requests_filter_approved: "Approved",
+    files_admin_requests_filter_declined: "Declined",
+    files_admin_requests_filter_authorized: "Authorized",
+    files_admin_requests_filter_all: "All",
+    files_admin_requests_refresh_button: "REFRESH",
+    files_admin_requests_loading: "Loading access requests...",
+    files_admin_requests_empty: "No matching users found.",
+    files_admin_requests_status_pending: "Pending",
+    files_admin_requests_status_approved: "Approved",
+    files_admin_requests_status_declined: "Declined",
+    files_admin_requests_source_allowlist: "ALLOWLIST",
+    files_admin_requests_source_request: "REQUEST",
+    files_admin_requests_meta_requested: "Requested",
+    files_admin_requests_meta_decided: "Decided",
+    files_admin_requests_meta_reason: "Reason",
+    files_admin_requests_meta_email: "Email",
+    files_admin_requests_action_approve: "APPROVE",
+    files_admin_requests_action_deny: "DENY",
+    files_admin_requests_action_unauthorize: "UNAUTHORIZE",
+    files_admin_requests_action_allow_reapply: "ALLOW REAPPLY",
+    files_admin_requests_action_busy: "PROCESSING...",
+    files_admin_requests_action_approve_success: "Request approved.",
+    files_admin_requests_action_deny_success: "Request denied.",
+    files_admin_requests_action_unauthorize_success: "User access removed.",
+    files_admin_requests_action_allow_reapply_success: "User can apply again now.",
+    files_admin_requests_error_generic: "Unable to process this action right now.",
+    files_admin_requests_error_allowlist: "This user is in ALLOWED_DISCORD_IDS and cannot be unauthorized here.",
     files_file_index_title: "FILE INDEX",
     files_upload_file_label: "File",
     files_upload_description_label: "Description",
@@ -328,6 +431,65 @@ const STRINGS = {
     files_main_title: "ACCESO AL SISTEMA DE ARCHIVOS PIP-BOY",
     files_unauthorized_title: "ACCESO NO AUTORIZADO AL SISTEMA DE ARCHIVOS",
     files_unauthorized_subtitle: "SE REQUIERE VERIFICACION DE IDENTIDAD",
+    files_restricted_browser_title: "ARCHIVO RESTRINGIDO",
+    files_restricted_badge: "CUENTA RESTRINGIDA",
+    files_restricted_incident: "INCIDENTE {code}",
+    files_restricted_title: "EL ACCESO AL ARCHIVO ESTA BLOQUEADO",
+    files_restricted_subtitle: "Esta cuenta esta autenticada pero no aprobada para el indice de archivos.",
+    files_restricted_identity_label: "Identidad",
+    files_restricted_discord_label: "Discord ID",
+    files_restricted_clearance_label: "Nivel",
+    files_restricted_status_label: "Estado de compuerta",
+    files_restricted_time_label: "Hora de revision",
+    files_restricted_status_none: "Sin solicitud enviada",
+    files_restricted_status_pending: "Esperando aprobacion de admin",
+    files_restricted_status_approved: "Aprobada",
+    files_restricted_status_declined: "Rechazada",
+    files_restricted_status_value: "Esperando aprobacion de admin",
+    files_restricted_reason_label: "Por que necesitas acceso?",
+    files_restricted_reason_placeholder: "Escribe por que necesitas acceso al indice de archivos...",
+    files_restricted_reason_hint: "Este motivo es obligatorio y se enviara en el email de solicitud.",
+    files_restricted_directive_title: "Directivas de acceso",
+    files_restricted_directive_line_1: "Solicita aprobacion de lista blanca al admin del terminal.",
+    files_restricted_directive_line_2: "Manten esta sesion abierta y reintenta la verificacion.",
+    files_restricted_directive_line_3: "O cierra sesion e inicia con una cuenta autorizada.",
+    files_restricted_retry_button: "SOLICITAR ACCESO",
+    files_restricted_request_button_pending: "SOLICITUD PENDIENTE",
+    files_restricted_request_button_busy: "ENVIANDO SOLICITUD...",
+    files_restricted_request_success: "Solicitud enviada. Un admin revisara tu cuenta.",
+    files_restricted_request_error: "No se pudo enviar la solicitud. Intenta de nuevo en un momento.",
+    files_restricted_request_rate_limited: "Ya enviaste una solicitud recientemente. Espera antes de reintentar.",
+    files_restricted_request_pending_error: "Tu solicitud ya esta pendiente de revision del admin.",
+    files_restricted_request_login_required: "Debes iniciar sesion para solicitar acceso.",
+    files_restricted_request_unavailable: "El servicio de solicitud no esta disponible. Contacta al admin directamente.",
+    files_restricted_reason_required: "Debes escribir por que quieres acceso antes de enviar la solicitud.",
+    files_restricted_reason_too_long: "Tu motivo es demasiado largo. Debe tener menos de 1200 caracteres.",
+    files_restricted_request_already_authorized: "Esta cuenta ya tiene acceso.",
+    files_restricted_request_declined_cooldown: "La solicitud fue rechazada. Podras enviar una nueva cuando termine el cooldown.",
+    files_denied_badge: "SOLICITUD DENEGADA",
+    files_denied_title: "SOLICITUD DE ACCESO RECHAZADA",
+    files_denied_subtitle: "Esta solicitud fue rechazada por un administrador.",
+    files_denied_countdown_label: "Cooldown para reintentar",
+    files_denied_next_window_label: "Proxima ventana de solicitud",
+    files_denied_status_label: "Estado de solicitud",
+    files_denied_status_value: "Rechazada",
+    files_denied_countdown_ready: "El cooldown termino. Ya puedes solicitar acceso de nuevo.",
+    files_denied_directive_title: "Siguientes pasos",
+    files_denied_directive_line_1: "Espera hasta que el cooldown llegue a cero.",
+    files_denied_directive_line_2: "Luego vuelve a este panel y envia un nuevo motivo.",
+    files_denied_directive_line_3: "O cierra sesion y regresa mas tarde.",
+    files_unauthorized_badge: "PROTOCOLO DE BLOQUEO",
+    files_unauthorized_kicker: "El indice del archivo permanece sellado hasta validar la identidad del terminal.",
+    files_unauthorized_state_label: "Estado de identidad",
+    files_unauthorized_state_value: "Sesion sin verificar",
+    files_unauthorized_gate_label: "Control de compuerta",
+    files_unauthorized_gate_value: "Se requiere enlace biometrico",
+    files_unauthorized_trace_label: "Rastro de intrusion",
+    files_unauthorized_trace_value: "Monitoreo activo",
+    files_unauthorized_directive_title: "Directivas de recuperacion",
+    files_unauthorized_directive_line_1: "Autentica con una cuenta de Discord aprobada.",
+    files_unauthorized_directive_line_2: "Espera la confirmacion del enlace de credenciales.",
+    files_unauthorized_directive_line_3: "Reabre Archivos cuando se otorgue autorizacion.",
     files_login_button: "INICIAR CON DISCORD",
     files_logout_button: "CERRAR SESION",
     files_not_authorized_message: "Lo sentimos, no estas autorizado para ver la lista de archivos.",
@@ -353,6 +515,9 @@ const STRINGS = {
     files_session_clearance_label: "NIVEL",
     files_session_state_label: "ESTADO DE SESION",
     files_session_state_online: "ENLACE ESTABLECIDO",
+    files_session_state_pending: "SOLICITUD PENDIENTE",
+    files_session_state_approved: "SOLICITUD APROBADA",
+    files_session_state_declined: "SOLICITUD RECHAZADA",
     files_session_badge_authorized: "AUTORIZADO",
     files_session_badge_admin: "ADMIN",
     files_session_badge_unauthorized: "NO AUTORIZADO",
@@ -360,6 +525,39 @@ const STRINGS = {
     files_session_clearance_admin: "ADMINISTRADOR",
     files_session_clearance_unauthorized: "USUARIO NO AUTORIZADO",
     files_admin_console_title: "CONSOLA ADMIN",
+    files_admin_requests_title: "CONTROL DE ACCESO",
+    files_admin_requests_hint: "Busca usuarios autorizados y solicitudes pendientes. Aprueba, rechaza o quita acceso en tiempo real.",
+    files_admin_requests_search_label: "Buscar",
+    files_admin_requests_search_placeholder: "Buscar por nick, usuario, Discord ID o email...",
+    files_admin_requests_filter_label: "Filtro",
+    files_admin_requests_filter_pending: "Pendientes",
+    files_admin_requests_filter_approved: "Aprobadas",
+    files_admin_requests_filter_declined: "Rechazadas",
+    files_admin_requests_filter_authorized: "Autorizados",
+    files_admin_requests_filter_all: "Todas",
+    files_admin_requests_refresh_button: "ACTUALIZAR",
+    files_admin_requests_loading: "Cargando solicitudes de acceso...",
+    files_admin_requests_empty: "No se encontraron usuarios que coincidan.",
+    files_admin_requests_status_pending: "Pendiente",
+    files_admin_requests_status_approved: "Aprobada",
+    files_admin_requests_status_declined: "Rechazada",
+    files_admin_requests_source_allowlist: "ALLOWLIST",
+    files_admin_requests_source_request: "SOLICITUD",
+    files_admin_requests_meta_requested: "Solicitada",
+    files_admin_requests_meta_decided: "Decidida",
+    files_admin_requests_meta_reason: "Motivo",
+    files_admin_requests_meta_email: "Email",
+    files_admin_requests_action_approve: "APROBAR",
+    files_admin_requests_action_deny: "RECHAZAR",
+    files_admin_requests_action_unauthorize: "QUITAR ACCESO",
+    files_admin_requests_action_allow_reapply: "PERMITIR REAPLICAR",
+    files_admin_requests_action_busy: "PROCESANDO...",
+    files_admin_requests_action_approve_success: "Solicitud aprobada.",
+    files_admin_requests_action_deny_success: "Solicitud rechazada.",
+    files_admin_requests_action_unauthorize_success: "Acceso removido al usuario.",
+    files_admin_requests_action_allow_reapply_success: "El usuario ya puede solicitar de nuevo.",
+    files_admin_requests_error_generic: "No se pudo procesar esta accion ahora mismo.",
+    files_admin_requests_error_allowlist: "Este usuario esta en ALLOWED_DISCORD_IDS y no se puede desautorizar aqui.",
     files_file_index_title: "INDICE DE ARCHIVOS",
     files_upload_file_label: "Archivo",
     files_upload_description_label: "Descripcion",
@@ -566,6 +764,18 @@ const state = {
     uploadBusy: false,
     uploadMessage: "",
     uploadMessageKind: "",
+    accessRequestBusy: false,
+    accessRequestMessage: "",
+    accessRequestMessageKind: "",
+    adminRequests: {
+      loading: false,
+      list: [],
+      query: "",
+      filter: "pending",
+      busyActionKey: "",
+      message: "",
+      messageKind: ""
+    },
     uploadFieldInvalid: false,
     uploadMissingFileError: false,
     search: {
@@ -649,13 +859,66 @@ const elements = {
   intelGrid: document.getElementById("intelGrid"),
   filesPage: document.getElementById("filesPage"),
   filesUnauthorizedPanel: document.getElementById("filesUnauthorizedPanel"),
+  filesUnauthorizedBadge: document.getElementById("filesUnauthorizedBadge"),
   filesUnauthorizedTitle: document.getElementById("filesUnauthorizedTitle"),
   filesUnauthorizedSubtitle: document.getElementById("filesUnauthorizedSubtitle"),
+  filesUnauthorizedKicker: document.getElementById("filesUnauthorizedKicker"),
+  filesUnauthorizedStateLabel: document.getElementById("filesUnauthorizedStateLabel"),
+  filesUnauthorizedStateValue: document.getElementById("filesUnauthorizedStateValue"),
+  filesUnauthorizedGateLabel: document.getElementById("filesUnauthorizedGateLabel"),
+  filesUnauthorizedGateValue: document.getElementById("filesUnauthorizedGateValue"),
+  filesUnauthorizedTraceLabel: document.getElementById("filesUnauthorizedTraceLabel"),
+  filesUnauthorizedTraceValue: document.getElementById("filesUnauthorizedTraceValue"),
+  filesUnauthorizedDirectiveTitle: document.getElementById("filesUnauthorizedDirectiveTitle"),
+  filesUnauthorizedDirectiveLine1: document.getElementById("filesUnauthorizedDirectiveLine1"),
+  filesUnauthorizedDirectiveLine2: document.getElementById("filesUnauthorizedDirectiveLine2"),
+  filesUnauthorizedDirectiveLine3: document.getElementById("filesUnauthorizedDirectiveLine3"),
   filesNotAuthorizedMessage: document.getElementById("filesNotAuthorizedMessage"),
   filesLoginForm: document.getElementById("filesLoginForm"),
   filesLoginBtn: document.getElementById("filesLoginBtn"),
   filesLogoutBtn: document.getElementById("filesLogoutBtn"),
   filesAuthorizedView: document.getElementById("filesAuthorizedView"),
+  filesRestrictedView: document.getElementById("filesRestrictedView"),
+  filesRestrictedBadge: document.getElementById("filesRestrictedBadge"),
+  filesRestrictedIncident: document.getElementById("filesRestrictedIncident"),
+  filesRestrictedTitle: document.getElementById("filesRestrictedTitle"),
+  filesRestrictedSubtitle: document.getElementById("filesRestrictedSubtitle"),
+  filesRestrictedIdentityLabel: document.getElementById("filesRestrictedIdentityLabel"),
+  filesRestrictedIdentityValue: document.getElementById("filesRestrictedIdentityValue"),
+  filesRestrictedDiscordLabel: document.getElementById("filesRestrictedDiscordLabel"),
+  filesRestrictedDiscordValue: document.getElementById("filesRestrictedDiscordValue"),
+  filesRestrictedClearanceLabel: document.getElementById("filesRestrictedClearanceLabel"),
+  filesRestrictedClearanceValue: document.getElementById("filesRestrictedClearanceValue"),
+  filesRestrictedStatusLabel: document.getElementById("filesRestrictedStatusLabel"),
+  filesRestrictedStatusValue: document.getElementById("filesRestrictedStatusValue"),
+  filesRestrictedTimeLabel: document.getElementById("filesRestrictedTimeLabel"),
+  filesRestrictedTimeValue: document.getElementById("filesRestrictedTimeValue"),
+  filesRestrictedDirectiveTitle: document.getElementById("filesRestrictedDirectiveTitle"),
+  filesRestrictedDirectiveLine1: document.getElementById("filesRestrictedDirectiveLine1"),
+  filesRestrictedDirectiveLine2: document.getElementById("filesRestrictedDirectiveLine2"),
+  filesRestrictedDirectiveLine3: document.getElementById("filesRestrictedDirectiveLine3"),
+  filesRestrictedReasonSection: document.getElementById("filesRestrictedReasonSection"),
+  filesRestrictedReasonLabel: document.getElementById("filesRestrictedReasonLabel"),
+  filesRestrictedReasonInput: document.getElementById("filesRestrictedReasonInput"),
+  filesRestrictedReasonHint: document.getElementById("filesRestrictedReasonHint"),
+  filesRestrictedRetryBtn: document.getElementById("filesRestrictedRetryBtn"),
+  filesRestrictedLogoutBtn: document.getElementById("filesRestrictedLogoutBtn"),
+  filesRestrictedRequestFeedback: document.getElementById("filesRestrictedRequestFeedback"),
+  filesDeniedView: document.getElementById("filesDeniedView"),
+  filesDeniedBadge: document.getElementById("filesDeniedBadge"),
+  filesDeniedTitle: document.getElementById("filesDeniedTitle"),
+  filesDeniedSubtitle: document.getElementById("filesDeniedSubtitle"),
+  filesDeniedStatusLabel: document.getElementById("filesDeniedStatusLabel"),
+  filesDeniedStatusValue: document.getElementById("filesDeniedStatusValue"),
+  filesDeniedNextWindowLabel: document.getElementById("filesDeniedNextWindowLabel"),
+  filesDeniedNextWindowValue: document.getElementById("filesDeniedNextWindowValue"),
+  filesDeniedCountdownLabel: document.getElementById("filesDeniedCountdownLabel"),
+  filesDeniedCountdownValue: document.getElementById("filesDeniedCountdownValue"),
+  filesDeniedDirectiveTitle: document.getElementById("filesDeniedDirectiveTitle"),
+  filesDeniedDirectiveLine1: document.getElementById("filesDeniedDirectiveLine1"),
+  filesDeniedDirectiveLine2: document.getElementById("filesDeniedDirectiveLine2"),
+  filesDeniedDirectiveLine3: document.getElementById("filesDeniedDirectiveLine3"),
+  filesDeniedLogoutBtn: document.getElementById("filesDeniedLogoutBtn"),
   filesSessionTitle: document.getElementById("filesSessionTitle"),
   filesSessionBadge: document.getElementById("filesSessionBadge"),
   filesSessionIdentity: document.getElementById("filesSessionIdentity"),
@@ -677,6 +940,26 @@ const elements = {
   filesDescriptionInput: document.getElementById("filesDescriptionInput"),
   filesUploadBtn: document.getElementById("filesUploadBtn"),
   filesUploadFeedback: document.getElementById("filesUploadFeedback"),
+  filesAdminRequestsPanel: document.getElementById("filesAdminRequestsPanel"),
+  filesAdminRequestsTitle: document.getElementById("filesAdminRequestsTitle"),
+  filesAdminRequestsHint: document.getElementById("filesAdminRequestsHint"),
+  filesAdminRequestsSearchLabel: document.getElementById("filesAdminRequestsSearchLabel"),
+  filesAdminRequestsSearchInput: document.getElementById("filesAdminRequestsSearchInput"),
+  filesAdminRequestsFilterLabel: document.getElementById("filesAdminRequestsFilterLabel"),
+  filesAdminRequestsFilterDropdown: document.getElementById("filesAdminRequestsFilterDropdown"),
+  filesAdminRequestsFilterBtn: document.getElementById("filesAdminRequestsFilterBtn"),
+  filesAdminRequestsFilterCurrent: document.getElementById("filesAdminRequestsFilterCurrent"),
+  filesAdminRequestsFilterMenu: document.getElementById("filesAdminRequestsFilterMenu"),
+  filesAdminRequestsFilter: document.getElementById("filesAdminRequestsFilter"),
+  filesAdminRequestsFilterPending: document.getElementById("filesAdminRequestsFilterPending"),
+  filesAdminRequestsFilterApproved: document.getElementById("filesAdminRequestsFilterApproved"),
+  filesAdminRequestsFilterDeclined: document.getElementById("filesAdminRequestsFilterDeclined"),
+  filesAdminRequestsFilterAuthorized: document.getElementById("filesAdminRequestsFilterAuthorized"),
+  filesAdminRequestsFilterAll: document.getElementById("filesAdminRequestsFilterAll"),
+  filesAdminRequestsFilterOptions: Array.from(document.querySelectorAll(".files-admin-requests-filter-option")),
+  filesAdminRequestsRefreshBtn: document.getElementById("filesAdminRequestsRefreshBtn"),
+  filesAdminRequestsFeedback: document.getElementById("filesAdminRequestsFeedback"),
+  filesAdminRequestsList: document.getElementById("filesAdminRequestsList"),
   filesBrowserPanel: document.querySelector("#filesAuthorizedView .files-browser-panel"),
   filesBrowserTitle: document.getElementById("filesBrowserTitle"),
   filesSearchToggleBtn: document.getElementById("filesSearchToggleBtn"),
@@ -816,6 +1099,7 @@ function setTopTabActive(view) {
 }
 
 function hideFilesPage() {
+  stopFilesLiveIdentityPolling();
   document.body.classList.remove("is-files");
   document.body.classList.remove("is-files-unauthorized", "is-files-guest");
   closeFilesDeleteModal({ force: true });
@@ -851,6 +1135,7 @@ function showIntelPage({ updateHash = true } = {}) {
 
 function showFilesPage({ updateHash = true } = {}) {
   closeClassifiedPageForNavigation();
+  startFilesLiveIdentityPolling();
   document.body.classList.add("is-files");
   if (elements.filesPage) {
     elements.filesPage.hidden = false;
@@ -900,7 +1185,11 @@ function buildGuestFilesProfile() {
     discordId: "",
     username: "",
     isAdmin: false,
-    isAuthorized: false
+    isAuthorized: false,
+    accessRequestStatus: "none",
+    accessRequestRequestedAt: "",
+    accessRequestDecidedAt: "",
+    accessRequestReapplyAt: ""
   };
 }
 
@@ -915,8 +1204,85 @@ function normalizeFilesProfile(payload) {
     discordId: String(payload.discordId || ""),
     username: String(payload.username || ""),
     isAdmin: Boolean(payload.isAdmin),
-    isAuthorized: Boolean(payload.isAuthorized)
+    isAuthorized: Boolean(payload.isAuthorized),
+    accessRequestStatus: String(payload.accessRequestStatus || "none").trim().toLowerCase() || "none",
+    accessRequestRequestedAt: String(payload.accessRequestRequestedAt || ""),
+    accessRequestDecidedAt: String(payload.accessRequestDecidedAt || ""),
+    accessRequestReapplyAt: String(payload.accessRequestReapplyAt || "")
   };
+}
+
+function normalizeFilesAccessRequestStatus(status) {
+  const normalized = String(status || "").trim().toLowerCase();
+  if (normalized === "pending" || normalized === "approved" || normalized === "declined") {
+    return normalized;
+  }
+  return "none";
+}
+
+function getFilesAccessRequestStatusLabel(status) {
+  const resolvedStatus = normalizeFilesAccessRequestStatus(status);
+  if (resolvedStatus === "approved") {
+    return t("files_restricted_status_approved");
+  }
+  if (resolvedStatus === "declined") {
+    return t("files_restricted_status_declined");
+  }
+  if (resolvedStatus === "pending") {
+    return t("files_restricted_status_pending");
+  }
+  return t("files_restricted_status_none");
+}
+
+function resolveFilesReapplyAtMs({ accessRequestStatus, accessRequestDecidedAt, accessRequestReapplyAt } = {}) {
+  const explicitMs = Date.parse(String(accessRequestReapplyAt || "").trim());
+  if (Number.isFinite(explicitMs) && explicitMs > 0) {
+    return explicitMs;
+  }
+
+  const resolvedStatus = normalizeFilesAccessRequestStatus(accessRequestStatus);
+  if (resolvedStatus !== "declined") {
+    return 0;
+  }
+
+  const decidedAtMs = Date.parse(String(accessRequestDecidedAt || "").trim());
+  if (!Number.isFinite(decidedAtMs) || decidedAtMs <= 0) {
+    return 0;
+  }
+  return decidedAtMs + FILES_ACCESS_DECLINED_REAPPLY_MS;
+}
+
+function getFilesDeclinedCooldownRemainingMs(profile = {}, nowMs = Date.now()) {
+  const reapplyAtMs = resolveFilesReapplyAtMs(profile);
+  if (!Number.isFinite(reapplyAtMs) || reapplyAtMs <= 0) {
+    return 0;
+  }
+  return Math.max(0, reapplyAtMs - nowMs);
+}
+
+function isFilesDeclinedCooldownActive(profile = {}, nowMs = Date.now()) {
+  const status = normalizeFilesAccessRequestStatus(profile.accessRequestStatus);
+  if (status !== "declined") {
+    return false;
+  }
+  return getFilesDeclinedCooldownRemainingMs(profile, nowMs) > 0;
+}
+
+function getFilesSessionStateLabel({ loggedIn, accessRequestStatus }) {
+  if (!loggedIn) {
+    return t("files_unknown_value");
+  }
+  const resolvedStatus = normalizeFilesAccessRequestStatus(accessRequestStatus);
+  if (resolvedStatus === "approved") {
+    return t("files_session_state_approved");
+  }
+  if (resolvedStatus === "declined") {
+    return t("files_session_state_declined");
+  }
+  if (resolvedStatus === "pending") {
+    return t("files_session_state_pending");
+  }
+  return t("files_session_state_online");
 }
 
 function formatFileSize(byteValue) {
@@ -985,6 +1351,391 @@ function resolveFileTypeLabel(file) {
 function setFilesUploadFeedback(message = "", kind = "") {
   state.files.uploadMessage = String(message || "");
   state.files.uploadMessageKind = kind === "success" ? "success" : kind === "error" ? "error" : "";
+}
+
+function setFilesRestrictedRequestFeedback(message = "", kind = "") {
+  state.files.accessRequestMessage = String(message || "");
+  state.files.accessRequestMessageKind = kind === "success" ? "success" : kind === "error" ? "error" : "";
+}
+
+function setFilesAdminRequestsFeedback(message = "", kind = "") {
+  if (filesAdminRequestsFeedbackTimer) {
+    clearTimeout(filesAdminRequestsFeedbackTimer);
+    filesAdminRequestsFeedbackTimer = null;
+  }
+
+  state.files.adminRequests.message = String(message || "");
+  state.files.adminRequests.messageKind = kind === "success" ? "success" : kind === "error" ? "error" : "";
+
+  if (!state.files.adminRequests.message) {
+    return;
+  }
+
+  filesAdminRequestsFeedbackTimer = setTimeout(() => {
+    filesAdminRequestsFeedbackTimer = null;
+    state.files.adminRequests.message = "";
+    state.files.adminRequests.messageKind = "";
+    if (state.view === "files" && document.body.classList.contains("is-files")) {
+      renderFilesAccessView();
+    }
+  }, FILES_ADMIN_REQUESTS_FEEDBACK_AUTO_HIDE_MS);
+}
+
+function normalizeFilesAdminRequestsFilter(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (
+    normalized === "pending"
+    || normalized === "approved"
+    || normalized === "declined"
+    || normalized === "authorized"
+    || normalized === "all"
+  ) {
+    return normalized;
+  }
+  return "pending";
+}
+
+function getFilesAdminRequestsFilterLabel(filter) {
+  const resolvedFilter = normalizeFilesAdminRequestsFilter(filter);
+  if (resolvedFilter === "approved") {
+    return t("files_admin_requests_filter_approved");
+  }
+  if (resolvedFilter === "declined") {
+    return t("files_admin_requests_filter_declined");
+  }
+  if (resolvedFilter === "authorized") {
+    return t("files_admin_requests_filter_authorized");
+  }
+  if (resolvedFilter === "all") {
+    return t("files_admin_requests_filter_all");
+  }
+  return t("files_admin_requests_filter_pending");
+}
+
+function setFilesAdminRequestsFilterMenuOpen(active) {
+  if (!elements.filesAdminRequestsFilterDropdown || !elements.filesAdminRequestsFilterBtn || !elements.filesAdminRequestsFilterMenu) {
+    return;
+  }
+
+  const shouldOpen = Boolean(active);
+  elements.filesAdminRequestsFilterDropdown.classList.toggle("is-open", shouldOpen);
+  elements.filesAdminRequestsFilterBtn.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+  elements.filesAdminRequestsFilterMenu.hidden = !shouldOpen;
+}
+
+function syncFilesAdminRequestsFilterMenu() {
+  const resolvedFilter = normalizeFilesAdminRequestsFilter(state.files.adminRequests.filter);
+  state.files.adminRequests.filter = resolvedFilter;
+
+  if (elements.filesAdminRequestsFilter) {
+    elements.filesAdminRequestsFilter.value = resolvedFilter;
+  }
+  if (elements.filesAdminRequestsFilterCurrent) {
+    elements.filesAdminRequestsFilterCurrent.textContent = getFilesAdminRequestsFilterLabel(resolvedFilter);
+  }
+  if (!Array.isArray(elements.filesAdminRequestsFilterOptions)) {
+    return;
+  }
+
+  elements.filesAdminRequestsFilterOptions.forEach((option) => {
+    const selected = normalizeFilesAdminRequestsFilter(option.dataset.filter || "") === resolvedFilter;
+    option.classList.toggle("is-selected", selected);
+    option.setAttribute("aria-selected", selected ? "true" : "false");
+  });
+}
+
+function setFilesAdminRequestsFilterValue(nextFilter, { render = true, closeMenu = true } = {}) {
+  state.files.adminRequests.filter = normalizeFilesAdminRequestsFilter(nextFilter);
+  syncFilesAdminRequestsFilterMenu();
+  if (closeMenu) {
+    setFilesAdminRequestsFilterMenuOpen(false);
+  }
+  if (render) {
+    renderFilesAdminRequestsPanel();
+  }
+}
+
+function normalizeFilesAdminRequestSource(source) {
+  const normalized = String(source || "").trim().toLowerCase();
+  if (normalized === "allowlist") {
+    return "allowlist";
+  }
+  return "request";
+}
+
+function normalizeFilesAdminRequestEntry(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const discordId = String(payload.discordId || "").trim();
+  const requestId = String(payload.requestId || "").trim();
+  if (!discordId) {
+    return null;
+  }
+
+  return {
+    requestId,
+    discordId,
+    nick: String(payload.nick || "").trim(),
+    username: String(payload.username || "").trim(),
+    email: String(payload.email || "").trim(),
+    reason: String(payload.reason || "").trim(),
+    status: normalizeFilesAccessRequestStatus(payload.status),
+    requestedAt: String(payload.requestedAt || "").trim(),
+    decidedAt: String(payload.decidedAt || "").trim(),
+    source: normalizeFilesAdminRequestSource(payload.source),
+    canApprove: Boolean(payload.canApprove),
+    canDecline: Boolean(payload.canDecline),
+    canUnauthorize: Boolean(payload.canUnauthorize),
+    canAllowReapply: Boolean(payload.canAllowReapply)
+  };
+}
+
+function clearFilesAdminRequestsState() {
+  if (filesAdminRequestsFeedbackTimer) {
+    clearTimeout(filesAdminRequestsFeedbackTimer);
+    filesAdminRequestsFeedbackTimer = null;
+  }
+  state.files.adminRequests.loading = false;
+  state.files.adminRequests.list = [];
+  state.files.adminRequests.busyActionKey = "";
+  state.files.adminRequests.message = "";
+  state.files.adminRequests.messageKind = "";
+}
+
+function getFilesAdminRequestStatusLabel(status) {
+  const normalized = normalizeFilesAccessRequestStatus(status);
+  if (normalized === "approved") {
+    return t("files_admin_requests_status_approved");
+  }
+  if (normalized === "declined") {
+    return t("files_admin_requests_status_declined");
+  }
+  if (normalized === "pending") {
+    return t("files_admin_requests_status_pending");
+  }
+  return t("files_unknown_value");
+}
+
+function getFilesAdminRequestSearchText(entry) {
+  return normalizeSearchText([
+    entry.nick,
+    entry.username,
+    entry.discordId,
+    entry.email,
+    entry.reason
+  ].join(" "));
+}
+
+function getFilteredFilesAdminRequestsList() {
+  const source = Array.isArray(state.files.adminRequests.list) ? state.files.adminRequests.list : [];
+  const filter = normalizeFilesAdminRequestsFilter(state.files.adminRequests.filter);
+  const query = normalizeSearchText(state.files.adminRequests.query || "");
+  const tokens = query ? query.split(" ").filter(Boolean) : [];
+
+  return source.filter((entry) => {
+    if (filter === "pending" && entry.status !== "pending") {
+      return false;
+    }
+    if (filter === "approved" && entry.status !== "approved") {
+      return false;
+    }
+    if (filter === "declined" && entry.status !== "declined") {
+      return false;
+    }
+    if (filter === "authorized" && entry.status !== "approved") {
+      return false;
+    }
+    if (!tokens.length) {
+      return true;
+    }
+
+    const haystack = getFilesAdminRequestSearchText(entry);
+    return tokens.every((token) => haystack.includes(token));
+  });
+}
+
+function renderFilesAdminRequestsPanel() {
+  if (!elements.filesAdminRequestsPanel) {
+    return;
+  }
+
+  const me = normalizeFilesProfile(state.files.me);
+  const showPanel = Boolean(me.isAuthorized && me.isAdmin);
+  elements.filesAdminRequestsPanel.hidden = !showPanel;
+  if (!showPanel) {
+    setFilesAdminRequestsFilterMenuOpen(false);
+    return;
+  }
+
+  syncFilesAdminRequestsFilterMenu();
+
+  if (elements.filesAdminRequestsSearchInput) {
+    const nextQuery = String(state.files.adminRequests.query || "");
+    if (elements.filesAdminRequestsSearchInput.value !== nextQuery) {
+      elements.filesAdminRequestsSearchInput.value = nextQuery;
+    }
+  }
+
+  if (elements.filesAdminRequestsRefreshBtn) {
+    elements.filesAdminRequestsRefreshBtn.disabled = state.files.adminRequests.loading;
+  }
+
+  if (elements.filesAdminRequestsFeedback) {
+    const message = String(state.files.adminRequests.message || "");
+    const hasMessage = Boolean(message);
+    elements.filesAdminRequestsFeedback.hidden = !hasMessage;
+    elements.filesAdminRequestsFeedback.textContent = message;
+    elements.filesAdminRequestsFeedback.classList.toggle("is-success", state.files.adminRequests.messageKind === "success");
+    elements.filesAdminRequestsFeedback.classList.toggle("is-error", state.files.adminRequests.messageKind === "error");
+  }
+
+  if (!elements.filesAdminRequestsList) {
+    return;
+  }
+
+  if (state.files.adminRequests.loading) {
+    elements.filesAdminRequestsList.innerHTML = `<p class="files-admin-requests-empty">${t("files_admin_requests_loading")}</p>`;
+    return;
+  }
+
+  const visibleEntries = getFilteredFilesAdminRequestsList();
+  if (!visibleEntries.length) {
+    elements.filesAdminRequestsList.innerHTML = `<p class="files-admin-requests-empty">${t("files_admin_requests_empty")}</p>`;
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  for (let index = 0; index < visibleEntries.length; index += 1) {
+    const entry = visibleEntries[index];
+    const identity = entry.nick || entry.username || entry.discordId || t("files_unknown_value");
+    const statusLabel = getFilesAdminRequestStatusLabel(entry.status);
+    const sourceLabel = entry.source === "allowlist"
+      ? t("files_admin_requests_source_allowlist")
+      : t("files_admin_requests_source_request");
+    const requestedAt = formatFileDateTime(entry.requestedAt);
+    const decidedAt = entry.decidedAt ? formatFileDateTime(entry.decidedAt) : t("files_unknown_value");
+    const emailText = entry.email || t("files_unknown_value");
+    const reasonText = entry.reason || t("files_unknown_value");
+    const itemKey = entry.requestId || entry.discordId;
+    const rowBusy = Boolean(state.files.adminRequests.busyActionKey) && state.files.adminRequests.busyActionKey === itemKey;
+
+    const card = document.createElement("article");
+    card.className = "files-admin-request-item";
+    card.style.setProperty("--files-admin-request-index", String(Math.min(index, 11)));
+
+    const top = document.createElement("div");
+    top.className = "files-admin-request-top";
+    const name = document.createElement("p");
+    name.className = "files-admin-request-name";
+    name.textContent = identity;
+    const badges = document.createElement("div");
+    badges.className = "files-admin-request-badges";
+    const statusBadge = document.createElement("span");
+    statusBadge.className = `files-admin-request-badge is-${entry.status}`;
+    statusBadge.textContent = statusLabel;
+    const sourceBadge = document.createElement("span");
+    sourceBadge.className = "files-admin-request-badge is-source";
+    sourceBadge.textContent = sourceLabel;
+    badges.appendChild(statusBadge);
+    badges.appendChild(sourceBadge);
+    top.appendChild(name);
+    top.appendChild(badges);
+
+    const meta = document.createElement("div");
+    meta.className = "files-admin-request-meta";
+    const metaRows = [
+      [t("files_session_id_label"), entry.discordId || t("files_unknown_value")],
+      [t("files_admin_requests_meta_email"), emailText],
+      [t("files_admin_requests_meta_requested"), requestedAt],
+      [t("files_admin_requests_meta_decided"), decidedAt]
+    ];
+    for (const [label, value] of metaRows) {
+      const row = document.createElement("div");
+      const key = document.createElement("span");
+      key.textContent = label;
+      const val = document.createElement("strong");
+      val.textContent = value;
+      row.appendChild(key);
+      row.appendChild(val);
+      meta.appendChild(row);
+    }
+
+    const reason = document.createElement("p");
+    reason.className = "files-admin-request-reason";
+    const reasonLabel = document.createElement("span");
+    reasonLabel.textContent = t("files_admin_requests_meta_reason");
+    reason.appendChild(reasonLabel);
+    reason.appendChild(document.createTextNode(reasonText));
+
+    const actions = document.createElement("div");
+    actions.className = "files-admin-request-actions";
+
+    if (entry.canApprove && entry.requestId) {
+      const approveBtn = document.createElement("button");
+      approveBtn.type = "button";
+      approveBtn.className = "files-card-action files-admin-request-action";
+      approveBtn.textContent = rowBusy ? t("files_admin_requests_action_busy") : t("files_admin_requests_action_approve");
+      approveBtn.dataset.filesAdminAction = "approve";
+      approveBtn.dataset.requestId = entry.requestId;
+      approveBtn.dataset.actionKey = itemKey;
+      approveBtn.disabled = rowBusy || state.files.adminRequests.loading;
+      actions.appendChild(approveBtn);
+    }
+
+    if (entry.canDecline && entry.requestId) {
+      const denyBtn = document.createElement("button");
+      denyBtn.type = "button";
+      denyBtn.className = "files-card-action files-admin-request-action is-delete";
+      denyBtn.textContent = rowBusy ? t("files_admin_requests_action_busy") : t("files_admin_requests_action_deny");
+      denyBtn.dataset.filesAdminAction = "deny";
+      denyBtn.dataset.requestId = entry.requestId;
+      denyBtn.dataset.actionKey = itemKey;
+      denyBtn.disabled = rowBusy || state.files.adminRequests.loading;
+      actions.appendChild(denyBtn);
+    }
+
+    if (entry.canUnauthorize) {
+      const unauthorizeBtn = document.createElement("button");
+      unauthorizeBtn.type = "button";
+      unauthorizeBtn.className = "files-card-action files-admin-request-action is-delete";
+      unauthorizeBtn.textContent = rowBusy ? t("files_admin_requests_action_busy") : t("files_admin_requests_action_unauthorize");
+      unauthorizeBtn.dataset.filesAdminAction = "unauthorize";
+      unauthorizeBtn.dataset.discordId = entry.discordId;
+      unauthorizeBtn.dataset.actionKey = itemKey;
+      unauthorizeBtn.disabled = rowBusy || state.files.adminRequests.loading;
+      actions.appendChild(unauthorizeBtn);
+    }
+
+    if (entry.canAllowReapply) {
+      const allowReapplyBtn = document.createElement("button");
+      allowReapplyBtn.type = "button";
+      allowReapplyBtn.className = "files-card-action files-admin-request-action";
+      allowReapplyBtn.textContent = rowBusy ? t("files_admin_requests_action_busy") : t("files_admin_requests_action_allow_reapply");
+      allowReapplyBtn.dataset.filesAdminAction = "allow-reapply";
+      allowReapplyBtn.dataset.discordId = entry.discordId;
+      allowReapplyBtn.dataset.actionKey = itemKey;
+      allowReapplyBtn.disabled = rowBusy || state.files.adminRequests.loading;
+      actions.appendChild(allowReapplyBtn);
+    }
+
+    if (!actions.children.length && entry.source === "allowlist") {
+      const locked = document.createElement("p");
+      locked.className = "files-admin-request-locked";
+      locked.textContent = t("files_admin_requests_error_allowlist");
+      actions.appendChild(locked);
+    }
+
+    card.appendChild(top);
+    card.appendChild(meta);
+    card.appendChild(reason);
+    card.appendChild(actions);
+    fragment.appendChild(card);
+  }
+
+  elements.filesAdminRequestsList.innerHTML = "";
+  elements.filesAdminRequestsList.appendChild(fragment);
 }
 
 function setFilesUploadInputInvalid(isInvalid, { isMissingFileError = false } = {}) {
@@ -1263,7 +2014,7 @@ function renderFilesDetailCard(file) {
   elements.filesList.appendChild(detailCard);
 }
 
-function renderFilesSessionProfile({ loggedIn, authorized, isAdmin, username, discordId } = {}) {
+function renderFilesSessionProfile({ loggedIn, authorized, isAdmin, username, discordId, accessRequestStatus } = {}) {
   const unknown = t("files_unknown_value");
   const resolvedLoggedIn = Boolean(loggedIn);
   const resolvedAuthorized = Boolean(authorized) && resolvedLoggedIn;
@@ -1277,7 +2028,10 @@ function renderFilesSessionProfile({ loggedIn, authorized, isAdmin, username, di
       : resolvedAuthorized
         ? t("files_session_clearance_authorized")
         : t("files_session_clearance_unauthorized");
-  const resolvedState = resolvedLoggedIn ? t("files_session_state_online") : unknown;
+  const resolvedState = getFilesSessionStateLabel({
+    loggedIn: resolvedLoggedIn,
+    accessRequestStatus
+  });
   const badgeText = !resolvedLoggedIn
     ? unknown
     : resolvedAdmin
@@ -1303,6 +2057,166 @@ function renderFilesSessionProfile({ loggedIn, authorized, isAdmin, username, di
     elements.filesSessionBadge.textContent = badgeText;
     elements.filesSessionBadge.classList.toggle("is-admin", resolvedAdmin);
   }
+}
+
+function createFilesRestrictedIncidentCode(seed = "") {
+  const input = String(seed || "guest");
+  let hash = 0;
+  for (let index = 0; index < input.length; index += 1) {
+    hash = (hash * 33 + input.charCodeAt(index)) >>> 0;
+  }
+  return `FR-${hash.toString(16).toUpperCase().padStart(8, "0").slice(-6)}`;
+}
+
+function renderFilesRestrictedView({
+  loggedIn,
+  authorized,
+  username,
+  discordId,
+  accessRequestStatus,
+  accessRequestRequestedAt,
+  accessRequestDecidedAt,
+  accessRequestReapplyAt
+} = {}) {
+  if (!elements.filesRestrictedView) {
+    return;
+  }
+
+  const resolvedLoggedIn = Boolean(loggedIn);
+  const resolvedAuthorized = Boolean(authorized) && resolvedLoggedIn;
+  const cooldownActive = isFilesDeclinedCooldownActive({
+    accessRequestStatus,
+    accessRequestDecidedAt,
+    accessRequestReapplyAt
+  });
+  const showRestricted = resolvedLoggedIn && !resolvedAuthorized && !cooldownActive;
+  elements.filesRestrictedView.hidden = !showRestricted;
+  if (elements.filesRestrictedRequestFeedback) {
+    if (!showRestricted) {
+      elements.filesRestrictedRequestFeedback.hidden = true;
+      elements.filesRestrictedRequestFeedback.textContent = "";
+      elements.filesRestrictedRequestFeedback.classList.remove("is-error", "is-success");
+    }
+  }
+  if (elements.filesRestrictedReasonInput && !showRestricted) {
+    elements.filesRestrictedReasonInput.classList.remove("is-invalid");
+  }
+  if (!showRestricted) {
+    return;
+  }
+
+  const unknown = t("files_unknown_value");
+  const resolvedUsername = String(username || "").trim() || unknown;
+  const resolvedDiscordId = String(discordId || "").trim() || unknown;
+  const resolvedRequestStatus = normalizeFilesAccessRequestStatus(accessRequestStatus);
+  const hideReasonSection = resolvedRequestStatus === "pending";
+  const incidentCode = createFilesRestrictedIncidentCode(resolvedDiscordId !== unknown ? resolvedDiscordId : resolvedUsername);
+  const locale = state.lang === "es" ? "es-ES" : "en-US";
+
+  if (elements.filesRestrictedReasonSection) {
+    elements.filesRestrictedReasonSection.hidden = hideReasonSection;
+  }
+  if (hideReasonSection && elements.filesRestrictedReasonInput) {
+    elements.filesRestrictedReasonInput.classList.remove("is-invalid");
+  }
+
+  if (elements.filesRestrictedIncident) {
+    elements.filesRestrictedIncident.textContent = t("files_restricted_incident", { code: incidentCode });
+  }
+  if (elements.filesRestrictedIdentityValue) {
+    elements.filesRestrictedIdentityValue.textContent = resolvedUsername;
+  }
+  if (elements.filesRestrictedDiscordValue) {
+    elements.filesRestrictedDiscordValue.textContent = resolvedDiscordId;
+  }
+  if (elements.filesRestrictedClearanceValue) {
+    elements.filesRestrictedClearanceValue.textContent = t("files_session_clearance_unauthorized");
+  }
+  if (elements.filesRestrictedStatusValue) {
+    elements.filesRestrictedStatusValue.textContent = getFilesAccessRequestStatusLabel(resolvedRequestStatus);
+  }
+  if (elements.filesRestrictedTimeValue) {
+    const checkpointSource = String(accessRequestDecidedAt || accessRequestRequestedAt || "").trim();
+    const checkpointDate = checkpointSource ? new Date(checkpointSource) : new Date();
+    const safeDate = Number.isNaN(checkpointDate.getTime()) ? new Date() : checkpointDate;
+    elements.filesRestrictedTimeValue.textContent = safeDate.toLocaleString(locale, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+  }
+  if (elements.filesRestrictedRequestFeedback) {
+    const hasMessage = Boolean(state.files.accessRequestMessage);
+    elements.filesRestrictedRequestFeedback.hidden = !hasMessage;
+    elements.filesRestrictedRequestFeedback.textContent = hasMessage ? state.files.accessRequestMessage : "";
+    elements.filesRestrictedRequestFeedback.classList.toggle("is-success", state.files.accessRequestMessageKind === "success");
+    elements.filesRestrictedRequestFeedback.classList.toggle("is-error", state.files.accessRequestMessageKind === "error");
+  }
+}
+
+function updateFilesDeniedCountdown(nowMs = Date.now()) {
+  if (!elements.filesDeniedView || elements.filesDeniedView.hidden || !elements.filesDeniedCountdownValue) {
+    return;
+  }
+
+  const me = normalizeFilesProfile(state.files.me);
+  const remainingMs = getFilesDeclinedCooldownRemainingMs(me, nowMs);
+  if (remainingMs <= 0) {
+    elements.filesDeniedCountdownValue.textContent = t("files_denied_countdown_ready");
+    renderFilesAccessView();
+    return;
+  }
+
+  elements.filesDeniedCountdownValue.textContent = formatMinervaCountdown(remainingMs);
+}
+
+function renderFilesDeniedView({
+  loggedIn,
+  authorized,
+  accessRequestStatus,
+  accessRequestDecidedAt,
+  accessRequestReapplyAt
+} = {}) {
+  if (!elements.filesDeniedView) {
+    return;
+  }
+
+  const resolvedLoggedIn = Boolean(loggedIn);
+  const resolvedAuthorized = Boolean(authorized) && resolvedLoggedIn;
+  const resolvedStatus = normalizeFilesAccessRequestStatus(accessRequestStatus);
+  const remainingMs = getFilesDeclinedCooldownRemainingMs({
+    accessRequestStatus: resolvedStatus,
+    accessRequestDecidedAt,
+    accessRequestReapplyAt
+  });
+  const showDenied = resolvedLoggedIn && !resolvedAuthorized && resolvedStatus === "declined" && remainingMs > 0;
+  elements.filesDeniedView.hidden = !showDenied;
+  if (!showDenied) {
+    return;
+  }
+
+  const reapplyAtMs = resolveFilesReapplyAtMs({
+    accessRequestStatus: resolvedStatus,
+    accessRequestDecidedAt,
+    accessRequestReapplyAt
+  });
+  const reapplyAtDate = Number.isFinite(reapplyAtMs) && reapplyAtMs > 0
+    ? new Date(reapplyAtMs)
+    : null;
+
+  if (elements.filesDeniedStatusValue) {
+    elements.filesDeniedStatusValue.textContent = t("files_denied_status_value");
+  }
+  if (elements.filesDeniedNextWindowValue) {
+    elements.filesDeniedNextWindowValue.textContent = reapplyAtDate
+      ? formatFileDateTime(reapplyAtDate.toISOString())
+      : t("files_unknown_value");
+  }
+
+  updateFilesDeniedCountdown();
 }
 
 function renderFilesSearchResults() {
@@ -1444,21 +2358,29 @@ function renderFilesList() {
 
     setFilesSearchCount("");
     elements.filesList.hidden = true;
-    elements.filesEmptyState.hidden = !showRestrictedNotice;
-    elements.filesEmptyState.textContent = showRestrictedNotice ? t("files_not_authorized_message") : "";
-    elements.filesEmptyState.classList.toggle("is-restricted", showRestrictedNotice);
-    if (showRestrictedNotice) {
-      const warningIcon = document.createElement("span");
-      warningIcon.className = "fo76-icon files-empty-icon";
-      warningIcon.setAttribute("aria-hidden", "true");
-      warningIcon.textContent = "\uF743";
-      elements.filesEmptyState.appendChild(warningIcon);
+    elements.filesEmptyState.hidden = true;
+    elements.filesEmptyState.textContent = "";
+    elements.filesEmptyState.classList.remove("is-restricted");
+    if (!showRestrictedNotice) {
+      if (elements.filesRestrictedView) {
+        elements.filesRestrictedView.hidden = true;
+      }
+      if (elements.filesDeniedView) {
+        elements.filesDeniedView.hidden = true;
+      }
     }
     if (elements.filesSearchResults) {
       elements.filesSearchResults.innerHTML = "";
       elements.filesSearchResults.hidden = true;
     }
     return;
+  }
+
+  if (elements.filesRestrictedView) {
+    elements.filesRestrictedView.hidden = true;
+  }
+  if (elements.filesDeniedView) {
+    elements.filesDeniedView.hidden = true;
   }
 
   const isSearchMode = Boolean(state.files.search.open);
@@ -1587,13 +2509,20 @@ function renderFilesAccessView() {
   document.body.classList.toggle("is-files-unauthorized", !authorized);
   document.body.classList.toggle("is-files-guest", !loggedIn && !authorized);
 
+  if (elements.filesBrowserTitle) {
+    elements.filesBrowserTitle.textContent = showRestrictedLayout
+      ? t("files_restricted_browser_title")
+      : t("files_file_index_title");
+  }
+
   if (isFileProtocol) {
     renderFilesSessionProfile({
       loggedIn: false,
       authorized: false,
       isAdmin: false,
       username: "",
-      discordId: ""
+      discordId: "",
+      accessRequestStatus: "none"
     });
     if (elements.filesUnauthorizedPanel) {
       elements.filesUnauthorizedPanel.hidden = false;
@@ -1616,6 +2545,15 @@ function renderFilesAccessView() {
     }
     if (elements.filesUploadPanel) {
       elements.filesUploadPanel.hidden = true;
+    }
+    if (elements.filesAdminRequestsPanel) {
+      elements.filesAdminRequestsPanel.hidden = true;
+    }
+    if (elements.filesRestrictedView) {
+      elements.filesRestrictedView.hidden = true;
+    }
+    if (elements.filesDeniedView) {
+      elements.filesDeniedView.hidden = true;
     }
     renderFilesList();
     return;
@@ -1671,11 +2609,40 @@ function renderFilesAccessView() {
     authorized,
     isAdmin,
     username: me.username,
-    discordId: me.discordId
+    discordId: me.discordId,
+    accessRequestStatus: me.accessRequestStatus
+  });
+  renderFilesRestrictedView({
+    loggedIn,
+    authorized,
+    username: me.username,
+    discordId: me.discordId,
+    accessRequestStatus: me.accessRequestStatus,
+    accessRequestRequestedAt: me.accessRequestRequestedAt,
+    accessRequestDecidedAt: me.accessRequestDecidedAt,
+    accessRequestReapplyAt: me.accessRequestReapplyAt
+  });
+  renderFilesDeniedView({
+    loggedIn,
+    authorized,
+    accessRequestStatus: me.accessRequestStatus,
+    accessRequestDecidedAt: me.accessRequestDecidedAt,
+    accessRequestReapplyAt: me.accessRequestReapplyAt
   });
 
   if (elements.filesUploadBtn) {
     elements.filesUploadBtn.disabled = state.files.uploadBusy;
+  }
+  if (elements.filesRestrictedRetryBtn) {
+    const requestBusy = Boolean(state.files.accessRequestBusy);
+    const requestPending = normalizeFilesAccessRequestStatus(me.accessRequestStatus) === "pending";
+    const declinedCooldownActive = isFilesDeclinedCooldownActive(me);
+    elements.filesRestrictedRetryBtn.disabled = requestBusy || requestPending || declinedCooldownActive || !showRestrictedLayout;
+    elements.filesRestrictedRetryBtn.textContent = requestBusy
+      ? t("files_restricted_request_button_busy")
+      : requestPending
+        ? t("files_restricted_request_button_pending")
+        : t("files_restricted_retry_button");
   }
   if (elements.filesUploadInput) {
     elements.filesUploadInput.classList.toggle("is-invalid", state.files.uploadFieldInvalid);
@@ -1698,6 +2665,7 @@ function renderFilesAccessView() {
     elements.filesUploadFeedback.textContent = hasMessage ? state.files.uploadMessage : "";
   }
 
+  renderFilesAdminRequestsPanel();
   renderFilesList();
 }
 
@@ -1726,6 +2694,103 @@ async function requestJson(url, options = {}) {
   return payload || {};
 }
 
+function stopFilesLiveIdentityPolling() {
+  if (filesLiveIdentityPollTimer) {
+    clearInterval(filesLiveIdentityPollTimer);
+    filesLiveIdentityPollTimer = null;
+  }
+  filesLiveIdentityPollInFlight = false;
+}
+
+function startFilesLiveIdentityPolling() {
+  if (filesLiveIdentityPollTimer) {
+    return;
+  }
+
+  filesLiveIdentityPollTimer = setInterval(() => {
+    void pollFilesIdentityLive();
+  }, FILES_LIVE_IDENTITY_POLL_INTERVAL_MS);
+}
+
+function hasFilesIdentityChanged(previousProfile, nextProfile) {
+  const prev = normalizeFilesProfile(previousProfile);
+  const next = normalizeFilesProfile(nextProfile);
+  return (
+    prev.loggedIn !== next.loggedIn
+    || prev.discordId !== next.discordId
+    || prev.username !== next.username
+    || prev.isAdmin !== next.isAdmin
+    || prev.isAuthorized !== next.isAuthorized
+    || prev.accessRequestStatus !== next.accessRequestStatus
+    || prev.accessRequestRequestedAt !== next.accessRequestRequestedAt
+    || prev.accessRequestDecidedAt !== next.accessRequestDecidedAt
+    || prev.accessRequestReapplyAt !== next.accessRequestReapplyAt
+  );
+}
+
+async function pollFilesIdentityLive({ force = false } = {}) {
+  if (filesLiveIdentityPollInFlight) {
+    return;
+  }
+  if (state.view !== "files" || !document.body.classList.contains("is-files")) {
+    return;
+  }
+  if (!force && document.hidden) {
+    return;
+  }
+
+  filesLiveIdentityPollInFlight = true;
+  const previousProfile = normalizeFilesProfile(state.files.me);
+
+  try {
+    const payload = await requestJson("/api/me");
+    const nextProfile = normalizeFilesProfile(payload);
+    if (!hasFilesIdentityChanged(previousProfile, nextProfile)) {
+      return;
+    }
+
+    state.files.me = nextProfile;
+
+    if (nextProfile.isAuthorized) {
+      const identityChanged = previousProfile.discordId !== nextProfile.discordId;
+      const becameAuthorized = !previousProfile.isAuthorized && nextProfile.isAuthorized;
+      if (identityChanged || becameAuthorized) {
+        await refreshFilesList();
+      } else {
+        renderFilesAccessView();
+      }
+
+      if (nextProfile.isAdmin) {
+        await refreshFilesAdminRequests({ silent: true });
+      } else {
+        clearFilesAdminRequestsState();
+        renderFilesAccessView();
+      }
+      return;
+    }
+
+    if (previousProfile.isAuthorized || previousProfile.discordId !== nextProfile.discordId) {
+      state.files.list = [];
+      state.files.listError = "";
+      state.files.loadingList = false;
+      state.files.selectedId = "";
+      state.files.detailOrigin = "";
+      state.files.transition = "";
+      clearFilesAdminRequestsState();
+    }
+    if (!nextProfile.loggedIn || nextProfile.isAuthorized) {
+      state.files.accessRequestBusy = false;
+      setFilesRestrictedRequestFeedback("", "");
+    }
+
+    renderFilesAccessView();
+  } catch {
+    // Ignore background polling failures; user-initiated flows keep explicit errors.
+  } finally {
+    filesLiveIdentityPollInFlight = false;
+  }
+}
+
 async function refreshFilesList() {
   if (!state.files.me?.isAuthorized) {
     state.files.list = [];
@@ -1733,6 +2798,9 @@ async function refreshFilesList() {
     state.files.selectedId = "";
     state.files.detailOrigin = "";
     state.files.transition = "";
+    if (!state.files.me?.isAdmin) {
+      clearFilesAdminRequestsState();
+    }
     renderFilesAccessView();
     return;
   }
@@ -1763,6 +2831,41 @@ async function refreshFilesList() {
   renderFilesAccessView();
 }
 
+async function refreshFilesAdminRequests({ silent = false } = {}) {
+  const me = normalizeFilesProfile(state.files.me);
+  if (!me.isAuthorized || !me.isAdmin) {
+    clearFilesAdminRequestsState();
+    renderFilesAccessView();
+    return;
+  }
+
+  state.files.adminRequests.loading = true;
+  state.files.adminRequests.busyActionKey = "";
+  if (!silent) {
+    renderFilesAccessView();
+  }
+
+  try {
+    const payload = await requestJson("/api/files/access-requests");
+    const rawEntries = Array.isArray(payload?.entries) ? payload.entries : [];
+    const parsedEntries = rawEntries
+      .map((entry) => normalizeFilesAdminRequestEntry(entry))
+      .filter(Boolean);
+    state.files.adminRequests.list = parsedEntries;
+  } catch (error) {
+    if (error?.status === 401 || error?.status === 403) {
+      await refreshFilesIdentity({ loadFiles: false });
+      return;
+    }
+    state.files.adminRequests.list = [];
+    setFilesAdminRequestsFeedback(String(error?.message || t("files_admin_requests_error_generic")), "error");
+  } finally {
+    state.files.adminRequests.loading = false;
+  }
+
+  renderFilesAccessView();
+}
+
 async function refreshFilesIdentity({ loadFiles = true } = {}) {
   state.files.loadingMe = true;
   state.files.meError = "";
@@ -1780,6 +2883,11 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
 
   if (state.files.me.isAuthorized && loadFiles) {
     await refreshFilesList();
+    if (state.files.me.isAdmin) {
+      await refreshFilesAdminRequests({ silent: true });
+    } else {
+      clearFilesAdminRequestsState();
+    }
     return;
   }
 
@@ -1790,6 +2898,14 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
     state.files.selectedId = "";
     state.files.detailOrigin = "";
     state.files.transition = "";
+    clearFilesAdminRequestsState();
+  }
+  if (state.files.me.isAuthorized && !state.files.me.isAdmin) {
+    clearFilesAdminRequestsState();
+  }
+  if (!state.files.me.loggedIn || state.files.me.isAuthorized) {
+    state.files.accessRequestBusy = false;
+    setFilesRestrictedRequestFeedback("", "");
   }
 
   renderFilesAccessView();
@@ -1810,11 +2926,118 @@ async function handleFilesLogout() {
   state.files.transition = "";
   state.files.uploadBusy = false;
   setFilesUploadFeedback("", "");
+  state.files.accessRequestBusy = false;
+  setFilesRestrictedRequestFeedback("", "");
+  clearFilesAdminRequestsState();
+  state.files.adminRequests.query = "";
+  state.files.adminRequests.filter = "pending";
   setFilesUploadInputInvalid(false, { isMissingFileError: false });
   state.files.search.query = "";
   state.files.search.open = false;
   renderFilesAccessView();
   await refreshFilesIdentity({ loadFiles: false });
+}
+
+async function handleFilesAccessRequest() {
+  if (state.files.accessRequestBusy) {
+    return;
+  }
+
+  const me = normalizeFilesProfile(state.files.me);
+  if (!me.loggedIn) {
+    setFilesRestrictedRequestFeedback(t("files_restricted_request_login_required"), "error");
+    renderFilesAccessView();
+    return;
+  }
+  if (me.isAuthorized) {
+    setFilesRestrictedRequestFeedback(t("files_restricted_request_already_authorized"), "error");
+    renderFilesAccessView();
+    return;
+  }
+
+  const reasonRaw = String(elements.filesRestrictedReasonInput?.value || "");
+  const reason = reasonRaw.trim();
+  if (!reason) {
+    setFilesRestrictedRequestFeedback(t("files_restricted_reason_required"), "error");
+    if (elements.filesRestrictedReasonInput) {
+      elements.filesRestrictedReasonInput.classList.add("is-invalid");
+      elements.filesRestrictedReasonInput.focus();
+    }
+    renderFilesAccessView();
+    return;
+  }
+  if (reason.length > FILES_ACCESS_REQUEST_REASON_MAX) {
+    setFilesRestrictedRequestFeedback(t("files_restricted_reason_too_long"), "error");
+    if (elements.filesRestrictedReasonInput) {
+      elements.filesRestrictedReasonInput.classList.add("is-invalid");
+      elements.filesRestrictedReasonInput.focus();
+    }
+    renderFilesAccessView();
+    return;
+  }
+  if (elements.filesRestrictedReasonInput) {
+    elements.filesRestrictedReasonInput.classList.remove("is-invalid");
+  }
+
+  state.files.accessRequestBusy = true;
+  setFilesRestrictedRequestFeedback("", "");
+  renderFilesAccessView();
+
+  try {
+    await requestJson("/api/files/access-request", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        reason
+      })
+    });
+    state.files.me = {
+      ...normalizeFilesProfile(state.files.me),
+      accessRequestStatus: "pending",
+      accessRequestRequestedAt: new Date().toISOString(),
+      accessRequestDecidedAt: "",
+      accessRequestReapplyAt: ""
+    };
+    if (elements.filesRestrictedReasonInput) {
+      elements.filesRestrictedReasonInput.value = "";
+      elements.filesRestrictedReasonInput.classList.remove("is-invalid");
+    }
+    setFilesRestrictedRequestFeedback(t("files_restricted_request_success"), "success");
+  } catch (error) {
+    let message = t("files_restricted_request_error");
+    if (error?.status === 401) {
+      message = t("files_restricted_request_login_required");
+    } else if (error?.status === 400) {
+      const serverMessage = String(error?.message || "").toLowerCase();
+      message = serverMessage.includes("required")
+        ? t("files_restricted_reason_required")
+        : (serverMessage.includes("long") || serverMessage.includes("exceed") || serverMessage.includes("character"))
+            ? t("files_restricted_reason_too_long")
+            : t("files_restricted_request_error");
+      if (elements.filesRestrictedReasonInput) {
+        elements.filesRestrictedReasonInput.classList.add("is-invalid");
+      }
+    } else if (error?.status === 409) {
+      message = t("files_restricted_request_already_authorized");
+    } else if (error?.status === 429) {
+      const serverMessage = String(error?.message || "").toLowerCase();
+      message = serverMessage.includes("pending")
+        ? t("files_restricted_request_pending_error")
+        : (serverMessage.includes("declined") || serverMessage.includes("cooldown"))
+            ? t("files_restricted_request_declined_cooldown")
+            : t("files_restricted_request_rate_limited");
+    } else if (error?.status === 503) {
+      message = t("files_restricted_request_unavailable");
+    } else if (error?.message) {
+      message = String(error.message);
+    }
+    setFilesRestrictedRequestFeedback(message, "error");
+  } finally {
+    state.files.accessRequestBusy = false;
+    renderFilesAccessView();
+  }
 }
 
 async function handleFilesUpload(event) {
@@ -1863,6 +3086,92 @@ async function handleFilesUpload(event) {
     setFilesUploadInputInvalid(false, { isMissingFileError: false });
     renderFilesAccessView();
   }
+}
+
+async function handleFilesAdminRequestsAction(actionElement) {
+  const me = normalizeFilesProfile(state.files.me);
+  if (!me.isAuthorized || !me.isAdmin) {
+    return;
+  }
+  if (!(actionElement instanceof HTMLElement)) {
+    return;
+  }
+  if (state.files.adminRequests.loading || state.files.adminRequests.busyActionKey) {
+    return;
+  }
+
+  const action = String(actionElement.dataset.filesAdminAction || "").trim().toLowerCase();
+  const requestId = String(actionElement.dataset.requestId || "").trim();
+  const discordId = String(actionElement.dataset.discordId || "").trim();
+  const actionKey = String(actionElement.dataset.actionKey || requestId || discordId).trim();
+  if (!actionKey) {
+    return;
+  }
+
+  let requestUrl = "";
+  let requestBody = null;
+  let successMessage = "";
+
+  if ((action === "approve" || action === "deny") && requestId) {
+    requestUrl = `/api/files/access-requests/${encodeURIComponent(requestId)}/decision`;
+    requestBody = {
+      action: action === "approve" ? "approve" : "decline"
+    };
+    successMessage = action === "approve"
+      ? t("files_admin_requests_action_approve_success")
+      : t("files_admin_requests_action_deny_success");
+  } else if (action === "unauthorize" && discordId) {
+    requestUrl = `/api/files/access-requests/${encodeURIComponent(discordId)}/unauthorize`;
+    successMessage = t("files_admin_requests_action_unauthorize_success");
+  } else if (action === "allow-reapply" && discordId) {
+    requestUrl = `/api/files/access-requests/${encodeURIComponent(discordId)}/allow-reapply`;
+    successMessage = t("files_admin_requests_action_allow_reapply_success");
+  } else {
+    return;
+  }
+
+  state.files.adminRequests.busyActionKey = actionKey;
+  setFilesAdminRequestsFeedback("", "");
+  renderFilesAccessView();
+
+  try {
+    await requestJson(requestUrl, {
+      method: "POST",
+      headers: requestBody
+        ? {
+            "Content-Type": "application/json"
+          }
+        : undefined,
+      body: requestBody ? JSON.stringify(requestBody) : undefined
+    });
+    setFilesAdminRequestsFeedback(successMessage, "success");
+    await refreshFilesAdminRequests({ silent: true });
+  } catch (error) {
+    const serverMessage = String(error?.message || "");
+    const lowerMessage = serverMessage.toLowerCase();
+    let message = t("files_admin_requests_error_generic");
+    if (lowerMessage.includes("allowed_discord_ids")) {
+      message = t("files_admin_requests_error_allowlist");
+    } else if (serverMessage) {
+      message = serverMessage;
+    }
+    setFilesAdminRequestsFeedback(message, "error");
+  } finally {
+    state.files.adminRequests.busyActionKey = "";
+    renderFilesAccessView();
+  }
+}
+
+function handleFilesAdminRequestsListClick(event) {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return;
+  }
+  const actionTarget = target.closest("[data-files-admin-action]");
+  if (!(actionTarget instanceof HTMLElement)) {
+    return;
+  }
+  void handleFilesAdminRequestsAction(actionTarget);
 }
 
 async function handleFilesDelete(fileId) {
@@ -2547,6 +3856,7 @@ function updateClock() {
 
   elements.siloExpiry.textContent = t("reset_in", { d, h, m, s, ts });
   updateMinervaLocationCountdown(nowMs);
+  updateFilesDeniedCountdown(nowMs);
 }
 
 function setSignal(key) {
@@ -5516,6 +6826,60 @@ function applyLanguage(lang, persist = true) {
 
   elements.filesUnauthorizedTitle.textContent = t("files_unauthorized_title");
   elements.filesUnauthorizedSubtitle.textContent = t("files_unauthorized_subtitle");
+  elements.filesUnauthorizedBadge.textContent = t("files_unauthorized_badge");
+  elements.filesUnauthorizedKicker.textContent = t("files_unauthorized_kicker");
+  elements.filesUnauthorizedStateLabel.textContent = t("files_unauthorized_state_label");
+  elements.filesUnauthorizedStateValue.textContent = t("files_unauthorized_state_value");
+  elements.filesUnauthorizedGateLabel.textContent = t("files_unauthorized_gate_label");
+  elements.filesUnauthorizedGateValue.textContent = t("files_unauthorized_gate_value");
+  elements.filesUnauthorizedTraceLabel.textContent = t("files_unauthorized_trace_label");
+  elements.filesUnauthorizedTraceValue.textContent = t("files_unauthorized_trace_value");
+  elements.filesUnauthorizedDirectiveTitle.textContent = t("files_unauthorized_directive_title");
+  elements.filesUnauthorizedDirectiveLine1.textContent = t("files_unauthorized_directive_line_1");
+  elements.filesUnauthorizedDirectiveLine2.textContent = t("files_unauthorized_directive_line_2");
+  elements.filesUnauthorizedDirectiveLine3.textContent = t("files_unauthorized_directive_line_3");
+  elements.filesRestrictedBadge.textContent = t("files_restricted_badge");
+  elements.filesRestrictedIncident.textContent = t("files_restricted_incident", { code: "FR-000000" });
+  elements.filesRestrictedTitle.textContent = t("files_restricted_title");
+  elements.filesRestrictedSubtitle.textContent = t("files_restricted_subtitle");
+  elements.filesRestrictedIdentityLabel.textContent = t("files_restricted_identity_label");
+  elements.filesRestrictedDiscordLabel.textContent = t("files_restricted_discord_label");
+  elements.filesRestrictedClearanceLabel.textContent = t("files_restricted_clearance_label");
+  elements.filesRestrictedStatusLabel.textContent = t("files_restricted_status_label");
+  elements.filesRestrictedTimeLabel.textContent = t("files_restricted_time_label");
+  elements.filesRestrictedIdentityValue.textContent = t("files_unknown_value");
+  elements.filesRestrictedDiscordValue.textContent = t("files_unknown_value");
+  elements.filesRestrictedClearanceValue.textContent = t("files_session_clearance_unauthorized");
+  elements.filesRestrictedStatusValue.textContent = getFilesAccessRequestStatusLabel(state.files.me?.accessRequestStatus || "none");
+  elements.filesRestrictedTimeValue.textContent = t("files_unknown_value");
+  elements.filesRestrictedDirectiveTitle.textContent = t("files_restricted_directive_title");
+  elements.filesRestrictedDirectiveLine1.textContent = t("files_restricted_directive_line_1");
+  elements.filesRestrictedDirectiveLine2.textContent = t("files_restricted_directive_line_2");
+  elements.filesRestrictedDirectiveLine3.textContent = t("files_restricted_directive_line_3");
+  elements.filesRestrictedReasonLabel.textContent = t("files_restricted_reason_label");
+  elements.filesRestrictedReasonInput.placeholder = t("files_restricted_reason_placeholder");
+  elements.filesRestrictedReasonHint.textContent = t("files_restricted_reason_hint");
+  elements.filesRestrictedRetryBtn.textContent = t("files_restricted_retry_button");
+  elements.filesRestrictedLogoutBtn.textContent = t("files_logout_button");
+  elements.filesDeniedBadge.textContent = t("files_denied_badge");
+  elements.filesDeniedTitle.textContent = t("files_denied_title");
+  elements.filesDeniedSubtitle.textContent = t("files_denied_subtitle");
+  elements.filesDeniedStatusLabel.textContent = t("files_denied_status_label");
+  elements.filesDeniedStatusValue.textContent = t("files_denied_status_value");
+  elements.filesDeniedNextWindowLabel.textContent = t("files_denied_next_window_label");
+  elements.filesDeniedNextWindowValue.textContent = t("files_unknown_value");
+  elements.filesDeniedCountdownLabel.textContent = t("files_denied_countdown_label");
+  elements.filesDeniedCountdownValue.textContent = t("files_unknown_value");
+  elements.filesDeniedDirectiveTitle.textContent = t("files_denied_directive_title");
+  elements.filesDeniedDirectiveLine1.textContent = t("files_denied_directive_line_1");
+  elements.filesDeniedDirectiveLine2.textContent = t("files_denied_directive_line_2");
+  elements.filesDeniedDirectiveLine3.textContent = t("files_denied_directive_line_3");
+  elements.filesDeniedLogoutBtn.textContent = t("files_logout_button");
+  if (!state.files.accessRequestMessage) {
+    elements.filesRestrictedRequestFeedback.hidden = true;
+    elements.filesRestrictedRequestFeedback.textContent = "";
+    elements.filesRestrictedRequestFeedback.classList.remove("is-error", "is-success");
+  }
   elements.filesNotAuthorizedMessage.textContent = t("files_not_authorized_message");
   elements.filesLoginBtn.textContent = t("files_login_button");
   elements.filesLogoutBtn.textContent = t("files_logout_button");
@@ -5533,6 +6897,25 @@ function applyLanguage(lang, persist = true) {
   elements.filesSessionBadge.classList.remove("is-admin");
   elements.filesSessionClearance.classList.remove("is-admin");
   elements.filesUploadTitle.textContent = t("files_admin_console_title");
+  elements.filesAdminRequestsTitle.textContent = t("files_admin_requests_title");
+  elements.filesAdminRequestsHint.textContent = t("files_admin_requests_hint");
+  elements.filesAdminRequestsSearchLabel.textContent = t("files_admin_requests_search_label");
+  elements.filesAdminRequestsSearchInput.placeholder = t("files_admin_requests_search_placeholder");
+  elements.filesAdminRequestsFilterLabel.textContent = t("files_admin_requests_filter_label");
+  elements.filesAdminRequestsFilterPending.textContent = t("files_admin_requests_filter_pending");
+  elements.filesAdminRequestsFilterApproved.textContent = t("files_admin_requests_filter_approved");
+  elements.filesAdminRequestsFilterDeclined.textContent = t("files_admin_requests_filter_declined");
+  elements.filesAdminRequestsFilterAuthorized.textContent = t("files_admin_requests_filter_authorized");
+  elements.filesAdminRequestsFilterAll.textContent = t("files_admin_requests_filter_all");
+  if (elements.filesAdminRequestsFilter?.options?.length >= 5) {
+    elements.filesAdminRequestsFilter.options[0].textContent = t("files_admin_requests_filter_pending");
+    elements.filesAdminRequestsFilter.options[1].textContent = t("files_admin_requests_filter_approved");
+    elements.filesAdminRequestsFilter.options[2].textContent = t("files_admin_requests_filter_declined");
+    elements.filesAdminRequestsFilter.options[3].textContent = t("files_admin_requests_filter_authorized");
+    elements.filesAdminRequestsFilter.options[4].textContent = t("files_admin_requests_filter_all");
+  }
+  syncFilesAdminRequestsFilterMenu();
+  elements.filesAdminRequestsRefreshBtn.textContent = t("files_admin_requests_refresh_button");
   elements.filesBrowserTitle.textContent = t("files_file_index_title");
   elements.filesSearchLabel.textContent = t("files_search_label");
   elements.filesSearchInput.placeholder = t("files_search_placeholder");
@@ -5750,8 +7133,52 @@ function wireEvents() {
   elements.filesSessionLogoutBtn?.addEventListener("click", () => {
     void handleFilesLogout();
   });
+  elements.filesRestrictedLogoutBtn?.addEventListener("click", () => {
+    void handleFilesLogout();
+  });
+  elements.filesDeniedLogoutBtn?.addEventListener("click", () => {
+    void handleFilesLogout();
+  });
+  elements.filesRestrictedRetryBtn?.addEventListener("click", () => {
+    void handleFilesAccessRequest();
+  });
+  elements.filesRestrictedReasonInput?.addEventListener("input", () => {
+    const value = String(elements.filesRestrictedReasonInput.value || "").trim();
+    if (value) {
+      elements.filesRestrictedReasonInput.classList.remove("is-invalid");
+      if (state.files.accessRequestMessageKind === "error") {
+        const reasonRequired = t("files_restricted_reason_required");
+        const reasonTooLong = t("files_restricted_reason_too_long");
+        if (state.files.accessRequestMessage === reasonRequired || state.files.accessRequestMessage === reasonTooLong) {
+          setFilesRestrictedRequestFeedback("", "");
+          renderFilesAccessView();
+        }
+      }
+    }
+  });
   elements.filesUploadForm?.addEventListener("submit", (event) => {
     void handleFilesUpload(event);
+  });
+  elements.filesAdminRequestsSearchInput?.addEventListener("input", () => {
+    state.files.adminRequests.query = String(elements.filesAdminRequestsSearchInput.value || "");
+    renderFilesAdminRequestsPanel();
+  });
+  elements.filesAdminRequestsFilterBtn?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const isOpen = elements.filesAdminRequestsFilterDropdown?.classList.contains("is-open");
+    setFilesAdminRequestsFilterMenuOpen(!isOpen);
+  });
+  elements.filesAdminRequestsFilterOptions?.forEach((option) => {
+    option.addEventListener("click", () => {
+      const nextFilter = normalizeFilesAdminRequestsFilter(option.dataset.filter || "pending");
+      setFilesAdminRequestsFilterValue(nextFilter, { render: true, closeMenu: true });
+    });
+  });
+  elements.filesAdminRequestsFilter?.addEventListener("change", () => {
+    setFilesAdminRequestsFilterValue(elements.filesAdminRequestsFilter.value, { render: true, closeMenu: false });
+  });
+  elements.filesAdminRequestsRefreshBtn?.addEventListener("click", () => {
+    void refreshFilesAdminRequests();
   });
   elements.filesSearchToggleBtn?.addEventListener("click", () => {
     const nextOpen = !state.files.search.open;
@@ -5779,6 +7206,7 @@ function wireEvents() {
   });
   elements.filesList?.addEventListener("click", handleFilesListClick);
   elements.filesSearchResults?.addEventListener("click", handleFilesListClick);
+  elements.filesAdminRequestsList?.addEventListener("click", handleFilesAdminRequestsListClick);
   elements.filesDeleteCancelBtn?.addEventListener("click", () => {
     closeFilesDeleteModal();
   });
@@ -5879,11 +7307,11 @@ function wireEvents() {
   });
   document.addEventListener("click", (event) => {
     const target = event.target;
-    if (!elements.langDropdown) {
-      return;
-    }
-    if (target instanceof Node && !elements.langDropdown.contains(target)) {
+    if (elements.langDropdown && target instanceof Node && !elements.langDropdown.contains(target)) {
       setLanguageMenuOpen(false);
+    }
+    if (elements.filesAdminRequestsFilterDropdown && target instanceof Node && !elements.filesAdminRequestsFilterDropdown.contains(target)) {
+      setFilesAdminRequestsFilterMenuOpen(false);
     }
   });
   document.addEventListener("keydown", (event) => {
@@ -5893,6 +7321,11 @@ function wireEvents() {
 
     if (elements.langDropdown?.classList.contains("is-open")) {
       setLanguageMenuOpen(false);
+      return;
+    }
+
+    if (elements.filesAdminRequestsFilterDropdown?.classList.contains("is-open")) {
+      setFilesAdminRequestsFilterMenuOpen(false);
       return;
     }
 
@@ -5913,6 +7346,11 @@ function wireEvents() {
 
     if (document.body.classList.contains("is-classified")) {
       hideClassifiedPage();
+    }
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && state.view === "files" && document.body.classList.contains("is-files")) {
+      void pollFilesIdentityLive({ force: true });
     }
   });
   window.addEventListener("resize", () => {

@@ -20,28 +20,70 @@
   <div class="screen-scanlines" aria-hidden="true"></div>
   <div class="screen-noise" aria-hidden="true"></div>
 
-  <main class="pipboy-terminal">
+  <main class="pipboy-terminal error-terminal">
     <header class="topbar error-topbar">
       <div class="topbar-left">
         <p class="micro">ROBCO SECURITY SUBSYSTEM</p>
         <h1 id="errorTitle">404 // ARCHIVE NODE NOT FOUND</h1>
+        <p id="errorKicker" class="error-kicker">Signal lost while traversing archive sectors.</p>
       </div>
       <div class="topbar-right">
         <p class="error-chip">TERMLINK SECURITY</p>
+        <p class="error-clearance"><span id="clearanceLabel">Clearance</span>: <strong id="clearanceValue">Operator</strong></p>
       </div>
     </header>
 
     <section class="grid error-grid">
-      <article class="panel error-panel">
+      <article class="panel error-panel error-panel-main">
+        <div class="error-radar" aria-hidden="true">
+          <span class="error-radar-ring"></span>
+          <span class="error-radar-ring"></span>
+          <span class="error-radar-ring"></span>
+          <span class="error-radar-sweep"></span>
+        </div>
+        <p id="errorBadge" class="error-badge">INCIDENT E-404</p>
         <h2 id="errorCode">FILE NOT FOUND</h2>
         <p id="errorSummary" class="summary">Requested terminal record could not be resolved.</p>
         <p class="hint">Requested path</p>
         <pre id="errorPath" class="error-path">/</pre>
         <div class="error-actions">
-          <a class="refresh-btn" href="/">Return to terminal</a>
+          <a class="refresh-btn error-action-primary" href="/">Return to terminal</a>
           <button id="errorBackBtn" class="refresh-btn" type="button">Go back</button>
         </div>
       </article>
+
+      <aside class="panel error-panel error-panel-side" aria-label="Recovery diagnostics">
+        <h2 id="diagTitle">Recovery directives</h2>
+        <p id="diagSummary" class="summary">Use a verified route, then resume archive navigation.</p>
+        <div class="error-signal" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <dl class="error-diagnostics">
+          <div class="error-diagnostics-row">
+            <dt id="incidentLabel">Incident ID</dt>
+            <dd id="incidentValue">FCX-000000</dd>
+          </div>
+          <div class="error-diagnostics-row">
+            <dt id="statusLabel">Subsystem status</dt>
+            <dd id="statusValue">Link unstable</dd>
+          </div>
+          <div class="error-diagnostics-row">
+            <dt id="timeLabel">Timestamp</dt>
+            <dd id="timeValue">--</dd>
+          </div>
+        </dl>
+      </aside>
     </section>
 
     <p class="footer-note">Unauthorized probing may be logged by the terminal.</p>
@@ -56,34 +98,62 @@
           pageTitleUnauthorized: "404 // Unauthorized Access",
           micro: "ROBCO SECURITY SUBSYSTEM",
           chip: "TERMLINK SECURITY",
-          titleDefault: "404 // ARCHIVE NODE NOT FOUND",
-          titleUnauthorized: "404 // UNAUTHORIZED ACCESS DETECTED",
-          codeDefault: "FILE NOT FOUND",
-          codeUnauthorized: "ACCESS DENIED",
-          summaryDefault: "Requested terminal record could not be resolved.",
-          summaryUnauthorized: "This asset node is restricted. Directory probing is disabled.",
-          pathLabel: "Requested path",
-          homeBtn: "Return to terminal",
-          backBtn: "Go back",
-          footer: "Unauthorized probing may be logged by the terminal."
-        },
-        es: {
-          pageTitleDefault: "404 | Terminal Fallout Codex",
-          pageTitleUnauthorized: "404 // Acceso no autorizado",
-          micro: "SUBSISTEMA DE SEGURIDAD ROBCO",
-          chip: "SEGURIDAD TERMLINK",
-          titleDefault: "404 // NODO DE ARCHIVO NO ENCONTRADO",
-          titleUnauthorized: "404 // ACCESO NO AUTORIZADO DETECTADO",
-          codeDefault: "ARCHIVO NO ENCONTRADO",
-          codeUnauthorized: "ACCESO DENEGADO",
-          summaryDefault: "No se pudo resolver el registro solicitado del terminal.",
-          summaryUnauthorized: "Este nodo de assets esta restringido. El escaneo de directorios esta deshabilitado.",
-          pathLabel: "Ruta solicitada",
-          homeBtn: "Volver al terminal",
-          backBtn: "Regresar",
-          footer: "El sondeo no autorizado puede quedar registrado por el terminal."
-        }
-      };
+        titleDefault: "404 // ARCHIVE NODE NOT FOUND",
+        titleUnauthorized: "404 // UNAUTHORIZED ACCESS DETECTED",
+        kickerDefault: "Signal lost while traversing archive sectors.",
+        kickerUnauthorized: "Restricted node intercepted by terminal security.",
+        codeDefault: "FILE NOT FOUND",
+        codeUnauthorized: "ACCESS DENIED",
+        badgeDefault: "INCIDENT E-404",
+        badgeUnauthorized: "INCIDENT E-SEC",
+        summaryDefault: "Requested terminal record could not be resolved.",
+        summaryUnauthorized: "This asset node is restricted. Directory probing is disabled.",
+        pathLabel: "Requested path",
+        clearanceLabel: "Clearance",
+        clearanceDefault: "Operator",
+        clearanceUnauthorized: "Security lock",
+        homeBtn: "Return to terminal",
+        backBtn: "Go back",
+        diagTitle: "Recovery directives",
+        diagSummary: "Use a verified route, then resume archive navigation.",
+        incidentLabel: "Incident ID",
+        statusLabel: "Subsystem status",
+        statusDefault: "Link unstable",
+        statusUnauthorized: "Containment active",
+        timeLabel: "Timestamp",
+        footer: "Unauthorized probing may be logged by the terminal."
+      },
+      es: {
+        pageTitleDefault: "404 | Terminal Fallout Codex",
+        pageTitleUnauthorized: "404 // Acceso no autorizado",
+        micro: "SUBSISTEMA DE SEGURIDAD ROBCO",
+        chip: "SEGURIDAD TERMLINK",
+        titleDefault: "404 // NODO DE ARCHIVO NO ENCONTRADO",
+        titleUnauthorized: "404 // ACCESO NO AUTORIZADO DETECTADO",
+        kickerDefault: "Senal perdida durante el recorrido de sectores del archivo.",
+        kickerUnauthorized: "Nodo restringido interceptado por la seguridad del terminal.",
+        codeDefault: "ARCHIVO NO ENCONTRADO",
+        codeUnauthorized: "ACCESO DENEGADO",
+        badgeDefault: "INCIDENTE E-404",
+        badgeUnauthorized: "INCIDENTE E-SEC",
+        summaryDefault: "No se pudo resolver el registro solicitado del terminal.",
+        summaryUnauthorized: "Este nodo de assets esta restringido. El escaneo de directorios esta deshabilitado.",
+        pathLabel: "Ruta solicitada",
+        clearanceLabel: "Credencial",
+        clearanceDefault: "Operador",
+        clearanceUnauthorized: "Bloqueo de seguridad",
+        homeBtn: "Volver al terminal",
+        backBtn: "Regresar",
+        diagTitle: "Directivas de recuperacion",
+        diagSummary: "Usa una ruta verificada y luego reanuda la navegacion del archivo.",
+        incidentLabel: "ID de incidente",
+        statusLabel: "Estado del subsistema",
+        statusDefault: "Enlace inestable",
+        statusUnauthorized: "Contencion activa",
+        timeLabel: "Marca temporal",
+        footer: "El sondeo no autorizado puede quedar registrado por el terminal."
+      }
+    };
 
       const detectLang = () => {
         try {
@@ -109,10 +179,22 @@
       const microEl = document.querySelector(".micro");
       const chipEl = document.querySelector(".error-chip");
       const titleEl = document.getElementById("errorTitle");
+      const kickerEl = document.getElementById("errorKicker");
       const codeEl = document.getElementById("errorCode");
+      const badgeEl = document.getElementById("errorBadge");
       const summaryEl = document.getElementById("errorSummary");
       const pathLabelEl = document.querySelector(".hint");
       const pathEl = document.getElementById("errorPath");
+      const clearanceLabelEl = document.getElementById("clearanceLabel");
+      const clearanceValueEl = document.getElementById("clearanceValue");
+      const diagTitleEl = document.getElementById("diagTitle");
+      const diagSummaryEl = document.getElementById("diagSummary");
+      const incidentLabelEl = document.getElementById("incidentLabel");
+      const incidentValueEl = document.getElementById("incidentValue");
+      const statusLabelEl = document.getElementById("statusLabel");
+      const statusValueEl = document.getElementById("statusValue");
+      const timeLabelEl = document.getElementById("timeLabel");
+      const timeValueEl = document.getElementById("timeValue");
       const homeBtn = document.querySelector(".error-actions a.refresh-btn");
       const backBtn = document.getElementById("errorBackBtn");
       const footerEl = document.querySelector(".footer-note");
@@ -126,14 +208,44 @@
       if (titleEl) {
         titleEl.textContent = tr.titleDefault;
       }
+      if (kickerEl) {
+        kickerEl.textContent = tr.kickerDefault;
+      }
       if (codeEl) {
         codeEl.textContent = tr.codeDefault;
+      }
+      if (badgeEl) {
+        badgeEl.textContent = tr.badgeDefault;
       }
       if (summaryEl) {
         summaryEl.textContent = tr.summaryDefault;
       }
       if (pathLabelEl) {
         pathLabelEl.textContent = tr.pathLabel;
+      }
+      if (clearanceLabelEl) {
+        clearanceLabelEl.textContent = tr.clearanceLabel;
+      }
+      if (clearanceValueEl) {
+        clearanceValueEl.textContent = tr.clearanceDefault;
+      }
+      if (diagTitleEl) {
+        diagTitleEl.textContent = tr.diagTitle;
+      }
+      if (diagSummaryEl) {
+        diagSummaryEl.textContent = tr.diagSummary;
+      }
+      if (incidentLabelEl) {
+        incidentLabelEl.textContent = tr.incidentLabel;
+      }
+      if (statusLabelEl) {
+        statusLabelEl.textContent = tr.statusLabel;
+      }
+      if (statusValueEl) {
+        statusValueEl.textContent = tr.statusDefault;
+      }
+      if (timeLabelEl) {
+        timeLabelEl.textContent = tr.timeLabel;
       }
       if (homeBtn) {
         homeBtn.textContent = tr.homeBtn;
@@ -150,17 +262,54 @@
         pathEl.textContent = pathValue || "/";
       }
 
+      const hashPath = (input) => {
+        let hash = 0;
+        for (let i = 0; i < input.length; i += 1) {
+          hash = (hash * 33 + input.charCodeAt(i)) >>> 0;
+        }
+        return hash;
+      };
+
+      if (incidentValueEl) {
+        const incidentCode = hashPath(pathValue || "/").toString(16).toUpperCase().padStart(8, "0").slice(-6);
+        incidentValueEl.textContent = `FCX-${incidentCode}`;
+      }
+
+      if (timeValueEl) {
+        const locale = lang === "es" ? "es-ES" : "en-US";
+        timeValueEl.textContent = new Date().toLocaleString(locale, {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        });
+      }
+
       if (isAssetProbe) {
         document.body.classList.add("is-unauthorized");
         document.title = tr.pageTitleUnauthorized;
         if (titleEl) {
           titleEl.textContent = tr.titleUnauthorized;
         }
+        if (kickerEl) {
+          kickerEl.textContent = tr.kickerUnauthorized;
+        }
         if (codeEl) {
           codeEl.textContent = tr.codeUnauthorized;
         }
+        if (badgeEl) {
+          badgeEl.textContent = tr.badgeUnauthorized;
+        }
         if (summaryEl) {
           summaryEl.textContent = tr.summaryUnauthorized;
+        }
+        if (clearanceValueEl) {
+          clearanceValueEl.textContent = tr.clearanceUnauthorized;
+        }
+        if (statusValueEl) {
+          statusValueEl.textContent = tr.statusUnauthorized;
         }
       }
 

@@ -313,8 +313,50 @@
     </section>
     <section id="filesPage" class="files-page" hidden>
       <article id="filesUnauthorizedPanel" class="panel files-access-panel">
+        <div class="files-access-topline">
+          <p id="filesUnauthorizedBadge" class="files-unauth-badge">LOCKDOWN PROTOCOL</p>
+          <div class="files-unauth-signal" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
         <h2 id="filesUnauthorizedTitle">UNAUTHORIZED ACCESS TO FILE SYSTEM</h2>
         <p id="filesUnauthorizedSubtitle" class="files-access-subtitle">IDENTITY VERIFICATION REQUIRED</p>
+        <p id="filesUnauthorizedKicker" class="files-unauth-kicker">
+          Archive index remains sealed until terminal identity is validated.
+        </p>
+        <dl class="files-unauth-matrix">
+          <div class="files-unauth-row">
+            <dt id="filesUnauthorizedStateLabel">Identity state</dt>
+            <dd id="filesUnauthorizedStateValue">Unverified session</dd>
+          </div>
+          <div class="files-unauth-row">
+            <dt id="filesUnauthorizedGateLabel">Gate control</dt>
+            <dd id="filesUnauthorizedGateValue">Biometric handshake required</dd>
+          </div>
+          <div class="files-unauth-row">
+            <dt id="filesUnauthorizedTraceLabel">Intrusion trace</dt>
+            <dd id="filesUnauthorizedTraceValue">Active monitoring</dd>
+          </div>
+        </dl>
+        <section class="files-unauth-directive" aria-label="Recovery directives">
+          <p id="filesUnauthorizedDirectiveTitle" class="files-unauth-directive-title">Recovery directives</p>
+          <ul class="files-unauth-directive-list">
+            <li id="filesUnauthorizedDirectiveLine1">Authenticate with an approved Discord account.</li>
+            <li id="filesUnauthorizedDirectiveLine2">Wait for clearance handshake confirmation.</li>
+            <li id="filesUnauthorizedDirectiveLine3">Re-open Files once authorization is granted.</li>
+          </ul>
+        </section>
         <p id="filesNotAuthorizedMessage" class="files-notice" hidden>
           Sorry, you are not authorized to access the file system.
         </p>
@@ -372,6 +414,70 @@
             </form>
             <p id="filesUploadFeedback" class="files-upload-feedback" aria-live="polite" hidden></p>
           </article>
+
+          <article id="filesAdminRequestsPanel" class="panel files-admin-requests-panel" hidden>
+            <h2 id="filesAdminRequestsTitle">ACCESS CONTROL</h2>
+            <p id="filesAdminRequestsHint" class="files-admin-requests-hint">
+              Search users and process pending applications from this console.
+            </p>
+            <div class="files-admin-requests-controls">
+              <div class="files-admin-requests-control">
+                <label id="filesAdminRequestsSearchLabel" for="filesAdminRequestsSearchInput">Search</label>
+                <input
+                  id="filesAdminRequestsSearchInput"
+                  class="files-admin-requests-search-input"
+                  type="search"
+                  inputmode="search"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="Search by nick, username, Discord ID, or email..."
+                />
+              </div>
+              <div class="files-admin-requests-control-row">
+                <div class="files-admin-requests-control">
+                  <label id="filesAdminRequestsFilterLabel" for="filesAdminRequestsFilterBtn">Filter</label>
+                  <div id="filesAdminRequestsFilterDropdown" class="files-admin-requests-filter-dropdown">
+                    <button
+                      id="filesAdminRequestsFilterBtn"
+                      class="files-admin-requests-filter-trigger"
+                      type="button"
+                      aria-haspopup="listbox"
+                      aria-expanded="false"
+                      aria-labelledby="filesAdminRequestsFilterLabel"
+                    >
+                      <span id="filesAdminRequestsFilterCurrent">Pending</span>
+                      <span class="files-admin-requests-filter-caret" aria-hidden="true">▾</span>
+                    </button>
+                    <ul
+                      id="filesAdminRequestsFilterMenu"
+                      class="files-admin-requests-filter-menu"
+                      role="listbox"
+                      aria-labelledby="filesAdminRequestsFilterLabel"
+                      hidden
+                    >
+                      <li><button id="filesAdminRequestsFilterPending" class="files-admin-requests-filter-option" type="button" role="option" data-filter="pending">Pending</button></li>
+                      <li><button id="filesAdminRequestsFilterApproved" class="files-admin-requests-filter-option" type="button" role="option" data-filter="approved">Approved</button></li>
+                      <li><button id="filesAdminRequestsFilterDeclined" class="files-admin-requests-filter-option" type="button" role="option" data-filter="declined">Declined</button></li>
+                      <li><button id="filesAdminRequestsFilterAuthorized" class="files-admin-requests-filter-option" type="button" role="option" data-filter="authorized">Authorized</button></li>
+                      <li><button id="filesAdminRequestsFilterAll" class="files-admin-requests-filter-option" type="button" role="option" data-filter="all">All</button></li>
+                    </ul>
+                  </div>
+                  <select id="filesAdminRequestsFilter" class="files-admin-requests-filter-select" aria-label="Access control filter" hidden>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="declined">Declined</option>
+                    <option value="authorized">Authorized</option>
+                    <option value="all">All</option>
+                  </select>
+                </div>
+                <button id="filesAdminRequestsRefreshBtn" class="files-btn files-admin-requests-refresh" type="button">
+                  REFRESH
+                </button>
+              </div>
+            </div>
+            <p id="filesAdminRequestsFeedback" class="files-upload-feedback files-admin-requests-feedback" aria-live="polite" hidden></p>
+            <div id="filesAdminRequestsList" class="files-admin-requests-list"></div>
+          </article>
         </div>
 
         <article class="panel files-browser-panel">
@@ -389,6 +495,113 @@
               <span id="filesSearchToggleText" class="files-search-toggle-text">SEARCH</span>
             </button>
           </div>
+          <section id="filesRestrictedView" class="files-restricted-view" hidden>
+            <div class="files-restricted-top">
+              <p id="filesRestrictedBadge" class="files-restricted-badge">RESTRICTED ACCOUNT</p>
+              <p id="filesRestrictedIncident" class="files-restricted-incident">INCIDENT FR-000000</p>
+            </div>
+            <h3 id="filesRestrictedTitle" class="files-restricted-title">ARCHIVE ACCESS IS CURRENTLY BLOCKED</h3>
+            <p id="filesRestrictedSubtitle" class="files-restricted-subtitle">
+              This account is authenticated but not approved for file index access.
+            </p>
+            <div class="files-unauth-signal files-restricted-signal" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <dl class="files-restricted-matrix">
+              <div class="files-restricted-row">
+                <dt id="filesRestrictedIdentityLabel">Callsign</dt>
+                <dd id="filesRestrictedIdentityValue">--</dd>
+              </div>
+              <div class="files-restricted-row">
+                <dt id="filesRestrictedDiscordLabel">Discord ID</dt>
+                <dd id="filesRestrictedDiscordValue">--</dd>
+              </div>
+              <div class="files-restricted-row">
+                <dt id="filesRestrictedClearanceLabel">Clearance</dt>
+                <dd id="filesRestrictedClearanceValue">Unauthorized user</dd>
+              </div>
+              <div class="files-restricted-row">
+                <dt id="filesRestrictedStatusLabel">Gate status</dt>
+                <dd id="filesRestrictedStatusValue">Awaiting admin approval</dd>
+              </div>
+              <div class="files-restricted-row">
+                <dt id="filesRestrictedTimeLabel">Checkpoint time</dt>
+                <dd id="filesRestrictedTimeValue">--</dd>
+              </div>
+            </dl>
+            <section class="files-restricted-directive" aria-label="Access directives">
+              <p id="filesRestrictedDirectiveTitle" class="files-restricted-directive-title">Access directives</p>
+              <ul class="files-restricted-directive-list">
+                <li id="filesRestrictedDirectiveLine1">Request whitelist approval from terminal admin.</li>
+                <li id="filesRestrictedDirectiveLine2">Keep this session open and re-run clearance check.</li>
+                <li id="filesRestrictedDirectiveLine3">Or log out and sign in with an authorized account.</li>
+              </ul>
+            </section>
+            <section id="filesRestrictedReasonSection" class="files-restricted-reason" aria-label="Access request reason">
+              <label id="filesRestrictedReasonLabel" class="files-restricted-reason-label" for="filesRestrictedReasonInput">
+                Why do you need access?
+              </label>
+              <textarea
+                id="filesRestrictedReasonInput"
+                class="files-restricted-reason-input"
+                rows="4"
+                maxlength="1200"
+                required
+                placeholder="Write why you need access to the file index..."
+              ></textarea>
+              <p id="filesRestrictedReasonHint" class="files-restricted-reason-hint">
+                This reason is required and will be sent in the access request email.
+              </p>
+            </section>
+            <div class="files-restricted-actions">
+              <button id="filesRestrictedRetryBtn" class="files-btn" type="button">REQUEST ACCESS</button>
+              <button id="filesRestrictedLogoutBtn" class="files-btn" type="button">LOGOUT</button>
+            </div>
+            <p id="filesRestrictedRequestFeedback" class="files-notice files-restricted-feedback" hidden></p>
+          </section>
+          <section id="filesDeniedView" class="files-denied-view" hidden>
+            <p id="filesDeniedBadge" class="files-denied-badge">APPLICATION DENIED</p>
+            <h3 id="filesDeniedTitle" class="files-denied-title">ACCESS REQUEST DECLINED</h3>
+            <p id="filesDeniedSubtitle" class="files-denied-subtitle">
+              This request was declined by an administrator.
+            </p>
+            <dl class="files-denied-matrix">
+              <div class="files-denied-row">
+                <dt id="filesDeniedStatusLabel">Application status</dt>
+                <dd id="filesDeniedStatusValue">Denied</dd>
+              </div>
+              <div class="files-denied-row">
+                <dt id="filesDeniedNextWindowLabel">Next request window</dt>
+                <dd id="filesDeniedNextWindowValue">--</dd>
+              </div>
+              <div class="files-denied-row">
+                <dt id="filesDeniedCountdownLabel">Reapply cooldown</dt>
+                <dd id="filesDeniedCountdownValue">--</dd>
+              </div>
+            </dl>
+            <section class="files-denied-directive" aria-label="Denied account directives">
+              <p id="filesDeniedDirectiveTitle" class="files-denied-directive-title">Next steps</p>
+              <ul class="files-denied-directive-list">
+                <li id="filesDeniedDirectiveLine1">Wait until the cooldown reaches zero.</li>
+                <li id="filesDeniedDirectiveLine2">Then reopen this panel and submit a new reason.</li>
+                <li id="filesDeniedDirectiveLine3">Or log out and return later.</li>
+              </ul>
+            </section>
+            <div class="files-denied-actions">
+              <button id="filesDeniedLogoutBtn" class="files-btn" type="button">LOGOUT</button>
+            </div>
+          </section>
           <div id="filesSearchWrap" class="files-search-wrap" hidden>
             <div class="files-search-head">
               <label id="filesSearchLabel" class="files-search-label" for="filesSearchInput">Search file</label>

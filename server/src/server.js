@@ -8,6 +8,7 @@ const session = require("express-session");
 const { createClient } = require("redis");
 const { RedisStore } = require("connect-redis");
 const multer = require("multer");
+const nodemailer = require("nodemailer");
 
 require("dotenv").config({
   path: path.resolve(__dirname, "..", ".env")
@@ -17,12 +18,14 @@ const app = express();
 app.set("trust proxy", 1);
 
 const SITE_ROOT = path.resolve(__dirname, "..", "..");
+const NOT_FOUND_PAGE = path.join(SITE_ROOT, "404.html");
 const configuredStorageDir = String(process.env.STORAGE_DIR || "").trim();
 const STORAGE_DIR = configuredStorageDir
   ? path.resolve(configuredStorageDir)
   : path.resolve(__dirname, "..", "storage");
 const UPLOAD_DIR = path.join(STORAGE_DIR, "uploads");
 const METADATA_PATH = path.join(STORAGE_DIR, "files-metadata.json");
+const ACCESS_REQUESTS_PATH = path.join(STORAGE_DIR, "access-requests.json");
 const PORT = Number(process.env.PORT || 3000);
 const NODE_ENV = String(process.env.NODE_ENV || "development").trim() || "development";
 const SESSION_SECRET = String(process.env.SESSION_SECRET || "").trim() || "replace-me-in-production";
@@ -35,6 +38,21 @@ const REDIS_URL = String(process.env.REDIS_URL || "").trim();
 const SESSION_REDIS_PREFIX = String(process.env.SESSION_REDIS_PREFIX || "fallout_codex:sess:").trim() || "fallout_codex:sess:";
 const SESSION_COOKIE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
 const DEFAULT_SESSION_TTL_SECONDS = Math.floor(SESSION_COOKIE_MAX_AGE_MS / 1000);
+const DISCORD_EPOCH_MS = 1420070400000;
+const ACCESS_REQUEST_EMAIL_TO = String(process.env.ACCESS_REQUEST_EMAIL_TO || "dai@daivr.dev").trim() || "dai@daivr.dev";
+const SMTP_HOST = String(process.env.SMTP_HOST || "").trim();
+const SMTP_PORT_RAW = String(process.env.SMTP_PORT || "").trim();
+const SMTP_SECURE_RAW = String(process.env.SMTP_SECURE || "").trim();
+const SMTP_USER = String(process.env.SMTP_USER || "").trim();
+const SMTP_PASS = String(process.env.SMTP_PASS || "").trim();
+const SMTP_FROM = String(process.env.SMTP_FROM || "").trim();
+const SMTP_TLS_REJECT_UNAUTHORIZED_RAW = String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || "").trim();
+const ACCESS_REQUEST_COOLDOWN_MS_RAW = String(process.env.ACCESS_REQUEST_COOLDOWN_MS || "").trim();
+const ACCESS_REQUEST_DECISION_TTL_MS_RAW = String(process.env.ACCESS_REQUEST_DECISION_TTL_MS || "").trim();
+const ACCESS_REQUEST_REAPPLY_COOLDOWN_MS_RAW = String(process.env.ACCESS_REQUEST_REAPPLY_COOLDOWN_MS || "").trim();
+const ACCESS_REQUEST_TOKEN_SECRET = String(process.env.ACCESS_REQUEST_TOKEN_SECRET || "").trim() || SESSION_SECRET;
+const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || "").trim();
+const ACCESS_REQUEST_MAX_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 
 function parsePositiveInteger(value, fallback) {
   const parsed = Number.parseInt(String(value || "").trim(), 10);
@@ -44,7 +62,42 @@ function parsePositiveInteger(value, fallback) {
   return parsed;
 }
 
+function parseBoolean(value, fallback = false) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) {
+    return fallback;
+  }
+  if (normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on") {
+    return true;
+  }
+  if (normalized === "0" || normalized === "false" || normalized === "no" || normalized === "off") {
+    return false;
+  }
+  return fallback;
+}
+
 const SESSION_TTL_SECONDS = parsePositiveInteger(process.env.SESSION_TTL_SECONDS, DEFAULT_SESSION_TTL_SECONDS);
+const SMTP_PORT = parsePositiveInteger(SMTP_PORT_RAW, 587);
+const SMTP_SECURE = parseBoolean(SMTP_SECURE_RAW, SMTP_PORT === 465);
+const SMTP_TLS_REJECT_UNAUTHORIZED = parseBoolean(SMTP_TLS_REJECT_UNAUTHORIZED_RAW, true);
+const ACCESS_REQUEST_COOLDOWN_MS = parsePositiveInteger(ACCESS_REQUEST_COOLDOWN_MS_RAW, 15 * 60 * 1000);
+const ACCESS_REQUEST_DECISION_TTL_MS = Math.min(
+  parsePositiveInteger(ACCESS_REQUEST_DECISION_TTL_MS_RAW, ACCESS_REQUEST_MAX_WINDOW_MS),
+  ACCESS_REQUEST_MAX_WINDOW_MS
+);
+const ACCESS_REQUEST_REAPPLY_COOLDOWN_MS = parsePositiveInteger(
+  ACCESS_REQUEST_REAPPLY_COOLDOWN_MS_RAW,
+  7 * 24 * 60 * 60 * 1000
+);
+const ACCESS_REQUEST_REASON_MAX_CHARS = 1200;
+const ACCESS_REQUEST_COOLDOWN_BY_DISCORD_ID = new Map();
+const ACCESS_REQUEST_STATUS = Object.freeze({
+  NONE: "none",
+  PENDING: "pending",
+  APPROVED: "approved",
+  DECLINED: "declined"
+});
+const ACCESS_REQUEST_DECISION_ACTIONS = new Set(["approve", "decline"]);
 
 function parseDiscordIdList(raw) {
   return String(raw || "")
@@ -68,6 +121,9 @@ fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 if (!fs.existsSync(METADATA_PATH)) {
   fs.writeFileSync(METADATA_PATH, "[]\n", "utf8");
 }
+if (!fs.existsSync(ACCESS_REQUESTS_PATH)) {
+  fs.writeFileSync(ACCESS_REQUESTS_PATH, "[]\n", "utf8");
+}
 
 function readMetadataStore() {
   try {
@@ -85,6 +141,440 @@ function writeMetadataStore(entries) {
   const payload = JSON.stringify(entries, null, 2);
   fs.writeFileSync(tempPath, `${payload}\n`, "utf8");
   fs.renameSync(tempPath, METADATA_PATH);
+}
+
+function normalizeAccessRequestStatus(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === ACCESS_REQUEST_STATUS.PENDING) {
+    return ACCESS_REQUEST_STATUS.PENDING;
+  }
+  if (normalized === ACCESS_REQUEST_STATUS.APPROVED) {
+    return ACCESS_REQUEST_STATUS.APPROVED;
+  }
+  if (normalized === ACCESS_REQUEST_STATUS.DECLINED) {
+    return ACCESS_REQUEST_STATUS.DECLINED;
+  }
+  return ACCESS_REQUEST_STATUS.NONE;
+}
+
+function sanitizeAccessRequestReason(value) {
+  const raw = String(value || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  if (!raw) {
+    return "";
+  }
+  return raw.slice(0, ACCESS_REQUEST_REASON_MAX_CHARS);
+}
+
+function sanitizeAccessRequestEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const discordId = String(entry.discordId || "").trim();
+  if (!isDiscordId(discordId)) {
+    return null;
+  }
+
+  const status = normalizeAccessRequestStatus(entry.status);
+  const requestId = /^[a-f0-9-]{36}$/i.test(String(entry.requestId || "").trim())
+    ? String(entry.requestId || "").trim().toLowerCase()
+    : "";
+
+  return {
+    requestId: requestId || crypto.randomUUID(),
+    discordId,
+    nick: String(entry.nick || "").trim().slice(0, 120),
+    username: String(entry.username || "").trim().slice(0, 120),
+    email: String(entry.email || "").trim().slice(0, 200),
+    reason: sanitizeAccessRequestReason(entry.reason),
+    status: status === ACCESS_REQUEST_STATUS.NONE ? ACCESS_REQUEST_STATUS.PENDING : status,
+    requestedAt: String(entry.requestedAt || "").trim(),
+    decidedAt: String(entry.decidedAt || "").trim()
+  };
+}
+
+function readAccessRequestStore() {
+  try {
+    const raw = fs.readFileSync(ACCESS_REQUESTS_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    const sanitized = [];
+    for (const entry of parsed) {
+      const normalized = sanitizeAccessRequestEntry(entry);
+      if (normalized) {
+        sanitized.push(normalized);
+      }
+    }
+
+    if (expireStalePendingAccessRequests(sanitized)) {
+      writeAccessRequestStore(sanitized);
+    }
+    return sanitized;
+  } catch (error) {
+    console.error("[access-requests] read error:", error);
+    return [];
+  }
+}
+
+function writeAccessRequestStore(entries) {
+  const tempPath = `${ACCESS_REQUESTS_PATH}.tmp`;
+  const payload = JSON.stringify(entries, null, 2);
+  fs.writeFileSync(tempPath, `${payload}\n`, "utf8");
+  fs.renameSync(tempPath, ACCESS_REQUESTS_PATH);
+}
+
+function getAccessRequestPendingExpiresAtMs(accessRequestState = null) {
+  const resolved = accessRequestState && typeof accessRequestState === "object" ? accessRequestState : null;
+  if (!resolved || normalizeAccessRequestStatus(resolved.status) !== ACCESS_REQUEST_STATUS.PENDING) {
+    return 0;
+  }
+
+  const requestedAtMs = Date.parse(String(resolved.requestedAt || "").trim());
+  if (!Number.isFinite(requestedAtMs) || requestedAtMs <= 0) {
+    return 0;
+  }
+  return requestedAtMs + ACCESS_REQUEST_DECISION_TTL_MS;
+}
+
+function expireStalePendingAccessRequests(entries) {
+  if (!Array.isArray(entries) || !entries.length) {
+    return false;
+  }
+
+  const nowMs = Date.now();
+  const nowIso = new Date(nowMs).toISOString();
+  let didChange = false;
+
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index];
+    if (!entry || normalizeAccessRequestStatus(entry.status) !== ACCESS_REQUEST_STATUS.PENDING) {
+      continue;
+    }
+
+    const expiresAtMs = getAccessRequestPendingExpiresAtMs(entry);
+    if (Number.isFinite(expiresAtMs) && expiresAtMs > 0 && nowMs <= expiresAtMs) {
+      continue;
+    }
+
+    const updatedEntry = sanitizeAccessRequestEntry({
+      ...entry,
+      status: ACCESS_REQUEST_STATUS.DECLINED,
+      decidedAt: nowIso
+    });
+    if (!updatedEntry) {
+      continue;
+    }
+    entries[index] = updatedEntry;
+    didChange = true;
+  }
+
+  return didChange;
+}
+
+function getAccessRequestState(discordId) {
+  const normalizedId = String(discordId || "").trim();
+  if (!isDiscordId(normalizedId)) {
+    return {
+      status: ACCESS_REQUEST_STATUS.NONE,
+      requestId: "",
+      requestedAt: "",
+      decidedAt: "",
+      nick: "",
+      username: "",
+      email: "",
+      reason: ""
+    };
+  }
+
+  const entry = readAccessRequestStore().find((item) => item.discordId === normalizedId) || null;
+  if (!entry) {
+    return {
+      status: ACCESS_REQUEST_STATUS.NONE,
+      requestId: "",
+      requestedAt: "",
+      decidedAt: "",
+      nick: "",
+      username: "",
+      email: "",
+      reason: ""
+    };
+  }
+
+  return {
+    status: normalizeAccessRequestStatus(entry.status),
+    requestId: String(entry.requestId || ""),
+    requestedAt: String(entry.requestedAt || ""),
+    decidedAt: String(entry.decidedAt || ""),
+    nick: String(entry.nick || ""),
+    username: String(entry.username || ""),
+    email: String(entry.email || ""),
+    reason: sanitizeAccessRequestReason(entry.reason)
+  };
+}
+
+function getAccessRequestEntryByRequestId(requestId) {
+  const normalizedRequestId = String(requestId || "").trim().toLowerCase();
+  if (!/^[a-f0-9-]{36}$/i.test(normalizedRequestId)) {
+    return null;
+  }
+
+  return readAccessRequestStore().find((entry) => entry.requestId === normalizedRequestId) || null;
+}
+
+function getAccessRequestReapplyAtMs(accessRequestState = null) {
+  const resolved = accessRequestState && typeof accessRequestState === "object" ? accessRequestState : null;
+  if (!resolved || normalizeAccessRequestStatus(resolved.status) !== ACCESS_REQUEST_STATUS.DECLINED) {
+    return 0;
+  }
+
+  const decidedAtMs = Date.parse(String(resolved.decidedAt || "").trim());
+  if (!Number.isFinite(decidedAtMs) || decidedAtMs <= 0) {
+    return 0;
+  }
+
+  return decidedAtMs + ACCESS_REQUEST_REAPPLY_COOLDOWN_MS;
+}
+
+function getAccessRequestReapplyAtIso(accessRequestState = null) {
+  const reapplyAtMs = getAccessRequestReapplyAtMs(accessRequestState);
+  if (!Number.isFinite(reapplyAtMs) || reapplyAtMs <= 0) {
+    return "";
+  }
+  return new Date(reapplyAtMs).toISOString();
+}
+
+function getAccessRequestReapplyRemainingMs(accessRequestState = null) {
+  const reapplyAtMs = getAccessRequestReapplyAtMs(accessRequestState);
+  if (!Number.isFinite(reapplyAtMs) || reapplyAtMs <= 0) {
+    return 0;
+  }
+  return Math.max(0, reapplyAtMs - Date.now());
+}
+
+function createPendingAccessRequestEntry(user, reason) {
+  const profile = user && user.discordProfile && typeof user.discordProfile === "object" ? user.discordProfile : null;
+  const nowIso = new Date().toISOString();
+  return {
+    requestId: crypto.randomUUID(),
+    discordId: user.discordId,
+    nick: String(profile?.global_name || user.username || "").trim().slice(0, 120),
+    username: String(profile?.username || user.username || "").trim().slice(0, 120),
+    email: String(profile?.email || "").trim().slice(0, 200),
+    reason: sanitizeAccessRequestReason(reason),
+    status: ACCESS_REQUEST_STATUS.PENDING,
+    requestedAt: nowIso,
+    decidedAt: ""
+  };
+}
+
+function upsertAccessRequestEntry(nextEntry) {
+  const entries = readAccessRequestStore();
+  const existingIndex = entries.findIndex((entry) => entry.discordId === nextEntry.discordId);
+  if (existingIndex >= 0) {
+    entries[existingIndex] = nextEntry;
+  } else {
+    entries.push(nextEntry);
+  }
+  writeAccessRequestStore(entries);
+}
+
+function applyAccessRequestDecision(requestId, action) {
+  const normalizedRequestId = String(requestId || "").trim().toLowerCase();
+  const normalizedAction = String(action || "").trim().toLowerCase();
+  if (!/^[a-f0-9-]{36}$/i.test(normalizedRequestId) || !ACCESS_REQUEST_DECISION_ACTIONS.has(normalizedAction)) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  const entries = readAccessRequestStore();
+  const index = entries.findIndex((entry) => entry.requestId === normalizedRequestId);
+  if (index < 0) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  const entry = entries[index];
+  const currentStatus = normalizeAccessRequestStatus(entry.status);
+  if (currentStatus !== ACCESS_REQUEST_STATUS.PENDING) {
+    return {
+      ok: false,
+      reason: "already_decided",
+      entry
+    };
+  }
+
+  entries[index] = {
+    ...entry,
+    status: normalizedAction === "approve" ? ACCESS_REQUEST_STATUS.APPROVED : ACCESS_REQUEST_STATUS.DECLINED,
+    decidedAt: new Date().toISOString()
+  };
+  writeAccessRequestStore(entries);
+  return {
+    ok: true,
+    entry: entries[index]
+  };
+}
+
+function updateAccessRequestStatusByDiscordId(discordId, nextStatus, { allowedCurrentStatuses = null } = {}) {
+  const normalizedDiscordId = String(discordId || "").trim();
+  const normalizedNextStatus = normalizeAccessRequestStatus(nextStatus);
+  if (!isDiscordId(normalizedDiscordId) || normalizedNextStatus === ACCESS_REQUEST_STATUS.NONE) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  const entries = readAccessRequestStore();
+  const index = entries.findIndex((entry) => entry.discordId === normalizedDiscordId);
+  if (index < 0) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  const currentEntry = entries[index];
+  const currentStatus = normalizeAccessRequestStatus(currentEntry.status);
+  if (allowedCurrentStatuses instanceof Set && !allowedCurrentStatuses.has(currentStatus)) {
+    return {
+      ok: false,
+      reason: "status_mismatch",
+      entry: currentEntry
+    };
+  }
+  if (currentStatus === normalizedNextStatus) {
+    return {
+      ok: false,
+      reason: "already_set",
+      entry: currentEntry
+    };
+  }
+
+  const nowIso = new Date().toISOString();
+  const updatedEntry = sanitizeAccessRequestEntry({
+    ...currentEntry,
+    status: normalizedNextStatus,
+    requestedAt: String(currentEntry.requestedAt || nowIso).trim() || nowIso,
+    decidedAt: normalizedNextStatus === ACCESS_REQUEST_STATUS.PENDING ? "" : nowIso
+  });
+
+  if (!updatedEntry) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  entries[index] = updatedEntry;
+  writeAccessRequestStore(entries);
+
+  return {
+    ok: true,
+    entry: updatedEntry
+  };
+}
+
+function clearDeclinedAccessRequestForReapply(discordId) {
+  const normalizedDiscordId = String(discordId || "").trim();
+  if (!isDiscordId(normalizedDiscordId)) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  const entries = readAccessRequestStore();
+  const index = entries.findIndex((entry) => entry.discordId === normalizedDiscordId);
+  if (index < 0) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  const entry = entries[index];
+  const currentStatus = normalizeAccessRequestStatus(entry.status);
+  if (currentStatus !== ACCESS_REQUEST_STATUS.DECLINED) {
+    return {
+      ok: false,
+      reason: "status_mismatch",
+      entry
+    };
+  }
+
+  entries.splice(index, 1);
+  writeAccessRequestStore(entries);
+  return {
+    ok: true,
+    entry
+  };
+}
+
+function getAccessRequestAdminEntries() {
+  const requestEntries = readAccessRequestStore().map((entry) => {
+    const status = normalizeAccessRequestStatus(entry.status);
+    return {
+      requestId: String(entry.requestId || ""),
+      discordId: String(entry.discordId || ""),
+      nick: String(entry.nick || ""),
+      username: String(entry.username || ""),
+      email: String(entry.email || ""),
+      reason: sanitizeAccessRequestReason(entry.reason),
+      status,
+      requestedAt: String(entry.requestedAt || ""),
+      decidedAt: String(entry.decidedAt || ""),
+      source: "request",
+      canApprove: status === ACCESS_REQUEST_STATUS.PENDING,
+      canDecline: status === ACCESS_REQUEST_STATUS.PENDING,
+      canUnauthorize: status === ACCESS_REQUEST_STATUS.APPROVED,
+      canAllowReapply: status === ACCESS_REQUEST_STATUS.DECLINED
+    };
+  });
+
+  const seenDiscordIds = new Set(requestEntries.map((entry) => entry.discordId));
+  const staticAllowlistEntries = [];
+  for (const discordId of ALLOWED_DISCORD_IDS) {
+    if (!isDiscordId(discordId) || discordId === ADMIN_DISCORD_ID || seenDiscordIds.has(discordId)) {
+      continue;
+    }
+    staticAllowlistEntries.push({
+      requestId: "",
+      discordId,
+      nick: "",
+      username: "",
+      email: "",
+      reason: "",
+      status: ACCESS_REQUEST_STATUS.APPROVED,
+      requestedAt: "",
+      decidedAt: "",
+      source: "allowlist",
+      canApprove: false,
+      canDecline: false,
+      canUnauthorize: false,
+      canAllowReapply: false
+    });
+  }
+
+  const statusOrder = {
+    [ACCESS_REQUEST_STATUS.PENDING]: 0,
+    [ACCESS_REQUEST_STATUS.APPROVED]: 1,
+    [ACCESS_REQUEST_STATUS.DECLINED]: 2,
+    [ACCESS_REQUEST_STATUS.NONE]: 3
+  };
+
+  const allEntries = [...requestEntries, ...staticAllowlistEntries];
+  allEntries.sort((left, right) => {
+    const leftStatus = normalizeAccessRequestStatus(left.status);
+    const rightStatus = normalizeAccessRequestStatus(right.status);
+    const leftRank = Number.isFinite(statusOrder[leftStatus]) ? statusOrder[leftStatus] : 9;
+    const rightRank = Number.isFinite(statusOrder[rightStatus]) ? statusOrder[rightStatus] : 9;
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+
+    const leftSourceRank = left.source === "request" ? 0 : 1;
+    const rightSourceRank = right.source === "request" ? 0 : 1;
+    if (leftSourceRank !== rightSourceRank) {
+      return leftSourceRank - rightSourceRank;
+    }
+
+    const leftTimeMs = Date.parse(String(left.requestedAt || "")) || 0;
+    const rightTimeMs = Date.parse(String(right.requestedAt || "")) || 0;
+    if (leftTimeMs !== rightTimeMs) {
+      return rightTimeMs - leftTimeMs;
+    }
+
+    return String(left.discordId || "").localeCompare(String(right.discordId || ""));
+  });
+
+  return allEntries;
 }
 
 function sanitizeDisplayFilename(input) {
@@ -134,6 +624,18 @@ function formatDiscordUsername(userPayload) {
   return username || "UNKNOWN";
 }
 
+function buildDiscordProfileForSession(userPayload) {
+  if (!userPayload || typeof userPayload !== "object") {
+    return null;
+  }
+
+  try {
+    return JSON.parse(JSON.stringify(userPayload));
+  } catch {
+    return null;
+  }
+}
+
 function getSessionUser(req) {
   const user = req.session?.user;
   if (!user || typeof user !== "object") {
@@ -147,7 +649,8 @@ function getSessionUser(req) {
 
   return {
     discordId,
-    username: String(user.username || "").trim() || "UNKNOWN"
+    username: String(user.username || "").trim() || "UNKNOWN",
+    discordProfile: user.discordProfile && typeof user.discordProfile === "object" ? user.discordProfile : null
   };
 }
 
@@ -155,8 +658,16 @@ function isAdmin(user) {
   return Boolean(user && user.discordId === ADMIN_DISCORD_ID);
 }
 
-function isAuthorized(user) {
-  return Boolean(user && (isAdmin(user) || ALLOWED_DISCORD_IDS.has(user.discordId)));
+function isAuthorized(user, accessRequestState = null) {
+  if (!user) {
+    return false;
+  }
+  if (isAdmin(user) || ALLOWED_DISCORD_IDS.has(user.discordId)) {
+    return true;
+  }
+
+  const resolvedAccessState = accessRequestState || getAccessRequestState(user.discordId);
+  return normalizeAccessRequestStatus(resolvedAccessState.status) === ACCESS_REQUEST_STATUS.APPROVED;
 }
 
 function buildMePayload(req) {
@@ -167,16 +678,26 @@ function buildMePayload(req) {
       discordId: "",
       username: "",
       isAdmin: false,
-      isAuthorized: false
+      isAuthorized: false,
+      accessRequestStatus: ACCESS_REQUEST_STATUS.NONE,
+      accessRequestRequestedAt: "",
+      accessRequestDecidedAt: "",
+      accessRequestReapplyAt: ""
     };
   }
+
+  const accessRequestState = getAccessRequestState(user.discordId);
 
   return {
     loggedIn: true,
     discordId: user.discordId,
     username: user.username,
     isAdmin: isAdmin(user),
-    isAuthorized: isAuthorized(user)
+    isAuthorized: isAuthorized(user, accessRequestState),
+    accessRequestStatus: accessRequestState.status,
+    accessRequestRequestedAt: accessRequestState.requestedAt,
+    accessRequestDecidedAt: accessRequestState.decidedAt,
+    accessRequestReapplyAt: getAccessRequestReapplyAtIso(accessRequestState)
   };
 }
 
@@ -202,6 +723,441 @@ function requireAdmin(req, res, next) {
 
 function oauthConfigured() {
   return Boolean(DISCORD_CLIENT_ID && DISCORD_CLIENT_SECRET && DISCORD_REDIRECT_URI);
+}
+
+function mailConfigured() {
+  return Boolean(SMTP_HOST && SMTP_FROM && ACCESS_REQUEST_EMAIL_TO);
+}
+
+const mailTransport = mailConfigured()
+  ? nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_SECURE,
+      tls: {
+        rejectUnauthorized: SMTP_TLS_REJECT_UNAUTHORIZED
+      },
+      auth: SMTP_USER && SMTP_PASS
+        ? {
+            user: SMTP_USER,
+            pass: SMTP_PASS
+          }
+        : undefined
+    })
+  : null;
+
+function getAccessRequestCooldownRemainingMs(discordId) {
+  const key = String(discordId || "").trim();
+  if (!key) {
+    return 0;
+  }
+
+  const lastSentAtMs = Number(ACCESS_REQUEST_COOLDOWN_BY_DISCORD_ID.get(key));
+  if (!Number.isFinite(lastSentAtMs)) {
+    return 0;
+  }
+
+  const elapsedMs = Date.now() - lastSentAtMs;
+  if (elapsedMs < 0 || elapsedMs >= ACCESS_REQUEST_COOLDOWN_MS) {
+    ACCESS_REQUEST_COOLDOWN_BY_DISCORD_ID.delete(key);
+    return 0;
+  }
+  return ACCESS_REQUEST_COOLDOWN_MS - elapsedMs;
+}
+
+function markAccessRequestSent(discordId) {
+  const key = String(discordId || "").trim();
+  if (!key) {
+    return;
+  }
+  ACCESS_REQUEST_COOLDOWN_BY_DISCORD_ID.set(key, Date.now());
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function getDiscordAccountCreatedAt(discordId) {
+  const rawId = String(discordId || "").trim();
+  if (!isDiscordId(rawId)) {
+    return null;
+  }
+
+  try {
+    const snowflake = BigInt(rawId);
+    const timestampMs = Number((snowflake >> 22n) + BigInt(DISCORD_EPOCH_MS));
+    if (!Number.isFinite(timestampMs) || timestampMs <= 0) {
+      return null;
+    }
+    const createdAt = new Date(timestampMs);
+    if (Number.isNaN(createdAt.getTime())) {
+      return null;
+    }
+    return createdAt;
+  } catch {
+    return null;
+  }
+}
+
+function formatDiscordAccountAge(createdAt) {
+  if (!(createdAt instanceof Date) || Number.isNaN(createdAt.getTime())) {
+    return "Unknown";
+  }
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  const nowMs = Date.now();
+  const diffMs = Math.max(0, nowMs - createdAt.getTime());
+  const totalDays = Math.floor(diffMs / dayMs);
+  const years = Math.floor(totalDays / 365);
+  const remainingAfterYears = totalDays % 365;
+  const months = Math.floor(remainingAfterYears / 30);
+  const days = remainingAfterYears % 30;
+
+  const parts = [];
+  if (years > 0) {
+    parts.push(`${years} year${years === 1 ? "" : "s"}`);
+  }
+  if (months > 0) {
+    parts.push(`${months} month${months === 1 ? "" : "s"}`);
+  }
+  if (days > 0 || !parts.length) {
+    parts.push(`${days} day${days === 1 ? "" : "s"}`);
+  }
+  return parts.slice(0, 2).join(", ");
+}
+
+function formatUtcTimestamp(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown";
+  }
+  return date.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
+}
+
+function resolveAccessRequestIdentity(user, requestEntry = null) {
+  const profile = user.discordProfile && typeof user.discordProfile === "object" ? user.discordProfile : null;
+  const nick = String(profile?.global_name || "").trim() || String(user.username || "").trim() || "Unknown";
+  const username = String(profile?.username || "").trim() || String(user.username || "").trim() || "unknown";
+  const email = String(requestEntry?.email || profile?.email || "").trim() || "Not available";
+  const reason = sanitizeAccessRequestReason(requestEntry?.reason);
+  const accountCreatedAt = getDiscordAccountCreatedAt(user.discordId);
+  const requestTimeRaw = String(requestEntry?.requestedAt || "").trim() || new Date().toISOString();
+
+  return {
+    nick,
+    username,
+    email,
+    reason,
+    discordId: String(user.discordId || "").trim() || "Unknown",
+    accountAge: formatDiscordAccountAge(accountCreatedAt),
+    requestTime: formatUtcTimestamp(requestTimeRaw)
+  };
+}
+
+function getRequestBaseUrl(req) {
+  const configuredBaseUrl = String(PUBLIC_BASE_URL || "").trim();
+  if (configuredBaseUrl) {
+    return configuredBaseUrl.replace(/\/+$/, "");
+  }
+
+  const forwardedProto = String(req.get("x-forwarded-proto") || "").trim().split(",")[0].trim();
+  const protocol = forwardedProto || String(req.protocol || "http");
+  const forwardedHost = String(req.get("x-forwarded-host") || "").trim().split(",")[0].trim();
+  const host = forwardedHost || String(req.get("host") || "").trim();
+  if (!host) {
+    return "";
+  }
+  return `${protocol}://${host}`.replace(/\/+$/, "");
+}
+
+function signAccessRequestDecisionToken(requestId, action, expiresAtMs) {
+  const payload = `${requestId}:${action}:${expiresAtMs}`;
+  return crypto.createHmac("sha256", ACCESS_REQUEST_TOKEN_SECRET).update(payload).digest("hex");
+}
+
+function verifyAccessRequestDecisionToken(requestId, action, expiresAtMs, providedToken) {
+  const expectedToken = signAccessRequestDecisionToken(requestId, action, expiresAtMs);
+  const provided = Buffer.from(String(providedToken || ""), "utf8");
+  const expected = Buffer.from(expectedToken, "utf8");
+  if (provided.length !== expected.length) {
+    return false;
+  }
+  try {
+    return crypto.timingSafeEqual(provided, expected);
+  } catch {
+    return false;
+  }
+}
+
+function buildAccessRequestDecisionLink({ baseUrl, requestId, action, expiresAtMs }) {
+  const query = new URLSearchParams({
+    rid: requestId,
+    action,
+    exp: String(expiresAtMs),
+    token: signAccessRequestDecisionToken(requestId, action, expiresAtMs)
+  });
+  return `${baseUrl}/admin/access-requests/decision?${query.toString()}`;
+}
+
+function buildAccessRequestDecisionPage({
+  title,
+  statusLabel,
+  message,
+  accent = "#8bff8b",
+  baseUrl = "",
+  entry = null
+}) {
+  const safeTitle = escapeHtml(title);
+  const safeStatus = escapeHtml(statusLabel);
+  const safeMessage = escapeHtml(message);
+  const safeUser = escapeHtml(String(entry?.username || entry?.discordId || "Unknown"));
+  const safeId = escapeHtml(String(entry?.discordId || "Unknown"));
+  const safeRequestedAt = escapeHtml(formatUtcTimestamp(entry?.requestedAt || ""));
+  const safeDecidedAt = escapeHtml(formatUtcTimestamp(entry?.decidedAt || ""));
+  const safeReason = escapeHtml(sanitizeAccessRequestReason(entry?.reason || ""));
+  const reasonRow = safeReason
+    ? `<div class="row"><span>Reason</span><span style="white-space:pre-wrap;">${safeReason}</span></div>`
+    : "";
+  const returnUrl = baseUrl ? `${baseUrl}/#files` : "/#files";
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${safeTitle}</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        padding: 24px;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(120% 120% at 100% 0%, rgba(255, 225, 122, 0.14), rgba(0, 0, 0, 0) 56%),
+          radial-gradient(110% 120% at 0% 100%, rgba(139, 255, 139, 0.12), rgba(0, 0, 0, 0) 58%),
+          #060a06;
+        color: #c7f7c7;
+        font-family: "Consolas", "Courier New", monospace;
+      }
+      .card {
+        width: min(760px, 100%);
+        border: 1px solid rgba(139, 255, 139, 0.34);
+        border-radius: 14px;
+        padding: 18px;
+        background:
+          linear-gradient(to bottom, rgba(139, 255, 139, 0.08), rgba(0, 0, 0, 0.4)),
+          rgba(0, 0, 0, 0.46);
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5) inset, 0 18px 60px rgba(0, 0, 0, 0.6);
+      }
+      .chip {
+        display: inline-block;
+        padding: 4px 9px;
+        border: 1px solid ${accent};
+        border-radius: 999px;
+        color: ${accent};
+        background: rgba(0, 0, 0, 0.35);
+        font-size: 12px;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 12px 0 6px;
+        font-size: clamp(1.08rem, 2vw, 1.38rem);
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: #fff4cb;
+      }
+      p {
+        margin: 0;
+        line-height: 1.45;
+        color: #b4eab4;
+      }
+      .grid {
+        margin-top: 14px;
+        display: grid;
+        gap: 8px;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 10px;
+        border: 1px solid rgba(139, 255, 139, 0.22);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.3);
+      }
+      .row span:first-child {
+        color: #97cf97;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        font-size: 12px;
+      }
+      .row span:last-child {
+        color: #d8ffd8;
+        text-align: right;
+      }
+      .actions {
+        margin-top: 14px;
+        display: flex;
+        justify-content: flex-end;
+      }
+      .btn {
+        border: 1px solid rgba(139, 255, 139, 0.48);
+        border-radius: 9px;
+        padding: 9px 12px;
+        text-decoration: none;
+        color: #d8ffd8;
+        background: rgba(0, 0, 0, 0.35);
+      }
+    </style>
+  </head>
+  <body>
+    <section class="card">
+      <span class="chip">${safeStatus}</span>
+      <h1>${safeTitle}</h1>
+      <p>${safeMessage}</p>
+      <div class="grid">
+        <div class="row"><span>User</span><span>${safeUser}</span></div>
+        <div class="row"><span>Discord ID</span><span>${safeId}</span></div>
+        ${reasonRow}
+        <div class="row"><span>Requested (UTC)</span><span>${safeRequestedAt}</span></div>
+        <div class="row"><span>Decided (UTC)</span><span>${safeDecidedAt}</span></div>
+      </div>
+      <div class="actions">
+        <a class="btn" href="${escapeHtml(returnUrl)}">Open Fallout Codex</a>
+      </div>
+    </section>
+  </body>
+</html>`;
+}
+
+function buildAccessRequestEmailContent({ user, requestEntry, req }) {
+  const identity = resolveAccessRequestIdentity(user, requestEntry);
+  const safeNick = escapeHtml(identity.nick);
+  const safeUsername = escapeHtml(identity.username);
+  const safeEmail = escapeHtml(identity.email);
+  const safeReason = escapeHtml(identity.reason);
+  const safeReasonHtml = safeReason ? safeReason.replace(/\n/g, "<br />") : "";
+  const safeDiscordId = escapeHtml(identity.discordId);
+  const safeAccountAge = escapeHtml(identity.accountAge);
+  const safeRequestTime = escapeHtml(identity.requestTime);
+  const baseUrl = getRequestBaseUrl(req);
+  const requestedAtMs = Date.parse(String(requestEntry?.requestedAt || "").trim());
+  const decisionWindowStartMs = Number.isFinite(requestedAtMs) && requestedAtMs > 0 ? requestedAtMs : Date.now();
+  const decisionExpiresAtMs = decisionWindowStartMs + ACCESS_REQUEST_DECISION_TTL_MS;
+  const decisionExpiresAtLabel = formatUtcTimestamp(decisionExpiresAtMs);
+  const approveLink = baseUrl
+    ? buildAccessRequestDecisionLink({
+        baseUrl,
+        requestId: requestEntry.requestId,
+        action: "approve",
+        expiresAtMs: decisionExpiresAtMs
+      })
+    : "";
+  const declineLink = baseUrl
+    ? buildAccessRequestDecisionLink({
+        baseUrl,
+        requestId: requestEntry.requestId,
+        action: "decline",
+        expiresAtMs: decisionExpiresAtMs
+      })
+    : "";
+  const safeApproveHref = escapeHtml(approveLink || "#");
+  const safeDeclineHref = escapeHtml(declineLink || "#");
+  const approveButtonStyle = approveLink
+    ? "display:inline-block;padding:9px 14px;border:1px solid rgba(139,255,139,0.5);border-radius:9px;background:rgba(0,0,0,0.34);color:#d8ffd8;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;"
+    : "display:inline-block;padding:9px 14px;border:1px solid rgba(139,255,139,0.22);border-radius:9px;background:rgba(0,0,0,0.24);color:#7fb07f;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;pointer-events:none;";
+  const declineButtonStyle = declineLink
+    ? "display:inline-block;padding:9px 14px;border:1px solid rgba(255,120,120,0.54);border-radius:9px;background:rgba(0,0,0,0.34);color:#ffc2c2;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;"
+    : "display:inline-block;padding:9px 14px;border:1px solid rgba(255,120,120,0.24);border-radius:9px;background:rgba(0,0,0,0.24);color:#c08a8a;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;pointer-events:none;";
+
+  const subject = `[Fallout Codex] Access Review Required - ${identity.username} (${identity.discordId})`;
+  const text = [
+    "FALLOUT CODEX - ACCESS REVIEW REQUIRED",
+    "",
+    `Nick: ${identity.nick}`,
+    `Username: ${identity.username}`,
+    `Email: ${identity.email}`,
+    `Discord ID: ${identity.discordId}`,
+    `Account Age: ${identity.accountAge}`,
+    `Request Time (UTC): ${identity.requestTime}`,
+    "",
+    `Approve: ${approveLink || "Unavailable (set PUBLIC_BASE_URL or use a public host)"}`,
+    `Decline: ${declineLink || "Unavailable (set PUBLIC_BASE_URL or use a public host)"}`,
+    `Decision link expires: ${decisionExpiresAtLabel}`,
+    "If no action is taken before expiration, this application is auto-declined.",
+    "",
+    "Reason:",
+    identity.reason || "Not provided"
+  ].join("\n");
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;padding:24px;background:#060a06;color:#c7f7c7;font-family:Consolas,'Courier New',monospace;">
+    <div style="max-width:620px;margin:0 auto;border:1px solid rgba(139,255,139,0.34);border-radius:14px;overflow:hidden;background:linear-gradient(to bottom,rgba(139,255,139,0.08),rgba(0,0,0,0.42)),rgba(0,0,0,0.44);box-shadow:0 0 0 1px rgba(0,0,0,.48) inset,0 18px 60px rgba(0,0,0,.58);">
+      <div style="padding:12px 16px;background:linear-gradient(to right,rgba(139,255,139,0.22),rgba(0,0,0,0));border-bottom:1px solid rgba(139,255,139,0.28);">
+        <span style="display:inline-block;padding:3px 8px;border:1px solid rgba(255,225,122,0.48);border-radius:999px;font-size:11px;letter-spacing:.08em;color:#ffefaf;text-transform:uppercase;">Access Review Required</span>
+        <p style="margin:10px 0 0;font-size:16px;letter-spacing:.06em;color:#fff4cb;text-transform:uppercase;">Fallout Codex - New Access Request</p>
+      </div>
+      <div style="padding:16px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Nick</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeNick}</td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Username</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeUsername}</td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Email</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeEmail}</td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Discord ID</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-family:Consolas,Menlo,monospace;font-size:14px;color:#d8ffd8;">${safeDiscordId}</td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Account Age</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeAccountAge}</td></tr>
+          <tr><td style="padding:10px 0;color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Request Time (UTC)</td><td style="padding:10px 0;text-align:right;font-family:Consolas,Menlo,monospace;font-size:14px;color:#d8ffd8;">${safeRequestTime}</td></tr>
+        </table>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,225,122,0.24);">
+          <p style="margin:0 0 10px;color:#ffefaf;font-size:12px;letter-spacing:.06em;text-transform:uppercase;">Admin Decision Actions</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a href="${safeApproveHref}" style="${approveButtonStyle}">Approve</a>
+            <a href="${safeDeclineHref}" style="${declineButtonStyle}">Decline</a>
+          </div>
+          <p style="margin:10px 0 0;font-size:12px;color:#9ccf9c;">Decision link expires: ${escapeHtml(decisionExpiresAtLabel)}</p>
+          <p style="margin:6px 0 0;font-size:12px;color:#9ccf9c;">If no action is taken before expiration, this request is auto-declined.</p>
+          <div style="margin-top:12px;padding:10px;border:1px solid rgba(255,225,122,0.24);border-radius:10px;background:rgba(0,0,0,0.28);">
+            <p style="margin:0;color:#ffefaf;font-size:11px;letter-spacing:.06em;text-transform:uppercase;">Access Reason</p>
+            <p style="margin:7px 0 0;color:#d8ffd8;font-size:13px;line-height:1.4;white-space:pre-wrap;word-break:break-word;">${safeReasonHtml || "Not provided"}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`;
+
+  return {
+    subject,
+    text,
+    html
+  };
+}
+
+async function sendAccessRequestEmail({ user, requestEntry, req }) {
+  if (!mailTransport) {
+    throw new Error("Mail transport is not configured");
+  }
+
+  const content = buildAccessRequestEmailContent({
+    user,
+    requestEntry,
+    req
+  });
+  await mailTransport.sendMail({
+    from: SMTP_FROM,
+    to: ACCESS_REQUEST_EMAIL_TO,
+    subject: content.subject,
+    text: content.text,
+    html: content.html
+  });
 }
 
 const uploadStorage = multer.diskStorage({
@@ -287,6 +1243,307 @@ app.get("/api/me", (req, res) => {
   res.json(buildMePayload(req));
 });
 
+app.get("/admin/access-requests/decision", (req, res) => {
+  const requestId = String(req.query.rid || "").trim().toLowerCase();
+  const action = String(req.query.action || "").trim().toLowerCase();
+  const expRaw = String(req.query.exp || "").trim();
+  const token = String(req.query.token || "").trim();
+  const baseUrl = getRequestBaseUrl(req);
+
+  const invalidResponse = (statusCode, title, statusLabel, message, entry = null, accent = "#ff9a9a") => {
+    res.status(statusCode).send(
+      buildAccessRequestDecisionPage({
+        title,
+        statusLabel,
+        message,
+        accent,
+        baseUrl,
+        entry
+      })
+    );
+  };
+
+  if (!/^[a-f0-9-]{36}$/i.test(requestId) || !ACCESS_REQUEST_DECISION_ACTIONS.has(action) || !expRaw || !token) {
+    invalidResponse(400, "Invalid Decision Link", "Invalid Request", "The decision link is malformed or incomplete.");
+    return;
+  }
+
+  const expiresAtMs = Number.parseInt(expRaw, 10);
+  if (!Number.isFinite(expiresAtMs) || expiresAtMs <= 0) {
+    invalidResponse(400, "Invalid Decision Link", "Invalid Expiration", "The decision link expiration is invalid.");
+    return;
+  }
+
+  const storedEntry = getAccessRequestEntryByRequestId(requestId);
+
+  if (Date.now() > expiresAtMs) {
+    const currentStatus = normalizeAccessRequestStatus(storedEntry?.status);
+    if (currentStatus === ACCESS_REQUEST_STATUS.APPROVED || currentStatus === ACCESS_REQUEST_STATUS.DECLINED) {
+      const alreadyApproved = currentStatus === ACCESS_REQUEST_STATUS.APPROVED;
+      invalidResponse(
+        200,
+        "Decision Already Recorded",
+        alreadyApproved ? "Already Approved" : "Already Declined",
+        `This request was already marked as ${currentStatus.toUpperCase()}.`,
+        storedEntry,
+        alreadyApproved ? "#8bff8b" : "#ffb3b3"
+      );
+      return;
+    }
+    invalidResponse(
+      410,
+      "Decision Link Expired",
+      "Expired",
+      "This decision link expired after 2 days. The pending application was auto-declined.",
+      storedEntry
+    );
+    return;
+  }
+
+  if (!verifyAccessRequestDecisionToken(requestId, action, expiresAtMs, token)) {
+    invalidResponse(403, "Decision Link Rejected", "Forbidden", "Token verification failed for this decision link.");
+    return;
+  }
+
+  const decision = applyAccessRequestDecision(requestId, action);
+  if (!decision.ok && decision.reason === "not_found") {
+    invalidResponse(404, "Request Not Found", "Missing", "No matching access request was found for this decision link.");
+    return;
+  }
+  if (!decision.ok && decision.reason === "already_decided") {
+    const entry = decision.entry || null;
+    const currentStatus = normalizeAccessRequestStatus(entry?.status);
+    const statusLabel = currentStatus === ACCESS_REQUEST_STATUS.APPROVED ? "Already Approved" : "Already Declined";
+    const accent = currentStatus === ACCESS_REQUEST_STATUS.APPROVED ? "#8bff8b" : "#ffb3b3";
+    invalidResponse(
+      200,
+      "Decision Already Recorded",
+      statusLabel,
+      `This request was already marked as ${currentStatus.toUpperCase()}.`,
+      entry,
+      accent
+    );
+    return;
+  }
+  if (!decision.ok) {
+    invalidResponse(400, "Unable To Process Decision", "Invalid", "The decision request could not be processed.");
+    return;
+  }
+
+  const entry = decision.entry;
+  const finalStatus = normalizeAccessRequestStatus(entry?.status);
+  const approved = finalStatus === ACCESS_REQUEST_STATUS.APPROVED;
+  res.status(200).send(
+    buildAccessRequestDecisionPage({
+      title: approved ? "Application Approved" : "Application Declined",
+      statusLabel: approved ? "Approved" : "Declined",
+      message: approved
+        ? "Access has been granted. On next login, this user will be authorized."
+        : "Access has been denied. On next login, this user will see a declined status.",
+      accent: approved ? "#8bff8b" : "#ffb3b3",
+      baseUrl,
+      entry
+    })
+  );
+});
+
+app.post("/api/files/access-request", async (req, res) => {
+  const user = getSessionUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Login required" });
+    return;
+  }
+  const reasonRaw = String(req.body?.reason || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  if (!reasonRaw) {
+    res.status(400).json({ error: "Access reason is required." });
+    return;
+  }
+  if (reasonRaw.length > ACCESS_REQUEST_REASON_MAX_CHARS) {
+    res.status(400).json({ error: `Access reason exceeds ${ACCESS_REQUEST_REASON_MAX_CHARS} characters.` });
+    return;
+  }
+  const reason = sanitizeAccessRequestReason(reasonRaw);
+
+  const accessRequestState = getAccessRequestState(user.discordId);
+  if (isAuthorized(user, accessRequestState)) {
+    res.status(409).json({ error: "Account is already authorized" });
+    return;
+  }
+  if (accessRequestState.status === ACCESS_REQUEST_STATUS.PENDING) {
+    res.status(429).json({ error: "An access request is already pending review." });
+    return;
+  }
+  if (accessRequestState.status === ACCESS_REQUEST_STATUS.DECLINED) {
+    const reapplyRemainingMs = getAccessRequestReapplyRemainingMs(accessRequestState);
+    if (reapplyRemainingMs > 0) {
+      const retrySeconds = Math.ceil(reapplyRemainingMs / 1000);
+      const reapplyAtIso = getAccessRequestReapplyAtIso(accessRequestState);
+      res.status(429).json({
+        error: "Application was declined. Reapply after the cooldown expires.",
+        retryAfterMs: reapplyRemainingMs,
+        retryAfterSeconds: retrySeconds,
+        reapplyAt: reapplyAtIso
+      });
+      return;
+    }
+  }
+  if (!mailTransport) {
+    res.status(503).json({ error: "Access request email service is not configured" });
+    return;
+  }
+
+  const cooldownRemainingMs = getAccessRequestCooldownRemainingMs(user.discordId);
+  if (cooldownRemainingMs > 0) {
+    const retrySeconds = Math.ceil(cooldownRemainingMs / 1000);
+    res.status(429).json({ error: `Request recently sent. Try again in ${retrySeconds}s.` });
+    return;
+  }
+
+  try {
+    const requestEntry = createPendingAccessRequestEntry(user, reason);
+    await sendAccessRequestEmail({
+      user,
+      requestEntry,
+      req
+    });
+    upsertAccessRequestEntry(requestEntry);
+    markAccessRequestSent(user.discordId);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("[access-request] email send error:", error);
+    res.status(500).json({ error: "Unable to send access request email" });
+  }
+});
+
+app.get("/api/files/access-requests", requireAdmin, (_req, res) => {
+  res.json({
+    entries: getAccessRequestAdminEntries()
+  });
+});
+
+app.post("/api/files/access-requests/:requestId/decision", requireAdmin, (req, res) => {
+  const requestId = String(req.params.requestId || "").trim().toLowerCase();
+  const action = String(req.body?.action || "").trim().toLowerCase();
+  if (!/^[a-f0-9-]{36}$/i.test(requestId)) {
+    res.status(400).json({ error: "Invalid request id" });
+    return;
+  }
+  if (!ACCESS_REQUEST_DECISION_ACTIONS.has(action)) {
+    res.status(400).json({ error: "Invalid decision action" });
+    return;
+  }
+
+  const decision = applyAccessRequestDecision(requestId, action);
+  if (!decision.ok && decision.reason === "not_found") {
+    res.status(404).json({ error: "Access request not found" });
+    return;
+  }
+  if (!decision.ok && decision.reason === "already_decided") {
+    const status = normalizeAccessRequestStatus(decision.entry?.status);
+    const statusLabel = status === ACCESS_REQUEST_STATUS.APPROVED ? "approved" : "declined";
+    res.status(409).json({ error: `This request was already ${statusLabel}.` });
+    return;
+  }
+  if (!decision.ok) {
+    res.status(400).json({ error: "Unable to process request decision" });
+    return;
+  }
+
+  res.json({
+    ok: true,
+    entry: decision.entry
+  });
+});
+
+app.post("/api/files/access-requests/:discordId/unauthorize", requireAdmin, (req, res) => {
+  const discordId = String(req.params.discordId || "").trim();
+  if (!isDiscordId(discordId)) {
+    res.status(400).json({ error: "Invalid Discord ID" });
+    return;
+  }
+  if (discordId === ADMIN_DISCORD_ID) {
+    res.status(400).json({ error: "Admin account cannot be unauthorized" });
+    return;
+  }
+  if (ALLOWED_DISCORD_IDS.has(discordId)) {
+    res.status(409).json({
+      error: "This user is authorized via ALLOWED_DISCORD_IDS and cannot be unauthorized from the admin panel."
+    });
+    return;
+  }
+
+  const result = updateAccessRequestStatusByDiscordId(discordId, ACCESS_REQUEST_STATUS.DECLINED, {
+    allowedCurrentStatuses: new Set([ACCESS_REQUEST_STATUS.APPROVED])
+  });
+
+  if (!result.ok && result.reason === "not_found") {
+    res.status(404).json({ error: "Access request entry not found for this Discord ID" });
+    return;
+  }
+  if (!result.ok && result.reason === "status_mismatch") {
+    const currentStatus = normalizeAccessRequestStatus(result.entry?.status);
+    if (currentStatus === ACCESS_REQUEST_STATUS.PENDING) {
+      res.status(409).json({ error: "This request is still pending. Use deny for pending applications." });
+      return;
+    }
+    if (currentStatus === ACCESS_REQUEST_STATUS.DECLINED) {
+      res.status(409).json({ error: "This user is already unauthorized." });
+      return;
+    }
+    res.status(409).json({ error: "Only approved users can be unauthorized." });
+    return;
+  }
+  if (!result.ok && result.reason === "already_set") {
+    res.status(409).json({ error: "This user is already unauthorized." });
+    return;
+  }
+  if (!result.ok) {
+    res.status(400).json({ error: "Unable to unauthorize this user" });
+    return;
+  }
+
+  res.json({
+    ok: true,
+    entry: result.entry
+  });
+});
+
+app.post("/api/files/access-requests/:discordId/allow-reapply", requireAdmin, (req, res) => {
+  const discordId = String(req.params.discordId || "").trim();
+  if (!isDiscordId(discordId)) {
+    res.status(400).json({ error: "Invalid Discord ID" });
+    return;
+  }
+
+  const result = clearDeclinedAccessRequestForReapply(discordId);
+  if (!result.ok && result.reason === "not_found") {
+    res.status(404).json({ error: "Access request entry not found for this Discord ID" });
+    return;
+  }
+  if (!result.ok && result.reason === "status_mismatch") {
+    const currentStatus = normalizeAccessRequestStatus(result.entry?.status);
+    if (currentStatus === ACCESS_REQUEST_STATUS.PENDING) {
+      res.status(409).json({ error: "This application is pending. Use approve or deny instead." });
+      return;
+    }
+    if (currentStatus === ACCESS_REQUEST_STATUS.APPROVED) {
+      res.status(409).json({ error: "This user is approved. Use unauthorize to revoke access." });
+      return;
+    }
+    res.status(409).json({ error: "Only declined applications can be unlocked for reapply." });
+    return;
+  }
+  if (!result.ok) {
+    res.status(400).json({ error: "Unable to allow reapply for this user" });
+    return;
+  }
+
+  res.json({
+    ok: true,
+    entry: result.entry
+  });
+});
+
 app.post("/auth/discord", (req, res) => {
   if (!oauthConfigured()) {
     res.status(500).json({ error: "Discord OAuth is not configured on the server." });
@@ -300,7 +1557,7 @@ app.post("/auth/discord", (req, res) => {
     client_id: DISCORD_CLIENT_ID,
     response_type: "code",
     redirect_uri: DISCORD_REDIRECT_URI,
-    scope: "identify",
+    scope: "identify email",
     state: oauthState
   });
   const redirectUrl = `https://discord.com/oauth2/authorize?${query.toString()}`;
@@ -372,7 +1629,8 @@ app.get("/auth/discord/callback", async (req, res) => {
 
     req.session.user = {
       discordId,
-      username: formatDiscordUsername(userPayload)
+      username: formatDiscordUsername(userPayload),
+      discordProfile: buildDiscordProfileForSession(userPayload)
     };
 
     req.session.save((error) => {
@@ -546,6 +1804,15 @@ app.get("/", (_req, res) => {
   res.sendFile(path.join(SITE_ROOT, "index.html"));
 });
 
+app.use((req, res) => {
+  if (req.path.startsWith("/api/")) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  res.status(404).sendFile(NOT_FOUND_PAGE);
+});
+
 async function startServer() {
   if (redisClient) {
     try {
@@ -572,6 +1839,9 @@ async function startServer() {
     }
     if (SESSION_SECRET === "replace-me-in-production") {
       console.warn("[server] SESSION_SECRET is using the default fallback. Set SESSION_SECRET in production.");
+    }
+    if (!mailConfigured()) {
+      console.warn("[mail] Access request email is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, SMTP_FROM.");
     }
   });
 
