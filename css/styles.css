@@ -210,6 +210,27 @@ body.is-hacking .screen-scanlines::before {
   animation-duration: 8s;
 }
 
+/* Keep hacking background motion calmer so the modal feels readable/stable. */
+body.is-hacking .screen-map {
+  animation-duration: 24s;
+}
+
+body.is-hacking .screen-grid {
+  animation-duration: 20s;
+}
+
+body.is-hacking .screen-scanlines {
+  animation-duration: 18s;
+}
+
+body.is-hacking .screen-scanlines::before {
+  animation-duration: 26s;
+}
+
+body.is-hacking .screen-noise {
+  animation-duration: 2.8s;
+}
+
 body.is-syncing,
 body.is-classified-loading {
   overflow: hidden;
@@ -1403,8 +1424,11 @@ body:not(.error-page) .topbar::before {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
+  border-radius: inherit;
+  -webkit-clip-path: inset(0 round var(--radius));
+  clip-path: inset(0 round var(--radius));
   opacity: 0.34;
   background-image:
     linear-gradient(to right, rgba(255, 225, 122, 0.14) 1px, transparent 1px),
@@ -1413,15 +1437,34 @@ body:not(.error-page) .topbar::before {
 }
 
 body:not(.error-page) .topbar::after {
-  content: "";
+  content: none;
+}
+
+body:not(.error-page) .topbar-sweep {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
-  background:
-    linear-gradient(90deg, rgba(255, 225, 122, 0), rgba(255, 225, 122, 0.12), rgba(255, 225, 122, 0));
-  transform: translateX(-120%);
-  animation: intelTopbarSweep 9.5s linear infinite;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+body:not(.error-page) .topbar-sweep::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -20%;
+  width: 40%;
+  opacity: 0.35;
+  background: linear-gradient(to right, rgba(255, 225, 122, 0), rgba(255, 225, 122, 0.3), rgba(255, 225, 122, 0));
+  transform: skewX(-18deg) translateX(-170%);
+  animation: intelTopbarSweep 10s linear infinite;
+}
+
+body:not(.error-page) .topbar > :not(.topbar-sweep) {
+  position: relative;
+  z-index: 1;
 }
 
 body:not(.error-page) .micro {
@@ -1687,11 +1730,11 @@ body:not(.is-files):not(.is-classified):not(.error-page) .footer-note {
 
 @keyframes intelTopbarSweep {
   0% {
-    transform: translateX(-120%);
+    transform: skewX(-18deg) translateX(-170%);
   }
   55%,
   100% {
-    transform: translateX(120%);
+    transform: skewX(-18deg) translateX(470%);
   }
 }
 
@@ -2161,7 +2204,7 @@ body.error-page.is-unauthorized .error-radar-sweep {
 }
 
 .classified-load-overlay {
-  z-index: 1110;
+  z-index: 1220;
 }
 
 .files-delete-overlay {
@@ -2653,7 +2696,7 @@ body.is-classified-loading .pipboy-terminal {
     rgba(255, 225, 122, 0.28) 48%,
     rgba(255, 225, 122, 0) 72%
   );
-  animation: hackOverlaySweep 4.6s linear infinite;
+  animation: hackOverlaySweep 9.8s linear infinite;
 }
 
 .hack-core {
@@ -2711,7 +2754,7 @@ body.is-classified-loading .pipboy-terminal {
   border-radius: 14px;
   border: 1px solid rgba(139, 255, 139, 0.22);
   opacity: 0.5;
-  animation: hackFramePulse 2.8s ease-in-out infinite;
+  animation: hackFramePulse 6.4s ease-in-out infinite;
 }
 
 .hack-frame > * {

@@ -4615,11 +4615,15 @@ function beginClassifiedTransition() {
   }
 
   elements.hackOverlay.classList.add("is-success");
+  // Close hack overlay first so classified loading never renders behind its blur layer.
+  hideHackOverlay();
   showClassifiedLoadOverlay(true);
+
+  const classifiedLoadMs = 950;
   setTimeout(() => {
     showClassifiedLoadOverlay(false);
     showClassifiedPage();
-  }, 950);
+  }, classifiedLoadMs);
 }
 
 function normalizeSearchText(value) {
