@@ -128,7 +128,8 @@ const HACK_BRACKET_PAIRS = [
 ];
 const VIEW_HASHES = {
   intel: "#intel",
-  files: "#files"
+  files: "#files",
+  classified: "#clasified"
 };
 const FILES_ACCESS_REQUEST_REASON_MAX = 1200;
 const FILES_ACCESS_DECLINED_REAPPLY_MS = 7 * 24 * 60 * 60 * 1000;
@@ -812,6 +813,7 @@ const elements = {
   bootSubtitle: document.getElementById("bootSubtitle"),
   bootLog: document.getElementById("bootLog"),
   bootBar: document.getElementById("bootBar"),
+  bootPercent: document.getElementById("bootPercent"),
   bootHint: document.getElementById("bootHint"),
   bootLine1: document.getElementById("bootLine1"),
   bootLine2: document.getElementById("bootLine2"),
@@ -1070,6 +1072,9 @@ function getHashView() {
   if (hash === VIEW_HASHES.files) {
     return "files";
   }
+  if (hash === VIEW_HASHES.classified || hash === "#classified" || hash === "#data") {
+    return "classified";
+  }
   if (!hash || hash === VIEW_HASHES.intel) {
     return "intel";
   }
@@ -1077,7 +1082,11 @@ function getHashView() {
 }
 
 function setHashView(view, { replace = false } = {}) {
-  const targetHash = view === "files" ? VIEW_HASHES.files : VIEW_HASHES.intel;
+  const targetHash = view === "files"
+    ? VIEW_HASHES.files
+    : view === "classified"
+      ? VIEW_HASHES.classified
+      : VIEW_HASHES.intel;
   const currentHash = String(window.location.hash || "").trim().toLowerCase();
   if (currentHash === targetHash) {
     return;
@@ -1170,6 +1179,20 @@ function applyViewFromHash() {
       return;
     }
     showFilesPage({ updateHash: false });
+    return;
+  }
+
+  if (hashView === "classified") {
+    if (!state.easterEgg.unlocked && !state.easterEgg.hack?.solved) {
+      setHashView("intel", { replace: true });
+      showIntelPage({ updateHash: false });
+      return;
+    }
+
+    if (state.view === "classified" && document.body.classList.contains("is-classified")) {
+      return;
+    }
+    showClassifiedPage({ updateHash: false });
     return;
   }
 
@@ -5278,7 +5301,7 @@ async function ensureClassifiedMinervaArchive() {
   setClassifiedSearchOpen(state.classifiedSearch.open);
 }
 
-function showClassifiedPage() {
+function showClassifiedPage({ updateHash = true } = {}) {
   if (!state.easterEgg.unlocked && !state.easterEgg.hack?.solved) {
     return;
   }
@@ -5302,6 +5325,9 @@ function showClassifiedPage() {
   document.body.classList.add("is-classified");
   elements.mainTitle.textContent = t("classified_main_title");
   setTopTabActive("data");
+  if (updateHash) {
+    setHashView("classified");
+  }
   setClassifiedSearchOpen(false, { clearQuery: true });
   void ensureClassifiedMinervaArchive();
 }
@@ -5424,6 +5450,17 @@ function parseSiloData(text) {
   };
 }
 
+function formatSiloCodeForDisplay(code) {
+  const digits = typeof code === "string" ? code.replace(/\D/g, "") : "";
+  const match = digits.match(/^(\d{3})(\d{2})(\d{3})$/);
+
+  if (!match) {
+    return "--- -- ---";
+  }
+
+  return `${match[1]} ${match[2]} ${match[3]}`;
+}
+
 function renderSiloFromState() {
   elements.siloCodes.innerHTML = "";
 
@@ -5451,7 +5488,7 @@ function renderSiloFromState() {
 
     const codeValue = document.createElement("div");
     codeValue.className = "code";
-    codeValue.textContent = codes[site] || "--------";
+    codeValue.textContent = formatSiloCodeForDisplay(codes[site]);
 
     card.appendChild(siteLabel);
     card.appendChild(codeValue);
@@ -7047,6 +7084,9 @@ async function startBootSequence() {
   if (elements.bootBar) {
     elements.bootBar.style.width = "0%";
   }
+  if (elements.bootPercent) {
+    elements.bootPercent.textContent = "0%";
+  }
   if (elements.bootHint) {
     elements.bootHint.textContent = t("boot_hint_initializing");
   }
@@ -7060,12 +7100,17 @@ async function startBootSequence() {
     if (elements.bootLog) {
       const line = document.createElement("div");
       line.className = `boot-log-line${step.ready ? " is-ready" : ""}`;
-      line.textContent = step.ready ? `[OK] ${step.text}` : `> ${step.text}`;
+      line.textContent = step.ready
+        ? `[OK ${step.progress}%] ${step.text}`
+        : `[${String(step.progress).padStart(2, "0")}%] ${step.text}`;
       elements.bootLog.appendChild(line);
       elements.bootLog.scrollTop = elements.bootLog.scrollHeight;
     }
     if (elements.bootBar) {
       elements.bootBar.style.width = `${step.progress}%`;
+    }
+    if (elements.bootPercent) {
+      elements.bootPercent.textContent = `${step.progress}%`;
     }
     if (elements.bootHint) {
       elements.bootHint.textContent = step.text;
@@ -7083,6 +7128,33 @@ async function startBootSequence() {
 }
 
 function wireEvents() {
+  const hackInteractiveRoot = elements.hackOverlay?.querySelector(".hack-core") || null;
+  const shouldBlockBackgroundForActiveOverlay = (target) => {
+    if (document.body.classList.contains("is-syncing") && elements.syncOverlay?.classList.contains("is-active")) {
+      return true;
+    }
+    if (document.body.classList.contains("is-classified-loading") && elements.classifiedLoadOverlay?.classList.contains("is-active")) {
+      return true;
+    }
+    if (!document.body.classList.contains("is-hacking")) {
+      return false;
+    }
+    if (!elements.hackOverlay?.classList.contains("is-active")) {
+      return false;
+    }
+    if (!(target instanceof Node) || !hackInteractiveRoot) {
+      return true;
+    }
+    return !hackInteractiveRoot.contains(target);
+  };
+  const blockBackgroundForActiveOverlay = (event) => {
+    if (!shouldBlockBackgroundForActiveOverlay(event.target)) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   document.addEventListener("pointerdown", () => {
     primeAudioContext();
   }, { passive: true });
@@ -7314,6 +7386,8 @@ function wireEvents() {
       setFilesAdminRequestsFilterMenuOpen(false);
     }
   });
+  document.addEventListener("touchmove", blockBackgroundForActiveOverlay, { passive: false });
+  document.addEventListener("wheel", blockBackgroundForActiveOverlay, { passive: false });
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") {
       return;

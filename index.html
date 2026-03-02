@@ -42,8 +42,17 @@
 <body class="is-booting">
   <div id="bootOverlay" class="boot-overlay">
     <div class="boot-core">
-      <p id="bootTitle" class="boot-title">PIP-BOY 3000 MK IV</p>
-      <p id="bootSubtitle" class="boot-subtitle">VAULT-TEC PERSONAL INFORMATION PROCESSOR</p>
+      <div class="boot-head">
+        <p id="bootTitle" class="boot-title">PIP-BOY 3000 MK IV</p>
+        <p id="bootSubtitle" class="boot-subtitle">VAULT-TEC PERSONAL INFORMATION PROCESSOR</p>
+      </div>
+      <div class="boot-trace-meta" aria-hidden="true">
+        <span class="boot-trace-dot"></span>
+        <span class="boot-trace-dot"></span>
+        <span class="boot-trace-dot"></span>
+        <span class="boot-trace-label">TRACE</span>
+        <span id="bootPercent" class="boot-percent">0%</span>
+      </div>
       <div id="bootLog" class="boot-log" aria-live="polite" aria-atomic="false"></div>
       <div class="boot-progress"><span id="bootBar"></span></div>
       <p id="bootHint" class="boot-hint">Initializing...</p>
