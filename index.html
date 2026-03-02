@@ -129,7 +129,6 @@
         </div>
       </div>
     </div>
-
     <header class="topbar">
       <span class="topbar-sweep" aria-hidden="true"></span>
       <div class="topbar-left">
@@ -218,18 +217,30 @@
           </div>
         </div>
         <h3 id="minervaInventoryTitle">Inventory + Price</h3>
-        <div class="table-wrap">
-          <table>
+        <div class="table-wrap minerva-table-wrap">
+          <table class="minerva-table-head">
+            <colgroup>
+              <col />
+              <col class="minerva-price-col" />
+            </colgroup>
             <thead>
               <tr>
                 <th id="tableItemHeader">Plan / Item</th>
                 <th id="tablePriceHeader">Gold Bullion</th>
               </tr>
             </thead>
-            <tbody id="minervaItems">
-              <tr><td colspan="2" id="minervaAwaiting">Awaiting response...</td></tr>
-            </tbody>
           </table>
+          <div class="minerva-table-scroll">
+            <table class="minerva-table-body">
+              <colgroup>
+                <col />
+                <col class="minerva-price-col" />
+              </colgroup>
+              <tbody id="minervaItems">
+                <tr><td colspan="2" id="minervaAwaiting">Awaiting response...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
         <p class="source">
           <span id="minervaSourcePrefix">Sources:</span>

@@ -1107,6 +1107,18 @@ function setTopTabActive(view) {
   elements.tabData?.classList.toggle("active", view === "data");
 }
 
+function syncTopTabForCurrentView() {
+  if (state.view === "classified") {
+    setTopTabActive("data");
+    return;
+  }
+  if (state.view === "files") {
+    setTopTabActive("files");
+    return;
+  }
+  setTopTabActive("intel");
+}
+
 function hideFilesPage() {
   stopFilesLiveIdentityPolling();
   document.body.classList.remove("is-files");
@@ -1136,7 +1148,7 @@ function showIntelPage({ updateHash = true } = {}) {
   hideFilesPage();
   state.view = "intel";
   elements.mainTitle.textContent = t("main_title");
-  setTopTabActive("intel");
+  syncTopTabForCurrentView();
   if (updateHash) {
     setHashView("intel");
   }
@@ -1158,7 +1170,7 @@ function showFilesPage({ updateHash = true } = {}) {
 
   state.view = "files";
   elements.mainTitle.textContent = t("files_main_title");
-  setTopTabActive("files");
+  syncTopTabForCurrentView();
   renderFilesAccessView();
   void refreshFilesIdentity();
   if (updateHash) {
@@ -5328,7 +5340,7 @@ function showClassifiedPage({ updateHash = true } = {}) {
   state.view = "classified";
   document.body.classList.add("is-classified");
   elements.mainTitle.textContent = t("classified_main_title");
-  setTopTabActive("data");
+  syncTopTabForCurrentView();
   if (updateHash) {
     setHashView("classified");
   }
@@ -7014,13 +7026,7 @@ function applyLanguage(lang, persist = true) {
     elements.mainTitle.textContent = t("main_title");
   }
 
-  if (state.view === "classified") {
-    setTopTabActive("data");
-  } else if (state.view === "files") {
-    setTopTabActive("files");
-  } else {
-    setTopTabActive("intel");
-  }
+  syncTopTabForCurrentView();
 
   elements.langSelect.value = state.lang;
   syncLanguageMenu();

@@ -409,9 +409,9 @@ body.is-ready:not(.error-page) .pipboy-terminal::-webkit-scrollbar {
 
 .tab-strip {
   display: inline-grid;
-  grid-template-columns: repeat(3, minmax(74px, 1fr));
+  grid-template-columns: repeat(3, minmax(68px, 1fr));
   gap: 8px;
-  width: min(320px, 100%);
+  width: min(430px, 100%);
 }
 
 .tab {
@@ -953,6 +953,41 @@ a:hover {
   position: relative;
 }
 
+#minervaPanel .table-wrap.minerva-table-wrap {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#minervaPanel .minerva-table-head,
+#minervaPanel .minerva-table-body {
+  width: 100%;
+  table-layout: fixed;
+}
+
+#minervaPanel .minerva-table-head th {
+  position: static;
+}
+
+#minervaPanel .minerva-table-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 255, 139, 0.56) rgba(0, 0, 0, 0.38);
+}
+
+#minervaPanel .minerva-price-col {
+  width: 32%;
+}
+
+#minervaPanel .minerva-table-body td:last-child,
+#minervaPanel .minerva-table-head #tablePriceHeader {
+  white-space: nowrap;
+}
+
 #minervaPanel.is-detail-open > :not(.minerva-subview) {
   display: none;
 }
@@ -1483,7 +1518,7 @@ body:not(.error-page) #mainTitle {
 }
 
 body:not(.error-page) .tab-strip {
-  width: min(356px, 100%);
+  width: min(468px, 100%);
   padding: 4px;
   border: 1px solid rgba(255, 225, 122, 0.3);
   border-radius: 14px;
