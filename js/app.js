@@ -3237,7 +3237,7 @@ function handleFilesListClick(event) {
       setFilesSearchOpen(true, { clearQuery: false });
     } else {
       state.files.transition = "to-list";
-      renderFilesAccessView();
+      renderFilesList();
     }
     return;
   }
@@ -3260,7 +3260,7 @@ function handleFilesListClick(event) {
     state.files.selectedId = fileId;
     state.files.detailOrigin = "list";
     state.files.transition = "to-detail";
-    renderFilesAccessView();
+    renderFilesList();
     elements.filesList?.scrollTo({ top: 0 });
     return;
   }
