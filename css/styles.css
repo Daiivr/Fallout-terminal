@@ -4010,9 +4010,15 @@ body.is-files .files-side-stack {
   display: grid;
   gap: 14px;
   align-content: start;
+  grid-auto-rows: max-content;
   align-self: stretch;
   min-height: 0;
   width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
 }
 
 body.is-files #filesSessionPanel,
@@ -5153,11 +5159,35 @@ body.is-classified .classified-layout {
     grid-row: auto;
   }
 
+  body.is-files .files-side-stack {
+    position: relative;
+    z-index: 12;
+    isolation: isolate;
+    overflow: visible;
+    padding-right: 0;
+    scrollbar-gutter: auto;
+  }
+
   body.is-files .files-browser-panel {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
+  }
+
+  body.is-files .files-admin-requests-panel {
+    position: relative;
+    z-index: 22;
+  }
+
+  body.is-files .files-admin-requests-filter-dropdown {
+    z-index: 32;
+  }
+
+  body.is-files .files-admin-requests-filter-menu {
+    z-index: 64;
   }
 
   body.is-files.is-files-unauthorized .files-browser-panel {
