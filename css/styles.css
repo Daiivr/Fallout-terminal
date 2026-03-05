@@ -4374,7 +4374,7 @@ body.is-files .files-browser-panel.is-restricted > * {
 }
 
 .files-denied-actions .files-btn {
-  flex: 1 1 180px;
+  flex: 0 1 220px;
   min-width: 0;
   border-color: rgba(255, 126, 126, 0.46);
   color: #ffd2d2;
@@ -8649,11 +8649,15 @@ body.is-classified .classified-layout {
   }
 
   .files-denied-actions {
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: flex-start;
   }
 
   .files-denied-actions .files-btn {
     width: 100%;
+    max-width: none;
+    min-width: 0;
+    flex: 0 0 100%;
   }
 
   .files-session-head {

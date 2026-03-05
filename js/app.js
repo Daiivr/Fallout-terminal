@@ -3162,7 +3162,7 @@ function renderFilesSearchResults() {
     elements.filesSearchResults.innerHTML = `<p class="files-search-empty">${message}</p>`;
   };
 
-  if (state.files.loadingList) {
+  if (state.files.loadingList && !state.files.list.length) {
     setFilesSearchCount("");
     setSearchMessage(t("files_loading_state"));
     return;
@@ -3398,7 +3398,7 @@ function renderFilesList() {
   }
 
   let emptyMessage = "";
-  if (state.files.loadingList) {
+  if (state.files.loadingList && !state.files.list.length) {
     emptyMessage = t("files_loading_state");
   } else if (state.files.listError) {
     emptyMessage = state.files.listError;
