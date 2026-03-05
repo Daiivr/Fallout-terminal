@@ -1542,6 +1542,22 @@ function getFilesGroupKey(groupValue) {
   return `group:${normalizeSearchText(normalizedGroup)}`;
 }
 
+function getFilesGroupItemCount(groupKey, files = state.files.list) {
+  const targetKey = String(groupKey || "").trim();
+  if (!targetKey) {
+    return 0;
+  }
+  const source = Array.isArray(files) ? files : [];
+  let count = 0;
+  for (const file of source) {
+    const entryKey = getFilesGroupKey(normalizeFilesGroup(file?.group || ""));
+    if (entryKey === targetKey) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
 function getFilesDisplayName(file) {
   const displayName = String(file?.displayName || "")
     .replace(/\r\n/g, " ")
@@ -4884,7 +4900,8 @@ function handleFilesListClick(event) {
     }
     state.files.activeGroupKey = groupKey;
     clearFilesGroupManagerState();
-    state.files.groupTransition = "open";
+    const groupItemCount = getFilesGroupItemCount(groupKey);
+    state.files.groupTransition = groupItemCount > 1 ? "open" : "";
     cancelFilesRename({ render: false });
     renderFilesList();
     renderFilesGroupManagerPanel();
