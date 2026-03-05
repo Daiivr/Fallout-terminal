@@ -973,7 +973,23 @@ function formatUtcTimestamp(value) {
   if (Number.isNaN(date.getTime())) {
     return "Unknown";
   }
-  return date.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
+  try {
+    const formatted = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "UTC",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
+    })
+      .format(date)
+      .replace(/\bam\b/g, "AM")
+      .replace(/\bpm\b/g, "PM");
+    return `${formatted} UTC`;
+  } catch {
+    return date.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
+  }
 }
 
 function resolveAccessRequestIdentity(user, requestEntry = null) {

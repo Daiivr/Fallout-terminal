@@ -433,6 +433,22 @@
                 maxlength="80"
                 placeholder="Optional group..."
               />
+              <div id="filesGroupSuggestDropdown" class="files-admin-requests-filter-dropdown files-group-suggest-dropdown" data-files-group-suggest-dropdown="true" data-files-group-suggest-target="filesGroupInput">
+                <button
+                  id="filesGroupSuggestBtn"
+                  class="files-admin-requests-filter-trigger files-group-suggest-trigger"
+                  type="button"
+                  data-files-action="toggle-group-suggest-menu"
+                  data-files-group-suggest-toggle="true"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-label="Select existing group"
+                >
+                  <span id="filesGroupSuggestCurrent" data-files-group-suggest-current="true">Select existing group...</span>
+                  <span class="files-admin-requests-filter-caret" aria-hidden="true">▾</span>
+                </button>
+                <ul id="filesGroupSuggestMenu" class="files-admin-requests-filter-menu files-group-suggest-menu" data-files-group-suggest-menu="true" role="listbox" hidden></ul>
+              </div>
               <label id="filesUploadDescLabel" for="filesDescriptionInput">Description</label>
               <textarea
                 id="filesDescriptionInput"
@@ -515,17 +531,30 @@
         <article class="panel files-browser-panel">
           <div class="files-browser-top">
             <h2 id="filesBrowserTitle">FILE INDEX</h2>
-            <button
-              id="filesSearchToggleBtn"
-              class="files-search-toggle"
-              type="button"
-              aria-expanded="false"
-              aria-controls="filesSearchWrap"
-              title="Search files"
-            >
-              <span class="files-search-toggle-icon" aria-hidden="true">&#8981;</span>
-              <span id="filesSearchToggleText" class="files-search-toggle-text">SEARCH</span>
-            </button>
+            <div class="files-browser-actions">
+              <button
+                id="filesSearchToggleBtn"
+                class="files-search-toggle"
+                type="button"
+                aria-expanded="false"
+                aria-controls="filesSearchWrap"
+                title="Search files"
+              >
+                <span class="files-search-toggle-icon" aria-hidden="true">&#8981;</span>
+                <span id="filesSearchToggleText" class="files-search-toggle-text">SEARCH</span>
+              </button>
+              <button
+                id="filesGroupManagerToggleBtn"
+                class="files-search-toggle files-group-manager-toggle"
+                type="button"
+                aria-expanded="false"
+                aria-controls="filesGroupManagerWrap"
+                title="Group manager"
+              >
+                <span class="files-search-toggle-icon" aria-hidden="true">&#9776;</span>
+                <span id="filesGroupManagerToggleText" class="files-search-toggle-text">GROUPS</span>
+              </button>
+            </div>
           </div>
           <section id="filesRestrictedView" class="files-restricted-view" hidden>
             <div class="files-restricted-top">
@@ -636,6 +665,7 @@
             />
             <p id="filesSearchHint" class="files-search-hint">Filter files by name, type, description, or uploader.</p>
           </div>
+          <div id="filesGroupManagerWrap" class="files-group-manager-wrap" hidden></div>
           <div id="filesSearchResults" class="files-search-results" hidden></div>
           <p id="filesEmptyState" class="files-empty-state" hidden>No files available.</p>
           <div id="filesList" class="files-list" aria-live="polite"></div>

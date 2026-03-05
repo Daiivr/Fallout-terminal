@@ -227,6 +227,10 @@ const STRINGS = {
     files_search_toggle_close: "CLOSE",
     files_search_toggle_open_label: "Open file search",
     files_search_toggle_close_label: "Close file search",
+    files_group_manager_toggle_open: "GROUPS",
+    files_group_manager_toggle_close: "CLOSE",
+    files_group_manager_toggle_open_label: "Open group manager",
+    files_group_manager_toggle_close_label: "Close group manager",
     files_search_results_count: "Matches: {n}",
     files_search_prompt: "Enter a file name to search the index.",
     files_search_no_results: "No matching file found.",
@@ -316,6 +320,27 @@ const STRINGS = {
     files_group_count: "{n} file(s)",
     files_group_open_button: "OPEN GROUP",
     files_groups_back_button: "ALL GROUPS",
+    files_group_manager_title: "GROUP MANAGER",
+    files_group_manager_active_group: "Group: {group}",
+    files_group_manager_selected_count: "{n}/{total} selected",
+    files_group_manager_placeholder: "Create or pick group...",
+    files_group_manager_suggest_placeholder: "Select existing group...",
+    files_group_manager_select_group_first: "Open a group first to assign files.",
+    files_group_manager_assign_button: "SAVE GROUP",
+    files_group_manager_assign_busy: "SAVING...",
+    files_group_manager_select_all_button: "SELECT ALL",
+    files_group_manager_clear_button: "CLEAR",
+    files_group_manager_select_file_label: "Select for group",
+    files_group_manager_mode_hint: "Choose a target group, select files from the list, and save.",
+    files_group_manager_no_files: "No files available to manage.",
+    files_group_manager_status_current: "Current group: {group}",
+    files_group_manager_status_in_target: "Already in selected group",
+    files_group_manager_status_other: "In another group: {group}",
+    files_group_manager_status_none: "No group assigned",
+    files_group_manager_error_group_required: "Enter a group name first.",
+    files_group_manager_error_select_files: "Select at least one file.",
+    files_group_manager_error_update: "Unable to update selected files.",
+    files_group_manager_success: "{n} file(s) moved to \"{group}\".",
     files_rename_button: "RENAME",
     files_rename_placeholder: "Display name...",
     files_rename_save_button: "SAVE NAME",
@@ -530,6 +555,10 @@ const STRINGS = {
     files_search_toggle_close: "CERRAR",
     files_search_toggle_open_label: "Abrir busqueda de archivos",
     files_search_toggle_close_label: "Cerrar busqueda de archivos",
+    files_group_manager_toggle_open: "GRUPOS",
+    files_group_manager_toggle_close: "CERRAR",
+    files_group_manager_toggle_open_label: "Abrir gestor de grupos",
+    files_group_manager_toggle_close_label: "Cerrar gestor de grupos",
     files_search_results_count: "Coincidencias: {n}",
     files_search_prompt: "Escribe un nombre para buscar en el indice.",
     files_search_no_results: "No se encontro ningun archivo coincidente.",
@@ -619,6 +648,27 @@ const STRINGS = {
     files_group_count: "{n} archivo(s)",
     files_group_open_button: "ABRIR GRUPO",
     files_groups_back_button: "TODOS LOS GRUPOS",
+    files_group_manager_title: "GESTOR DE GRUPOS",
+    files_group_manager_active_group: "Grupo: {group}",
+    files_group_manager_selected_count: "{n}/{total} seleccionados",
+    files_group_manager_placeholder: "Crear o elegir grupo...",
+    files_group_manager_suggest_placeholder: "Elegir grupo existente...",
+    files_group_manager_select_group_first: "Abre un grupo primero para asignar archivos.",
+    files_group_manager_assign_button: "GUARDAR GRUPO",
+    files_group_manager_assign_busy: "GUARDANDO...",
+    files_group_manager_select_all_button: "SELECCIONAR TODO",
+    files_group_manager_clear_button: "LIMPIAR",
+    files_group_manager_select_file_label: "Seleccionar para grupo",
+    files_group_manager_mode_hint: "Elige un grupo destino, selecciona archivos de la lista y guarda.",
+    files_group_manager_no_files: "No hay archivos para gestionar.",
+    files_group_manager_status_current: "Grupo actual: {group}",
+    files_group_manager_status_in_target: "Ya esta en el grupo seleccionado",
+    files_group_manager_status_other: "En otro grupo: {group}",
+    files_group_manager_status_none: "Sin grupo asignado",
+    files_group_manager_error_group_required: "Escribe un nombre de grupo.",
+    files_group_manager_error_select_files: "Selecciona al menos un archivo.",
+    files_group_manager_error_update: "No se pudieron actualizar los archivos seleccionados.",
+    files_group_manager_success: "{n} archivo(s) movidos a \"{group}\".",
     files_rename_button: "RENOMBRAR",
     files_rename_placeholder: "Nombre visible...",
     files_rename_save_button: "GUARDAR NOMBRE",
@@ -832,6 +882,12 @@ const state = {
       value: "",
       busy: false
     },
+    groupManager: {
+      open: false,
+      targetGroup: "",
+      selectedIds: [],
+      busy: false
+    },
     search: {
       open: false,
       query: ""
@@ -995,6 +1051,10 @@ const elements = {
   filesImageInput: document.getElementById("filesImageInput"),
   filesUploadGroupLabel: document.getElementById("filesUploadGroupLabel"),
   filesGroupInput: document.getElementById("filesGroupInput"),
+  filesGroupSuggestDropdown: document.getElementById("filesGroupSuggestDropdown"),
+  filesGroupSuggestBtn: document.getElementById("filesGroupSuggestBtn"),
+  filesGroupSuggestCurrent: document.getElementById("filesGroupSuggestCurrent"),
+  filesGroupSuggestMenu: document.getElementById("filesGroupSuggestMenu"),
   filesUploadDescLabel: document.getElementById("filesUploadDescLabel"),
   filesDescriptionInput: document.getElementById("filesDescriptionInput"),
   filesUploadBtn: document.getElementById("filesUploadBtn"),
@@ -1023,7 +1083,10 @@ const elements = {
   filesBrowserTitle: document.getElementById("filesBrowserTitle"),
   filesSearchToggleBtn: document.getElementById("filesSearchToggleBtn"),
   filesSearchToggleText: document.getElementById("filesSearchToggleText"),
+  filesGroupManagerToggleBtn: document.getElementById("filesGroupManagerToggleBtn"),
+  filesGroupManagerToggleText: document.getElementById("filesGroupManagerToggleText"),
   filesSearchWrap: document.getElementById("filesSearchWrap"),
+  filesGroupManagerWrap: document.getElementById("filesGroupManagerWrap"),
   filesSearchLabel: document.getElementById("filesSearchLabel"),
   filesSearchCount: document.getElementById("filesSearchCount"),
   filesSearchInput: document.getElementById("filesSearchInput"),
@@ -1508,6 +1571,297 @@ function getFilesGroupDisplayLabel(file) {
 function formatFilesGroupCount(count) {
   const normalizedCount = Math.max(0, Number(count) || 0);
   return t("files_group_count", { n: String(normalizedCount) });
+}
+
+function getKnownFileGroups() {
+  const groups = new Set();
+  const baseFiles = Array.isArray(state.files.list) ? state.files.list : [];
+  for (const file of baseFiles) {
+    const group = normalizeFilesGroup(file?.group || "");
+    if (group) {
+      groups.add(group);
+    }
+  }
+
+  return Array.from(groups).sort((left, right) => left.localeCompare(right, state.lang === "es" ? "es" : "en"));
+}
+
+function getFilesGroupSuggestionOptions(selectedValue = "") {
+  const groups = getKnownFileGroups();
+  const normalizedSelected = normalizeFilesGroup(selectedValue);
+  const options = [
+    {
+      value: "",
+      label: t("files_group_manager_suggest_placeholder")
+    }
+  ];
+
+  let hasSelectedOption = !normalizedSelected;
+  for (const group of groups) {
+    options.push({
+      value: group,
+      label: group
+    });
+    if (!hasSelectedOption && group === normalizedSelected) {
+      hasSelectedOption = true;
+    }
+  }
+
+  if (normalizedSelected && !hasSelectedOption) {
+    options.push({
+      value: normalizedSelected,
+      label: normalizedSelected
+    });
+  }
+
+  return {
+    options,
+    selectedValue: normalizedSelected
+  };
+}
+
+function getFilesGroupSuggestTargetInput(dropdownElement) {
+  if (!(dropdownElement instanceof HTMLElement)) {
+    return null;
+  }
+  const targetId = String(dropdownElement.getAttribute("data-files-group-suggest-target") || "").trim();
+  if (!targetId) {
+    return null;
+  }
+  const targetInput = document.getElementById(targetId);
+  return targetInput instanceof HTMLInputElement ? targetInput : null;
+}
+
+function setFilesGroupSuggestMenuOpen(dropdownElement, active) {
+  if (!(dropdownElement instanceof HTMLElement)) {
+    return;
+  }
+  const toggleBtn = dropdownElement.querySelector("[data-files-group-suggest-toggle]");
+  const menu = dropdownElement.querySelector("[data-files-group-suggest-menu]");
+  if (!(toggleBtn instanceof HTMLButtonElement) || !(menu instanceof HTMLElement)) {
+    return;
+  }
+
+  const shouldOpen = Boolean(active);
+  dropdownElement.classList.toggle("is-open", shouldOpen);
+  toggleBtn.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+  menu.hidden = !shouldOpen;
+}
+
+function closeAllFilesGroupSuggestMenus({ except = null } = {}) {
+  const dropdowns = Array.from(document.querySelectorAll("[data-files-group-suggest-dropdown]"));
+  for (const node of dropdowns) {
+    if (!(node instanceof HTMLElement)) {
+      continue;
+    }
+    if (except && node === except) {
+      continue;
+    }
+    setFilesGroupSuggestMenuOpen(node, false);
+  }
+}
+
+function syncFilesGroupSuggestDropdown(dropdownElement, selectedValue = null) {
+  if (!(dropdownElement instanceof HTMLElement)) {
+    return;
+  }
+
+  const currentEl = dropdownElement.querySelector("[data-files-group-suggest-current]");
+  const menu = dropdownElement.querySelector("[data-files-group-suggest-menu]");
+  const toggleBtn = dropdownElement.querySelector("[data-files-group-suggest-toggle]");
+  if (!(menu instanceof HTMLElement)) {
+    return;
+  }
+
+  const linkedInput = getFilesGroupSuggestTargetInput(dropdownElement);
+  const effectiveValue = selectedValue === null
+    ? normalizeFilesGroup(linkedInput?.value || "")
+    : normalizeFilesGroup(selectedValue);
+  const optionState = getFilesGroupSuggestionOptions(effectiveValue);
+  const selectedValueKey = optionState.selectedValue || "";
+  let selectedLabel = t("files_group_manager_suggest_placeholder");
+  const fragment = document.createDocumentFragment();
+
+  for (const option of optionState.options) {
+    const row = document.createElement("li");
+
+    const optionButton = document.createElement("button");
+    optionButton.type = "button";
+    optionButton.className = "files-admin-requests-filter-option files-group-suggest-option";
+    optionButton.setAttribute("role", "option");
+    optionButton.setAttribute("data-files-action", "select-group-suggest-option");
+    optionButton.setAttribute("data-group-value", option.value);
+    optionButton.textContent = option.label;
+
+    const isSelected = option.value === selectedValueKey;
+    if (isSelected) {
+      selectedLabel = option.label;
+      optionButton.classList.add("is-selected");
+    }
+    optionButton.setAttribute("aria-selected", isSelected ? "true" : "false");
+
+    row.appendChild(optionButton);
+    fragment.appendChild(row);
+  }
+
+  menu.replaceChildren(fragment);
+  if (currentEl instanceof HTMLElement) {
+    currentEl.textContent = selectedLabel;
+  }
+  if (toggleBtn instanceof HTMLButtonElement) {
+    toggleBtn.setAttribute("aria-label", selectedLabel || t("files_group_manager_suggest_placeholder"));
+    toggleBtn.title = selectedLabel || t("files_group_manager_suggest_placeholder");
+  }
+}
+
+function createFilesGroupSuggestionDropdown(targetInputId, selectedValue = "") {
+  const dropdown = document.createElement("div");
+  dropdown.className = "files-admin-requests-filter-dropdown files-group-suggest-dropdown";
+  dropdown.setAttribute("data-files-group-suggest-dropdown", "true");
+  dropdown.setAttribute("data-files-group-suggest-target", targetInputId);
+
+  const toggleBtn = document.createElement("button");
+  toggleBtn.type = "button";
+  toggleBtn.className = "files-admin-requests-filter-trigger files-group-suggest-trigger";
+  toggleBtn.setAttribute("data-files-action", "toggle-group-suggest-menu");
+  toggleBtn.setAttribute("data-files-group-suggest-toggle", "true");
+  toggleBtn.setAttribute("aria-haspopup", "listbox");
+  toggleBtn.setAttribute("aria-expanded", "false");
+
+  const current = document.createElement("span");
+  current.setAttribute("data-files-group-suggest-current", "true");
+  current.textContent = t("files_group_manager_suggest_placeholder");
+  toggleBtn.appendChild(current);
+
+  const caret = document.createElement("span");
+  caret.className = "files-admin-requests-filter-caret";
+  caret.setAttribute("aria-hidden", "true");
+  caret.textContent = "▾";
+  toggleBtn.appendChild(caret);
+
+  const menu = document.createElement("ul");
+  menu.className = "files-admin-requests-filter-menu files-group-suggest-menu";
+  menu.setAttribute("data-files-group-suggest-menu", "true");
+  menu.setAttribute("role", "listbox");
+  menu.hidden = true;
+
+  dropdown.appendChild(toggleBtn);
+  dropdown.appendChild(menu);
+  syncFilesGroupSuggestDropdown(dropdown, selectedValue);
+  return dropdown;
+}
+
+function syncFilesGroupSuggestions() {
+  const dropdowns = Array.from(document.querySelectorAll("[data-files-group-suggest-dropdown]"));
+  for (const node of dropdowns) {
+    if (!(node instanceof HTMLElement)) {
+      continue;
+    }
+    syncFilesGroupSuggestDropdown(node);
+  }
+}
+
+function getFilesGroupManagerVisibleFileIds() {
+  const baseFiles = Array.isArray(state.files.list) ? state.files.list : [];
+  const filteredFiles = getFilteredFilesList(baseFiles);
+  const ids = [];
+  for (const file of filteredFiles) {
+    const fileId = String(file?.id || "").trim();
+    if (fileId) {
+      ids.push(fileId);
+    }
+  }
+  return ids;
+}
+
+function getFilesActiveGroupFileIds() {
+  const activeGroupKey = String(state.files.activeGroupKey || "").trim();
+  if (!activeGroupKey) {
+    return [];
+  }
+
+  const ids = [];
+  const baseFiles = Array.isArray(state.files.list) ? state.files.list : [];
+  for (const file of baseFiles) {
+    if (getFilesGroupKey(file?.group || "") !== activeGroupKey) {
+      continue;
+    }
+    const fileId = String(file?.id || "").trim();
+    if (fileId) {
+      ids.push(fileId);
+    }
+  }
+  return ids;
+}
+
+function getFilesActiveGroupContext() {
+  const activeGroupKey = String(state.files.activeGroupKey || "").trim();
+  if (!activeGroupKey) {
+    return null;
+  }
+
+  const files = [];
+  let groupLabel = "";
+  const baseFiles = Array.isArray(state.files.list) ? state.files.list : [];
+  for (const file of baseFiles) {
+    if (getFilesGroupKey(file?.group || "") !== activeGroupKey) {
+      continue;
+    }
+    files.push(file);
+    if (!groupLabel) {
+      groupLabel = getFilesGroupDisplayLabel(file);
+    }
+  }
+
+  if (!files.length) {
+    return null;
+  }
+
+  return {
+    key: activeGroupKey,
+    label: groupLabel || t("files_group_default"),
+    files
+  };
+}
+
+function resolveFilesGroupManagerFileStatus(file, targetGroup = "") {
+  const currentGroup = normalizeFilesGroup(file?.group || "");
+  const currentGroupLabel = currentGroup || t("files_group_default");
+  const normalizedTarget = normalizeFilesGroup(targetGroup);
+
+  if (!normalizedTarget) {
+    return {
+      kind: currentGroup ? "other" : "none",
+      text: t("files_group_manager_status_current", { group: currentGroupLabel })
+    };
+  }
+
+  if (getFilesGroupKey(currentGroup) === getFilesGroupKey(normalizedTarget)) {
+    return {
+      kind: "match",
+      text: t("files_group_manager_status_in_target")
+    };
+  }
+
+  if (currentGroup) {
+    return {
+      kind: "other",
+      text: t("files_group_manager_status_other", { group: currentGroupLabel })
+    };
+  }
+
+  return {
+    kind: "none",
+    text: t("files_group_manager_status_none")
+  };
+}
+
+function clearFilesGroupManagerState({ clearTargetGroup = true } = {}) {
+  state.files.groupManager.selectedIds = [];
+  state.files.groupManager.busy = false;
+  if (clearTargetGroup) {
+    state.files.groupManager.targetGroup = "";
+  }
 }
 
 function normalizeFilesEntry(payload) {
@@ -2027,11 +2381,178 @@ function setFilesSearchOpen(active, { focusInput = false, clearQuery = false } =
   }
 
   renderFilesList();
+  renderFilesGroupManagerPanel();
 
   if (open && focusInput && elements.filesSearchInput) {
     elements.filesSearchInput.focus();
     elements.filesSearchInput.select();
   }
+}
+
+function setFilesGroupManagerOpen(active, { focusInput = false, clearSelection = false } = {}) {
+  const me = normalizeFilesProfile(state.files.me);
+  const canUseManager = Boolean(me.isAuthorized && me.isAdmin);
+  const open = canUseManager && Boolean(active);
+  state.files.groupManager.open = open;
+
+  if (open) {
+    state.files.activeGroupKey = "";
+    state.files.groupTransition = "";
+    state.files.selectedId = "";
+    state.files.detailOrigin = "";
+    cancelFilesRename({ render: false });
+  }
+
+  if (!open && clearSelection) {
+    clearFilesGroupManagerState();
+    closeAllFilesGroupSuggestMenus();
+  }
+
+  if (elements.filesGroupManagerToggleBtn) {
+    elements.filesGroupManagerToggleBtn.classList.toggle("is-active", open);
+    elements.filesGroupManagerToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    const titleKey = open ? "files_group_manager_toggle_close_label" : "files_group_manager_toggle_open_label";
+    elements.filesGroupManagerToggleBtn.title = t(titleKey);
+    elements.filesGroupManagerToggleBtn.setAttribute("aria-label", t(titleKey));
+    elements.filesGroupManagerToggleBtn.hidden = !canUseManager;
+  }
+  if (elements.filesGroupManagerToggleText) {
+    const textKey = open ? "files_group_manager_toggle_close" : "files_group_manager_toggle_open";
+    elements.filesGroupManagerToggleText.textContent = t(textKey);
+  }
+  if (elements.filesGroupManagerWrap) {
+    elements.filesGroupManagerWrap.hidden = !open;
+  }
+
+  renderFilesList();
+  renderFilesGroupManagerPanel();
+
+  if (open && focusInput) {
+    const managerInput = elements.filesGroupManagerWrap?.querySelector("[data-files-group-input]");
+    if (managerInput instanceof HTMLInputElement) {
+      managerInput.focus();
+      managerInput.select();
+    }
+  }
+}
+
+function renderFilesGroupManagerPanel() {
+  if (!elements.filesGroupManagerWrap) {
+    return;
+  }
+
+  const me = normalizeFilesProfile(state.files.me);
+  const canUseManager = Boolean(me.isAuthorized && me.isAdmin);
+  const shouldShow = canUseManager && Boolean(state.files.groupManager.open);
+  elements.filesGroupManagerWrap.hidden = !shouldShow;
+  elements.filesGroupManagerWrap.replaceChildren();
+  if (!shouldShow) {
+    return;
+  }
+
+  const visibleFileIds = getFilesGroupManagerVisibleFileIds();
+  const visibleIdSet = new Set(visibleFileIds);
+  state.files.groupManager.selectedIds = state.files.groupManager.selectedIds
+    .map((value) => String(value || "").trim())
+    .filter((value) => value && visibleIdSet.has(value));
+
+  const selectedCount = state.files.groupManager.selectedIds.length;
+  const totalCount = Math.max(0, visibleFileIds.length);
+  const currentTargetGroup = normalizeFilesGroup(state.files.groupManager.targetGroup || "");
+  const currentTargetLabel = currentTargetGroup || t("files_group_default");
+  const fragment = document.createDocumentFragment();
+
+  const manager = document.createElement("section");
+  manager.className = "files-group-manager";
+
+  const managerTop = document.createElement("div");
+  managerTop.className = "files-group-manager-top";
+
+  const managerTitle = document.createElement("p");
+  managerTitle.className = "files-group-manager-title";
+  managerTitle.textContent = t("files_group_manager_title");
+  managerTop.appendChild(managerTitle);
+
+  const managerCount = document.createElement("span");
+  managerCount.className = "files-group-manager-count";
+  managerCount.textContent = t("files_group_manager_selected_count", {
+    n: String(selectedCount),
+    total: String(totalCount)
+  });
+  managerTop.appendChild(managerCount);
+  manager.appendChild(managerTop);
+
+  const activeGroupText = document.createElement("p");
+  activeGroupText.className = "files-group-manager-active";
+  activeGroupText.textContent = t("files_group_manager_active_group", { group: currentTargetLabel });
+  manager.appendChild(activeGroupText);
+
+  const managerHint = document.createElement("p");
+  managerHint.className = "files-group-manager-hint";
+  managerHint.textContent = t("files_group_manager_mode_hint");
+  manager.appendChild(managerHint);
+
+  const managerControls = document.createElement("div");
+  managerControls.className = "files-group-manager-controls";
+
+  const managerInput = document.createElement("input");
+  managerInput.id = "filesGroupManagerInput";
+  managerInput.type = "text";
+  managerInput.className = "files-upload-text files-group-manager-input";
+  managerInput.maxLength = 80;
+  managerInput.placeholder = t("files_group_manager_placeholder");
+  managerInput.value = currentTargetGroup;
+  managerInput.setAttribute("data-files-group-input", "true");
+  managerInput.disabled = state.files.groupManager.busy;
+  managerControls.appendChild(managerInput);
+
+  const managerSuggest = createFilesGroupSuggestionDropdown(managerInput.id, managerInput.value);
+  const managerSuggestToggle = managerSuggest.querySelector("[data-files-group-suggest-toggle]");
+  if (managerSuggestToggle instanceof HTMLButtonElement) {
+    managerSuggestToggle.disabled = state.files.groupManager.busy;
+  }
+  managerControls.appendChild(managerSuggest);
+
+  const managerActions = document.createElement("div");
+  managerActions.className = "files-group-manager-actions";
+
+  const assignButton = document.createElement("button");
+  assignButton.type = "button";
+  assignButton.className = "files-card-action";
+  assignButton.setAttribute("data-files-action", "assign-selected-group");
+  assignButton.textContent = state.files.groupManager.busy
+    ? t("files_group_manager_assign_busy")
+    : t("files_group_manager_assign_button");
+  assignButton.disabled = state.files.groupManager.busy || selectedCount < 1;
+  managerActions.appendChild(assignButton);
+
+  const selectAllButton = document.createElement("button");
+  selectAllButton.type = "button";
+  selectAllButton.className = "files-card-action";
+  selectAllButton.setAttribute("data-files-action", "select-all-group-files");
+  selectAllButton.textContent = t("files_group_manager_select_all_button");
+  selectAllButton.disabled = state.files.groupManager.busy || totalCount < 1;
+  managerActions.appendChild(selectAllButton);
+
+  const clearSelectionButton = document.createElement("button");
+  clearSelectionButton.type = "button";
+  clearSelectionButton.className = "files-card-action";
+  clearSelectionButton.setAttribute("data-files-action", "clear-group-files-selection");
+  clearSelectionButton.textContent = t("files_group_manager_clear_button");
+  clearSelectionButton.disabled = state.files.groupManager.busy || selectedCount < 1;
+  managerActions.appendChild(clearSelectionButton);
+
+  managerControls.appendChild(managerActions);
+  if (!totalCount) {
+    const empty = document.createElement("p");
+    empty.className = "files-search-empty files-group-manager-empty";
+    empty.textContent = t("files_group_manager_no_files");
+    managerControls.appendChild(empty);
+  }
+  manager.appendChild(managerControls);
+  fragment.appendChild(manager);
+
+  elements.filesGroupManagerWrap.appendChild(fragment);
 }
 
 function getFilteredFilesList(files = []) {
@@ -2214,6 +2735,9 @@ function createFilesAdminEditForm(file) {
   groupInput.value = normalizeFilesGroup(file.group || "");
   groupInput.placeholder = t("files_upload_group_placeholder");
   form.appendChild(groupInput);
+
+  const groupSuggestDropdown = createFilesGroupSuggestionDropdown(groupInput.id, groupInput.value);
+  form.appendChild(groupSuggestDropdown);
 
   const imageLabel = document.createElement("label");
   imageLabel.className = "files-edit-label";
@@ -2694,6 +3218,7 @@ function renderFilesList() {
   state.files.groupTransition = "";
 
   if (!canReadFiles) {
+    clearFilesGroupManagerState();
     if (state.files.search.open || state.files.search.query) {
       setFilesSearchOpen(false, { clearQuery: true });
       return;
@@ -2725,8 +3250,10 @@ function renderFilesList() {
   if (elements.filesDeniedView) {
     elements.filesDeniedView.hidden = true;
   }
+  syncFilesGroupSuggestions();
 
   const isSearchMode = Boolean(state.files.search.open);
+  const managerMode = Boolean(state.files.groupManager.open && me.isAdmin);
   const selectedId = String(state.files.selectedId || "");
   const selectedFile = selectedId
     ? state.files.list.find((entry) => String(entry.id || "") === selectedId) || null
@@ -2737,7 +3264,12 @@ function renderFilesList() {
     state.files.detailOrigin = "";
   }
 
-  if (selectedFile) {
+  if (managerMode && selectedFile) {
+    state.files.selectedId = "";
+    state.files.detailOrigin = "";
+  }
+
+  if (selectedFile && !managerMode) {
     elements.filesList.hidden = false;
     if (elements.filesSearchResults) {
       elements.filesSearchResults.innerHTML = "";
@@ -2752,7 +3284,7 @@ function renderFilesList() {
     return;
   }
 
-  if (isSearchMode) {
+  if (isSearchMode && !managerMode) {
     elements.filesList.hidden = true;
     elements.filesEmptyState.hidden = true;
     renderFilesSearchResults();
@@ -2824,12 +3356,163 @@ function renderFilesList() {
     state.files.rename.value = "";
     state.files.rename.busy = false;
   }
+  if (!hasFocusedGroup && !managerMode) {
+    state.files.groupManager.selectedIds = [];
+  }
   const groupsToRender = hasFocusedGroup ? [activeGroup] : groups;
 
   if (state.files.rename.fileId && !baseFiles.some((entry) => String(entry.id || "") === state.files.rename.fileId)) {
     state.files.rename.fileId = "";
     state.files.rename.value = "";
     state.files.rename.busy = false;
+  }
+  const availableFileIds = new Set(baseFiles.map((entry) => String(entry?.id || "")));
+  state.files.groupManager.selectedIds = state.files.groupManager.selectedIds
+    .map((value) => String(value || "").trim())
+    .filter((value) => value && availableFileIds.has(value));
+  if (hasFocusedGroup) {
+    const focusedIds = new Set((activeGroup?.files || []).map((entry) => String(entry?.id || "")));
+    state.files.groupManager.selectedIds = state.files.groupManager.selectedIds.filter((value) => focusedIds.has(value));
+  }
+
+  if (managerMode) {
+    const managerFiles = getFilteredFilesList(baseFiles);
+    const managerVisibleIds = new Set(managerFiles.map((entry) => String(entry?.id || "").trim()).filter(Boolean));
+    state.files.groupManager.selectedIds = state.files.groupManager.selectedIds
+      .map((value) => String(value || "").trim())
+      .filter((value) => value && managerVisibleIds.has(value));
+
+    if (isSearchMode) {
+      setFilesSearchCount(t("files_search_results_count", { n: String(managerFiles.length) }));
+    }
+
+    if (!managerFiles.length) {
+      elements.filesEmptyState.hidden = false;
+      elements.filesEmptyState.textContent = isSearchMode
+        ? t("files_search_no_results")
+        : t("files_group_manager_no_files");
+      return;
+    }
+
+    const targetGroup = normalizeFilesGroup(state.files.groupManager.targetGroup || "");
+    const managerList = document.createElement("section");
+    managerList.className = "files-group-manager-list";
+    let renderedIndex = 0;
+
+    for (const file of managerFiles) {
+      const fileId = String(file.id || "");
+      const fileName = getFilesDisplayName(file);
+      const fileType = resolveFileTypeLabel(file);
+      const fileTypeBadgeLabel = getFilesTypeBadgeLabel(file);
+      const fileTypeSummaryLabel = fileTypeBadgeLabel || fileType;
+      const fileSize = formatFileSize(file.size);
+      const uploadDate = formatFileDateTime(file.uploadedAt || file.uploaded_at);
+      const uploader = String(file.uploader || t("files_unknown_value"));
+      const selectedForGrouping = state.files.groupManager.selectedIds.includes(fileId);
+      const groupStatus = resolveFilesGroupManagerFileStatus(file, targetGroup);
+
+      const card = document.createElement("article");
+      card.className = "panel files-file-card files-file-card-manager";
+      card.style.setProperty("--files-item-index", String(Math.min(renderedIndex, 9)));
+      renderedIndex += 1;
+
+      const cardBody = document.createElement("div");
+      cardBody.className = "files-file-toggle files-file-toggle-static";
+
+      const cardHead = document.createElement("div");
+      cardHead.className = "files-file-head";
+
+      const title = document.createElement("p");
+      title.className = "files-file-name";
+      title.textContent = fileName;
+
+      const badges = document.createElement("div");
+      badges.className = "files-file-badges";
+
+      const typeBadge = document.createElement("span");
+      typeBadge.className = "files-file-badge is-type";
+      typeBadge.textContent = fileTypeBadgeLabel;
+      badges.appendChild(typeBadge);
+
+      if (file.hasImage || file.imageUrl) {
+        const imageBadge = document.createElement("span");
+        imageBadge.className = "files-file-badge is-image";
+        imageBadge.textContent = "IMG";
+        badges.appendChild(imageBadge);
+      }
+
+      cardHead.appendChild(title);
+      cardHead.appendChild(badges);
+
+      const summary = document.createElement("div");
+      summary.className = "files-file-summary";
+
+      const typeSummary = document.createElement("span");
+      typeSummary.className = "files-file-pill";
+      typeSummary.textContent = `${t("files_type_label")}: ${fileTypeSummaryLabel}`;
+      if (fileType && fileType !== fileTypeSummaryLabel) {
+        typeSummary.title = fileType;
+      }
+
+      const sizeSummary = document.createElement("span");
+      sizeSummary.className = "files-file-pill";
+      sizeSummary.textContent = `${t("files_size_label")}: ${fileSize}`;
+
+      summary.appendChild(typeSummary);
+      summary.appendChild(sizeSummary);
+
+      const footer = document.createElement("div");
+      footer.className = "files-file-footer";
+
+      const dateSummary = document.createElement("span");
+      dateSummary.className = "files-file-footer-item";
+      dateSummary.textContent = `${t("files_uploaded_label")}: ${uploadDate}`;
+
+      const uploaderSummary = document.createElement("span");
+      uploaderSummary.className = "files-file-footer-item";
+      uploaderSummary.textContent = `${t("files_uploader_label")}: ${uploader}`;
+
+      footer.appendChild(dateSummary);
+      footer.appendChild(uploaderSummary);
+
+      cardBody.appendChild(cardHead);
+      cardBody.appendChild(summary);
+      cardBody.appendChild(footer);
+      card.appendChild(cardBody);
+
+      const managerWrap = document.createElement("div");
+      managerWrap.className = "files-file-rename-wrap files-file-group-manager-wrap";
+
+      const statusText = document.createElement("p");
+      statusText.className = `files-file-group-status is-${groupStatus.kind}`;
+      statusText.textContent = groupStatus.text;
+      managerWrap.appendChild(statusText);
+
+      const selectLabel = document.createElement("label");
+      selectLabel.className = "files-file-group-select";
+
+      const selectInput = document.createElement("input");
+      selectInput.type = "checkbox";
+      selectInput.className = "files-file-group-select-input";
+      selectInput.setAttribute("data-files-group-select", "true");
+      selectInput.setAttribute("data-file-id", fileId);
+      selectInput.checked = selectedForGrouping;
+      selectInput.disabled = state.files.groupManager.busy;
+
+      const selectText = document.createElement("span");
+      selectText.textContent = t("files_group_manager_select_file_label");
+
+      selectLabel.appendChild(selectInput);
+      selectLabel.appendChild(selectText);
+      managerWrap.appendChild(selectLabel);
+      card.appendChild(managerWrap);
+
+      managerList.appendChild(card);
+    }
+
+    fragment.appendChild(managerList);
+    elements.filesList.appendChild(fragment);
+    return;
   }
 
   if (hasFocusedGroup) {
@@ -2910,11 +3593,14 @@ function renderFilesList() {
         const fileId = String(file.id || "");
         const fileName = getFilesDisplayName(file);
         const fileType = resolveFileTypeLabel(file);
+        const fileTypeBadgeLabel = getFilesTypeBadgeLabel(file);
+        const fileTypeSummaryLabel = fileTypeBadgeLabel || fileType;
         const fileSize = formatFileSize(file.size);
         const uploadDate = formatFileDateTime(file.uploadedAt || file.uploaded_at);
         const uploader = String(file.uploader || t("files_unknown_value"));
         const isRenaming = Boolean(state.files.rename.fileId) && state.files.rename.fileId === fileId;
         const renameBusy = isRenaming && Boolean(state.files.rename.busy);
+        const selectedForGrouping = state.files.groupManager.selectedIds.includes(fileId);
 
         const card = document.createElement("article");
         card.className = "panel files-file-card";
@@ -2939,7 +3625,7 @@ function renderFilesList() {
 
         const typeBadge = document.createElement("span");
         typeBadge.className = "files-file-badge is-type";
-        typeBadge.textContent = getFilesTypeBadgeLabel(file);
+        typeBadge.textContent = fileTypeBadgeLabel;
         badges.appendChild(typeBadge);
 
         if (file.hasImage || file.imageUrl) {
@@ -2957,7 +3643,10 @@ function renderFilesList() {
 
         const typeSummary = document.createElement("span");
         typeSummary.className = "files-file-pill";
-        typeSummary.textContent = `${t("files_type_label")}: ${fileType}`;
+        typeSummary.textContent = `${t("files_type_label")}: ${fileTypeSummaryLabel}`;
+        if (fileType && fileType !== fileTypeSummaryLabel) {
+          typeSummary.title = fileType;
+        }
         const sizeSummary = document.createElement("span");
         sizeSummary.className = "files-file-pill";
         sizeSummary.textContent = `${t("files_size_label")}: ${fileSize}`;
@@ -2987,6 +3676,27 @@ function renderFilesList() {
         if (state.files.me?.isAdmin) {
           const renameWrap = document.createElement("div");
           renameWrap.className = "files-file-rename-wrap";
+
+          if (hasFocusedGroup && state.files.groupManager.open) {
+            const selectLabel = document.createElement("label");
+            selectLabel.className = "files-file-group-select";
+
+            const selectInput = document.createElement("input");
+            selectInput.type = "checkbox";
+            selectInput.className = "files-file-group-select-input";
+            selectInput.setAttribute("data-files-group-select", "true");
+            selectInput.setAttribute("data-file-id", fileId);
+            selectInput.checked = selectedForGrouping;
+            selectInput.disabled = state.files.groupManager.busy;
+
+            const selectText = document.createElement("span");
+            selectText.textContent = t("files_group_manager_select_file_label");
+
+            selectLabel.appendChild(selectInput);
+            selectLabel.appendChild(selectText);
+            renameWrap.appendChild(selectLabel);
+          }
+
           if (isRenaming) {
             const renameForm = document.createElement("form");
             renameForm.className = "files-file-rename-form";
@@ -3104,6 +3814,13 @@ function renderFilesAccessView() {
     if (elements.filesUploadPanel) {
       elements.filesUploadPanel.hidden = true;
     }
+    if (elements.filesGroupManagerToggleBtn) {
+      elements.filesGroupManagerToggleBtn.hidden = true;
+    }
+    if (elements.filesGroupManagerWrap) {
+      elements.filesGroupManagerWrap.hidden = true;
+      elements.filesGroupManagerWrap.replaceChildren();
+    }
     if (elements.filesAdminRequestsPanel) {
       elements.filesAdminRequestsPanel.hidden = true;
     }
@@ -3124,6 +3841,8 @@ function renderFilesAccessView() {
     state.files.rename.fileId = "";
     state.files.rename.value = "";
     state.files.rename.busy = false;
+    state.files.groupManager.open = false;
+    clearFilesGroupManagerState();
     if (elements.filesSearchInput) {
       elements.filesSearchInput.value = "";
     }
@@ -3164,6 +3883,30 @@ function renderFilesAccessView() {
   }
   if (elements.filesSearchToggleBtn) {
     elements.filesSearchToggleBtn.hidden = !authorized;
+  }
+  if (elements.filesGroupManagerToggleBtn) {
+    elements.filesGroupManagerToggleBtn.hidden = !showUploadPanel;
+    const managerOpen = showUploadPanel && Boolean(state.files.groupManager.open);
+    elements.filesGroupManagerToggleBtn.classList.toggle("is-active", managerOpen);
+    elements.filesGroupManagerToggleBtn.setAttribute("aria-expanded", managerOpen ? "true" : "false");
+    const managerTitleKey = managerOpen
+      ? "files_group_manager_toggle_close_label"
+      : "files_group_manager_toggle_open_label";
+    elements.filesGroupManagerToggleBtn.title = t(managerTitleKey);
+    elements.filesGroupManagerToggleBtn.setAttribute("aria-label", t(managerTitleKey));
+  }
+  if (elements.filesGroupManagerToggleText) {
+    const managerTextKey = showUploadPanel && state.files.groupManager.open
+      ? "files_group_manager_toggle_close"
+      : "files_group_manager_toggle_open";
+    elements.filesGroupManagerToggleText.textContent = t(managerTextKey);
+  }
+  if (elements.filesGroupManagerWrap) {
+    elements.filesGroupManagerWrap.hidden = !showUploadPanel || !state.files.groupManager.open;
+  }
+  if (!showUploadPanel) {
+    state.files.groupManager.open = false;
+    clearFilesGroupManagerState();
   }
 
   renderFilesSessionProfile({
@@ -3229,6 +3972,7 @@ function renderFilesAccessView() {
 
   renderFilesAdminRequestsPanel();
   renderFilesList();
+  renderFilesGroupManagerPanel();
 }
 
 async function requestJson(url, options = {}) {
@@ -3337,6 +4081,7 @@ async function pollFilesIdentityLive({ force = false } = {}) {
       state.files.rename.fileId = "";
       state.files.rename.value = "";
       state.files.rename.busy = false;
+      clearFilesGroupManagerState();
       state.files.listError = "";
       state.files.loadingList = false;
       state.files.selectedId = "";
@@ -3364,6 +4109,7 @@ async function refreshFilesList() {
     state.files.rename.fileId = "";
     state.files.rename.value = "";
     state.files.rename.busy = false;
+    clearFilesGroupManagerState();
     state.files.listError = "";
     state.files.selectedId = "";
     state.files.detailOrigin = "";
@@ -3390,6 +4136,7 @@ async function refreshFilesList() {
       && !state.files.list.some((entry) => getFilesGroupKey(entry.group) === state.files.activeGroupKey)
     ) {
       state.files.activeGroupKey = "";
+      clearFilesGroupManagerState();
     }
     if (
       state.files.rename.fileId
@@ -3414,6 +4161,7 @@ async function refreshFilesList() {
     state.files.rename.fileId = "";
     state.files.rename.value = "";
     state.files.rename.busy = false;
+    clearFilesGroupManagerState();
     state.files.listError = String(error?.message || t("files_empty_state"));
   } finally {
     state.files.loadingList = false;
@@ -3488,6 +4236,7 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
     state.files.rename.fileId = "";
     state.files.rename.value = "";
     state.files.rename.busy = false;
+    clearFilesGroupManagerState();
     state.files.listError = "";
     state.files.loadingList = false;
     state.files.selectedId = "";
@@ -3519,6 +4268,7 @@ async function handleFilesLogout() {
   state.files.rename.fileId = "";
   state.files.rename.value = "";
   state.files.rename.busy = false;
+  clearFilesGroupManagerState();
   state.files.listError = "";
   state.files.selectedId = "";
   state.files.detailOrigin = "";
@@ -3933,6 +4683,129 @@ async function handleFilesRenameSubmit(formElement) {
   }
 }
 
+async function handleFilesAssignSelectedGroup() {
+  if (!state.files.me?.isAdmin || state.files.groupManager.busy) {
+    return;
+  }
+
+  const selectedIds = state.files.groupManager.selectedIds
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  if (!selectedIds.length) {
+    setFilesUploadFeedback(t("files_group_manager_error_select_files"), "error");
+    renderFilesAccessView();
+    return;
+  }
+
+  const groupInput = elements.filesGroupManagerWrap?.querySelector("[data-files-group-input]")
+    || elements.filesList?.querySelector("[data-files-group-input]");
+  const rawGroupName = groupInput instanceof HTMLInputElement
+    ? String(groupInput.value || "")
+    : String(state.files.groupManager.targetGroup || "");
+  const nextGroup = normalizeFilesGroup(rawGroupName);
+  state.files.groupManager.targetGroup = nextGroup || rawGroupName;
+
+  if (!nextGroup) {
+    setFilesUploadFeedback(t("files_group_manager_error_group_required"), "error");
+    renderFilesAccessView();
+    return;
+  }
+
+  state.files.groupManager.busy = true;
+  setFilesUploadFeedback("", "");
+  renderFilesList();
+
+  let updated = false;
+  try {
+    await Promise.all(selectedIds.map((fileId) => {
+      const formData = new FormData();
+      formData.append("group", nextGroup);
+      return requestJson(`/api/files/${encodeURIComponent(fileId)}`, {
+        method: "PATCH",
+        body: formData
+      });
+    }));
+
+    clearFilesGroupManagerState({ clearTargetGroup: false });
+    state.files.groupManager.targetGroup = nextGroup;
+    if (state.files.groupManager.open) {
+      state.files.activeGroupKey = "";
+      state.files.groupTransition = "";
+    } else {
+      state.files.activeGroupKey = getFilesGroupKey(nextGroup);
+      state.files.groupTransition = "open";
+    }
+    setFilesUploadFeedback(
+      t("files_group_manager_success", { n: String(selectedIds.length), group: nextGroup }),
+      "success"
+    );
+    updated = true;
+  } catch (error) {
+    setFilesUploadFeedback(String(error?.message || t("files_group_manager_error_update")), "error");
+  } finally {
+    state.files.groupManager.busy = false;
+  }
+
+  if (updated) {
+    await refreshFilesList();
+    return;
+  }
+  renderFilesAccessView();
+}
+
+function handleFilesListInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) {
+    return;
+  }
+
+  if (target.id) {
+    const dropdowns = Array.from(document.querySelectorAll("[data-files-group-suggest-target]"));
+    const linkedDropdown = dropdowns.find((node) => {
+      if (!(node instanceof HTMLElement)) {
+        return false;
+      }
+      return String(node.getAttribute("data-files-group-suggest-target") || "") === target.id;
+    });
+    if (linkedDropdown instanceof HTMLElement) {
+      syncFilesGroupSuggestDropdown(linkedDropdown, target.value || "");
+    }
+  }
+
+  if (!target.matches("[data-files-group-input]")) {
+    return;
+  }
+  state.files.groupManager.targetGroup = String(target.value || "").slice(0, 80);
+  syncFilesGroupSuggestions();
+  renderFilesList();
+}
+
+function handleFilesListChange(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  if (!(target instanceof HTMLInputElement) || !target.matches("[data-files-group-select]")) {
+    return;
+  }
+
+  const fileId = String(target.getAttribute("data-file-id") || "").trim();
+  if (!fileId) {
+    return;
+  }
+
+  const selected = new Set(state.files.groupManager.selectedIds.map((value) => String(value || "").trim()).filter(Boolean));
+  if (target.checked) {
+    selected.add(fileId);
+  } else {
+    selected.delete(fileId);
+  }
+  state.files.groupManager.selectedIds = Array.from(selected);
+  renderFilesList();
+  renderFilesGroupManagerPanel();
+}
+
 function handleFilesListClick(event) {
   const target = event.target;
   if (!(target instanceof Element)) {
@@ -3945,6 +4818,62 @@ function handleFilesListClick(event) {
   }
 
   const action = actionTarget.getAttribute("data-files-action") || "";
+  if (action === "toggle-group-suggest-menu") {
+    const dropdown = actionTarget.closest("[data-files-group-suggest-dropdown]");
+    if (!(dropdown instanceof HTMLElement)) {
+      return;
+    }
+    const shouldOpen = !dropdown.classList.contains("is-open");
+    closeAllFilesGroupSuggestMenus({ except: shouldOpen ? dropdown : null });
+    setFilesGroupSuggestMenuOpen(dropdown, shouldOpen);
+    return;
+  }
+
+  if (action === "select-group-suggest-option") {
+    const dropdown = actionTarget.closest("[data-files-group-suggest-dropdown]");
+    if (!(dropdown instanceof HTMLElement)) {
+      return;
+    }
+    const nextValue = normalizeFilesGroup(actionTarget.getAttribute("data-group-value") || "");
+    const linkedInput = getFilesGroupSuggestTargetInput(dropdown);
+    if (linkedInput instanceof HTMLInputElement) {
+      linkedInput.value = nextValue;
+      if (linkedInput.id === "filesGroupManagerInput" || linkedInput.matches("[data-files-group-input]")) {
+        state.files.groupManager.targetGroup = nextValue;
+        renderFilesList();
+        renderFilesGroupManagerPanel();
+      } else {
+        linkedInput.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    }
+    syncFilesGroupSuggestDropdown(dropdown, nextValue);
+    setFilesGroupSuggestMenuOpen(dropdown, false);
+    return;
+  }
+
+  if (action === "assign-selected-group") {
+    void handleFilesAssignSelectedGroup();
+    return;
+  }
+  if (action === "select-all-group-files") {
+    if (state.files.groupManager.busy) {
+      return;
+    }
+    state.files.groupManager.selectedIds = getFilesGroupManagerVisibleFileIds();
+    renderFilesList();
+    renderFilesGroupManagerPanel();
+    return;
+  }
+  if (action === "clear-group-files-selection") {
+    if (state.files.groupManager.busy) {
+      return;
+    }
+    state.files.groupManager.selectedIds = [];
+    renderFilesList();
+    renderFilesGroupManagerPanel();
+    return;
+  }
+
   if (action === "select-group") {
     const groupKey = String(actionTarget.getAttribute("data-group-key") || "").trim();
     if (!groupKey) {
@@ -3954,16 +4883,20 @@ function handleFilesListClick(event) {
       return;
     }
     state.files.activeGroupKey = groupKey;
+    clearFilesGroupManagerState();
     state.files.groupTransition = "open";
     cancelFilesRename({ render: false });
     renderFilesList();
+    renderFilesGroupManagerPanel();
     return;
   }
   if (action === "clear-group-filter") {
     state.files.activeGroupKey = "";
+    clearFilesGroupManagerState();
     state.files.groupTransition = "close";
     cancelFilesRename({ render: false });
     renderFilesList();
+    renderFilesGroupManagerPanel();
     return;
   }
 
@@ -7746,6 +8679,12 @@ function applyLanguage(lang, persist = true) {
   elements.filesSearchLabel.textContent = t("files_search_label");
   elements.filesSearchInput.placeholder = t("files_search_placeholder");
   elements.filesSearchHint.textContent = t("files_search_hint");
+  if (elements.filesGroupManagerToggleText) {
+    const managerTextKey = state.files.groupManager.open
+      ? "files_group_manager_toggle_close"
+      : "files_group_manager_toggle_open";
+    elements.filesGroupManagerToggleText.textContent = t(managerTextKey);
+  }
   elements.filesUploadFileLabel.textContent = t("files_upload_file_label");
   if (elements.filesUploadImageLabel) {
     elements.filesUploadImageLabel.textContent = t("files_upload_image_label");
@@ -7758,6 +8697,7 @@ function applyLanguage(lang, persist = true) {
   if (elements.filesGroupInput) {
     elements.filesGroupInput.placeholder = t("files_upload_group_placeholder");
   }
+  syncFilesGroupSuggestions();
   elements.filesDescriptionInput.placeholder = t("files_upload_description_placeholder");
   elements.filesEmptyState.textContent = t("files_empty_state");
   elements.filesDeleteTitle.textContent = t("files_delete_modal_title");
@@ -8048,9 +8988,16 @@ function wireEvents() {
     const nextOpen = !state.files.search.open;
     setFilesSearchOpen(nextOpen, { focusInput: nextOpen, clearQuery: !nextOpen });
   });
+  elements.filesGroupManagerToggleBtn?.addEventListener("click", () => {
+    const nextOpen = !state.files.groupManager.open;
+    setFilesGroupManagerOpen(nextOpen, { focusInput: nextOpen, clearSelection: !nextOpen });
+  });
   elements.filesSearchInput?.addEventListener("input", () => {
     state.files.search.query = String(elements.filesSearchInput.value || "");
     renderFilesList();
+    if (state.files.groupManager.open) {
+      renderFilesGroupManagerPanel();
+    }
   });
   elements.filesSearchInput?.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -8079,9 +9026,16 @@ function wireEvents() {
       setFilesUploadFeedback("", "");
       renderFilesAccessView();
     }
+    syncFilesGroupSuggestions();
   });
+  elements.filesUploadPanel?.addEventListener("click", handleFilesListClick);
   elements.filesList?.addEventListener("click", handleFilesListClick);
+  elements.filesList?.addEventListener("input", handleFilesListInput);
+  elements.filesList?.addEventListener("change", handleFilesListChange);
   elements.filesList?.addEventListener("submit", handleFilesListSubmit);
+  elements.filesGroupManagerWrap?.addEventListener("click", handleFilesListClick);
+  elements.filesGroupManagerWrap?.addEventListener("input", handleFilesListInput);
+  elements.filesGroupManagerWrap?.addEventListener("change", handleFilesListChange);
   elements.filesSearchResults?.addEventListener("click", handleFilesListClick);
   elements.filesAdminRequestsList?.addEventListener("click", handleFilesAdminRequestsListClick);
   elements.filesDeleteCancelBtn?.addEventListener("click", () => {
@@ -8190,6 +9144,17 @@ function wireEvents() {
     if (elements.filesAdminRequestsFilterDropdown && target instanceof Node && !elements.filesAdminRequestsFilterDropdown.contains(target)) {
       setFilesAdminRequestsFilterMenuOpen(false);
     }
+    if (target instanceof Node) {
+      const openGroupDropdowns = Array.from(document.querySelectorAll("[data-files-group-suggest-dropdown].is-open"));
+      for (const dropdown of openGroupDropdowns) {
+        if (!(dropdown instanceof HTMLElement)) {
+          continue;
+        }
+        if (!dropdown.contains(target)) {
+          setFilesGroupSuggestMenuOpen(dropdown, false);
+        }
+      }
+    }
   });
   document.addEventListener("touchmove", blockBackgroundForActiveOverlay, { passive: false });
   document.addEventListener("wheel", blockBackgroundForActiveOverlay, { passive: false });
@@ -8205,6 +9170,12 @@ function wireEvents() {
 
     if (elements.filesAdminRequestsFilterDropdown?.classList.contains("is-open")) {
       setFilesAdminRequestsFilterMenuOpen(false);
+      return;
+    }
+
+    const openGroupDropdown = document.querySelector("[data-files-group-suggest-dropdown].is-open");
+    if (openGroupDropdown instanceof HTMLElement) {
+      setFilesGroupSuggestMenuOpen(openGroupDropdown, false);
       return;
     }
 
