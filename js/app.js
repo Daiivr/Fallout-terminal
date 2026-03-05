@@ -136,11 +136,19 @@ const FILES_ACCESS_DECLINED_REAPPLY_MS = 7 * 24 * 60 * 60 * 1000;
 const FILES_LIVE_IDENTITY_POLL_INTERVAL_MS = 5000;
 const FILES_ADMIN_REQUESTS_FEEDBACK_AUTO_HIDE_MS = 5000;
 const FILES_UPLOAD_FEEDBACK_AUTO_HIDE_MS = 5000;
+const DISCORD_AUTH_POPUP_WINDOW_NAME = "fallout_codex_discord_auth";
+const DISCORD_AUTH_POPUP_PATH = "/auth/discord?popup=1";
+const DISCORD_AUTH_POPUP_WIDTH = 540;
+const DISCORD_AUTH_POPUP_HEIGHT = 760;
+const DISCORD_AUTH_POPUP_POLL_INTERVAL_MS = 450;
+const DISCORD_AUTH_POST_MESSAGE_TYPE = "fallout-codex:discord-auth";
 
 let filesLiveIdentityPollTimer = null;
 let filesLiveIdentityPollInFlight = false;
 let filesAdminRequestsFeedbackTimer = null;
 let filesUploadFeedbackTimer = null;
+let discordAuthPopupWindow = null;
+let discordAuthPopupPollTimer = null;
 
 const STRINGS = {
   en: {
@@ -4090,6 +4098,141 @@ async function requestJson(url, options = {}) {
   }
 
   return payload || {};
+}
+
+function getDiscordAuthPopupFeatures() {
+  const leftBase = Number.isFinite(window.screenLeft) ? window.screenLeft : window.screenX;
+  const topBase = Number.isFinite(window.screenTop) ? window.screenTop : window.screenY;
+  const viewportWidth = Number(window.innerWidth) || Number(document.documentElement?.clientWidth) || DISCORD_AUTH_POPUP_WIDTH;
+  const viewportHeight = Number(window.innerHeight) || Number(document.documentElement?.clientHeight) || DISCORD_AUTH_POPUP_HEIGHT;
+  const left = Math.max(0, Math.round((Number(leftBase) || 0) + (viewportWidth - DISCORD_AUTH_POPUP_WIDTH) / 2));
+  const top = Math.max(0, Math.round((Number(topBase) || 0) + (viewportHeight - DISCORD_AUTH_POPUP_HEIGHT) / 2));
+
+  return [
+    `width=${DISCORD_AUTH_POPUP_WIDTH}`,
+    `height=${DISCORD_AUTH_POPUP_HEIGHT}`,
+    `left=${left}`,
+    `top=${top}`,
+    "menubar=no",
+    "toolbar=no",
+    "location=no",
+    "status=no",
+    "resizable=yes",
+    "scrollbars=yes"
+  ].join(",");
+}
+
+function stopDiscordAuthPopupWatch({ refreshIdentity = false } = {}) {
+  if (discordAuthPopupPollTimer) {
+    clearInterval(discordAuthPopupPollTimer);
+    discordAuthPopupPollTimer = null;
+  }
+  discordAuthPopupWindow = null;
+  if (refreshIdentity) {
+    void refreshFilesIdentity({ loadFiles: true });
+  }
+}
+
+function startDiscordAuthPopupWatch() {
+  if (discordAuthPopupPollTimer) {
+    clearInterval(discordAuthPopupPollTimer);
+  }
+
+  discordAuthPopupPollTimer = setInterval(() => {
+    if (discordAuthPopupWindow && !discordAuthPopupWindow.closed) {
+      return;
+    }
+    stopDiscordAuthPopupWatch({ refreshIdentity: true });
+  }, DISCORD_AUTH_POPUP_POLL_INTERVAL_MS);
+}
+
+function openDiscordLoginPopup() {
+  if (!elements.filesLoginForm) {
+    return false;
+  }
+
+  if (discordAuthPopupWindow && !discordAuthPopupWindow.closed) {
+    try {
+      discordAuthPopupWindow.focus();
+    } catch {
+      // no-op
+    }
+    return true;
+  }
+
+  const popup = window.open("", DISCORD_AUTH_POPUP_WINDOW_NAME, getDiscordAuthPopupFeatures());
+  if (!popup) {
+    return false;
+  }
+
+  const form = elements.filesLoginForm;
+  const previousTarget = form.getAttribute("target");
+  const previousAction = form.getAttribute("action");
+  discordAuthPopupWindow = popup;
+
+  form.setAttribute("target", DISCORD_AUTH_POPUP_WINDOW_NAME);
+  form.setAttribute("action", DISCORD_AUTH_POPUP_PATH);
+
+  try {
+    form.submit();
+  } catch {
+    try {
+      popup.close();
+    } catch {
+      // no-op
+    }
+    discordAuthPopupWindow = null;
+    if (previousTarget === null) {
+      form.removeAttribute("target");
+    } else {
+      form.setAttribute("target", previousTarget);
+    }
+    if (previousAction === null) {
+      form.removeAttribute("action");
+    } else {
+      form.setAttribute("action", previousAction);
+    }
+    return false;
+  }
+
+  if (previousTarget === null) {
+    form.removeAttribute("target");
+  } else {
+    form.setAttribute("target", previousTarget);
+  }
+  if (previousAction === null) {
+    form.removeAttribute("action");
+  } else {
+    form.setAttribute("action", previousAction);
+  }
+
+  try {
+    popup.focus();
+  } catch {
+    // no-op
+  }
+  startDiscordAuthPopupWatch();
+  return true;
+}
+
+function handleDiscordAuthPopupMessage(event) {
+  if (event.origin !== window.location.origin) {
+    return;
+  }
+  const payload = event.data;
+  if (!payload || typeof payload !== "object" || payload.type !== DISCORD_AUTH_POST_MESSAGE_TYPE) {
+    return;
+  }
+
+  try {
+    if (discordAuthPopupWindow && !discordAuthPopupWindow.closed) {
+      discordAuthPopupWindow.close();
+    }
+  } catch {
+    // no-op
+  }
+
+  stopDiscordAuthPopupWatch({ refreshIdentity: true });
 }
 
 function stopFilesLiveIdentityPolling() {
@@ -9107,6 +9250,12 @@ function wireEvents() {
     elements.tabData.classList.add("secret-trigger");
     elements.tabData.addEventListener("click", handleSecretTriggerTap);
   }
+  elements.filesLoginForm?.addEventListener("submit", (event) => {
+    if (!openDiscordLoginPopup()) {
+      return;
+    }
+    event.preventDefault();
+  });
   elements.filesLogoutBtn?.addEventListener("click", () => {
     void handleFilesLogout();
   });
@@ -9392,6 +9541,7 @@ function wireEvents() {
   window.addEventListener("hashchange", () => {
     applyViewFromHash();
   });
+  window.addEventListener("message", handleDiscordAuthPopupMessage);
 }
 
 async function init() {

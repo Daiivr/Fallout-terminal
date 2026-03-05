@@ -862,6 +862,60 @@ function oauthConfigured() {
   return Boolean(DISCORD_CLIENT_ID && DISCORD_CLIENT_SECRET && DISCORD_REDIRECT_URI);
 }
 
+function parseBooleanQueryFlag(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
+function buildDiscordAuthorizeUrl(oauthState) {
+  const query = new URLSearchParams({
+    client_id: DISCORD_CLIENT_ID,
+    response_type: "code",
+    redirect_uri: DISCORD_REDIRECT_URI,
+    scope: "identify email",
+    state: oauthState
+  });
+  return `https://discord.com/oauth2/authorize?${query.toString()}`;
+}
+
+function sendDiscordPopupCallbackResponse(res, ok) {
+  const payload = JSON.stringify({
+    type: "fallout-codex:discord-auth",
+    ok: Boolean(ok)
+  });
+
+  res
+    .status(200)
+    .type("html")
+    .send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Discord Login</title>
+</head>
+<body>
+  <script>
+    (function () {
+      var payload = ${payload};
+      try {
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage(payload, window.location.origin);
+        }
+      } catch (_error) {}
+      try {
+        window.close();
+      } catch (_error) {}
+      setTimeout(function () {
+        document.body.textContent = payload.ok
+          ? "Login complete. You can close this window."
+          : "Login failed. Please return to the previous window.";
+      }, 120);
+    })();
+  </script>
+</body>
+</html>`);
+}
+
 function mailConfigured() {
   return Boolean(SMTP_HOST && SMTP_FROM && ACCESS_REQUEST_EMAIL_TO);
 }
@@ -1725,16 +1779,10 @@ app.post("/auth/discord", (req, res) => {
   }
 
   const oauthState = crypto.randomBytes(24).toString("hex");
+  const popupMode = parseBooleanQueryFlag(req.query?.popup) || parseBooleanQueryFlag(req.body?.popup);
   req.session.oauthState = oauthState;
-
-  const query = new URLSearchParams({
-    client_id: DISCORD_CLIENT_ID,
-    response_type: "code",
-    redirect_uri: DISCORD_REDIRECT_URI,
-    scope: "identify email",
-    state: oauthState
-  });
-  const redirectUrl = `https://discord.com/oauth2/authorize?${query.toString()}`;
+  req.session.oauthPopupMode = popupMode ? "1" : "";
+  const redirectUrl = buildDiscordAuthorizeUrl(oauthState);
 
   req.session.save((error) => {
     if (error) {
@@ -1754,9 +1802,15 @@ app.get("/auth/discord/callback", async (req, res) => {
   const code = String(req.query.code || "").trim();
   const returnedState = String(req.query.state || "").trim();
   const expectedState = String(req.session.oauthState || "").trim();
+  const popupMode = String(req.session.oauthPopupMode || "").trim() === "1";
   delete req.session.oauthState;
+  delete req.session.oauthPopupMode;
 
   if (!code || !returnedState || returnedState !== expectedState) {
+    if (popupMode) {
+      sendDiscordPopupCallbackResponse(res, false);
+      return;
+    }
     res.redirect("/#files");
     return;
   }
@@ -1809,13 +1863,25 @@ app.get("/auth/discord/callback", async (req, res) => {
 
     req.session.save((error) => {
       if (error) {
+        if (popupMode) {
+          sendDiscordPopupCallbackResponse(res, false);
+          return;
+        }
         res.redirect("/#files");
+        return;
+      }
+      if (popupMode) {
+        sendDiscordPopupCallbackResponse(res, true);
         return;
       }
       res.redirect("/#files");
     });
   } catch (error) {
     console.error("[oauth] callback error:", error);
+    if (popupMode) {
+      sendDiscordPopupCallbackResponse(res, false);
+      return;
+    }
     res.redirect("/#files");
   }
 });
