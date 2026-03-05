@@ -5810,15 +5810,15 @@ body.is-files .files-list.is-detail-mode {
   overflow-x: hidden;
 }
 
-body.is-files .files-list.is-detail-mode .files-detail-card {
+body.is-files .files-list.is-detail-mode.is-transition-to-detail .files-detail-card {
   animation: filesDetailIn 240ms cubic-bezier(0.24, 0.7, 0.24, 1) both;
 }
 
-body.is-files .files-list.is-detail-mode .files-detail-top {
+body.is-files .files-list.is-detail-mode.is-transition-to-detail .files-detail-top {
   animation: filesDetailPartIn 220ms ease 45ms both;
 }
 
-body.is-files .files-list.is-detail-mode .files-detail-body {
+body.is-files .files-list.is-detail-mode.is-transition-to-detail .files-detail-body {
   animation: filesDetailPartIn 220ms ease 90ms both;
 }
 
