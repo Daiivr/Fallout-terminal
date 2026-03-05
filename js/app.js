@@ -2715,6 +2715,27 @@ function createFilesDescriptionBlock({ description = "", imageUrl = "", imageNam
   return wrap;
 }
 
+function buildFilesDetailRenderKey(file, { isAdmin = false } = {}) {
+  const safeFile = file && typeof file === "object" ? file : {};
+  return [
+    state.lang,
+    isAdmin ? "1" : "0",
+    String(safeFile.id || ""),
+    String(safeFile.name || safeFile.originalName || ""),
+    String(safeFile.displayName || ""),
+    String(safeFile.mimeType || safeFile.type || ""),
+    String(Math.max(0, Number(safeFile.size) || 0)),
+    String(safeFile.uploadedAt || safeFile.uploaded_at || ""),
+    String(safeFile.updatedAt || safeFile.updated_at || ""),
+    normalizeFilesGroup(safeFile.group),
+    String(safeFile.description || ""),
+    String(safeFile.uploader || safeFile.uploaderDiscordId || ""),
+    String(safeFile.imageUrl || ""),
+    String(safeFile.imageName || ""),
+    safeFile.hasImage ? "1" : "0"
+  ].join("|");
+}
+
 function createFilesAdminEditForm(file) {
   if (!state.files.me?.isAdmin) {
     return null;
@@ -2903,6 +2924,9 @@ function renderFilesDetailCard(file) {
   detailCard.appendChild(detailTop);
   detailCard.appendChild(detailBody);
   elements.filesList.appendChild(detailCard);
+  elements.filesList.dataset.detailRenderKey = buildFilesDetailRenderKey(file, {
+    isAdmin: Boolean(state.files.me?.isAdmin)
+  });
 }
 
 function renderFilesSessionProfile({ loggedIn, authorized, isAdmin, username, discordId, accessRequestStatus } = {}) {
@@ -3234,7 +3258,42 @@ function renderFilesList() {
   const me = normalizeFilesProfile(state.files.me);
   const canReadFiles = Boolean(me.isAuthorized);
   const showRestrictedNotice = me.loggedIn && !canReadFiles;
+  const pendingTransition = String(state.files.transition || "");
+  const reuseManagerMode = Boolean(state.files.groupManager.open && me.isAdmin);
+  const reuseSelectedId = String(state.files.selectedId || "");
+  const reuseSelectedFile = reuseSelectedId
+    ? state.files.list.find((entry) => String(entry.id || "") === reuseSelectedId) || null
+    : null;
+  if (canReadFiles && reuseSelectedFile && !reuseManagerMode && pendingTransition !== "to-detail") {
+    const currentDetailKey = String(elements.filesList.dataset.detailRenderKey || "");
+    const nextDetailKey = buildFilesDetailRenderKey(reuseSelectedFile, {
+      isAdmin: Boolean(me.isAdmin)
+    });
+    if (currentDetailKey && currentDetailKey === nextDetailKey && elements.filesList.classList.contains("is-detail-mode")) {
+      state.files.transition = "";
+      state.files.groupTransition = "";
+      elements.filesList.classList.remove(
+        "is-transition-to-detail",
+        "is-transition-to-list",
+        "is-transition-group-open",
+        "is-transition-group-close"
+      );
+      elements.filesList.classList.add("is-detail-mode");
+      elements.filesList.hidden = false;
+      elements.filesEmptyState.hidden = true;
+      elements.filesEmptyState.textContent = "";
+      elements.filesEmptyState.classList.remove("is-restricted");
+      elements.filesBrowserPanel?.classList.toggle("is-restricted", showRestrictedNotice);
+      setFilesSearchCount("");
+      if (elements.filesSearchResults) {
+        elements.filesSearchResults.innerHTML = "";
+        elements.filesSearchResults.hidden = true;
+      }
+      return;
+    }
+  }
   elements.filesList.replaceChildren();
+  delete elements.filesList.dataset.detailRenderKey;
   elements.filesList.classList.remove(
     "is-detail-mode",
     "is-transition-to-detail",
