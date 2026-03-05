@@ -328,6 +328,8 @@ const STRINGS = {
     files_group_manager_select_group_first: "Open a group first to assign files.",
     files_group_manager_assign_button: "SAVE GROUP",
     files_group_manager_assign_busy: "SAVING...",
+    files_group_manager_remove_button: "REMOVE FROM GROUP",
+    files_group_manager_remove_busy: "REMOVING...",
     files_group_manager_select_all_button: "SELECT ALL",
     files_group_manager_clear_button: "CLEAR",
     files_group_manager_select_file_label: "Select for group",
@@ -341,6 +343,7 @@ const STRINGS = {
     files_group_manager_error_select_files: "Select at least one file.",
     files_group_manager_error_update: "Unable to update selected files.",
     files_group_manager_success: "{n} file(s) moved to \"{group}\".",
+    files_group_manager_remove_success: "{n} file(s) removed from group.",
     files_rename_button: "RENAME",
     files_rename_placeholder: "Display name...",
     files_rename_save_button: "SAVE NAME",
@@ -656,6 +659,8 @@ const STRINGS = {
     files_group_manager_select_group_first: "Abre un grupo primero para asignar archivos.",
     files_group_manager_assign_button: "GUARDAR GRUPO",
     files_group_manager_assign_busy: "GUARDANDO...",
+    files_group_manager_remove_button: "QUITAR DEL GRUPO",
+    files_group_manager_remove_busy: "QUITANDO...",
     files_group_manager_select_all_button: "SELECCIONAR TODO",
     files_group_manager_clear_button: "LIMPIAR",
     files_group_manager_select_file_label: "Seleccionar para grupo",
@@ -669,6 +674,7 @@ const STRINGS = {
     files_group_manager_error_select_files: "Selecciona al menos un archivo.",
     files_group_manager_error_update: "No se pudieron actualizar los archivos seleccionados.",
     files_group_manager_success: "{n} archivo(s) movidos a \"{group}\".",
+    files_group_manager_remove_success: "{n} archivo(s) quitados del grupo.",
     files_rename_button: "RENOMBRAR",
     files_rename_placeholder: "Nombre visible...",
     files_rename_save_button: "GUARDAR NOMBRE",
@@ -2542,6 +2548,16 @@ function renderFilesGroupManagerPanel() {
   assignButton.disabled = state.files.groupManager.busy || selectedCount < 1;
   managerActions.appendChild(assignButton);
 
+  const removeButton = document.createElement("button");
+  removeButton.type = "button";
+  removeButton.className = "files-card-action is-delete";
+  removeButton.setAttribute("data-files-action", "remove-selected-group");
+  removeButton.textContent = state.files.groupManager.busy
+    ? t("files_group_manager_remove_busy")
+    : t("files_group_manager_remove_button");
+  removeButton.disabled = state.files.groupManager.busy || selectedCount < 1;
+  managerActions.appendChild(removeButton);
+
   const selectAllButton = document.createElement("button");
   selectAllButton.type = "button";
   selectAllButton.className = "files-card-action";
@@ -3623,9 +3639,10 @@ function renderFilesList() {
         card.style.setProperty("--files-item-index", String(Math.min(renderedIndex, 9)));
         renderedIndex += 1;
 
-        const openButton = document.createElement("button");
-        openButton.type = "button";
+        const openButton = document.createElement("div");
         openButton.className = "files-file-toggle";
+        openButton.setAttribute("role", "button");
+        openButton.tabIndex = 0;
         openButton.setAttribute("data-files-action", "open-detail");
         openButton.setAttribute("data-file-id", fileId);
 
@@ -4769,6 +4786,56 @@ async function handleFilesAssignSelectedGroup() {
   renderFilesAccessView();
 }
 
+async function handleFilesRemoveSelectedFromGroup() {
+  if (!state.files.me?.isAdmin || state.files.groupManager.busy) {
+    return;
+  }
+
+  const selectedIds = state.files.groupManager.selectedIds
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  if (!selectedIds.length) {
+    setFilesUploadFeedback(t("files_group_manager_error_select_files"), "error");
+    renderFilesAccessView();
+    return;
+  }
+
+  state.files.groupManager.busy = true;
+  setFilesUploadFeedback("", "");
+  renderFilesList();
+
+  let updated = false;
+  try {
+    await Promise.all(selectedIds.map((fileId) => {
+      const formData = new FormData();
+      formData.append("group", "");
+      return requestJson(`/api/files/${encodeURIComponent(fileId)}`, {
+        method: "PATCH",
+        body: formData
+      });
+    }));
+
+    clearFilesGroupManagerState({ clearTargetGroup: false });
+    state.files.activeGroupKey = "";
+    state.files.groupTransition = "";
+    setFilesUploadFeedback(
+      t("files_group_manager_remove_success", { n: String(selectedIds.length) }),
+      "success"
+    );
+    updated = true;
+  } catch (error) {
+    setFilesUploadFeedback(String(error?.message || t("files_group_manager_error_update")), "error");
+  } finally {
+    state.files.groupManager.busy = false;
+  }
+
+  if (updated) {
+    await refreshFilesList();
+    return;
+  }
+  renderFilesAccessView();
+}
+
 function handleFilesListInput(event) {
   const target = event.target;
   if (!(target instanceof HTMLInputElement)) {
@@ -4869,6 +4936,10 @@ function handleFilesListClick(event) {
 
   if (action === "assign-selected-group") {
     void handleFilesAssignSelectedGroup();
+    return;
+  }
+  if (action === "remove-selected-group") {
+    void handleFilesRemoveSelectedFromGroup();
     return;
   }
   if (action === "select-all-group-files") {
@@ -4978,6 +5049,35 @@ function handleFilesListClick(event) {
   if (action === "delete") {
     void handleFilesDelete(fileId);
   }
+}
+
+function handleFilesListKeydown(event) {
+  const key = String(event.key || "");
+  if (key !== "Enter" && key !== " ") {
+    return;
+  }
+
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return;
+  }
+
+  const actionTarget = target.closest("[data-files-action]");
+  if (!(actionTarget instanceof HTMLElement)) {
+    return;
+  }
+
+  const action = String(actionTarget.getAttribute("data-files-action") || "").trim();
+  if (action !== "open-detail") {
+    return;
+  }
+
+  if (actionTarget.tagName === "BUTTON") {
+    return;
+  }
+
+  event.preventDefault();
+  actionTarget.click();
 }
 
 function handleFilesListSubmit(event) {
@@ -9047,6 +9147,7 @@ function wireEvents() {
   });
   elements.filesUploadPanel?.addEventListener("click", handleFilesListClick);
   elements.filesList?.addEventListener("click", handleFilesListClick);
+  elements.filesList?.addEventListener("keydown", handleFilesListKeydown);
   elements.filesList?.addEventListener("input", handleFilesListInput);
   elements.filesList?.addEventListener("change", handleFilesListChange);
   elements.filesList?.addEventListener("submit", handleFilesListSubmit);
