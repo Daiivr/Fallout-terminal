@@ -134,11 +134,13 @@ const VIEW_HASHES = {
 const FILES_ACCESS_REQUEST_REASON_MAX = 1200;
 const FILES_ACCESS_DECLINED_REAPPLY_MS = 7 * 24 * 60 * 60 * 1000;
 const FILES_LIVE_IDENTITY_POLL_INTERVAL_MS = 5000;
-const FILES_ADMIN_REQUESTS_FEEDBACK_AUTO_HIDE_MS = 4200;
+const FILES_ADMIN_REQUESTS_FEEDBACK_AUTO_HIDE_MS = 5000;
+const FILES_UPLOAD_FEEDBACK_AUTO_HIDE_MS = 5000;
 
 let filesLiveIdentityPollTimer = null;
 let filesLiveIdentityPollInFlight = false;
 let filesAdminRequestsFeedbackTimer = null;
+let filesUploadFeedbackTimer = null;
 
 const STRINGS = {
   en: {
@@ -220,7 +222,7 @@ const STRINGS = {
     files_back_to_index_button: "BACK TO INDEX",
     files_search_label: "Search File",
     files_search_placeholder: "Type file name...",
-    files_search_hint: "Filter files by name, type, description, or uploader.",
+    files_search_hint: "Filter files by name, type, group, description, or uploader.",
     files_search_toggle_open: "SEARCH",
     files_search_toggle_close: "CLOSE",
     files_search_toggle_open_label: "Open file search",
@@ -280,11 +282,22 @@ const STRINGS = {
     files_admin_requests_error_allowlist: "This user is in ALLOWED_DISCORD_IDS and cannot be unauthorized here.",
     files_file_index_title: "FILE INDEX",
     files_upload_file_label: "File",
+    files_upload_image_label: "Image",
+    files_upload_group_label: "Group",
+    files_upload_group_placeholder: "Optional group...",
     files_upload_description_label: "Description",
     files_upload_description_placeholder: "Optional dossier note...",
     files_upload_success: "Upload complete.",
     files_upload_error: "Upload failed.",
     files_upload_missing_file: "Select a file before upload.",
+    files_edit_section_title: "EDIT FILE DETAILS",
+    files_edit_description_label: "Description",
+    files_edit_group_label: "Group",
+    files_edit_image_label: "Description Image",
+    files_edit_remove_image_label: "Remove existing image",
+    files_edit_save_button: "SAVE CHANGES",
+    files_edit_save_busy: "SAVING...",
+    files_edit_success: "File details updated.",
     files_loading_state: "Loading file index...",
     files_delete_button: "DELETE FILE",
     files_delete_confirm: "Delete this file from storage?",
@@ -298,6 +311,17 @@ const STRINGS = {
     files_type_label: "Type",
     files_size_label: "Size",
     files_uploaded_label: "Uploaded",
+    files_group_label: "Group",
+    files_group_default: "UNGROUPED",
+    files_group_count: "{n} file(s)",
+    files_group_open_button: "OPEN GROUP",
+    files_groups_back_button: "ALL GROUPS",
+    files_rename_button: "RENAME",
+    files_rename_placeholder: "Display name...",
+    files_rename_save_button: "SAVE NAME",
+    files_rename_cancel_button: "CANCEL",
+    files_rename_busy: "SAVING...",
+    files_rename_success: "Display name updated.",
     files_description_label: "Description",
     files_uploader_label: "Uploaded By",
     files_unknown_value: "--",
@@ -501,7 +525,7 @@ const STRINGS = {
     files_back_to_index_button: "VOLVER AL INDICE",
     files_search_label: "Buscar Archivo",
     files_search_placeholder: "Escribe nombre del archivo...",
-    files_search_hint: "Filtra archivos por nombre, tipo, descripcion o autor.",
+    files_search_hint: "Filtra archivos por nombre, tipo, grupo, descripcion o autor.",
     files_search_toggle_open: "BUSCAR",
     files_search_toggle_close: "CERRAR",
     files_search_toggle_open_label: "Abrir busqueda de archivos",
@@ -561,11 +585,22 @@ const STRINGS = {
     files_admin_requests_error_allowlist: "Este usuario esta en ALLOWED_DISCORD_IDS y no se puede desautorizar aqui.",
     files_file_index_title: "INDICE DE ARCHIVOS",
     files_upload_file_label: "Archivo",
+    files_upload_image_label: "Imagen",
+    files_upload_group_label: "Grupo",
+    files_upload_group_placeholder: "Grupo opcional...",
     files_upload_description_label: "Descripcion",
     files_upload_description_placeholder: "Nota opcional del expediente...",
     files_upload_success: "Carga completada.",
     files_upload_error: "La carga fallo.",
     files_upload_missing_file: "Selecciona un archivo antes de subirlo.",
+    files_edit_section_title: "EDITAR DETALLES DEL ARCHIVO",
+    files_edit_description_label: "Descripcion",
+    files_edit_group_label: "Grupo",
+    files_edit_image_label: "Imagen de descripcion",
+    files_edit_remove_image_label: "Quitar imagen actual",
+    files_edit_save_button: "GUARDAR CAMBIOS",
+    files_edit_save_busy: "GUARDANDO...",
+    files_edit_success: "Detalles del archivo actualizados.",
     files_loading_state: "Cargando indice de archivos...",
     files_delete_button: "ELIMINAR ARCHIVO",
     files_delete_confirm: "Eliminar este archivo del almacenamiento?",
@@ -579,6 +614,17 @@ const STRINGS = {
     files_type_label: "Tipo",
     files_size_label: "Tamano",
     files_uploaded_label: "Subido",
+    files_group_label: "Grupo",
+    files_group_default: "SIN GRUPO",
+    files_group_count: "{n} archivo(s)",
+    files_group_open_button: "ABRIR GRUPO",
+    files_groups_back_button: "TODOS LOS GRUPOS",
+    files_rename_button: "RENOMBRAR",
+    files_rename_placeholder: "Nombre visible...",
+    files_rename_save_button: "GUARDAR NOMBRE",
+    files_rename_cancel_button: "CANCELAR",
+    files_rename_busy: "GUARDANDO...",
+    files_rename_success: "Nombre visible actualizado.",
     files_description_label: "Descripcion",
     files_uploader_label: "Subido Por",
     files_unknown_value: "--",
@@ -762,6 +808,7 @@ const state = {
     selectedId: "",
     detailOrigin: "",
     transition: "",
+    groupTransition: "",
     uploadBusy: false,
     uploadMessage: "",
     uploadMessageKind: "",
@@ -779,6 +826,12 @@ const state = {
     },
     uploadFieldInvalid: false,
     uploadMissingFileError: false,
+    activeGroupKey: "",
+    rename: {
+      fileId: "",
+      value: "",
+      busy: false
+    },
     search: {
       open: false,
       query: ""
@@ -938,6 +991,10 @@ const elements = {
   filesUploadForm: document.getElementById("filesUploadForm"),
   filesUploadFileLabel: document.getElementById("filesUploadFileLabel"),
   filesUploadInput: document.getElementById("filesUploadInput"),
+  filesUploadImageLabel: document.getElementById("filesUploadImageLabel"),
+  filesImageInput: document.getElementById("filesImageInput"),
+  filesUploadGroupLabel: document.getElementById("filesUploadGroupLabel"),
+  filesGroupInput: document.getElementById("filesGroupInput"),
   filesUploadDescLabel: document.getElementById("filesUploadDescLabel"),
   filesDescriptionInput: document.getElementById("filesDescriptionInput"),
   filesUploadBtn: document.getElementById("filesUploadBtn"),
@@ -1383,9 +1440,124 @@ function resolveFileTypeLabel(file) {
   return t("files_unknown_value");
 }
 
+function getFilesTypeBadgeLabel(file) {
+  const fileName = String(file?.name || file?.originalName || "");
+  const extensionMatch = /\.([A-Za-z0-9]+)$/.exec(fileName);
+  if (extensionMatch && extensionMatch[1]) {
+    return extensionMatch[1].toUpperCase();
+  }
+
+  const mimeType = String(file?.mimeType || file?.type || "").trim();
+  if (!mimeType) {
+    return "FILE";
+  }
+
+  const mimeToken = mimeType.includes("/") ? mimeType.split("/").pop() : mimeType;
+  const compactToken = String(mimeToken || "")
+    .replace(/[^A-Za-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)[0]
+    .slice(0, 12)
+    .toUpperCase();
+  return compactToken || "FILE";
+}
+
+function normalizeFilesGroup(value) {
+  return String(value || "")
+    .replace(/\r\n/g, " ")
+    .replace(/\r/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+}
+
+function getFilesGroupKey(groupValue) {
+  const normalizedGroup = normalizeFilesGroup(groupValue);
+  if (!normalizedGroup) {
+    return "__ungrouped__";
+  }
+  return `group:${normalizeSearchText(normalizedGroup)}`;
+}
+
+function getFilesDisplayName(file) {
+  const displayName = String(file?.displayName || "")
+    .replace(/\r\n/g, " ")
+    .replace(/\r/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (displayName) {
+    return displayName;
+  }
+
+  const fallbackName = String(file?.name || file?.originalName || "")
+    .replace(/\r\n/g, " ")
+    .replace(/\r/g, " ")
+    .trim();
+  if (fallbackName) {
+    return fallbackName;
+  }
+
+  return t("files_unknown_value");
+}
+
+function getFilesGroupDisplayLabel(file) {
+  const group = normalizeFilesGroup(file?.group || "");
+  return group || t("files_group_default");
+}
+
+function formatFilesGroupCount(count) {
+  const normalizedCount = Math.max(0, Number(count) || 0);
+  return t("files_group_count", { n: String(normalizedCount) });
+}
+
+function normalizeFilesEntry(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const id = String(payload.id || "").trim();
+  if (!id) {
+    return null;
+  }
+
+  return {
+    id,
+    name: String(payload.name || payload.originalName || "").trim(),
+    displayName: String(payload.displayName || "").trim(),
+    mimeType: String(payload.mimeType || payload.type || "").trim(),
+    size: Math.max(0, Number(payload.size) || 0),
+    uploadedAt: String(payload.uploadedAt || payload.uploaded_at || "").trim(),
+    updatedAt: String(payload.updatedAt || payload.updated_at || payload.uploadedAt || "").trim(),
+    description: String(payload.description || ""),
+    group: normalizeFilesGroup(payload.group),
+    uploader: String(payload.uploader || payload.uploaderDiscordId || "").trim(),
+    imageUrl: String(payload.imageUrl || "").trim(),
+    imageName: String(payload.imageName || "").trim(),
+    hasImage: Boolean(payload.hasImage || payload.imageUrl)
+  };
+}
+
 function setFilesUploadFeedback(message = "", kind = "") {
+  if (filesUploadFeedbackTimer) {
+    clearTimeout(filesUploadFeedbackTimer);
+    filesUploadFeedbackTimer = null;
+  }
+
   state.files.uploadMessage = String(message || "");
   state.files.uploadMessageKind = kind === "success" ? "success" : kind === "error" ? "error" : "";
+
+  if (!state.files.uploadMessage) {
+    return;
+  }
+
+  filesUploadFeedbackTimer = setTimeout(() => {
+    filesUploadFeedbackTimer = null;
+    state.files.uploadMessage = "";
+    state.files.uploadMessageKind = "";
+    if (state.view === "files" && document.body.classList.contains("is-files")) {
+      renderFilesAccessView();
+    }
+  }, FILES_UPLOAD_FEEDBACK_AUTO_HIDE_MS);
 }
 
 function setFilesRestrictedRequestFeedback(message = "", kind = "") {
@@ -1879,11 +2051,13 @@ function getFilteredFilesList(files = []) {
   }
 
   return source.filter((file) => {
-    const name = normalizeSearchText(file.name || file.originalName || "");
+    const displayName = normalizeSearchText(getFilesDisplayName(file));
+    const realName = normalizeSearchText(file.name || file.originalName || "");
     const type = normalizeSearchText(file.mimeType || file.type || resolveFileTypeLabel(file));
+    const group = normalizeSearchText(file.group || "");
     const description = normalizeSearchText(file.description || "");
     const uploader = normalizeSearchText(file.uploader || file.uploaderDiscordId || "");
-    const haystack = `${name} ${type} ${description} ${uploader}`;
+    const haystack = `${displayName} ${realName} ${type} ${group} ${description} ${uploader}`;
     return queryTokens.every((token) => haystack.includes(token));
   });
 }
@@ -1900,11 +2074,7 @@ function openFilesDeleteModal(fileId) {
 
   state.files.deleteModal.open = true;
   state.files.deleteModal.fileId = String(fileId);
-  state.files.deleteModal.fileName = String(
-    matchedFile.name
-    || matchedFile.originalName
-    || t("files_unknown_value")
-  );
+  state.files.deleteModal.fileName = getFilesDisplayName(matchedFile);
   state.files.deleteModal.deleting = false;
   renderFilesDeleteModal();
   setTimeout(() => {
@@ -1958,7 +2128,7 @@ function createFilesMetaItem(label, value) {
   return wrap;
 }
 
-function createFilesDescriptionBlock(description) {
+function createFilesDescriptionBlock({ description = "", imageUrl = "", imageName = "", fileName = "" } = {}) {
   const wrap = document.createElement("div");
   wrap.className = "files-description-block";
 
@@ -1972,7 +2142,121 @@ function createFilesDescriptionBlock(description) {
 
   wrap.appendChild(labelEl);
   wrap.appendChild(valueEl);
+
+  const resolvedImageUrl = String(imageUrl || "").trim();
+  if (resolvedImageUrl) {
+    const imageWrap = document.createElement("figure");
+    imageWrap.className = "files-description-image";
+
+    const imageEl = document.createElement("img");
+    imageEl.className = "files-description-image-media";
+    imageEl.src = resolvedImageUrl;
+    imageEl.alt = String(imageName || fileName || t("files_description_label"));
+    imageEl.loading = "lazy";
+    imageEl.decoding = "async";
+
+    imageWrap.appendChild(imageEl);
+    wrap.appendChild(imageWrap);
+  }
+
   return wrap;
+}
+
+function createFilesAdminEditForm(file) {
+  if (!state.files.me?.isAdmin) {
+    return null;
+  }
+
+  const fileId = String(file.id || "").trim();
+  if (!fileId) {
+    return null;
+  }
+
+  const form = document.createElement("form");
+  form.className = "files-edit-form";
+  form.noValidate = true;
+  form.setAttribute("data-files-edit-form", "true");
+  form.setAttribute("data-file-id", fileId);
+
+  const title = document.createElement("p");
+  title.className = "files-edit-title";
+  title.textContent = t("files_edit_section_title");
+  form.appendChild(title);
+
+  const descriptionLabel = document.createElement("label");
+  descriptionLabel.className = "files-edit-label";
+  descriptionLabel.textContent = t("files_edit_description_label");
+  descriptionLabel.setAttribute("for", `filesEditDescription-${fileId}`);
+  form.appendChild(descriptionLabel);
+
+  const descriptionInput = document.createElement("textarea");
+  descriptionInput.id = `filesEditDescription-${fileId}`;
+  descriptionInput.className = "files-upload-description files-edit-description";
+  descriptionInput.name = "description";
+  descriptionInput.rows = 4;
+  descriptionInput.maxLength = 500;
+  descriptionInput.value = String(file.description || "").trim();
+  descriptionInput.placeholder = t("files_upload_description_placeholder");
+  form.appendChild(descriptionInput);
+
+  const groupLabel = document.createElement("label");
+  groupLabel.className = "files-edit-label";
+  groupLabel.textContent = t("files_edit_group_label");
+  groupLabel.setAttribute("for", `filesEditGroup-${fileId}`);
+  form.appendChild(groupLabel);
+
+  const groupInput = document.createElement("input");
+  groupInput.id = `filesEditGroup-${fileId}`;
+  groupInput.className = "files-upload-text files-edit-group";
+  groupInput.name = "group";
+  groupInput.type = "text";
+  groupInput.maxLength = 80;
+  groupInput.value = normalizeFilesGroup(file.group || "");
+  groupInput.placeholder = t("files_upload_group_placeholder");
+  form.appendChild(groupInput);
+
+  const imageLabel = document.createElement("label");
+  imageLabel.className = "files-edit-label";
+  imageLabel.textContent = t("files_edit_image_label");
+  imageLabel.setAttribute("for", `filesEditImage-${fileId}`);
+  form.appendChild(imageLabel);
+
+  const imageInput = document.createElement("input");
+  imageInput.id = `filesEditImage-${fileId}`;
+  imageInput.className = "files-upload-input files-upload-image-input files-edit-image";
+  imageInput.name = "image";
+  imageInput.type = "file";
+  imageInput.accept = "image/*";
+  form.appendChild(imageInput);
+
+  if (file.hasImage || file.imageUrl) {
+    const removeWrap = document.createElement("label");
+    removeWrap.className = "files-edit-remove";
+
+    const removeInput = document.createElement("input");
+    removeInput.type = "checkbox";
+    removeInput.name = "removeImage";
+    removeInput.value = "1";
+
+    const removeText = document.createElement("span");
+    removeText.textContent = t("files_edit_remove_image_label");
+
+    removeWrap.appendChild(removeInput);
+    removeWrap.appendChild(removeText);
+    form.appendChild(removeWrap);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "files-edit-actions";
+
+  const saveButton = document.createElement("button");
+  saveButton.type = "submit";
+  saveButton.className = "files-card-action";
+  saveButton.textContent = t("files_edit_save_button");
+  actions.appendChild(saveButton);
+
+  form.appendChild(actions);
+  return form;
 }
 
 function renderFilesDetailCard(file) {
@@ -1981,12 +2265,15 @@ function renderFilesDetailCard(file) {
   }
 
   const fileId = String(file.id || "");
-  const fileName = String(file.name || file.originalName || t("files_unknown_value"));
+  const fileName = getFilesDisplayName(file);
   const fileType = resolveFileTypeLabel(file);
   const fileSize = formatFileSize(file.size);
   const uploadDate = formatFileDateTime(file.uploadedAt || file.uploaded_at);
-  const description = String(file.description || "").trim() || t("files_unknown_value");
+  const description = String(file.description || "").trim();
+  const group = getFilesGroupDisplayLabel(file);
   const uploader = String(file.uploader || file.uploaderDiscordId || t("files_unknown_value"));
+  const imageUrl = String(file.imageUrl || "").trim();
+  const imageName = String(file.imageName || "").trim();
 
   const detailCard = document.createElement("article");
   detailCard.className = "panel files-detail-card";
@@ -2015,9 +2302,15 @@ function renderFilesDetailCard(file) {
   metadata.appendChild(createFilesMetaItem(t("files_type_label"), fileType));
   metadata.appendChild(createFilesMetaItem(t("files_size_label"), fileSize));
   metadata.appendChild(createFilesMetaItem(t("files_uploaded_label"), uploadDate));
+  metadata.appendChild(createFilesMetaItem(t("files_group_label"), group));
   metadata.appendChild(createFilesMetaItem(t("files_uploader_label"), uploader));
 
-  const descriptionBlock = createFilesDescriptionBlock(description);
+  const descriptionBlock = createFilesDescriptionBlock({
+    description,
+    imageUrl,
+    imageName,
+    fileName
+  });
 
   const actions = document.createElement("div");
   actions.className = "files-card-actions files-detail-actions";
@@ -2043,6 +2336,13 @@ function renderFilesDetailCard(file) {
   detailBody.appendChild(metadata);
   detailBody.appendChild(descriptionBlock);
   detailBody.appendChild(actions);
+
+  if (state.files.me?.isAdmin) {
+    const editForm = createFilesAdminEditForm(file);
+    if (editForm) {
+      detailBody.appendChild(editForm);
+    }
+  }
 
   detailCard.appendChild(detailTop);
   detailCard.appendChild(detailBody);
@@ -2306,7 +2606,7 @@ function renderFilesSearchResults() {
   for (let index = 0; index < limitedMatches.length; index += 1) {
     const file = limitedMatches[index];
     const fileId = String(file.id || "");
-    const fileName = String(file.name || file.originalName || t("files_unknown_value"));
+    const fileName = getFilesDisplayName(file);
     const fileType = resolveFileTypeLabel(file);
     const fileSize = formatFileSize(file.size);
     const uploadDate = formatFileDateTime(file.uploadedAt || file.uploaded_at);
@@ -2379,11 +2679,19 @@ function renderFilesList() {
   const canReadFiles = Boolean(me.isAuthorized);
   const showRestrictedNotice = me.loggedIn && !canReadFiles;
   elements.filesList.replaceChildren();
-  elements.filesList.classList.remove("is-detail-mode", "is-transition-to-detail", "is-transition-to-list");
+  elements.filesList.classList.remove(
+    "is-detail-mode",
+    "is-transition-to-detail",
+    "is-transition-to-list",
+    "is-transition-group-open",
+    "is-transition-group-close"
+  );
   elements.filesEmptyState.classList.remove("is-restricted");
   elements.filesBrowserPanel?.classList.toggle("is-restricted", showRestrictedNotice);
   const transition = String(state.files.transition || "");
+  const groupTransition = String(state.files.groupTransition || "");
   state.files.transition = "";
+  state.files.groupTransition = "";
 
   if (!canReadFiles) {
     if (state.files.search.open || state.files.search.query) {
@@ -2476,52 +2784,267 @@ function renderFilesList() {
   if (transition === "to-list") {
     elements.filesList.classList.add("is-transition-to-list");
   }
+  if (groupTransition === "open") {
+    elements.filesList.classList.add("is-transition-group-open");
+  } else if (groupTransition === "close") {
+    elements.filesList.classList.add("is-transition-group-close");
+  }
 
   elements.filesEmptyState.hidden = true;
   const fragment = document.createDocumentFragment();
   const baseFiles = Array.isArray(state.files.list) ? state.files.list : [];
 
-  for (let index = 0; index < baseFiles.length; index += 1) {
-    const file = baseFiles[index];
-    const fileId = String(file.id || "");
-    const fileName = String(file.name || file.originalName || t("files_unknown_value"));
-    const fileType = resolveFileTypeLabel(file);
-    const fileSize = formatFileSize(file.size);
-    const uploadDate = formatFileDateTime(file.uploadedAt || file.uploaded_at);
+  const groups = [];
+  const groupsByKey = new Map();
+  for (const file of baseFiles) {
+    const normalizedGroup = normalizeFilesGroup(file.group || "");
+    const key = getFilesGroupKey(normalizedGroup);
+    if (!groupsByKey.has(key)) {
+      const nextGroup = {
+        key,
+        label: normalizedGroup || t("files_group_default"),
+        files: []
+      };
+      groupsByKey.set(key, nextGroup);
+      groups.push(nextGroup);
+    }
+    groupsByKey.get(key).files.push(file);
+  }
 
-    const card = document.createElement("article");
-    card.className = "panel files-file-card";
-    card.style.setProperty("--files-item-index", String(Math.min(index, 9)));
+  const activeGroupKey = String(state.files.activeGroupKey || "").trim();
+  const activeGroup = activeGroupKey
+    ? groups.find((entry) => entry.key === activeGroupKey) || null
+    : null;
+  if (activeGroupKey && !activeGroup) {
+    state.files.activeGroupKey = "";
+  }
+  const hasFocusedGroup = Boolean(activeGroup && state.files.activeGroupKey);
+  if (!hasFocusedGroup && state.files.rename.fileId) {
+    state.files.rename.fileId = "";
+    state.files.rename.value = "";
+    state.files.rename.busy = false;
+  }
+  const groupsToRender = hasFocusedGroup ? [activeGroup] : groups;
 
-    const openButton = document.createElement("button");
-    openButton.type = "button";
-    openButton.className = "files-file-toggle";
-    openButton.setAttribute("data-files-action", "open-detail");
-    openButton.setAttribute("data-file-id", fileId);
+  if (state.files.rename.fileId && !baseFiles.some((entry) => String(entry.id || "") === state.files.rename.fileId)) {
+    state.files.rename.fileId = "";
+    state.files.rename.value = "";
+    state.files.rename.busy = false;
+  }
 
-    const title = document.createElement("p");
-    title.className = "files-file-name";
-    title.textContent = fileName;
+  if (hasFocusedGroup) {
+    const focusBar = document.createElement("div");
+    focusBar.className = "files-group-focus-bar";
 
-    const summary = document.createElement("div");
-    summary.className = "files-file-summary";
+    const backButton = document.createElement("button");
+    backButton.type = "button";
+    backButton.className = "files-btn files-group-back-btn";
+    backButton.textContent = t("files_groups_back_button");
+    backButton.setAttribute("data-files-action", "clear-group-filter");
+    focusBar.appendChild(backButton);
 
-    const typeSummary = document.createElement("span");
-    typeSummary.textContent = `${t("files_type_label")}: ${fileType}`;
-    const sizeSummary = document.createElement("span");
-    sizeSummary.textContent = `${t("files_size_label")}: ${fileSize}`;
-    const dateSummary = document.createElement("span");
-    dateSummary.textContent = `${t("files_uploaded_label")}: ${uploadDate}`;
+    const activeLabel = document.createElement("span");
+    activeLabel.className = "files-group-focus-label";
+    activeLabel.textContent = activeGroup.label;
+    focusBar.appendChild(activeLabel);
+    fragment.appendChild(focusBar);
+  }
 
-    summary.appendChild(typeSummary);
-    summary.appendChild(sizeSummary);
-    summary.appendChild(dateSummary);
+  let renderedIndex = 0;
+  let renderedGroupIndex = 0;
+  for (const groupEntry of groupsToRender) {
+    const groupWrap = document.createElement("section");
+    groupWrap.className = "files-group-section";
+    groupWrap.classList.toggle("is-open", hasFocusedGroup);
+    groupWrap.style.setProperty("--files-group-index", String(Math.min(renderedGroupIndex, 8)));
+    renderedGroupIndex += 1;
 
-    openButton.appendChild(title);
-    openButton.appendChild(summary);
-    card.appendChild(openButton);
+    const groupHead = document.createElement("div");
+    groupHead.className = "files-group-head";
 
-    fragment.appendChild(card);
+    const groupToggle = document.createElement("button");
+    groupToggle.type = "button";
+    groupToggle.className = "files-group-toggle";
+    groupToggle.setAttribute("data-files-action", "select-group");
+    groupToggle.setAttribute("data-group-key", groupEntry.key);
+    groupToggle.setAttribute("aria-expanded", hasFocusedGroup ? "true" : "false");
+    groupToggle.disabled = hasFocusedGroup;
+
+    const groupTitle = document.createElement("span");
+    groupTitle.className = "files-group-title";
+    groupTitle.textContent = groupEntry.label;
+
+    const groupMeta = document.createElement("span");
+    groupMeta.className = "files-group-meta";
+
+    const groupCount = document.createElement("span");
+    groupCount.className = "files-group-count";
+    const groupTotalBytes = groupEntry.files.reduce((acc, item) => acc + (Number(item?.size) || 0), 0);
+    groupCount.textContent = `${formatFilesGroupCount(groupEntry.files.length)} · ${formatFileSize(groupTotalBytes)}`;
+
+    groupMeta.appendChild(groupCount);
+    if (!hasFocusedGroup) {
+      const openHint = document.createElement("span");
+      openHint.className = "files-group-open-hint";
+      openHint.textContent = t("files_group_open_button");
+      groupMeta.appendChild(openHint);
+    }
+
+    const groupCaret = document.createElement("span");
+    groupCaret.className = "files-group-caret";
+    groupCaret.setAttribute("aria-hidden", "true");
+    groupCaret.textContent = ">";
+    groupMeta.appendChild(groupCaret);
+
+    groupToggle.appendChild(groupTitle);
+    groupToggle.appendChild(groupMeta);
+    groupHead.appendChild(groupToggle);
+
+    const groupList = document.createElement("div");
+    groupList.className = "files-group-list";
+    groupList.hidden = !hasFocusedGroup;
+
+    if (hasFocusedGroup) {
+      for (let index = 0; index < groupEntry.files.length; index += 1) {
+        const file = groupEntry.files[index];
+        const fileId = String(file.id || "");
+        const fileName = getFilesDisplayName(file);
+        const fileType = resolveFileTypeLabel(file);
+        const fileSize = formatFileSize(file.size);
+        const uploadDate = formatFileDateTime(file.uploadedAt || file.uploaded_at);
+        const uploader = String(file.uploader || t("files_unknown_value"));
+        const isRenaming = Boolean(state.files.rename.fileId) && state.files.rename.fileId === fileId;
+        const renameBusy = isRenaming && Boolean(state.files.rename.busy);
+
+        const card = document.createElement("article");
+        card.className = "panel files-file-card";
+        card.style.setProperty("--files-item-index", String(Math.min(renderedIndex, 9)));
+        renderedIndex += 1;
+
+        const openButton = document.createElement("button");
+        openButton.type = "button";
+        openButton.className = "files-file-toggle";
+        openButton.setAttribute("data-files-action", "open-detail");
+        openButton.setAttribute("data-file-id", fileId);
+
+        const cardHead = document.createElement("div");
+        cardHead.className = "files-file-head";
+
+        const title = document.createElement("p");
+        title.className = "files-file-name";
+        title.textContent = fileName;
+
+        const badges = document.createElement("div");
+        badges.className = "files-file-badges";
+
+        const typeBadge = document.createElement("span");
+        typeBadge.className = "files-file-badge is-type";
+        typeBadge.textContent = getFilesTypeBadgeLabel(file);
+        badges.appendChild(typeBadge);
+
+        if (file.hasImage || file.imageUrl) {
+          const imageBadge = document.createElement("span");
+          imageBadge.className = "files-file-badge is-image";
+          imageBadge.textContent = "IMG";
+          badges.appendChild(imageBadge);
+        }
+
+        cardHead.appendChild(title);
+        cardHead.appendChild(badges);
+
+        const summary = document.createElement("div");
+        summary.className = "files-file-summary";
+
+        const typeSummary = document.createElement("span");
+        typeSummary.className = "files-file-pill";
+        typeSummary.textContent = `${t("files_type_label")}: ${fileType}`;
+        const sizeSummary = document.createElement("span");
+        sizeSummary.className = "files-file-pill";
+        sizeSummary.textContent = `${t("files_size_label")}: ${fileSize}`;
+
+        summary.appendChild(typeSummary);
+        summary.appendChild(sizeSummary);
+
+        const footer = document.createElement("div");
+        footer.className = "files-file-footer";
+
+        const dateSummary = document.createElement("span");
+        dateSummary.className = "files-file-footer-item";
+        dateSummary.textContent = `${t("files_uploaded_label")}: ${uploadDate}`;
+
+        const uploaderSummary = document.createElement("span");
+        uploaderSummary.className = "files-file-footer-item";
+        uploaderSummary.textContent = `${t("files_uploader_label")}: ${uploader}`;
+
+        footer.appendChild(dateSummary);
+        footer.appendChild(uploaderSummary);
+
+        openButton.appendChild(cardHead);
+        openButton.appendChild(summary);
+        openButton.appendChild(footer);
+        card.appendChild(openButton);
+
+        if (state.files.me?.isAdmin) {
+          const renameWrap = document.createElement("div");
+          renameWrap.className = "files-file-rename-wrap";
+          if (isRenaming) {
+            const renameForm = document.createElement("form");
+            renameForm.className = "files-file-rename-form";
+            renameForm.noValidate = true;
+            renameForm.setAttribute("data-files-rename-form", "true");
+            renameForm.setAttribute("data-file-id", fileId);
+
+            const renameInput = document.createElement("input");
+            renameInput.type = "text";
+            renameInput.name = "displayName";
+            renameInput.className = "files-file-rename-input";
+            renameInput.maxLength = 180;
+            renameInput.placeholder = t("files_rename_placeholder");
+            renameInput.value = state.files.rename.value || fileName;
+            renameInput.disabled = renameBusy;
+
+            const renameActions = document.createElement("div");
+            renameActions.className = "files-file-rename-actions";
+
+            const saveRenameBtn = document.createElement("button");
+            saveRenameBtn.type = "submit";
+            saveRenameBtn.className = "files-card-action files-file-rename-save";
+            saveRenameBtn.textContent = renameBusy ? t("files_rename_busy") : t("files_rename_save_button");
+            saveRenameBtn.disabled = renameBusy;
+
+            const cancelRenameBtn = document.createElement("button");
+            cancelRenameBtn.type = "button";
+            cancelRenameBtn.className = "files-card-action files-file-rename-cancel";
+            cancelRenameBtn.textContent = t("files_rename_cancel_button");
+            cancelRenameBtn.setAttribute("data-files-action", "cancel-rename");
+            cancelRenameBtn.setAttribute("data-file-id", fileId);
+            cancelRenameBtn.disabled = renameBusy;
+
+            renameActions.appendChild(saveRenameBtn);
+            renameActions.appendChild(cancelRenameBtn);
+
+            renameForm.appendChild(renameInput);
+            renameForm.appendChild(renameActions);
+            renameWrap.appendChild(renameForm);
+          } else {
+            const renameButton = document.createElement("button");
+            renameButton.type = "button";
+            renameButton.className = "files-card-action files-file-rename-button";
+            renameButton.textContent = t("files_rename_button");
+            renameButton.setAttribute("data-files-action", "start-rename");
+            renameButton.setAttribute("data-file-id", fileId);
+            renameWrap.appendChild(renameButton);
+          }
+          card.appendChild(renameWrap);
+        }
+
+        groupList.appendChild(card);
+      }
+    }
+
+    groupWrap.appendChild(groupHead);
+    groupWrap.appendChild(groupList);
+    fragment.appendChild(groupWrap);
   }
 
   elements.filesList.appendChild(fragment);
@@ -2597,6 +3120,10 @@ function renderFilesAccessView() {
   if (!authorized) {
     state.files.search.open = false;
     state.files.search.query = "";
+    state.files.activeGroupKey = "";
+    state.files.rename.fileId = "";
+    state.files.rename.value = "";
+    state.files.rename.busy = false;
     if (elements.filesSearchInput) {
       elements.filesSearchInput.value = "";
     }
@@ -2806,6 +3333,10 @@ async function pollFilesIdentityLive({ force = false } = {}) {
 
     if (previousProfile.isAuthorized || previousProfile.discordId !== nextProfile.discordId) {
       state.files.list = [];
+      state.files.activeGroupKey = "";
+      state.files.rename.fileId = "";
+      state.files.rename.value = "";
+      state.files.rename.busy = false;
       state.files.listError = "";
       state.files.loadingList = false;
       state.files.selectedId = "";
@@ -2829,6 +3360,10 @@ async function pollFilesIdentityLive({ force = false } = {}) {
 async function refreshFilesList() {
   if (!state.files.me?.isAuthorized) {
     state.files.list = [];
+    state.files.activeGroupKey = "";
+    state.files.rename.fileId = "";
+    state.files.rename.value = "";
+    state.files.rename.busy = false;
     state.files.listError = "";
     state.files.selectedId = "";
     state.files.detailOrigin = "";
@@ -2846,7 +3381,24 @@ async function refreshFilesList() {
 
   try {
     const payload = await requestJson("/api/files");
-    state.files.list = Array.isArray(payload.files) ? payload.files : [];
+    const rawFiles = Array.isArray(payload.files) ? payload.files : [];
+    state.files.list = rawFiles
+      .map((entry) => normalizeFilesEntry(entry))
+      .filter(Boolean);
+    if (
+      state.files.activeGroupKey
+      && !state.files.list.some((entry) => getFilesGroupKey(entry.group) === state.files.activeGroupKey)
+    ) {
+      state.files.activeGroupKey = "";
+    }
+    if (
+      state.files.rename.fileId
+      && !state.files.list.some((entry) => String(entry.id || "") === state.files.rename.fileId)
+    ) {
+      state.files.rename.fileId = "";
+      state.files.rename.value = "";
+      state.files.rename.busy = false;
+    }
     if (!state.files.list.some((file) => String(file.id || "") === state.files.selectedId)) {
       state.files.selectedId = "";
       state.files.detailOrigin = "";
@@ -2858,6 +3410,10 @@ async function refreshFilesList() {
       return;
     }
     state.files.list = [];
+    state.files.activeGroupKey = "";
+    state.files.rename.fileId = "";
+    state.files.rename.value = "";
+    state.files.rename.busy = false;
     state.files.listError = String(error?.message || t("files_empty_state"));
   } finally {
     state.files.loadingList = false;
@@ -2928,6 +3484,10 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
 
   if (!state.files.me.isAuthorized) {
     state.files.list = [];
+    state.files.activeGroupKey = "";
+    state.files.rename.fileId = "";
+    state.files.rename.value = "";
+    state.files.rename.busy = false;
     state.files.listError = "";
     state.files.loadingList = false;
     state.files.selectedId = "";
@@ -2955,6 +3515,10 @@ async function handleFilesLogout() {
 
   state.files.me = buildGuestFilesProfile();
   state.files.list = [];
+  state.files.activeGroupKey = "";
+  state.files.rename.fileId = "";
+  state.files.rename.value = "";
+  state.files.rename.busy = false;
   state.files.listError = "";
   state.files.selectedId = "";
   state.files.detailOrigin = "";
@@ -3075,6 +3639,84 @@ async function handleFilesAccessRequest() {
   }
 }
 
+function setFilesEditFormBusy(formElement, busy) {
+  if (!(formElement instanceof HTMLFormElement)) {
+    return;
+  }
+
+  const isBusy = Boolean(busy);
+  const controls = Array.from(formElement.querySelectorAll("input, textarea, button"));
+  controls.forEach((control) => {
+    if (control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement || control instanceof HTMLButtonElement) {
+      control.disabled = isBusy;
+    }
+  });
+
+  const submitButton = formElement.querySelector("button[type=\"submit\"]");
+  if (submitButton instanceof HTMLButtonElement) {
+    submitButton.textContent = isBusy ? t("files_edit_save_busy") : t("files_edit_save_button");
+  }
+}
+
+async function handleFilesMetadataEdit(formElement) {
+  if (!state.files.me?.isAdmin) {
+    return;
+  }
+  if (!(formElement instanceof HTMLFormElement)) {
+    return;
+  }
+
+  const fileId = String(formElement.dataset.fileId || "").trim();
+  if (!fileId) {
+    return;
+  }
+
+  const descriptionInput = formElement.querySelector("textarea[name=\"description\"]");
+  const groupInput = formElement.querySelector("input[name=\"group\"]");
+  const imageInput = formElement.querySelector("input[name=\"image\"]");
+  const removeImageInput = formElement.querySelector("input[name=\"removeImage\"]");
+
+  const description = descriptionInput instanceof HTMLTextAreaElement
+    ? String(descriptionInput.value || "").trim()
+    : "";
+  const group = groupInput instanceof HTMLInputElement
+    ? normalizeFilesGroup(groupInput.value)
+    : "";
+  const imageFile = imageInput instanceof HTMLInputElement && imageInput.files?.length
+    ? imageInput.files[0]
+    : null;
+  const removeImage = removeImageInput instanceof HTMLInputElement && removeImageInput.checked;
+
+  const formData = new FormData();
+  formData.append("description", description);
+  formData.append("group", group);
+  if (imageFile) {
+    formData.append("image", imageFile);
+  }
+  if (removeImage) {
+    formData.append("removeImage", "1");
+  }
+
+  setFilesEditFormBusy(formElement, true);
+  setFilesUploadFeedback("", "");
+
+  try {
+    await requestJson(`/api/files/${encodeURIComponent(fileId)}`, {
+      method: "PATCH",
+      body: formData
+    });
+    setFilesUploadFeedback(t("files_edit_success"), "success");
+    await refreshFilesList();
+  } catch (error) {
+    setFilesUploadFeedback(String(error?.message || t("files_upload_error")), "error");
+    renderFilesAccessView();
+  } finally {
+    if (formElement.isConnected) {
+      setFilesEditFormBusy(formElement, false);
+    }
+  }
+}
+
 async function handleFilesUpload(event) {
   event.preventDefault();
   if (!state.files.me?.isAdmin) {
@@ -3093,9 +3735,17 @@ async function handleFilesUpload(event) {
   }
 
   const selectedFile = elements.filesUploadInput.files[0];
+  const selectedImage = elements.filesImageInput?.files?.length ? elements.filesImageInput.files[0] : null;
+  const group = normalizeFilesGroup(elements.filesGroupInput?.value || "");
   const description = String(elements.filesDescriptionInput?.value || "").trim();
   const formData = new FormData();
   formData.append("file", selectedFile);
+  if (selectedImage) {
+    formData.append("image", selectedImage);
+  }
+  if (group) {
+    formData.append("group", group);
+  }
   if (description) {
     formData.append("description", description);
   }
@@ -3216,6 +3866,73 @@ async function handleFilesDelete(fileId) {
   openFilesDeleteModal(fileId);
 }
 
+function startFilesRename(fileId) {
+  if (!state.files.me?.isAdmin) {
+    return;
+  }
+  const matchedFile = state.files.list.find((entry) => String(entry.id || "") === String(fileId || ""));
+  if (!matchedFile) {
+    return;
+  }
+
+  state.files.rename.fileId = String(fileId);
+  state.files.rename.value = getFilesDisplayName(matchedFile);
+  state.files.rename.busy = false;
+  renderFilesList();
+}
+
+function cancelFilesRename({ render = true } = {}) {
+  state.files.rename.fileId = "";
+  state.files.rename.value = "";
+  state.files.rename.busy = false;
+  if (render) {
+    renderFilesList();
+  }
+}
+
+async function handleFilesRenameSubmit(formElement) {
+  if (!state.files.me?.isAdmin) {
+    return;
+  }
+  if (!(formElement instanceof HTMLFormElement)) {
+    return;
+  }
+
+  const fileId = String(formElement.dataset.fileId || "").trim();
+  if (!fileId || state.files.rename.busy) {
+    return;
+  }
+
+  const nameInput = formElement.querySelector("input[name=\"displayName\"]");
+  const displayName = nameInput instanceof HTMLInputElement
+    ? String(nameInput.value || "")
+      .replace(/\r\n/g, " ")
+      .replace(/\r/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+    : "";
+
+  state.files.rename.busy = true;
+  state.files.rename.value = displayName;
+  renderFilesList();
+
+  try {
+    const formData = new FormData();
+    formData.append("displayName", displayName);
+    await requestJson(`/api/files/${encodeURIComponent(fileId)}`, {
+      method: "PATCH",
+      body: formData
+    });
+    setFilesUploadFeedback(t("files_rename_success"), "success");
+    cancelFilesRename({ render: false });
+    await refreshFilesList();
+  } catch (error) {
+    state.files.rename.busy = false;
+    setFilesUploadFeedback(String(error?.message || t("files_upload_error")), "error");
+    renderFilesAccessView();
+  }
+}
+
 function handleFilesListClick(event) {
   const target = event.target;
   if (!(target instanceof Element)) {
@@ -3228,6 +3945,28 @@ function handleFilesListClick(event) {
   }
 
   const action = actionTarget.getAttribute("data-files-action") || "";
+  if (action === "select-group") {
+    const groupKey = String(actionTarget.getAttribute("data-group-key") || "").trim();
+    if (!groupKey) {
+      return;
+    }
+    if (state.files.activeGroupKey === groupKey) {
+      return;
+    }
+    state.files.activeGroupKey = groupKey;
+    state.files.groupTransition = "open";
+    cancelFilesRename({ render: false });
+    renderFilesList();
+    return;
+  }
+  if (action === "clear-group-filter") {
+    state.files.activeGroupKey = "";
+    state.files.groupTransition = "close";
+    cancelFilesRename({ render: false });
+    renderFilesList();
+    return;
+  }
+
   if (action === "back-to-index") {
     const returnToSearch = state.files.detailOrigin === "search" && String(state.files.search.query || "").trim();
     state.files.selectedId = "";
@@ -3242,12 +3981,27 @@ function handleFilesListClick(event) {
     return;
   }
 
+  if (action === "start-rename") {
+    const renameFileId = actionTarget.getAttribute("data-file-id") || "";
+    if (!renameFileId) {
+      return;
+    }
+    startFilesRename(renameFileId);
+    return;
+  }
+
+  if (action === "cancel-rename") {
+    cancelFilesRename();
+    return;
+  }
+
   const fileId = actionTarget.getAttribute("data-file-id") || "";
   if (!fileId) {
     return;
   }
 
   if (action === "open-detail-search") {
+    cancelFilesRename({ render: false });
     state.files.selectedId = fileId;
     state.files.detailOrigin = "search";
     state.files.transition = "to-detail";
@@ -3257,6 +4011,7 @@ function handleFilesListClick(event) {
   }
 
   if (action === "open-detail") {
+    cancelFilesRename({ render: false });
     state.files.selectedId = fileId;
     state.files.detailOrigin = "list";
     state.files.transition = "to-detail";
@@ -3272,6 +4027,24 @@ function handleFilesListClick(event) {
 
   if (action === "delete") {
     void handleFilesDelete(fileId);
+  }
+}
+
+function handleFilesListSubmit(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLFormElement)) {
+    return;
+  }
+
+  if (target.matches("[data-files-edit-form]")) {
+    event.preventDefault();
+    void handleFilesMetadataEdit(target);
+    return;
+  }
+
+  if (target.matches("[data-files-rename-form]")) {
+    event.preventDefault();
+    void handleFilesRenameSubmit(target);
   }
 }
 
@@ -6974,8 +7747,17 @@ function applyLanguage(lang, persist = true) {
   elements.filesSearchInput.placeholder = t("files_search_placeholder");
   elements.filesSearchHint.textContent = t("files_search_hint");
   elements.filesUploadFileLabel.textContent = t("files_upload_file_label");
+  if (elements.filesUploadImageLabel) {
+    elements.filesUploadImageLabel.textContent = t("files_upload_image_label");
+  }
+  if (elements.filesUploadGroupLabel) {
+    elements.filesUploadGroupLabel.textContent = t("files_upload_group_label");
+  }
   elements.filesUploadDescLabel.textContent = t("files_upload_description_label");
   elements.filesUploadBtn.textContent = t("files_upload_button");
+  if (elements.filesGroupInput) {
+    elements.filesGroupInput.placeholder = t("files_upload_group_placeholder");
+  }
   elements.filesDescriptionInput.placeholder = t("files_upload_description_placeholder");
   elements.filesEmptyState.textContent = t("files_empty_state");
   elements.filesDeleteTitle.textContent = t("files_delete_modal_title");
@@ -7286,7 +8068,20 @@ function wireEvents() {
       renderFilesAccessView();
     }
   });
+  elements.filesImageInput?.addEventListener("change", () => {
+    if (elements.filesImageInput?.files?.length) {
+      setFilesUploadFeedback("", "");
+      renderFilesAccessView();
+    }
+  });
+  elements.filesGroupInput?.addEventListener("input", () => {
+    if (state.files.uploadMessageKind === "error") {
+      setFilesUploadFeedback("", "");
+      renderFilesAccessView();
+    }
+  });
   elements.filesList?.addEventListener("click", handleFilesListClick);
+  elements.filesList?.addEventListener("submit", handleFilesListSubmit);
   elements.filesSearchResults?.addEventListener("click", handleFilesListClick);
   elements.filesAdminRequestsList?.addEventListener("click", handleFilesAdminRequestsListClick);
   elements.filesDeleteCancelBtn?.addEventListener("click", () => {

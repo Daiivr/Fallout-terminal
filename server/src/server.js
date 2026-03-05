@@ -90,6 +90,10 @@ const ACCESS_REQUEST_REAPPLY_COOLDOWN_MS = parsePositiveInteger(
   7 * 24 * 60 * 60 * 1000
 );
 const ACCESS_REQUEST_REASON_MAX_CHARS = 1200;
+const FILE_DESCRIPTION_MAX_CHARS = 500;
+const FILE_GROUP_MAX_CHARS = 80;
+const FILE_DISPLAY_NAME_MAX_CHARS = 180;
+const FILE_ID_PATTERN = /^[a-f0-9-]{36}$/i;
 const ACCESS_REQUEST_COOLDOWN_BY_DISCORD_ID = new Map();
 const ACCESS_REQUEST_STATUS = Object.freeze({
   NONE: "none",
@@ -129,7 +133,18 @@ function readMetadataStore() {
   try {
     const raw = fs.readFileSync(METADATA_PATH, "utf8");
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    const entries = [];
+    for (const entry of parsed) {
+      const normalized = normalizeMetadataFileEntry(entry);
+      if (normalized) {
+        entries.push(normalized);
+      }
+    }
+    return entries;
   } catch (error) {
     console.error("[metadata] read error:", error);
     return [];
@@ -608,6 +623,128 @@ function buildStoredFilename(originalName) {
   const stem = path.basename(safeOriginal, extension).replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 40) || "file";
   const id = crypto.randomUUID();
   return `${Date.now()}-${id}-${stem}${extension}`;
+}
+
+function sanitizeFileDescription(value) {
+  const raw = String(value || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  if (!raw) {
+    return "";
+  }
+  return raw.slice(0, FILE_DESCRIPTION_MAX_CHARS);
+}
+
+function sanitizeFileGroup(value) {
+  const raw = String(value || "")
+    .replace(/\r\n/g, " ")
+    .replace(/\r/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!raw) {
+    return "";
+  }
+  return raw.slice(0, FILE_GROUP_MAX_CHARS);
+}
+
+function sanitizeFileDisplayName(value) {
+  const raw = String(value || "")
+    .replace(/\r\n/g, " ")
+    .replace(/\r/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!raw) {
+    return "";
+  }
+  return sanitizeDisplayFilename(raw).slice(0, FILE_DISPLAY_NAME_MAX_CHARS);
+}
+
+function normalizeMetadataFileEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const id = String(entry.id || "").trim();
+  const storedName = String(entry.storedName || "").trim();
+  const name = sanitizeDisplayFilename(entry.name || entry.originalName || "");
+  if (!FILE_ID_PATTERN.test(id) || !storedName || !name) {
+    return null;
+  }
+
+  const mimeType = String(entry.mimeType || "application/octet-stream").trim() || "application/octet-stream";
+  const size = Number(entry.size);
+  const uploadedAt = String(entry.uploadedAt || "").trim();
+  const updatedAt = String(entry.updatedAt || "").trim();
+  const imageStoredName = String(entry.imageStoredName || "").trim();
+  const imageMimeType = String(entry.imageMimeType || "").trim();
+  const hasImage = Boolean(imageStoredName);
+  const imageName = hasImage ? (sanitizeDisplayFilename(entry.imageName || "image") || "image") : "";
+  const imageSize = hasImage ? Math.max(0, Number(entry.imageSize) || 0) : 0;
+
+  return {
+    id: id.toLowerCase(),
+    storedName,
+    name,
+    displayName: sanitizeFileDisplayName(entry.displayName),
+    mimeType,
+    size: Number.isFinite(size) && size >= 0 ? size : 0,
+    description: sanitizeFileDescription(entry.description),
+    group: sanitizeFileGroup(entry.group),
+    uploadedAt: uploadedAt || new Date(0).toISOString(),
+    updatedAt: updatedAt || uploadedAt || "",
+    uploaderDiscordId: String(entry.uploaderDiscordId || "").trim(),
+    uploader: String(entry.uploader || "").trim(),
+    imageStoredName: hasImage ? imageStoredName : "",
+    imageMimeType: hasImage ? (imageMimeType || "application/octet-stream") : "",
+    imageName,
+    imageSize
+  };
+}
+
+function resolveUploadStoredPath(storedName) {
+  const normalizedName = String(storedName || "").trim();
+  if (!normalizedName) {
+    return "";
+  }
+  const resolvedPath = path.resolve(UPLOAD_DIR, normalizedName);
+  const uploadsRoot = path.resolve(UPLOAD_DIR) + path.sep;
+  if (!resolvedPath.startsWith(uploadsRoot)) {
+    return "";
+  }
+  return resolvedPath;
+}
+
+function deleteStoredUpload(storedName) {
+  const resolvedPath = resolveUploadStoredPath(storedName);
+  if (!resolvedPath) {
+    return;
+  }
+  fs.unlink(resolvedPath, () => {});
+}
+
+function buildFileListEntry(entry) {
+  const normalized = normalizeMetadataFileEntry(entry);
+  if (!normalized) {
+    return null;
+  }
+
+  const imageUrl = normalized.imageStoredName
+    ? `/api/files/${encodeURIComponent(normalized.id)}/image`
+    : "";
+
+  return {
+    id: normalized.id,
+    name: normalized.name,
+    displayName: normalized.displayName || normalized.name,
+    mimeType: normalized.mimeType,
+    size: normalized.size,
+    uploadedAt: normalized.uploadedAt,
+    updatedAt: normalized.updatedAt || normalized.uploadedAt,
+    description: normalized.description,
+    group: normalized.group,
+    uploader: normalized.uploader || normalized.uploaderDiscordId || "",
+    imageUrl,
+    imageName: normalized.imageName,
+    hasImage: Boolean(imageUrl)
+  };
 }
 
 function formatDiscordUsername(userPayload) {
@@ -1172,28 +1309,49 @@ const uploadStorage = multer.diskStorage({
 const upload = multer({
   storage: uploadStorage,
   limits: {
-    files: 1
+    files: 2
   }
 });
 
-function uploadSingleFile(req, res, next) {
-  upload.single("file")(req, res, (error) => {
-    if (!error) {
-      next();
+function handleUploadError(error, res) {
+  if (!error) {
+    return false;
+  }
+
+  if (error.code === "LIMIT_FILE_SIZE") {
+    res.status(400).json({ error: "File exceeds size limit" });
+    return true;
+  }
+
+  if (error instanceof multer.MulterError) {
+    res.status(400).json({ error: "Invalid upload payload" });
+    return true;
+  }
+
+  res.status(500).json({ error: "Upload failed" });
+  return true;
+}
+
+function uploadFileWithOptionalImage(req, res, next) {
+  upload.fields([
+    { name: "file", maxCount: 1 },
+    { name: "image", maxCount: 1 }
+  ])(req, res, (error) => {
+    if (handleUploadError(error, res)) {
       return;
     }
+    next();
+  });
+}
 
-    if (error.code === "LIMIT_FILE_SIZE") {
-      res.status(400).json({ error: "File exceeds size limit" });
+function uploadFileMetadataUpdate(req, res, next) {
+  upload.fields([
+    { name: "image", maxCount: 1 }
+  ])(req, res, (error) => {
+    if (handleUploadError(error, res)) {
       return;
     }
-
-    if (error instanceof multer.MulterError) {
-      res.status(400).json({ error: "Invalid upload payload" });
-      return;
-    }
-
-    res.status(500).json({ error: "Upload failed" });
+    next();
   });
 }
 
@@ -1660,43 +1818,63 @@ app.post("/auth/logout", (req, res) => {
 app.get("/api/files", requireAuthorized, (_req, res) => {
   const files = readMetadataStore()
     .sort((a, b) => String(b.uploadedAt || "").localeCompare(String(a.uploadedAt || "")))
-    .map((entry) => ({
-      id: entry.id,
-      name: entry.name,
-      mimeType: entry.mimeType,
-      size: Number(entry.size) || 0,
-      uploadedAt: entry.uploadedAt,
-      description: entry.description || "",
-      uploader: entry.uploader || entry.uploaderDiscordId || ""
-    }));
+    .map((entry) => buildFileListEntry(entry))
+    .filter(Boolean);
 
   res.json({ files });
 });
 
-app.post("/api/files/upload", requireAdmin, uploadSingleFile, (req, res) => {
-  if (!req.file) {
+app.post("/api/files/upload", requireAdmin, uploadFileWithOptionalImage, (req, res) => {
+  const uploadedFile = Array.isArray(req.files?.file) ? req.files.file[0] : null;
+  const uploadedImage = Array.isArray(req.files?.image) ? req.files.image[0] : null;
+
+  const cleanupUploads = () => {
+    if (uploadedFile?.filename) {
+      deleteStoredUpload(uploadedFile.filename);
+    } else if (uploadedFile?.path) {
+      fs.unlink(uploadedFile.path, () => {});
+    }
+    if (uploadedImage?.filename) {
+      deleteStoredUpload(uploadedImage.filename);
+    } else if (uploadedImage?.path) {
+      fs.unlink(uploadedImage.path, () => {});
+    }
+  };
+
+  if (!uploadedFile) {
+    cleanupUploads();
     res.status(400).json({ error: "No file uploaded" });
     return;
   }
 
-  const uploadPath = req.file.path;
-  const originalName = String(req.file.originalname || "");
+  const originalName = String(uploadedFile.originalname || "");
   const safeOriginalName = sanitizeDisplayFilename(originalName);
-  const description = String(req.body.description || "").trim().slice(0, 500);
+  const displayName = sanitizeFileDisplayName(req.body.displayName);
+  const description = sanitizeFileDescription(req.body.description);
+  const group = sanitizeFileGroup(req.body.group);
+  const hasImageUpload = Boolean(uploadedImage);
+  const safeImageName = hasImageUpload
+    ? (sanitizeDisplayFilename(uploadedImage.originalname || "image") || "image")
+    : "";
+  const imageMimeType = hasImageUpload
+    ? String(uploadedImage.mimetype || "application/octet-stream").trim()
+    : "";
 
   if (!isValidOriginalFilename(originalName) || !safeOriginalName) {
-    if (uploadPath) {
-      fs.unlink(uploadPath, () => {});
-    }
+    cleanupUploads();
     res.status(400).json({ error: "Invalid filename" });
     return;
   }
 
-  if (!Number.isFinite(req.file.size) || req.file.size <= 0) {
-    if (uploadPath) {
-      fs.unlink(uploadPath, () => {});
-    }
+  if (!Number.isFinite(uploadedFile.size) || uploadedFile.size <= 0) {
+    cleanupUploads();
     res.status(400).json({ error: "Empty uploads are not allowed" });
+    return;
+  }
+
+  if (hasImageUpload && !/^image\//i.test(imageMimeType)) {
+    cleanupUploads();
+    res.status(400).json({ error: "Image upload must be a valid image file" });
     return;
   }
 
@@ -1706,52 +1884,156 @@ app.post("/api/files/upload", requireAdmin, uploadSingleFile, (req, res) => {
 
   const entry = {
     id: uploadId,
-    storedName: req.file.filename,
+    storedName: uploadedFile.filename,
     name: safeOriginalName,
-    mimeType: String(req.file.mimetype || "application/octet-stream"),
-    size: req.file.size,
+    displayName,
+    mimeType: String(uploadedFile.mimetype || "application/octet-stream"),
+    size: uploadedFile.size,
     description,
+    group,
     uploadedAt: now,
+    updatedAt: now,
     uploaderDiscordId: user.discordId,
-    uploader: user.username
+    uploader: user.username,
+    imageStoredName: hasImageUpload ? uploadedImage.filename : "",
+    imageMimeType: hasImageUpload ? imageMimeType : "",
+    imageName: hasImageUpload ? safeImageName : "",
+    imageSize: hasImageUpload ? Math.max(0, Number(uploadedImage.size) || 0) : 0
   };
+
+  const normalizedEntry = normalizeMetadataFileEntry(entry);
+  if (!normalizedEntry) {
+    cleanupUploads();
+    res.status(400).json({ error: "Invalid file metadata" });
+    return;
+  }
 
   try {
     const entries = readMetadataStore();
-    entries.push(entry);
+    entries.push(normalizedEntry);
     writeMetadataStore(entries);
   } catch (error) {
-    if (uploadPath) {
-      fs.unlink(uploadPath, () => {});
-    }
+    cleanupUploads();
     console.error("[files] metadata write error:", error);
     res.status(500).json({ error: "Unable to store file metadata" });
     return;
   }
 
+  const responseFile = buildFileListEntry(normalizedEntry);
   res.status(201).json({
     ok: true,
-    file: {
-      id: entry.id,
-      name: entry.name,
-      mimeType: entry.mimeType,
-      size: entry.size,
-      uploadedAt: entry.uploadedAt,
-      description: entry.description,
-      uploader: entry.uploader
+    file: responseFile
+  });
+});
+
+app.patch("/api/files/:id", requireAdmin, uploadFileMetadataUpdate, (req, res) => {
+  const fileId = String(req.params.id || "").trim().toLowerCase();
+  const uploadedImage = Array.isArray(req.files?.image) ? req.files.image[0] : null;
+  const cleanupUploadedImage = () => {
+    if (uploadedImage?.filename) {
+      deleteStoredUpload(uploadedImage.filename);
+    } else if (uploadedImage?.path) {
+      fs.unlink(uploadedImage.path, () => {});
     }
+  };
+
+  if (!FILE_ID_PATTERN.test(fileId)) {
+    cleanupUploadedImage();
+    res.status(400).json({ error: "Invalid file id" });
+    return;
+  }
+
+  const hasDescription = Object.prototype.hasOwnProperty.call(req.body || {}, "description");
+  const hasGroup = Object.prototype.hasOwnProperty.call(req.body || {}, "group");
+  const hasDisplayName = Object.prototype.hasOwnProperty.call(req.body || {}, "displayName");
+  const removeImage = parseBoolean(req.body?.removeImage, false);
+  const imageMimeType = uploadedImage
+    ? String(uploadedImage.mimetype || "application/octet-stream").trim()
+    : "";
+
+  if (uploadedImage && !/^image\//i.test(imageMimeType)) {
+    cleanupUploadedImage();
+    res.status(400).json({ error: "Image upload must be a valid image file" });
+    return;
+  }
+
+  const entries = readMetadataStore();
+  const index = entries.findIndex((entry) => String(entry.id || "").toLowerCase() === fileId);
+  if (index < 0) {
+    cleanupUploadedImage();
+    res.status(404).json({ error: "File not found" });
+    return;
+  }
+
+  const currentEntry = entries[index];
+  const currentImageStoredName = String(currentEntry.imageStoredName || "").trim();
+  const now = new Date().toISOString();
+  const nextEntry = {
+    ...currentEntry,
+    updatedAt: now
+  };
+
+  if (hasDescription) {
+    nextEntry.description = sanitizeFileDescription(req.body.description);
+  }
+  if (hasGroup) {
+    nextEntry.group = sanitizeFileGroup(req.body.group);
+  }
+  if (hasDisplayName) {
+    nextEntry.displayName = sanitizeFileDisplayName(req.body.displayName);
+  }
+
+  if (uploadedImage) {
+    nextEntry.imageStoredName = uploadedImage.filename;
+    nextEntry.imageMimeType = imageMimeType || "application/octet-stream";
+    nextEntry.imageName = sanitizeDisplayFilename(uploadedImage.originalname || "image") || "image";
+    nextEntry.imageSize = Math.max(0, Number(uploadedImage.size) || 0);
+  } else if (removeImage) {
+    nextEntry.imageStoredName = "";
+    nextEntry.imageMimeType = "";
+    nextEntry.imageName = "";
+    nextEntry.imageSize = 0;
+  }
+
+  const normalizedEntry = normalizeMetadataFileEntry(nextEntry);
+  if (!normalizedEntry) {
+    cleanupUploadedImage();
+    res.status(400).json({ error: "Invalid file metadata update" });
+    return;
+  }
+
+  try {
+    entries[index] = normalizedEntry;
+    writeMetadataStore(entries);
+  } catch (error) {
+    cleanupUploadedImage();
+    console.error("[files] metadata update error:", error);
+    res.status(500).json({ error: "Unable to update file metadata" });
+    return;
+  }
+
+  if (uploadedImage && currentImageStoredName && currentImageStoredName !== normalizedEntry.imageStoredName) {
+    deleteStoredUpload(currentImageStoredName);
+  } else if (!uploadedImage && removeImage && currentImageStoredName) {
+    deleteStoredUpload(currentImageStoredName);
+  }
+
+  const responseFile = buildFileListEntry(normalizedEntry);
+  res.json({
+    ok: true,
+    file: responseFile
   });
 });
 
 app.delete("/api/files/:id", requireAdmin, (req, res) => {
-  const fileId = String(req.params.id || "").trim();
-  if (!/^[a-f0-9-]{36}$/i.test(fileId)) {
+  const fileId = String(req.params.id || "").trim().toLowerCase();
+  if (!FILE_ID_PATTERN.test(fileId)) {
     res.status(400).json({ error: "Invalid file id" });
     return;
   }
 
   const entries = readMetadataStore();
-  const index = entries.findIndex((entry) => entry.id === fileId);
+  const index = entries.findIndex((entry) => String(entry.id || "").toLowerCase() === fileId);
   if (index < 0) {
     res.status(404).json({ error: "File not found" });
     return;
@@ -1760,30 +2042,64 @@ app.delete("/api/files/:id", requireAdmin, (req, res) => {
   const [entry] = entries.splice(index, 1);
   writeMetadataStore(entries);
 
-  const storedPath = path.resolve(UPLOAD_DIR, String(entry.storedName || ""));
-  if (storedPath.startsWith(path.resolve(UPLOAD_DIR) + path.sep)) {
-    fs.unlink(storedPath, () => {});
-  }
+  deleteStoredUpload(entry.storedName);
+  deleteStoredUpload(entry.imageStoredName);
 
   res.json({ ok: true });
 });
 
-app.get("/api/files/:id/download", requireAuthorized, (req, res) => {
-  const fileId = String(req.params.id || "").trim();
-  if (!/^[a-f0-9-]{36}$/i.test(fileId)) {
+app.get("/api/files/:id/image", requireAuthorized, (req, res) => {
+  const fileId = String(req.params.id || "").trim().toLowerCase();
+  if (!FILE_ID_PATTERN.test(fileId)) {
     res.status(400).json({ error: "Invalid file id" });
     return;
   }
 
-  const entry = readMetadataStore().find((item) => item.id === fileId);
+  const entry = readMetadataStore().find((item) => String(item.id || "").toLowerCase() === fileId);
   if (!entry) {
     res.status(404).json({ error: "File not found" });
     return;
   }
 
-  const storedPath = path.resolve(UPLOAD_DIR, String(entry.storedName || ""));
-  const uploadsRoot = path.resolve(UPLOAD_DIR) + path.sep;
-  if (!storedPath.startsWith(uploadsRoot)) {
+  const imageStoredName = String(entry.imageStoredName || "").trim();
+  if (!imageStoredName) {
+    res.status(404).json({ error: "Image not found" });
+    return;
+  }
+
+  const storedPath = resolveUploadStoredPath(imageStoredName);
+  if (!storedPath) {
+    res.status(400).json({ error: "Invalid storage path" });
+    return;
+  }
+  if (!fs.existsSync(storedPath)) {
+    res.status(404).json({ error: "Image blob not found" });
+    return;
+  }
+
+  const safeImageName = sanitizeDisplayFilename(entry.imageName || `${entry.name || "image"}.png`) || "image.png";
+  const quotedImageName = safeImageName.replace(/"/g, "");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Content-Disposition", `inline; filename="${quotedImageName}"`);
+  res.type(entry.imageMimeType || "application/octet-stream");
+  res.sendFile(storedPath);
+});
+
+app.get("/api/files/:id/download", requireAuthorized, (req, res) => {
+  const fileId = String(req.params.id || "").trim().toLowerCase();
+  if (!FILE_ID_PATTERN.test(fileId)) {
+    res.status(400).json({ error: "Invalid file id" });
+    return;
+  }
+
+  const entry = readMetadataStore().find((item) => String(item.id || "").toLowerCase() === fileId);
+  if (!entry) {
+    res.status(404).json({ error: "File not found" });
+    return;
+  }
+
+  const storedPath = resolveUploadStoredPath(entry.storedName);
+  if (!storedPath) {
     res.status(400).json({ error: "Invalid storage path" });
     return;
   }

@@ -422,6 +422,17 @@
             <form id="filesUploadForm" class="files-upload-form" novalidate>
               <label id="filesUploadFileLabel" for="filesUploadInput">File</label>
               <input id="filesUploadInput" class="files-upload-input" type="file" name="file" />
+              <label id="filesUploadImageLabel" for="filesImageInput">Image</label>
+              <input id="filesImageInput" class="files-upload-input files-upload-image-input" type="file" name="image" accept="image/*" />
+              <label id="filesUploadGroupLabel" for="filesGroupInput">Group</label>
+              <input
+                id="filesGroupInput"
+                name="group"
+                class="files-upload-text"
+                type="text"
+                maxlength="80"
+                placeholder="Optional group..."
+              />
               <label id="filesUploadDescLabel" for="filesDescriptionInput">Description</label>
               <textarea
                 id="filesDescriptionInput"
