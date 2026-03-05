@@ -8403,8 +8403,16 @@ body.is-classified .classified-layout {
     letter-spacing: 0.03em;
   }
 
+  .hack-log-panel {
+    min-height: 0;
+  }
+
   .hack-log {
-    min-height: 180px;
+    height: clamp(170px, 26svh, 240px);
+    min-height: clamp(170px, 26svh, 240px);
+    max-height: clamp(170px, 26svh, 240px);
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .minerva-detail-top {
