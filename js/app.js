@@ -2370,11 +2370,19 @@ function closeFilesGroupRenameModal({ force = false } = {}) {
   renderFilesGroupRenameModal();
 }
 
+function isDesktopModalViewport() {
+  if (typeof window.matchMedia === "function") {
+    return window.matchMedia("(min-width: 1025px)").matches;
+  }
+  return (Number(window.innerWidth) || 0) >= 1025;
+}
+
 function renderFilesDisclaimerModal() {
   const me = normalizeFilesProfile(state.files.me);
   const canShowDisclaimer = Boolean(me.isAuthorized);
   const isOpen = canShowDisclaimer && Boolean(state.files.disclaimerModal.open);
   state.files.disclaimerModal.open = isOpen;
+  document.body.classList.toggle("is-files-disclaimer-open", isOpen);
 
   if (elements.filesDisclaimerBtn) {
     elements.filesDisclaimerBtn.hidden = !canShowDisclaimer;
@@ -10853,16 +10861,25 @@ function wireEvents() {
   });
   elements.filesDisclaimerOverlay?.addEventListener("click", (event) => {
     if (event.target === elements.filesDisclaimerOverlay) {
+      if (isDesktopModalViewport()) {
+        return;
+      }
       closeFilesDisclaimerModal();
     }
   });
   elements.filesUploadOverlay?.addEventListener("click", (event) => {
     if (event.target === elements.filesUploadOverlay) {
+      if (isDesktopModalViewport()) {
+        return;
+      }
       closeFilesAdminModal();
     }
   });
   elements.filesAdminRequestsOverlay?.addEventListener("click", (event) => {
     if (event.target === elements.filesAdminRequestsOverlay) {
+      if (isDesktopModalViewport()) {
+        return;
+      }
       closeFilesAdminModal();
     }
   });
@@ -11085,7 +11102,9 @@ function wireEvents() {
     }
 
     if (elements.filesDisclaimerOverlay?.classList.contains("is-active")) {
-      closeFilesDisclaimerModal();
+      if (!isDesktopModalViewport()) {
+        closeFilesDisclaimerModal();
+      }
       return;
     }
 
@@ -11108,7 +11127,9 @@ function wireEvents() {
       elements.filesUploadOverlay?.classList.contains("is-active")
       || elements.filesAdminRequestsOverlay?.classList.contains("is-active")
     ) {
-      closeFilesAdminModal();
+      if (!isDesktopModalViewport()) {
+        closeFilesAdminModal();
+      }
       return;
     }
 

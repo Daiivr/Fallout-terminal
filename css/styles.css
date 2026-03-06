@@ -2318,6 +2318,16 @@ body.error-page.is-unauthorized .error-radar-sweep {
   backdrop-filter: blur(1px);
 }
 
+.files-disclaimer-overlay,
+.files-admin-modal-overlay {
+  background:
+    radial-gradient(130% 110% at 100% 0%, rgba(255, 225, 122, 0.14), rgba(0, 0, 0, 0) 56%),
+    radial-gradient(120% 120% at 0% 100%, rgba(139, 255, 139, 0.14), rgba(0, 0, 0, 0) 58%),
+    rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(3px) saturate(1.1);
+  -webkit-backdrop-filter: blur(3px) saturate(1.1);
+}
+
 .classified-load-overlay {
   z-index: 1220;
 }
@@ -2609,7 +2619,8 @@ body.error-page.is-unauthorized .error-radar-sweep {
   z-index: 1;
 }
 
-body.is-files-admin-modal-open {
+body.is-files-admin-modal-open,
+body.is-files-disclaimer-open {
   overflow: hidden;
 }
 
@@ -9053,6 +9064,21 @@ body.is-classified .classified-layout {
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+  }
+
+  body.is-files-admin-modal-open .pipboy-terminal,
+  body.is-files-disclaimer-open .pipboy-terminal {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: auto;
+    touch-action: none;
+  }
+
+  body.is-files-admin-modal-open .files-page,
+  body.is-files-disclaimer-open .files-page {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+    touch-action: none;
   }
 
   body.is-files.is-files-unauthorized .files-page {
