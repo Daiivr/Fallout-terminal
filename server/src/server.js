@@ -90,6 +90,7 @@ const ACCESS_REQUEST_REAPPLY_COOLDOWN_MS = parsePositiveInteger(
   7 * 24 * 60 * 60 * 1000
 );
 const ACCESS_REQUEST_REASON_MAX_CHARS = 1200;
+const FILES_DISCLAIMER_REEVALUATION_MAX_CHARS = ACCESS_REQUEST_REASON_MAX_CHARS;
 const FILE_DESCRIPTION_MAX_CHARS = 500;
 const FILE_GROUP_MAX_CHARS = 80;
 const FILE_DISPLAY_NAME_MAX_CHARS = 180;
@@ -102,6 +103,11 @@ const ACCESS_REQUEST_STATUS = Object.freeze({
   DECLINED: "declined"
 });
 const ACCESS_REQUEST_DECISION_ACTIONS = new Set(["approve", "decline"]);
+const ACCESS_DISCLAIMER_DECISION = Object.freeze({
+  NONE: "none",
+  ACCEPTED: "accepted",
+  DECLINED: "declined"
+});
 
 function parseDiscordIdList(raw) {
   return String(raw || "")
@@ -172,6 +178,29 @@ function normalizeAccessRequestStatus(value) {
   return ACCESS_REQUEST_STATUS.NONE;
 }
 
+function normalizeAccessDisclaimerDecision(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === ACCESS_DISCLAIMER_DECISION.ACCEPTED) {
+    return ACCESS_DISCLAIMER_DECISION.ACCEPTED;
+  }
+  if (normalized === ACCESS_DISCLAIMER_DECISION.DECLINED) {
+    return ACCESS_DISCLAIMER_DECISION.DECLINED;
+  }
+  return ACCESS_DISCLAIMER_DECISION.NONE;
+}
+
+function isAccessRequestDisclaimerReevaluationPending(entry) {
+  if (!entry || typeof entry !== "object") {
+    return false;
+  }
+  const status = normalizeAccessRequestStatus(entry.status);
+  const disclaimerDecision = normalizeAccessDisclaimerDecision(entry.disclaimerDecision);
+  const pendingRequestedAt = String(entry.disclaimerReevaluationRequestedAt || "").trim();
+  return status === ACCESS_REQUEST_STATUS.APPROVED
+    && disclaimerDecision === ACCESS_DISCLAIMER_DECISION.DECLINED
+    && Boolean(pendingRequestedAt);
+}
+
 function sanitizeAccessRequestReason(value) {
   const raw = String(value || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
   if (!raw) {
@@ -194,6 +223,20 @@ function sanitizeAccessRequestEntry(entry) {
   const requestId = /^[a-f0-9-]{36}$/i.test(String(entry.requestId || "").trim())
     ? String(entry.requestId || "").trim().toLowerCase()
     : "";
+  const disclaimerDecisionRaw = normalizeAccessDisclaimerDecision(entry.disclaimerDecision);
+  const disclaimerDecision = status === ACCESS_REQUEST_STATUS.APPROVED
+    ? disclaimerDecisionRaw
+    : ACCESS_DISCLAIMER_DECISION.NONE;
+  const disclaimerDecidedAt = disclaimerDecision !== ACCESS_DISCLAIMER_DECISION.NONE
+    ? String(entry.disclaimerDecidedAt || "").trim()
+    : "";
+  const declineReason = status === ACCESS_REQUEST_STATUS.DECLINED
+    ? sanitizeAccessRequestReason(entry.declineReason)
+    : "";
+  const disclaimerReevaluationRequestedAt = status === ACCESS_REQUEST_STATUS.APPROVED
+    && disclaimerDecision === ACCESS_DISCLAIMER_DECISION.DECLINED
+    ? String(entry.disclaimerReevaluationRequestedAt || "").trim()
+    : "";
 
   return {
     requestId: requestId || crypto.randomUUID(),
@@ -202,9 +245,13 @@ function sanitizeAccessRequestEntry(entry) {
     username: String(entry.username || "").trim().slice(0, 120),
     email: String(entry.email || "").trim().slice(0, 200),
     reason: sanitizeAccessRequestReason(entry.reason),
+    declineReason,
     status: status === ACCESS_REQUEST_STATUS.NONE ? ACCESS_REQUEST_STATUS.PENDING : status,
     requestedAt: String(entry.requestedAt || "").trim(),
-    decidedAt: String(entry.decidedAt || "").trim()
+    decidedAt: String(entry.decidedAt || "").trim(),
+    disclaimerDecision,
+    disclaimerDecidedAt,
+    disclaimerReevaluationRequestedAt
   };
 }
 
@@ -293,40 +340,55 @@ function getAccessRequestState(discordId) {
   const normalizedId = String(discordId || "").trim();
   if (!isDiscordId(normalizedId)) {
     return {
+      discordId: "",
       status: ACCESS_REQUEST_STATUS.NONE,
+      disclaimerDecision: ACCESS_DISCLAIMER_DECISION.NONE,
+      disclaimerDecidedAt: "",
+      disclaimerReevaluationRequestedAt: "",
       requestId: "",
       requestedAt: "",
       decidedAt: "",
       nick: "",
       username: "",
       email: "",
-      reason: ""
+      reason: "",
+      declineReason: ""
     };
   }
 
   const entry = readAccessRequestStore().find((item) => item.discordId === normalizedId) || null;
   if (!entry) {
     return {
+      discordId: normalizedId,
       status: ACCESS_REQUEST_STATUS.NONE,
+      disclaimerDecision: ACCESS_DISCLAIMER_DECISION.NONE,
+      disclaimerDecidedAt: "",
+      disclaimerReevaluationRequestedAt: "",
       requestId: "",
       requestedAt: "",
       decidedAt: "",
       nick: "",
       username: "",
       email: "",
-      reason: ""
+      reason: "",
+      declineReason: ""
     };
   }
 
   return {
+    discordId: normalizedId,
     status: normalizeAccessRequestStatus(entry.status),
+    disclaimerDecision: normalizeAccessDisclaimerDecision(entry.disclaimerDecision),
+    disclaimerDecidedAt: String(entry.disclaimerDecidedAt || ""),
+    disclaimerReevaluationRequestedAt: String(entry.disclaimerReevaluationRequestedAt || ""),
     requestId: String(entry.requestId || ""),
     requestedAt: String(entry.requestedAt || ""),
     decidedAt: String(entry.decidedAt || ""),
     nick: String(entry.nick || ""),
     username: String(entry.username || ""),
     email: String(entry.email || ""),
-    reason: sanitizeAccessRequestReason(entry.reason)
+    reason: sanitizeAccessRequestReason(entry.reason),
+    declineReason: sanitizeAccessRequestReason(entry.declineReason)
   };
 }
 
@@ -379,9 +441,13 @@ function createPendingAccessRequestEntry(user, reason) {
     username: String(profile?.username || user.username || "").trim().slice(0, 120),
     email: String(profile?.email || "").trim().slice(0, 200),
     reason: sanitizeAccessRequestReason(reason),
+    declineReason: "",
     status: ACCESS_REQUEST_STATUS.PENDING,
     requestedAt: nowIso,
-    decidedAt: ""
+    decidedAt: "",
+    disclaimerDecision: ACCESS_DISCLAIMER_DECISION.NONE,
+    disclaimerDecidedAt: "",
+    disclaimerReevaluationRequestedAt: ""
   };
 }
 
@@ -396,9 +462,10 @@ function upsertAccessRequestEntry(nextEntry) {
   writeAccessRequestStore(entries);
 }
 
-function applyAccessRequestDecision(requestId, action) {
+function applyAccessRequestDecision(requestId, action, { declineReason = "" } = {}) {
   const normalizedRequestId = String(requestId || "").trim().toLowerCase();
   const normalizedAction = String(action || "").trim().toLowerCase();
+  const normalizedDeclineReason = sanitizeAccessRequestReason(declineReason);
   if (!/^[a-f0-9-]{36}$/i.test(normalizedRequestId) || !ACCESS_REQUEST_DECISION_ACTIONS.has(normalizedAction)) {
     return { ok: false, reason: "invalid" };
   }
@@ -411,7 +478,26 @@ function applyAccessRequestDecision(requestId, action) {
 
   const entry = entries[index];
   const currentStatus = normalizeAccessRequestStatus(entry.status);
+  const isPendingReevaluation = isAccessRequestDisclaimerReevaluationPending(entry);
   if (currentStatus !== ACCESS_REQUEST_STATUS.PENDING) {
+    if (isPendingReevaluation) {
+      const reevaluationDecision = applyAccessRequestReevaluationDecisionByDiscordId(
+        entry.discordId,
+        normalizedAction,
+        { declineReason: normalizedDeclineReason }
+      );
+      if (!reevaluationDecision.ok) {
+        return {
+          ok: false,
+          reason: reevaluationDecision.reason || "invalid",
+          entry: reevaluationDecision.entry || entry
+        };
+      }
+      return {
+        ok: true,
+        entry: reevaluationDecision.entry || null
+      };
+    }
     return {
       ok: false,
       reason: "already_decided",
@@ -419,11 +505,19 @@ function applyAccessRequestDecision(requestId, action) {
     };
   }
 
-  entries[index] = {
+  const nextEntry = sanitizeAccessRequestEntry({
     ...entry,
     status: normalizedAction === "approve" ? ACCESS_REQUEST_STATUS.APPROVED : ACCESS_REQUEST_STATUS.DECLINED,
-    decidedAt: new Date().toISOString()
-  };
+    decidedAt: new Date().toISOString(),
+    declineReason: normalizedAction === "decline" ? normalizedDeclineReason : "",
+    disclaimerDecision: ACCESS_DISCLAIMER_DECISION.NONE,
+    disclaimerDecidedAt: "",
+    disclaimerReevaluationRequestedAt: ""
+  });
+  if (!nextEntry) {
+    return { ok: false, reason: "invalid" };
+  }
+  entries[index] = nextEntry;
   writeAccessRequestStore(entries);
   return {
     ok: true,
@@ -431,7 +525,7 @@ function applyAccessRequestDecision(requestId, action) {
   };
 }
 
-function updateAccessRequestStatusByDiscordId(discordId, nextStatus, { allowedCurrentStatuses = null } = {}) {
+function updateAccessRequestStatusByDiscordId(discordId, nextStatus, { allowedCurrentStatuses = null, declineReason = "" } = {}) {
   const normalizedDiscordId = String(discordId || "").trim();
   const normalizedNextStatus = normalizeAccessRequestStatus(nextStatus);
   if (!isDiscordId(normalizedDiscordId) || normalizedNextStatus === ACCESS_REQUEST_STATUS.NONE) {
@@ -466,7 +560,13 @@ function updateAccessRequestStatusByDiscordId(discordId, nextStatus, { allowedCu
     ...currentEntry,
     status: normalizedNextStatus,
     requestedAt: String(currentEntry.requestedAt || nowIso).trim() || nowIso,
-    decidedAt: normalizedNextStatus === ACCESS_REQUEST_STATUS.PENDING ? "" : nowIso
+    decidedAt: normalizedNextStatus === ACCESS_REQUEST_STATUS.PENDING ? "" : nowIso,
+    declineReason: normalizedNextStatus === ACCESS_REQUEST_STATUS.DECLINED
+      ? sanitizeAccessRequestReason(declineReason)
+      : "",
+    disclaimerDecision: ACCESS_DISCLAIMER_DECISION.NONE,
+    disclaimerDecidedAt: "",
+    disclaimerReevaluationRequestedAt: ""
   });
 
   if (!updatedEntry) {
@@ -496,11 +596,33 @@ function clearDeclinedAccessRequestForReapply(discordId) {
 
   const entry = entries[index];
   const currentStatus = normalizeAccessRequestStatus(entry.status);
-  if (currentStatus !== ACCESS_REQUEST_STATUS.DECLINED) {
+  const currentDisclaimerDecision = normalizeAccessDisclaimerDecision(entry.disclaimerDecision);
+  const declinedByDisclaimer = currentStatus === ACCESS_REQUEST_STATUS.APPROVED
+    && currentDisclaimerDecision === ACCESS_DISCLAIMER_DECISION.DECLINED;
+
+  if (currentStatus !== ACCESS_REQUEST_STATUS.DECLINED && !declinedByDisclaimer) {
     return {
       ok: false,
       reason: "status_mismatch",
       entry
+    };
+  }
+
+  if (declinedByDisclaimer) {
+    const updatedEntry = sanitizeAccessRequestEntry({
+      ...entry,
+      disclaimerDecision: ACCESS_DISCLAIMER_DECISION.NONE,
+      disclaimerDecidedAt: "",
+      disclaimerReevaluationRequestedAt: ""
+    });
+    if (!updatedEntry) {
+      return { ok: false, reason: "invalid" };
+    }
+    entries[index] = updatedEntry;
+    writeAccessRequestStore(entries);
+    return {
+      ok: true,
+      entry: updatedEntry
     };
   }
 
@@ -512,24 +634,255 @@ function clearDeclinedAccessRequestForReapply(discordId) {
   };
 }
 
+function setAccessRequestDisclaimerDecisionByDiscordId(discordId, decision) {
+  const normalizedDiscordId = String(discordId || "").trim();
+  const normalizedDecision = normalizeAccessDisclaimerDecision(decision);
+  if (!isDiscordId(normalizedDiscordId) || normalizedDecision === ACCESS_DISCLAIMER_DECISION.NONE) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  const entries = readAccessRequestStore();
+  const index = entries.findIndex((entry) => entry.discordId === normalizedDiscordId);
+  if (index < 0) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  const currentEntry = entries[index];
+  const currentStatus = normalizeAccessRequestStatus(currentEntry.status);
+  if (currentStatus !== ACCESS_REQUEST_STATUS.APPROVED) {
+    return {
+      ok: false,
+      reason: "status_mismatch",
+      entry: currentEntry
+    };
+  }
+
+  const currentDecision = normalizeAccessDisclaimerDecision(currentEntry.disclaimerDecision);
+  if (currentDecision === ACCESS_DISCLAIMER_DECISION.DECLINED && normalizedDecision === ACCESS_DISCLAIMER_DECISION.ACCEPTED) {
+    return {
+      ok: false,
+      reason: "locked_declined",
+      entry: currentEntry
+    };
+  }
+  if (currentDecision === normalizedDecision) {
+    return {
+      ok: true,
+      entry: currentEntry
+    };
+  }
+
+  const updatedEntry = sanitizeAccessRequestEntry({
+    ...currentEntry,
+    disclaimerDecision: normalizedDecision,
+    disclaimerDecidedAt: new Date().toISOString(),
+    disclaimerReevaluationRequestedAt: ""
+  });
+  if (!updatedEntry) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  entries[index] = updatedEntry;
+  writeAccessRequestStore(entries);
+  return {
+    ok: true,
+    entry: updatedEntry
+  };
+}
+
+function applyAccessRequestReevaluationDecisionByDiscordId(discordId, action, { declineReason = "" } = {}) {
+  const normalizedDiscordId = String(discordId || "").trim();
+  const normalizedAction = String(action || "").trim().toLowerCase();
+  const normalizedDeclineReason = sanitizeAccessRequestReason(declineReason);
+  if (!isDiscordId(normalizedDiscordId) || !ACCESS_REQUEST_DECISION_ACTIONS.has(normalizedAction)) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  const entries = readAccessRequestStore();
+  const index = entries.findIndex((entry) => entry.discordId === normalizedDiscordId);
+  if (index < 0) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  const entry = entries[index];
+  const currentStatus = normalizeAccessRequestStatus(entry.status);
+  const currentDisclaimerDecision = normalizeAccessDisclaimerDecision(entry.disclaimerDecision);
+  const pendingRequestedAt = String(entry.disclaimerReevaluationRequestedAt || "").trim();
+  if (
+    currentStatus !== ACCESS_REQUEST_STATUS.APPROVED
+    || currentDisclaimerDecision !== ACCESS_DISCLAIMER_DECISION.DECLINED
+    || !pendingRequestedAt
+  ) {
+    return {
+      ok: false,
+      reason: "state_mismatch",
+      entry
+    };
+  }
+
+  let nextEntry = null;
+  if (normalizedAction === "approve") {
+    nextEntry = sanitizeAccessRequestEntry({
+      ...entry,
+      disclaimerDecision: ACCESS_DISCLAIMER_DECISION.NONE,
+      disclaimerDecidedAt: "",
+      disclaimerReevaluationRequestedAt: ""
+    });
+  } else {
+    const nowIso = new Date().toISOString();
+    nextEntry = sanitizeAccessRequestEntry({
+      ...entry,
+      status: ACCESS_REQUEST_STATUS.DECLINED,
+      decidedAt: nowIso,
+      declineReason: normalizedDeclineReason,
+      disclaimerDecision: ACCESS_DISCLAIMER_DECISION.NONE,
+      disclaimerDecidedAt: "",
+      disclaimerReevaluationRequestedAt: ""
+    });
+  }
+
+  if (!nextEntry) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  entries[index] = nextEntry;
+  writeAccessRequestStore(entries);
+  return {
+    ok: true,
+    entry: nextEntry
+  };
+}
+
+function markAccessRequestDisclaimerReevaluationPendingByDiscordId(discordId) {
+  const normalizedDiscordId = String(discordId || "").trim();
+  if (!isDiscordId(normalizedDiscordId)) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  const entries = readAccessRequestStore();
+  const index = entries.findIndex((entry) => entry.discordId === normalizedDiscordId);
+  if (index < 0) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  const entry = entries[index];
+  const currentStatus = normalizeAccessRequestStatus(entry.status);
+  const currentDisclaimerDecision = normalizeAccessDisclaimerDecision(entry.disclaimerDecision);
+  if (currentStatus !== ACCESS_REQUEST_STATUS.APPROVED || currentDisclaimerDecision !== ACCESS_DISCLAIMER_DECISION.DECLINED) {
+    return {
+      ok: false,
+      reason: "state_mismatch",
+      entry
+    };
+  }
+
+  const pendingRequestedAt = String(entry.disclaimerReevaluationRequestedAt || "").trim();
+  if (pendingRequestedAt) {
+    return {
+      ok: false,
+      reason: "already_pending",
+      entry
+    };
+  }
+
+  const updatedEntry = sanitizeAccessRequestEntry({
+    ...entry,
+    disclaimerReevaluationRequestedAt: new Date().toISOString()
+  });
+  if (!updatedEntry) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  entries[index] = updatedEntry;
+  writeAccessRequestStore(entries);
+  return {
+    ok: true,
+    entry: updatedEntry
+  };
+}
+
+function clearAccessRequestDisclaimerReevaluationPendingByDiscordId(discordId) {
+  const normalizedDiscordId = String(discordId || "").trim();
+  if (!isDiscordId(normalizedDiscordId)) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  const entries = readAccessRequestStore();
+  const index = entries.findIndex((entry) => entry.discordId === normalizedDiscordId);
+  if (index < 0) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  const entry = entries[index];
+  const pendingRequestedAt = String(entry.disclaimerReevaluationRequestedAt || "").trim();
+  if (!pendingRequestedAt) {
+    return {
+      ok: true,
+      entry
+    };
+  }
+
+  const updatedEntry = sanitizeAccessRequestEntry({
+    ...entry,
+    disclaimerReevaluationRequestedAt: ""
+  });
+  if (!updatedEntry) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  entries[index] = updatedEntry;
+  writeAccessRequestStore(entries);
+  return {
+    ok: true,
+    entry: updatedEntry
+  };
+}
+
 function getAccessRequestAdminEntries() {
   const requestEntries = readAccessRequestStore().map((entry) => {
     const status = normalizeAccessRequestStatus(entry.status);
+    const disclaimerDecision = normalizeAccessDisclaimerDecision(entry.disclaimerDecision);
+    const reevaluationPending = isAccessRequestDisclaimerReevaluationPending(entry);
+    const declinedByDisclaimer = status === ACCESS_REQUEST_STATUS.APPROVED
+      && disclaimerDecision === ACCESS_DISCLAIMER_DECISION.DECLINED;
+    const rawDeclineReason = sanitizeAccessRequestReason(entry.declineReason);
+    const effectiveStatus = reevaluationPending
+      ? ACCESS_REQUEST_STATUS.PENDING
+      : (declinedByDisclaimer ? ACCESS_REQUEST_STATUS.DECLINED : status);
+    const effectiveReason = reevaluationPending
+      ? "Pending reevaluation: user declined required disclaimer."
+      : (declinedByDisclaimer
+          ? "Declined by user: required disclaimer was not accepted."
+          : sanitizeAccessRequestReason(entry.reason));
+    const effectiveDeclineReason = reevaluationPending
+      ? ""
+      : (declinedByDisclaimer
+          ? "Declined by user: required disclaimer was not accepted."
+          : rawDeclineReason);
+    const effectiveRequestedAt = reevaluationPending
+      ? String(entry.disclaimerReevaluationRequestedAt || entry.requestedAt || "")
+      : String(entry.requestedAt || "");
+    const effectiveDecidedAt = reevaluationPending
+      ? ""
+      : (declinedByDisclaimer
+          ? String(entry.disclaimerDecidedAt || entry.decidedAt || "")
+          : String(entry.decidedAt || ""));
     return {
       requestId: String(entry.requestId || ""),
       discordId: String(entry.discordId || ""),
       nick: String(entry.nick || ""),
       username: String(entry.username || ""),
       email: String(entry.email || ""),
-      reason: sanitizeAccessRequestReason(entry.reason),
-      status,
-      requestedAt: String(entry.requestedAt || ""),
-      decidedAt: String(entry.decidedAt || ""),
+      reason: effectiveReason,
+      declineReason: effectiveDeclineReason,
+      status: effectiveStatus,
+      requestedAt: effectiveRequestedAt,
+      decidedAt: effectiveDecidedAt,
       source: "request",
-      canApprove: status === ACCESS_REQUEST_STATUS.PENDING,
-      canDecline: status === ACCESS_REQUEST_STATUS.PENDING,
-      canUnauthorize: status === ACCESS_REQUEST_STATUS.APPROVED,
-      canAllowReapply: status === ACCESS_REQUEST_STATUS.DECLINED
+      canApprove: effectiveStatus === ACCESS_REQUEST_STATUS.PENDING,
+      canDecline: effectiveStatus === ACCESS_REQUEST_STATUS.PENDING,
+      canUnauthorize: effectiveStatus === ACCESS_REQUEST_STATUS.APPROVED,
+      canAllowReapply: effectiveStatus === ACCESS_REQUEST_STATUS.DECLINED
     };
   });
 
@@ -546,6 +899,7 @@ function getAccessRequestAdminEntries() {
       username: "",
       email: "",
       reason: "",
+      declineReason: "",
       status: ACCESS_REQUEST_STATUS.APPROVED,
       requestedAt: "",
       decidedAt: "",
@@ -795,6 +1149,23 @@ function isAdmin(user) {
   return Boolean(user && user.discordId === ADMIN_DISCORD_ID);
 }
 
+function isAccessRequestDisclaimerAccepted(accessRequestState = null) {
+  return normalizeAccessDisclaimerDecision(accessRequestState?.disclaimerDecision) === ACCESS_DISCLAIMER_DECISION.ACCEPTED;
+}
+
+function isDisclaimerAcceptanceRequired(user, accessRequestState = null) {
+  if (!user || isAdmin(user) || ALLOWED_DISCORD_IDS.has(user.discordId)) {
+    return false;
+  }
+
+  const resolvedAccessState = accessRequestState || getAccessRequestState(user.discordId);
+  const status = normalizeAccessRequestStatus(resolvedAccessState?.status);
+  if (status !== ACCESS_REQUEST_STATUS.APPROVED) {
+    return false;
+  }
+  return !isAccessRequestDisclaimerAccepted(resolvedAccessState);
+}
+
 function isAuthorized(user, accessRequestState = null) {
   if (!user) {
     return false;
@@ -804,7 +1175,11 @@ function isAuthorized(user, accessRequestState = null) {
   }
 
   const resolvedAccessState = accessRequestState || getAccessRequestState(user.discordId);
-  return normalizeAccessRequestStatus(resolvedAccessState.status) === ACCESS_REQUEST_STATUS.APPROVED;
+  const status = normalizeAccessRequestStatus(resolvedAccessState.status);
+  if (status !== ACCESS_REQUEST_STATUS.APPROVED) {
+    return false;
+  }
+  return isAccessRequestDisclaimerAccepted(resolvedAccessState);
 }
 
 function buildMePayload(req) {
@@ -819,11 +1194,17 @@ function buildMePayload(req) {
       accessRequestStatus: ACCESS_REQUEST_STATUS.NONE,
       accessRequestRequestedAt: "",
       accessRequestDecidedAt: "",
-      accessRequestReapplyAt: ""
+      accessRequestReapplyAt: "",
+      accessRequestDeclineReason: "",
+      accessDisclaimerDecision: ACCESS_DISCLAIMER_DECISION.NONE,
+      accessDisclaimerDecidedAt: "",
+      accessDisclaimerReevaluationRequestedAt: "",
+      disclaimerRequired: false
     };
   }
 
   const accessRequestState = getAccessRequestState(user.discordId);
+  const disclaimerRequired = isDisclaimerAcceptanceRequired(user, accessRequestState);
 
   return {
     loggedIn: true,
@@ -834,7 +1215,12 @@ function buildMePayload(req) {
     accessRequestStatus: accessRequestState.status,
     accessRequestRequestedAt: accessRequestState.requestedAt,
     accessRequestDecidedAt: accessRequestState.decidedAt,
-    accessRequestReapplyAt: getAccessRequestReapplyAtIso(accessRequestState)
+    accessRequestReapplyAt: getAccessRequestReapplyAtIso(accessRequestState),
+    accessRequestDeclineReason: sanitizeAccessRequestReason(accessRequestState.declineReason),
+    accessDisclaimerDecision: normalizeAccessDisclaimerDecision(accessRequestState.disclaimerDecision),
+    accessDisclaimerDecidedAt: String(accessRequestState.disclaimerDecidedAt || ""),
+    accessDisclaimerReevaluationRequestedAt: String(accessRequestState.disclaimerReevaluationRequestedAt || ""),
+    disclaimerRequired
   };
 }
 
@@ -1111,6 +1497,35 @@ function buildAccessRequestDecisionLink({ baseUrl, requestId, action, expiresAtM
   return `${baseUrl}/admin/access-requests/decision?${query.toString()}`;
 }
 
+function signAccessRequestReevaluationDecisionToken(discordId, action, expiresAtMs) {
+  const payload = `reeval:${discordId}:${action}:${expiresAtMs}`;
+  return crypto.createHmac("sha256", ACCESS_REQUEST_TOKEN_SECRET).update(payload).digest("hex");
+}
+
+function verifyAccessRequestReevaluationDecisionToken(discordId, action, expiresAtMs, providedToken) {
+  const expectedToken = signAccessRequestReevaluationDecisionToken(discordId, action, expiresAtMs);
+  const provided = Buffer.from(String(providedToken || ""), "utf8");
+  const expected = Buffer.from(expectedToken, "utf8");
+  if (provided.length !== expected.length) {
+    return false;
+  }
+  try {
+    return crypto.timingSafeEqual(provided, expected);
+  } catch {
+    return false;
+  }
+}
+
+function buildAccessRequestReevaluationDecisionLink({ baseUrl, discordId, action, expiresAtMs }) {
+  const query = new URLSearchParams({
+    did: discordId,
+    action,
+    exp: String(expiresAtMs),
+    token: signAccessRequestReevaluationDecisionToken(discordId, action, expiresAtMs)
+  });
+  return `${baseUrl}/admin/access-requests/reevaluation-decision?${query.toString()}`;
+}
+
 function buildAccessRequestDecisionPage({
   title,
   statusLabel,
@@ -1127,8 +1542,12 @@ function buildAccessRequestDecisionPage({
   const safeRequestedAt = escapeHtml(formatUtcTimestamp(entry?.requestedAt || ""));
   const safeDecidedAt = escapeHtml(formatUtcTimestamp(entry?.decidedAt || ""));
   const safeReason = escapeHtml(sanitizeAccessRequestReason(entry?.reason || ""));
+  const safeDeclineReason = escapeHtml(sanitizeAccessRequestReason(entry?.declineReason || ""));
   const reasonRow = safeReason
     ? `<div class="row"><span>Reason</span><span style="white-space:pre-wrap;">${safeReason}</span></div>`
+    : "";
+  const declineReasonRow = safeDeclineReason
+    ? `<div class="row"><span>Decline Reason</span><span style="white-space:pre-wrap;">${safeDeclineReason}</span></div>`
     : "";
   const returnUrl = baseUrl ? `${baseUrl}/#files` : "/#files";
 
@@ -1235,6 +1654,7 @@ function buildAccessRequestDecisionPage({
         <div class="row"><span>User</span><span>${safeUser}</span></div>
         <div class="row"><span>Discord ID</span><span>${safeId}</span></div>
         ${reasonRow}
+        ${declineReasonRow}
         <div class="row"><span>Requested (UTC)</span><span>${safeRequestedAt}</span></div>
         <div class="row"><span>Decided (UTC)</span><span>${safeDecidedAt}</span></div>
       </div>
@@ -1367,6 +1787,152 @@ async function sendAccessRequestEmail({ user, requestEntry, req }) {
   });
 }
 
+function buildDisclaimerReevaluationEmailContent({ user, accessRequestState, explanation, req }) {
+  const sanitizedExplanation = sanitizeAccessRequestReason(explanation);
+  const identity = resolveAccessRequestIdentity(user, {
+    email: accessRequestState?.email || "",
+    reason: sanitizedExplanation,
+    requestedAt: accessRequestState?.requestedAt || ""
+  });
+
+  const safeNick = escapeHtml(identity.nick);
+  const safeUsername = escapeHtml(identity.username);
+  const safeEmail = escapeHtml(identity.email);
+  const safeDiscordId = escapeHtml(identity.discordId);
+  const safeRequestId = escapeHtml(String(accessRequestState?.requestId || "Unknown"));
+  const safeAccountAge = escapeHtml(identity.accountAge);
+  const safeRequestTime = escapeHtml(formatUtcTimestamp(accessRequestState?.requestedAt || ""));
+  const safeDecisionTime = escapeHtml(formatUtcTimestamp(accessRequestState?.decidedAt || ""));
+  const safeDisclaimerDecisionTime = escapeHtml(formatUtcTimestamp(accessRequestState?.disclaimerDecidedAt || ""));
+  const safeOriginalReason = escapeHtml(sanitizeAccessRequestReason(accessRequestState?.reason || ""));
+  const safeOriginalReasonHtml = safeOriginalReason ? safeOriginalReason.replace(/\n/g, "<br />") : "";
+  const safeExplanation = escapeHtml(sanitizedExplanation);
+  const safeExplanationHtml = safeExplanation ? safeExplanation.replace(/\n/g, "<br />") : "";
+  const baseUrl = getRequestBaseUrl(req);
+  const returnUrl = baseUrl ? `${baseUrl}/#files` : "/#files";
+  const decisionExpiresAtMs = Date.now() + ACCESS_REQUEST_DECISION_TTL_MS;
+  const decisionExpiresAtLabel = formatUtcTimestamp(decisionExpiresAtMs);
+  const reapproveLink = baseUrl
+    ? buildAccessRequestReevaluationDecisionLink({
+        baseUrl,
+        discordId: String(accessRequestState?.discordId || user?.discordId || "").trim(),
+        action: "approve",
+        expiresAtMs: decisionExpiresAtMs
+      })
+    : "";
+  const declineLink = baseUrl
+    ? buildAccessRequestReevaluationDecisionLink({
+        baseUrl,
+        discordId: String(accessRequestState?.discordId || user?.discordId || "").trim(),
+        action: "decline",
+        expiresAtMs: decisionExpiresAtMs
+      })
+    : "";
+  const safeReapproveHref = escapeHtml(reapproveLink || "#");
+  const safeDeclineHref = escapeHtml(declineLink || "#");
+  const reapproveButtonStyle = reapproveLink
+    ? "display:inline-block;padding:9px 14px;border:1px solid rgba(139,255,139,0.5);border-radius:9px;background:rgba(0,0,0,0.34);color:#d8ffd8;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;"
+    : "display:inline-block;padding:9px 14px;border:1px solid rgba(139,255,139,0.22);border-radius:9px;background:rgba(0,0,0,0.24);color:#7fb07f;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;pointer-events:none;";
+  const declineButtonStyle = declineLink
+    ? "display:inline-block;padding:9px 14px;border:1px solid rgba(255,120,120,0.54);border-radius:9px;background:rgba(0,0,0,0.34);color:#ffc2c2;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;"
+    : "display:inline-block;padding:9px 14px;border:1px solid rgba(255,120,120,0.24);border-radius:9px;background:rgba(0,0,0,0.24);color:#c08a8a;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;pointer-events:none;";
+
+  const subject = `[Fallout Codex] Disclaimer Reevaluation Request - ${identity.username} (${identity.discordId})`;
+  const text = [
+    "FALLOUT CODEX - DISCLAIMER REEVALUATION REQUEST",
+    "",
+    `Nick: ${identity.nick}`,
+    `Username: ${identity.username}`,
+    `Email: ${identity.email}`,
+    `Discord ID: ${identity.discordId}`,
+    `Account Age: ${identity.accountAge}`,
+    `Request ID: ${accessRequestState?.requestId || "Unknown"}`,
+    `Request Submitted (UTC): ${formatUtcTimestamp(accessRequestState?.requestedAt || "")}`,
+    `Application Approved (UTC): ${formatUtcTimestamp(accessRequestState?.decidedAt || "")}`,
+    `Disclaimer Declined (UTC): ${formatUtcTimestamp(accessRequestState?.disclaimerDecidedAt || "")}`,
+    "",
+    "Original Access Reason:",
+    sanitizeAccessRequestReason(accessRequestState?.reason || "") || "Not provided",
+    "",
+    "User Reevaluation Explanation:",
+    sanitizedExplanation || "Not provided",
+    "",
+    `Re-approve: ${reapproveLink || "Unavailable (set PUBLIC_BASE_URL or use a public host)"}`,
+    `Decline: ${declineLink || "Unavailable (set PUBLIC_BASE_URL or use a public host)"}`,
+    `Decision link expires: ${decisionExpiresAtLabel}`
+  ].join("\n");
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;padding:24px;background:#060a06;color:#c7f7c7;font-family:Consolas,'Courier New',monospace;">
+    <div style="max-width:620px;margin:0 auto;border:1px solid rgba(139,255,139,0.34);border-radius:14px;overflow:hidden;background:linear-gradient(to bottom,rgba(139,255,139,0.08),rgba(0,0,0,0.42)),rgba(0,0,0,0.44);box-shadow:0 0 0 1px rgba(0,0,0,.48) inset,0 18px 60px rgba(0,0,0,.58);">
+      <div style="padding:12px 16px;background:linear-gradient(to right,rgba(255,225,122,0.22),rgba(0,0,0,0));border-bottom:1px solid rgba(255,225,122,0.28);">
+        <span style="display:inline-block;padding:3px 8px;border:1px solid rgba(255,225,122,0.48);border-radius:999px;font-size:11px;letter-spacing:.08em;color:#ffefaf;text-transform:uppercase;">Reevaluation Request</span>
+        <p style="margin:10px 0 0;font-size:16px;letter-spacing:.06em;color:#fff4cb;text-transform:uppercase;">Disclaimer Reevaluation Submission</p>
+      </div>
+      <div style="padding:16px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Nick</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeNick}</td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Username</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeUsername}</td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Email</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeEmail}</td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Discord ID</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-family:Consolas,Menlo,monospace;font-size:14px;color:#d8ffd8;">${safeDiscordId}</td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Account Age</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeAccountAge}</td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Request ID</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-family:Consolas,Menlo,monospace;font-size:14px;color:#d8ffd8;">${safeRequestId}</td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Request Submitted (UTC)</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-family:Consolas,Menlo,monospace;font-size:14px;color:#d8ffd8;">${safeRequestTime}</td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Approved (UTC)</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-family:Consolas,Menlo,monospace;font-size:14px;color:#d8ffd8;">${safeDecisionTime}</td></tr>
+          <tr><td style="padding:10px 0;color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Disclaimer Declined (UTC)</td><td style="padding:10px 0;text-align:right;font-family:Consolas,Menlo,monospace;font-size:14px;color:#d8ffd8;">${safeDisclaimerDecisionTime}</td></tr>
+        </table>
+        <div style="margin-top:12px;padding:10px;border:1px solid rgba(255,225,122,0.24);border-radius:10px;background:rgba(0,0,0,0.28);">
+          <p style="margin:0;color:#ffefaf;font-size:11px;letter-spacing:.06em;text-transform:uppercase;">Original Access Reason</p>
+          <p style="margin:7px 0 0;color:#d8ffd8;font-size:13px;line-height:1.4;white-space:pre-wrap;word-break:break-word;">${safeOriginalReasonHtml || "Not provided"}</p>
+        </div>
+        <div style="margin-top:12px;padding:10px;border:1px solid rgba(255,225,122,0.32);border-radius:10px;background:rgba(0,0,0,0.28);">
+          <p style="margin:0;color:#ffefaf;font-size:11px;letter-spacing:.06em;text-transform:uppercase;">User Reevaluation Explanation</p>
+          <p style="margin:7px 0 0;color:#d8ffd8;font-size:13px;line-height:1.4;white-space:pre-wrap;word-break:break-word;">${safeExplanationHtml || "Not provided"}</p>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,225,122,0.24);">
+          <p style="margin:0 0 10px;color:#ffefaf;font-size:12px;letter-spacing:.06em;text-transform:uppercase;">Admin Reevaluation Actions</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a href="${safeReapproveHref}" style="${reapproveButtonStyle}">Re-approve</a>
+            <a href="${safeDeclineHref}" style="${declineButtonStyle}">Decline</a>
+          </div>
+          <p style="margin:10px 0 0;font-size:12px;color:#9ccf9c;">Decision link expires: ${escapeHtml(decisionExpiresAtLabel)}</p>
+        </div>
+        <div style="margin-top:14px;text-align:right;">
+          <a href="${escapeHtml(returnUrl)}" style="display:inline-block;padding:9px 14px;border:1px solid rgba(139,255,139,0.5);border-radius:9px;background:rgba(0,0,0,0.34);color:#d8ffd8;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;">Open Fallout Codex</a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`;
+
+  return {
+    subject,
+    text,
+    html
+  };
+}
+
+async function sendDisclaimerReevaluationEmail({ user, accessRequestState, explanation, req }) {
+  if (!mailTransport) {
+    throw new Error("Mail transport is not configured");
+  }
+
+  const content = buildDisclaimerReevaluationEmailContent({
+    user,
+    accessRequestState,
+    explanation,
+    req
+  });
+  await mailTransport.sendMail({
+    from: SMTP_FROM,
+    to: ACCESS_REQUEST_EMAIL_TO,
+    subject: content.subject,
+    text: content.text,
+    html: content.html
+  });
+}
+
 const uploadStorage = multer.diskStorage({
   destination: (_req, _file, callback) => {
     callback(null, UPLOAD_DIR);
@@ -1476,6 +2042,7 @@ app.get("/admin/access-requests/decision", (req, res) => {
   const action = String(req.query.action || "").trim().toLowerCase();
   const expRaw = String(req.query.exp || "").trim();
   const token = String(req.query.token || "").trim();
+  const declineReason = sanitizeAccessRequestReason(String(req.query.reason || ""));
   const baseUrl = getRequestBaseUrl(req);
 
   const invalidResponse = (statusCode, title, statusLabel, message, entry = null, accent = "#ff9a9a") => {
@@ -1533,7 +2100,9 @@ app.get("/admin/access-requests/decision", (req, res) => {
     return;
   }
 
-  const decision = applyAccessRequestDecision(requestId, action);
+  const decision = applyAccessRequestDecision(requestId, action, {
+    declineReason: action === "decline" ? declineReason : ""
+  });
   if (!decision.ok && decision.reason === "not_found") {
     invalidResponse(404, "Request Not Found", "Missing", "No matching access request was found for this decision link.");
     return;
@@ -1575,6 +2144,119 @@ app.get("/admin/access-requests/decision", (req, res) => {
   );
 });
 
+app.get("/admin/access-requests/reevaluation-decision", (req, res) => {
+  const discordId = String(req.query.did || "").trim();
+  const action = String(req.query.action || "").trim().toLowerCase();
+  const expRaw = String(req.query.exp || "").trim();
+  const token = String(req.query.token || "").trim();
+  const declineReason = sanitizeAccessRequestReason(String(req.query.reason || ""));
+  const baseUrl = getRequestBaseUrl(req);
+
+  const invalidResponse = (statusCode, title, statusLabel, message, entry = null, accent = "#ff9a9a") => {
+    res.status(statusCode).send(
+      buildAccessRequestDecisionPage({
+        title,
+        statusLabel,
+        message,
+        accent,
+        baseUrl,
+        entry
+      })
+    );
+  };
+
+  if (!isDiscordId(discordId) || !ACCESS_REQUEST_DECISION_ACTIONS.has(action) || !expRaw || !token) {
+    invalidResponse(400, "Invalid Reevaluation Link", "Invalid Request", "The reevaluation link is malformed or incomplete.");
+    return;
+  }
+
+  const expiresAtMs = Number.parseInt(expRaw, 10);
+  if (!Number.isFinite(expiresAtMs) || expiresAtMs <= 0) {
+    invalidResponse(400, "Invalid Reevaluation Link", "Invalid Expiration", "The reevaluation link expiration is invalid.");
+    return;
+  }
+
+  const currentState = getAccessRequestState(discordId);
+  const currentStatus = normalizeAccessRequestStatus(currentState.status);
+  const currentDisclaimerDecision = normalizeAccessDisclaimerDecision(currentState.disclaimerDecision);
+
+  const resolvedApproved = currentStatus === ACCESS_REQUEST_STATUS.APPROVED
+    && currentDisclaimerDecision === ACCESS_DISCLAIMER_DECISION.NONE;
+  const resolvedDeclined = currentStatus === ACCESS_REQUEST_STATUS.DECLINED;
+  if (Date.now() > expiresAtMs) {
+    if (resolvedApproved || resolvedDeclined) {
+      invalidResponse(
+        200,
+        "Reevaluation Already Processed",
+        resolvedApproved ? "Already Re-approved" : "Already Declined",
+        resolvedApproved
+          ? "This reevaluation request was already marked as RE-APPROVED."
+          : "This reevaluation request was already marked as DECLINED.",
+        currentState,
+        resolvedApproved ? "#8bff8b" : "#ffb3b3"
+      );
+      return;
+    }
+    invalidResponse(410, "Reevaluation Link Expired", "Expired", "This reevaluation decision link has expired.");
+    return;
+  }
+
+  if (!verifyAccessRequestReevaluationDecisionToken(discordId, action, expiresAtMs, token)) {
+    invalidResponse(403, "Reevaluation Link Rejected", "Forbidden", "Token verification failed for this reevaluation link.");
+    return;
+  }
+
+  const decision = applyAccessRequestReevaluationDecisionByDiscordId(discordId, action, {
+    declineReason: action === "decline" ? declineReason : ""
+  });
+  if (!decision.ok && decision.reason === "not_found") {
+    invalidResponse(404, "Request Not Found", "Missing", "No matching access request entry was found.");
+    return;
+  }
+  if (!decision.ok && decision.reason === "state_mismatch") {
+    const entry = decision.entry || null;
+    const entryStatus = normalizeAccessRequestStatus(entry?.status);
+    const entryDisclaimer = normalizeAccessDisclaimerDecision(entry?.disclaimerDecision);
+    const alreadyReapproved = entryStatus === ACCESS_REQUEST_STATUS.APPROVED
+      && entryDisclaimer === ACCESS_DISCLAIMER_DECISION.NONE;
+    const alreadyDeclined = entryStatus === ACCESS_REQUEST_STATUS.DECLINED;
+    if (alreadyReapproved || alreadyDeclined) {
+      invalidResponse(
+        200,
+        "Reevaluation Already Processed",
+        alreadyReapproved ? "Already Re-approved" : "Already Declined",
+        alreadyReapproved
+          ? "This reevaluation request was already marked as RE-APPROVED."
+          : "This reevaluation request was already marked as DECLINED.",
+        entry,
+        alreadyReapproved ? "#8bff8b" : "#ffb3b3"
+      );
+      return;
+    }
+    invalidResponse(409, "Reevaluation Not Applicable", "State Mismatch", "This account is not currently waiting on a disclaimer reevaluation.", entry);
+    return;
+  }
+  if (!decision.ok) {
+    invalidResponse(400, "Unable To Process Reevaluation", "Invalid", "The reevaluation decision could not be processed.");
+    return;
+  }
+
+  const entry = decision.entry || null;
+  const approved = action === "approve";
+  res.status(200).send(
+    buildAccessRequestDecisionPage({
+      title: approved ? "Reevaluation Re-approved" : "Reevaluation Declined",
+      statusLabel: approved ? "Re-approved" : "Declined",
+      message: approved
+        ? "Disclaimer state was reset. The user must accept the disclaimer again on next login."
+        : "Application is now declined. User must reapply after admin unlocks reapply.",
+      accent: approved ? "#8bff8b" : "#ffb3b3",
+      baseUrl,
+      entry
+    })
+  );
+});
+
 app.post("/api/files/access-request", async (req, res) => {
   const user = getSessionUser(req);
   if (!user) {
@@ -1595,6 +2277,10 @@ app.post("/api/files/access-request", async (req, res) => {
   const accessRequestState = getAccessRequestState(user.discordId);
   if (isAuthorized(user, accessRequestState)) {
     res.status(409).json({ error: "Account is already authorized" });
+    return;
+  }
+  if (accessRequestState.status === ACCESS_REQUEST_STATUS.APPROVED) {
+    res.status(409).json({ error: "Account is already approved" });
     return;
   }
   if (accessRequestState.status === ACCESS_REQUEST_STATUS.PENDING) {
@@ -1643,6 +2329,128 @@ app.post("/api/files/access-request", async (req, res) => {
   }
 });
 
+app.post("/api/files/disclaimer-decision", (req, res) => {
+  const user = getSessionUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Login required" });
+    return;
+  }
+  if (isAdmin(user) || ALLOWED_DISCORD_IDS.has(user.discordId)) {
+    res.status(409).json({ error: "Disclaimer decision is not required for this account." });
+    return;
+  }
+
+  const decisionRaw = String(req.body?.decision || "").trim().toLowerCase();
+  const decision = normalizeAccessDisclaimerDecision(decisionRaw);
+  if (decision !== ACCESS_DISCLAIMER_DECISION.ACCEPTED && decision !== ACCESS_DISCLAIMER_DECISION.DECLINED) {
+    res.status(400).json({ error: "Invalid disclaimer decision." });
+    return;
+  }
+
+  const accessRequestState = getAccessRequestState(user.discordId);
+  if (normalizeAccessRequestStatus(accessRequestState.status) !== ACCESS_REQUEST_STATUS.APPROVED) {
+    res.status(409).json({ error: "Only approved applications can submit disclaimer decisions." });
+    return;
+  }
+
+  const result = setAccessRequestDisclaimerDecisionByDiscordId(user.discordId, decision);
+  if (!result.ok && result.reason === "not_found") {
+    res.status(404).json({ error: "Access request entry not found." });
+    return;
+  }
+  if (!result.ok && result.reason === "status_mismatch") {
+    res.status(409).json({ error: "Only approved applications can submit disclaimer decisions." });
+    return;
+  }
+  if (!result.ok && result.reason === "locked_declined") {
+    res.status(409).json({ error: "Disclaimer was declined. Contact support to request reevaluation." });
+    return;
+  }
+  if (!result.ok) {
+    res.status(400).json({ error: "Unable to save disclaimer decision." });
+    return;
+  }
+
+  res.json({
+    ok: true,
+    decision: normalizeAccessDisclaimerDecision(result.entry?.disclaimerDecision),
+    decidedAt: String(result.entry?.disclaimerDecidedAt || ""),
+    me: buildMePayload(req)
+  });
+});
+
+app.post("/api/files/disclaimer-reevaluation", async (req, res) => {
+  const user = getSessionUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Login required" });
+    return;
+  }
+  if (!mailTransport) {
+    res.status(503).json({ error: "Access request email service is not configured" });
+    return;
+  }
+  if (isAdmin(user) || ALLOWED_DISCORD_IDS.has(user.discordId)) {
+    res.status(409).json({ error: "Reevaluation request is not required for this account." });
+    return;
+  }
+
+  const accessRequestState = getAccessRequestState(user.discordId);
+  if (normalizeAccessRequestStatus(accessRequestState.status) !== ACCESS_REQUEST_STATUS.APPROVED) {
+    res.status(409).json({ error: "Only approved applications can submit reevaluation requests." });
+    return;
+  }
+  if (normalizeAccessDisclaimerDecision(accessRequestState.disclaimerDecision) !== ACCESS_DISCLAIMER_DECISION.DECLINED) {
+    res.status(409).json({ error: "Reevaluation requests are only available after declining the disclaimer." });
+    return;
+  }
+
+  const explanationRaw = String(req.body?.explanation || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  if (!explanationRaw) {
+    res.status(400).json({ error: "A reevaluation explanation is required." });
+    return;
+  }
+  if (explanationRaw.length > FILES_DISCLAIMER_REEVALUATION_MAX_CHARS) {
+    res.status(400).json({
+      error: `Reevaluation explanation exceeds ${FILES_DISCLAIMER_REEVALUATION_MAX_CHARS} characters.`
+    });
+    return;
+  }
+
+  const explanation = sanitizeAccessRequestReason(explanationRaw);
+
+  const pendingResult = markAccessRequestDisclaimerReevaluationPendingByDiscordId(user.discordId);
+  if (!pendingResult.ok && pendingResult.reason === "not_found") {
+    res.status(404).json({ error: "Access request entry not found." });
+    return;
+  }
+  if (!pendingResult.ok && pendingResult.reason === "state_mismatch") {
+    res.status(409).json({ error: "Reevaluation requests are only available after declining the disclaimer." });
+    return;
+  }
+  if (!pendingResult.ok && pendingResult.reason === "already_pending") {
+    res.status(429).json({ error: "A reevaluation request is already pending review." });
+    return;
+  }
+  if (!pendingResult.ok) {
+    res.status(400).json({ error: "Unable to start reevaluation request." });
+    return;
+  }
+
+  try {
+    await sendDisclaimerReevaluationEmail({
+      user,
+      accessRequestState: pendingResult.entry || accessRequestState,
+      explanation,
+      req
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    clearAccessRequestDisclaimerReevaluationPendingByDiscordId(user.discordId);
+    console.error("[disclaimer-reevaluation] email send error:", error);
+    res.status(500).json({ error: "Unable to send reevaluation request email" });
+  }
+});
+
 app.get("/api/files/access-requests", requireAdmin, (_req, res) => {
   res.json({
     entries: getAccessRequestAdminEntries()
@@ -1652,6 +2460,15 @@ app.get("/api/files/access-requests", requireAdmin, (_req, res) => {
 app.post("/api/files/access-requests/:requestId/decision", requireAdmin, (req, res) => {
   const requestId = String(req.params.requestId || "").trim().toLowerCase();
   const action = String(req.body?.action || "").trim().toLowerCase();
+  const declineReasonRaw = String(req.body?.declineReason || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .trim();
+  if (action === "decline" && declineReasonRaw.length > ACCESS_REQUEST_REASON_MAX_CHARS) {
+    res.status(400).json({ error: `Decline reason exceeds ${ACCESS_REQUEST_REASON_MAX_CHARS} characters.` });
+    return;
+  }
+  const declineReason = action === "decline" ? sanitizeAccessRequestReason(declineReasonRaw) : "";
   if (!/^[a-f0-9-]{36}$/i.test(requestId)) {
     res.status(400).json({ error: "Invalid request id" });
     return;
@@ -1661,7 +2478,9 @@ app.post("/api/files/access-requests/:requestId/decision", requireAdmin, (req, r
     return;
   }
 
-  const decision = applyAccessRequestDecision(requestId, action);
+  const decision = applyAccessRequestDecision(requestId, action, {
+    declineReason
+  });
   if (!decision.ok && decision.reason === "not_found") {
     res.status(404).json({ error: "Access request not found" });
     return;
@@ -1750,11 +2569,18 @@ app.post("/api/files/access-requests/:discordId/allow-reapply", requireAdmin, (r
   }
   if (!result.ok && result.reason === "status_mismatch") {
     const currentStatus = normalizeAccessRequestStatus(result.entry?.status);
+    const disclaimerDecision = normalizeAccessDisclaimerDecision(result.entry?.disclaimerDecision);
     if (currentStatus === ACCESS_REQUEST_STATUS.PENDING) {
       res.status(409).json({ error: "This application is pending. Use approve or deny instead." });
       return;
     }
     if (currentStatus === ACCESS_REQUEST_STATUS.APPROVED) {
+      if (disclaimerDecision === ACCESS_DISCLAIMER_DECISION.DECLINED) {
+        res.status(409).json({
+          error: "This account is waiting on disclaimer reevaluation. Use allow reapply to reset disclaimer acceptance."
+        });
+        return;
+      }
       res.status(409).json({ error: "This user is approved. Use unauthorize to revoke access." });
       return;
     }

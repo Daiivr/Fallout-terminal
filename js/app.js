@@ -67,6 +67,7 @@ const STATIC_SITE_IMAGE_PRELOAD_URLS = [
 ];
 const CYCLE_LOCATIONS = ["Foundation", "Crater", "Fort Atlas", "The Whitespring"];
 const STORAGE_LANG_KEY = "pipboy_lang";
+const STORAGE_FILES_DECISION_SEEN_PREFIX = "files_decision_seen_v1";
 const PLAN_ITEM_GLYPH = "\uF246";
 const GOLD_BULLION_GLYPH = "\uF400";
 const SILO_SITE_GLYPHS = {
@@ -136,6 +137,8 @@ const FILES_ACCESS_DECLINED_REAPPLY_MS = 7 * 24 * 60 * 60 * 1000;
 const FILES_LIVE_IDENTITY_POLL_INTERVAL_MS = 5000;
 const FILES_ADMIN_REQUESTS_FEEDBACK_AUTO_HIDE_MS = 5000;
 const FILES_UPLOAD_FEEDBACK_AUTO_HIDE_MS = 5000;
+const FILES_DISCLAIMER_ACCEPT_MIN_MS = 700;
+const FILES_DISCLAIMER_ACCEPT_FADE_MS = 280;
 const DISCORD_AUTH_POPUP_WINDOW_NAME = "fallout_codex_discord_auth";
 const DISCORD_AUTH_POPUP_PATH = "/auth/discord?popup=1";
 const DISCORD_AUTH_POPUP_WIDTH = 540;
@@ -147,6 +150,7 @@ let filesLiveIdentityPollTimer = null;
 let filesLiveIdentityPollInFlight = false;
 let filesAdminRequestsFeedbackTimer = null;
 let filesUploadFeedbackTimer = null;
+let filesDisclaimerAcceptTransitionTimer = null;
 let discordAuthPopupWindow = null;
 let discordAuthPopupPollTimer = null;
 
@@ -166,6 +170,7 @@ const STRINGS = {
     files_restricted_incident: "INCIDENT {code}",
     files_restricted_title: "ARCHIVE ACCESS IS CURRENTLY BLOCKED",
     files_restricted_subtitle: "This account is authenticated but not approved for file index access.",
+    files_restricted_subtitle_declined_reason: "This account request was declined. Admin reason: {reason}",
     files_restricted_identity_label: "Callsign",
     files_restricted_discord_label: "Discord ID",
     files_restricted_clearance_label: "Clearance",
@@ -199,6 +204,8 @@ const STRINGS = {
     files_denied_badge: "APPLICATION DENIED",
     files_denied_title: "ACCESS REQUEST DECLINED",
     files_denied_subtitle: "This request was declined by an administrator.",
+    files_denied_subtitle_with_reason: "This request was declined by an administrator. Reason: {reason}",
+    files_denied_reason_label: "Decline reason",
     files_denied_countdown_label: "Reapply cooldown",
     files_denied_next_window_label: "Next request window",
     files_denied_status_label: "Application status",
@@ -208,6 +215,35 @@ const STRINGS = {
     files_denied_directive_line_1: "Wait until the cooldown reaches zero.",
     files_denied_directive_line_2: "Then reopen this panel and submit a new reason.",
     files_denied_directive_line_3: "Or log out and return later.",
+    files_denied_directive_line_4: "Reapplying after cooldown does not guarantee approval. You may be declined again.",
+    files_decision_badge_aria_label: "Application decision available",
+    files_disclaimer_gate_browser_title: "DISCLAIMER REVIEW",
+    files_disclaimer_gate_badge: "DISCLAIMER REQUIRED",
+    files_disclaimer_gate_title: "YOUR REQUEST WAS APPROVED, BUT BEFORE ACCESSING THE FILE INDEX, REVIEW THIS DISCLAIMER",
+    files_disclaimer_gate_intro: "If you do not agree, access to the file index will remain blocked.",
+    files_disclaimer_gate_agree_button: "I AGREE",
+    files_disclaimer_gate_decline_button: "I DO NOT AGREE",
+    files_disclaimer_gate_agree_busy: "SAVING...",
+    files_disclaimer_gate_decline_busy: "SAVING...",
+    files_disclaimer_gate_declined_badge: "DISCLAIMER DECLINED",
+    files_disclaimer_gate_declined_title: "FILE INDEX ACCESS BLOCKED",
+    files_disclaimer_gate_declined_message: "You did not agree to the disclaimer, so access remains blocked. If you believe this was an error, contact us below and explain what happened so we can reevaluate your application.",
+    files_disclaimer_gate_contact_button: "CONTACT US",
+    files_disclaimer_gate_contact_title: "REQUEST REEVALUATION",
+    files_disclaimer_gate_contact_hint: "Explain why this should be reviewed again. Your message will be sent to the admin team by email.",
+    files_disclaimer_gate_contact_label: "Explanation",
+    files_disclaimer_gate_contact_placeholder: "Describe what happened and why your application should be reevaluated...",
+    files_disclaimer_gate_contact_send_button: "SEND REQUEST",
+    files_disclaimer_gate_contact_cancel_button: "BACK",
+    files_disclaimer_gate_contact_send_busy: "SENDING...",
+    files_disclaimer_gate_contact_required: "Write an explanation before sending your request.",
+    files_disclaimer_gate_contact_too_long: "Your explanation is too long. Keep it under 1200 characters.",
+    files_disclaimer_gate_contact_pending: "A reevaluation request is already pending review.",
+    files_disclaimer_gate_contact_success: "Your reevaluation request was sent. We will review it and contact you if needed.",
+    files_disclaimer_gate_contact_error: "Unable to send your reevaluation request right now.",
+    files_disclaimer_gate_contact_unavailable: "Reevaluation request service is unavailable. Please try again later.",
+    files_disclaimer_gate_accept_loading: "Finalizing authorization. Loading file index...",
+    files_disclaimer_gate_error: "Unable to save your disclaimer decision right now.",
     files_unauthorized_badge: "LOCKDOWN PROTOCOL",
     files_unauthorized_kicker: "Archive index remains sealed until terminal identity is validated.",
     files_unauthorized_state_label: "Identity state",
@@ -258,8 +294,11 @@ const STRINGS = {
     files_session_clearance_authorized: "AUTHORIZED USER",
     files_session_clearance_admin: "ADMINISTRATOR",
     files_session_clearance_unauthorized: "UNAUTHORIZED USER",
+    files_admin_tools_title: "ADMIN TOOLS",
+    files_admin_modal_close: "CLOSE",
     files_admin_console_title: "ADMIN CONSOLE",
     files_admin_requests_title: "ACCESS CONTROL",
+    files_admin_requests_pending_badge: "{n} pending",
     files_admin_requests_hint: "Search authorized users and pending requests. Approve, deny, or remove access in real time.",
     files_admin_requests_search_label: "Search",
     files_admin_requests_search_placeholder: "Search by nick, username, Discord ID, or email...",
@@ -280,9 +319,12 @@ const STRINGS = {
     files_admin_requests_meta_requested: "Requested",
     files_admin_requests_meta_decided: "Decided",
     files_admin_requests_meta_reason: "Reason",
+    files_admin_requests_meta_decline_reason: "Decline reason",
     files_admin_requests_meta_email: "Email",
     files_admin_requests_action_approve: "APPROVE",
     files_admin_requests_action_deny: "DENY",
+    files_admin_requests_action_deny_confirm: "CONFIRM DENY",
+    files_admin_requests_action_deny_cancel: "CANCEL",
     files_admin_requests_action_unauthorize: "UNAUTHORIZE",
     files_admin_requests_action_allow_reapply: "ALLOW REAPPLY",
     files_admin_requests_action_busy: "PROCESSING...",
@@ -290,6 +332,10 @@ const STRINGS = {
     files_admin_requests_action_deny_success: "Request denied.",
     files_admin_requests_action_unauthorize_success: "User access removed.",
     files_admin_requests_action_allow_reapply_success: "User can apply again now.",
+    files_admin_requests_action_decline_reason_label: "Decline reason (optional)",
+    files_admin_requests_action_decline_reason_placeholder: "Why this request is being denied...",
+    files_admin_requests_action_decline_reason_prompt: "Optional decline reason (shown to user). Leave blank for no reason.",
+    files_admin_requests_action_decline_reason_too_long: "Decline reason is too long. Keep it under 1200 characters.",
     files_admin_requests_error_generic: "Unable to process this action right now.",
     files_admin_requests_error_allowlist: "This user is in ALLOWED_DISCORD_IDS and cannot be unauthorized here.",
     files_file_index_title: "FILE INDEX",
@@ -327,6 +373,21 @@ const STRINGS = {
     files_group_default: "UNGROUPED",
     files_group_count: "{n} file(s)",
     files_group_open_button: "OPEN GROUP",
+    files_group_rename_button_label: "Rename group {group}",
+    files_group_rename_modal_title: "RENAME GROUP",
+    files_group_rename_modal_body: "Update this group label for all files in \"{group}\".",
+    files_group_rename_modal_label: "Group name",
+    files_group_rename_modal_placeholder: "New group name...",
+    files_group_rename_modal_cancel: "CANCEL",
+    files_group_rename_modal_confirm: "SAVE GROUP",
+    files_group_rename_modal_confirm_busy: "SAVING...",
+    files_group_rename_error_required: "Enter a new group name.",
+    files_group_rename_success: "Group renamed to \"{group}\".",
+    files_disclaimer_button: "DISCLAIMER",
+    files_disclaimer_modal_title: "DISCLAIMER",
+    files_disclaimer_modal_body_1: "By using any files or modifications available through this site, you acknowledge that mod use in online games may violate game policies and can result in account suspension or permanent bans.",
+    files_disclaimer_modal_body_2: "You are solely responsible for all actions taken on your account. The website owner and team assume no liability for account penalties, losses, or any consequences related to the use of these files or mods.",
+    files_disclaimer_modal_close: "CLOSE",
     files_groups_back_button: "ALL GROUPS",
     files_group_manager_title: "GROUP MANAGER",
     files_group_manager_active_group: "Group: {group}",
@@ -497,6 +558,7 @@ const STRINGS = {
     files_restricted_incident: "INCIDENTE {code}",
     files_restricted_title: "EL ACCESO AL ARCHIVO ESTA BLOQUEADO",
     files_restricted_subtitle: "Esta cuenta esta autenticada pero no aprobada para el indice de archivos.",
+    files_restricted_subtitle_declined_reason: "Esta solicitud fue rechazada. Motivo del admin: {reason}",
     files_restricted_identity_label: "Identidad",
     files_restricted_discord_label: "Discord ID",
     files_restricted_clearance_label: "Nivel",
@@ -530,6 +592,8 @@ const STRINGS = {
     files_denied_badge: "SOLICITUD DENEGADA",
     files_denied_title: "SOLICITUD DE ACCESO RECHAZADA",
     files_denied_subtitle: "Esta solicitud fue rechazada por un administrador.",
+    files_denied_subtitle_with_reason: "Esta solicitud fue rechazada por un administrador. Motivo: {reason}",
+    files_denied_reason_label: "Motivo del rechazo",
     files_denied_countdown_label: "Cooldown para reintentar",
     files_denied_next_window_label: "Proxima ventana de solicitud",
     files_denied_status_label: "Estado de solicitud",
@@ -539,6 +603,35 @@ const STRINGS = {
     files_denied_directive_line_1: "Espera hasta que el cooldown llegue a cero.",
     files_denied_directive_line_2: "Luego vuelve a este panel y envia un nuevo motivo.",
     files_denied_directive_line_3: "O cierra sesion y regresa mas tarde.",
+    files_denied_directive_line_4: "Volver a solicitar tras el cooldown no garantiza aprobacion. Podrias ser rechazado otra vez.",
+    files_decision_badge_aria_label: "Hay una decision de solicitud disponible",
+    files_disclaimer_gate_browser_title: "REVISION DE AVISO",
+    files_disclaimer_gate_badge: "AVISO OBLIGATORIO",
+    files_disclaimer_gate_title: "TU SOLICITUD HA SIDO ACEPTADA, PERO ANTES DE ACCEDER AL INDICE, REVISA ESTE AVISO",
+    files_disclaimer_gate_intro: "Si no aceptas, el acceso al indice de archivos seguira bloqueado.",
+    files_disclaimer_gate_agree_button: "ACEPTO",
+    files_disclaimer_gate_decline_button: "NO ACEPTO",
+    files_disclaimer_gate_agree_busy: "GUARDANDO...",
+    files_disclaimer_gate_decline_busy: "GUARDANDO...",
+    files_disclaimer_gate_declined_badge: "AVISO RECHAZADO",
+    files_disclaimer_gate_declined_title: "ACCESO AL INDICE BLOQUEADO",
+    files_disclaimer_gate_declined_message: "No aceptaste el aviso, por lo que el acceso sigue bloqueado. Si crees que esto fue un error, contactanos abajo y explica lo ocurrido para reevaluar tu solicitud.",
+    files_disclaimer_gate_contact_button: "CONTACTAR",
+    files_disclaimer_gate_contact_title: "SOLICITAR REEVALUACION",
+    files_disclaimer_gate_contact_hint: "Explica por que tu caso debe revisarse otra vez. Tu mensaje se enviara por email al equipo admin.",
+    files_disclaimer_gate_contact_label: "Explicacion",
+    files_disclaimer_gate_contact_placeholder: "Describe que paso y por que tu solicitud deberia reevaluarse...",
+    files_disclaimer_gate_contact_send_button: "ENVIAR SOLICITUD",
+    files_disclaimer_gate_contact_cancel_button: "VOLVER",
+    files_disclaimer_gate_contact_send_busy: "ENVIANDO...",
+    files_disclaimer_gate_contact_required: "Debes escribir una explicacion antes de enviar la solicitud.",
+    files_disclaimer_gate_contact_too_long: "Tu explicacion es demasiado larga. Debe tener menos de 1200 caracteres.",
+    files_disclaimer_gate_contact_pending: "Ya hay una solicitud de reevaluacion pendiente de revision.",
+    files_disclaimer_gate_contact_success: "Tu solicitud de reevaluacion fue enviada. La revisaremos y te contactaremos si hace falta.",
+    files_disclaimer_gate_contact_error: "No se pudo enviar tu solicitud de reevaluacion en este momento.",
+    files_disclaimer_gate_contact_unavailable: "El servicio de reevaluacion no esta disponible. Intenta mas tarde.",
+    files_disclaimer_gate_accept_loading: "Finalizando autorizacion. Cargando indice de archivos...",
+    files_disclaimer_gate_error: "No se pudo guardar tu decision del aviso en este momento.",
     files_unauthorized_badge: "PROTOCOLO DE BLOQUEO",
     files_unauthorized_kicker: "El indice del archivo permanece sellado hasta validar la identidad del terminal.",
     files_unauthorized_state_label: "Estado de identidad",
@@ -589,8 +682,11 @@ const STRINGS = {
     files_session_clearance_authorized: "USUARIO AUTORIZADO",
     files_session_clearance_admin: "ADMINISTRADOR",
     files_session_clearance_unauthorized: "USUARIO NO AUTORIZADO",
+    files_admin_tools_title: "HERRAMIENTAS ADMIN",
+    files_admin_modal_close: "CERRAR",
     files_admin_console_title: "CONSOLA ADMIN",
     files_admin_requests_title: "CONTROL DE ACCESO",
+    files_admin_requests_pending_badge: "{n} pendientes",
     files_admin_requests_hint: "Busca usuarios autorizados y solicitudes pendientes. Aprueba, rechaza o quita acceso en tiempo real.",
     files_admin_requests_search_label: "Buscar",
     files_admin_requests_search_placeholder: "Buscar por nick, usuario, Discord ID o email...",
@@ -611,9 +707,12 @@ const STRINGS = {
     files_admin_requests_meta_requested: "Solicitada",
     files_admin_requests_meta_decided: "Decidida",
     files_admin_requests_meta_reason: "Motivo",
+    files_admin_requests_meta_decline_reason: "Motivo de rechazo",
     files_admin_requests_meta_email: "Email",
     files_admin_requests_action_approve: "APROBAR",
     files_admin_requests_action_deny: "RECHAZAR",
+    files_admin_requests_action_deny_confirm: "CONFIRMAR RECHAZO",
+    files_admin_requests_action_deny_cancel: "CANCELAR",
     files_admin_requests_action_unauthorize: "QUITAR ACCESO",
     files_admin_requests_action_allow_reapply: "PERMITIR REAPLICAR",
     files_admin_requests_action_busy: "PROCESANDO...",
@@ -621,6 +720,10 @@ const STRINGS = {
     files_admin_requests_action_deny_success: "Solicitud rechazada.",
     files_admin_requests_action_unauthorize_success: "Acceso removido al usuario.",
     files_admin_requests_action_allow_reapply_success: "El usuario ya puede solicitar de nuevo.",
+    files_admin_requests_action_decline_reason_label: "Motivo de rechazo (opcional)",
+    files_admin_requests_action_decline_reason_placeholder: "Por que se rechaza esta solicitud...",
+    files_admin_requests_action_decline_reason_prompt: "Motivo opcional del rechazo (se muestra al usuario). Dejalo vacio si no aplica.",
+    files_admin_requests_action_decline_reason_too_long: "El motivo del rechazo es demasiado largo. Debe tener menos de 1200 caracteres.",
     files_admin_requests_error_generic: "No se pudo procesar esta accion ahora mismo.",
     files_admin_requests_error_allowlist: "Este usuario esta en ALLOWED_DISCORD_IDS y no se puede desautorizar aqui.",
     files_file_index_title: "INDICE DE ARCHIVOS",
@@ -658,6 +761,21 @@ const STRINGS = {
     files_group_default: "SIN GRUPO",
     files_group_count: "{n} archivo(s)",
     files_group_open_button: "ABRIR GRUPO",
+    files_group_rename_button_label: "Renombrar grupo {group}",
+    files_group_rename_modal_title: "RENOMBRAR GRUPO",
+    files_group_rename_modal_body: "Actualiza esta etiqueta para todos los archivos en \"{group}\".",
+    files_group_rename_modal_label: "Nombre del grupo",
+    files_group_rename_modal_placeholder: "Nuevo nombre de grupo...",
+    files_group_rename_modal_cancel: "CANCELAR",
+    files_group_rename_modal_confirm: "GUARDAR GRUPO",
+    files_group_rename_modal_confirm_busy: "GUARDANDO...",
+    files_group_rename_error_required: "Escribe un nuevo nombre de grupo.",
+    files_group_rename_success: "Grupo renombrado a \"{group}\".",
+    files_disclaimer_button: "AVISO",
+    files_disclaimer_modal_title: "DESCARGO DE RESPONSABILIDAD",
+    files_disclaimer_modal_body_1: "Al usar cualquier archivo o modificacion disponible en este sitio, reconoces que el uso de mods en juegos en linea puede infringir politicas del juego y puede causar suspension o baneo permanente de la cuenta.",
+    files_disclaimer_modal_body_2: "Eres el unico responsable de las acciones realizadas en tu cuenta. El propietario del sitio y su equipo no asumen responsabilidad por sanciones, perdidas o cualquier consecuencia relacionada con el uso de estos archivos o mods.",
+    files_disclaimer_modal_close: "CERRAR",
     files_groups_back_button: "TODOS LOS GRUPOS",
     files_group_manager_title: "GESTOR DE GRUPOS",
     files_group_manager_active_group: "Grupo: {group}",
@@ -879,12 +997,30 @@ const state = {
     accessRequestBusy: false,
     accessRequestMessage: "",
     accessRequestMessageKind: "",
+    disclaimerGate: {
+      busy: false,
+      pendingDecision: "",
+      message: "",
+      messageKind: "",
+      acceptTransitionActive: false,
+      acceptTransitionExiting: false,
+      acceptTransitionStartedAt: 0,
+      contactOpen: false,
+      contactBusy: false,
+      contactText: ""
+    },
+    decisionNotice: {
+      visible: false,
+      token: ""
+    },
     adminRequests: {
       loading: false,
       list: [],
       query: "",
       filter: "pending",
       busyActionKey: "",
+      declineComposerRequestId: "",
+      declineComposerValue: "",
       message: "",
       messageKind: ""
     },
@@ -902,6 +1038,15 @@ const state = {
       selectedIds: [],
       busy: false
     },
+    groupRename: {
+      busy: false,
+      key: "",
+      open: false,
+      label: "",
+      value: "",
+      message: "",
+      messageKind: ""
+    },
     search: {
       open: false,
       query: ""
@@ -911,6 +1056,12 @@ const state = {
       fileId: "",
       fileName: "",
       deleting: false
+    },
+    adminModal: {
+      active: ""
+    },
+    disclaimerModal: {
+      open: false
     }
   },
   easterEgg: {
@@ -957,6 +1108,24 @@ const elements = {
   filesDeleteMessage: document.getElementById("filesDeleteMessage"),
   filesDeleteCancelBtn: document.getElementById("filesDeleteCancelBtn"),
   filesDeleteConfirmBtn: document.getElementById("filesDeleteConfirmBtn"),
+  filesDisclaimerOverlay: document.getElementById("filesDisclaimerOverlay"),
+  filesDisclaimerTitle: document.getElementById("filesDisclaimerTitle"),
+  filesDisclaimerBody1: document.getElementById("filesDisclaimerBody1"),
+  filesDisclaimerBody2: document.getElementById("filesDisclaimerBody2"),
+  filesDisclaimerCloseBtn: document.getElementById("filesDisclaimerCloseBtn"),
+  filesGroupRenameOverlay: document.getElementById("filesGroupRenameOverlay"),
+  filesGroupRenameTitle: document.getElementById("filesGroupRenameTitle"),
+  filesGroupRenameMessage: document.getElementById("filesGroupRenameMessage"),
+  filesGroupRenameForm: document.getElementById("filesGroupRenameForm"),
+  filesGroupRenameLabel: document.getElementById("filesGroupRenameLabel"),
+  filesGroupRenameInput: document.getElementById("filesGroupRenameInput"),
+  filesGroupRenameFeedback: document.getElementById("filesGroupRenameFeedback"),
+  filesGroupRenameCancelBtn: document.getElementById("filesGroupRenameCancelBtn"),
+  filesGroupRenameConfirmBtn: document.getElementById("filesGroupRenameConfirmBtn"),
+  filesUploadOverlay: document.getElementById("filesUploadOverlay"),
+  filesUploadModalCloseBtn: document.getElementById("filesUploadModalCloseBtn"),
+  filesAdminRequestsOverlay: document.getElementById("filesAdminRequestsOverlay"),
+  filesAdminRequestsModalCloseBtn: document.getElementById("filesAdminRequestsModalCloseBtn"),
   syncOverlay: document.getElementById("syncOverlay"),
   syncTitle: document.getElementById("syncTitle"),
   classifiedLoadOverlay: document.getElementById("classifiedLoadOverlay"),
@@ -964,6 +1133,8 @@ const elements = {
   microText: document.getElementById("microText"),
   mainTitle: document.getElementById("mainTitle"),
   tabStatus: document.getElementById("tabStatus"),
+  tabStatusText: document.getElementById("tabStatusText"),
+  tabStatusDecisionBadge: document.getElementById("tabStatusDecisionBadge"),
   tabIntel: document.getElementById("tabIntel"),
   tabData: document.getElementById("tabData"),
   langLabel: document.getElementById("langLabel"),
@@ -1033,6 +1204,9 @@ const elements = {
   filesDeniedBadge: document.getElementById("filesDeniedBadge"),
   filesDeniedTitle: document.getElementById("filesDeniedTitle"),
   filesDeniedSubtitle: document.getElementById("filesDeniedSubtitle"),
+  filesDeniedReasonSection: document.getElementById("filesDeniedReasonSection"),
+  filesDeniedReasonLabel: document.getElementById("filesDeniedReasonLabel"),
+  filesDeniedReasonValue: document.getElementById("filesDeniedReasonValue"),
   filesDeniedStatusLabel: document.getElementById("filesDeniedStatusLabel"),
   filesDeniedStatusValue: document.getElementById("filesDeniedStatusValue"),
   filesDeniedNextWindowLabel: document.getElementById("filesDeniedNextWindowLabel"),
@@ -1043,7 +1217,31 @@ const elements = {
   filesDeniedDirectiveLine1: document.getElementById("filesDeniedDirectiveLine1"),
   filesDeniedDirectiveLine2: document.getElementById("filesDeniedDirectiveLine2"),
   filesDeniedDirectiveLine3: document.getElementById("filesDeniedDirectiveLine3"),
+  filesDeniedDirectiveLine4: document.getElementById("filesDeniedDirectiveLine4"),
   filesDeniedLogoutBtn: document.getElementById("filesDeniedLogoutBtn"),
+  filesDisclaimerGateView: document.getElementById("filesDisclaimerGateView"),
+  filesDisclaimerGateBadge: document.getElementById("filesDisclaimerGateBadge"),
+  filesDisclaimerGateTitle: document.getElementById("filesDisclaimerGateTitle"),
+  filesDisclaimerGateIntro: document.getElementById("filesDisclaimerGateIntro"),
+  filesDisclaimerGateBody1: document.getElementById("filesDisclaimerGateBody1"),
+  filesDisclaimerGateBody2: document.getElementById("filesDisclaimerGateBody2"),
+  filesDisclaimerGateActions: document.getElementById("filesDisclaimerGateActions"),
+  filesDisclaimerAgreeBtn: document.getElementById("filesDisclaimerAgreeBtn"),
+  filesDisclaimerDeclineBtn: document.getElementById("filesDisclaimerDeclineBtn"),
+  filesDisclaimerDeclinedPanel: document.getElementById("filesDisclaimerDeclinedPanel"),
+  filesDisclaimerDeclinedTitle: document.getElementById("filesDisclaimerDeclinedTitle"),
+  filesDisclaimerDeclinedMessage: document.getElementById("filesDisclaimerDeclinedMessage"),
+  filesDisclaimerContactBtn: document.getElementById("filesDisclaimerContactBtn"),
+  filesDisclaimerContactView: document.getElementById("filesDisclaimerContactView"),
+  filesDisclaimerContactTitle: document.getElementById("filesDisclaimerContactTitle"),
+  filesDisclaimerContactHint: document.getElementById("filesDisclaimerContactHint"),
+  filesDisclaimerContactLabel: document.getElementById("filesDisclaimerContactLabel"),
+  filesDisclaimerContactInput: document.getElementById("filesDisclaimerContactInput"),
+  filesDisclaimerContactCancelBtn: document.getElementById("filesDisclaimerContactCancelBtn"),
+  filesDisclaimerContactSendBtn: document.getElementById("filesDisclaimerContactSendBtn"),
+  filesDisclaimerGateFeedback: document.getElementById("filesDisclaimerGateFeedback"),
+  filesDisclaimerAcceptLoader: document.getElementById("filesDisclaimerAcceptLoader"),
+  filesDisclaimerAcceptLoaderText: document.getElementById("filesDisclaimerAcceptLoaderText"),
   filesSessionTitle: document.getElementById("filesSessionTitle"),
   filesSessionBadge: document.getElementById("filesSessionBadge"),
   filesSessionIdentity: document.getElementById("filesSessionIdentity"),
@@ -1056,6 +1254,13 @@ const elements = {
   filesSessionStateLabel: document.getElementById("filesSessionStateLabel"),
   filesSessionState: document.getElementById("filesSessionState"),
   filesSessionLogoutBtn: document.getElementById("filesSessionLogoutBtn"),
+  filesAdminToolsPanel: document.getElementById("filesAdminToolsPanel"),
+  filesAdminToolsTitle: document.getElementById("filesAdminToolsTitle"),
+  filesAdminConsoleModalBtn: document.getElementById("filesAdminConsoleModalBtn"),
+  filesAdminConsoleModalBtnText: document.getElementById("filesAdminConsoleModalBtnText"),
+  filesAccessControlModalBtn: document.getElementById("filesAccessControlModalBtn"),
+  filesAccessControlModalBtnText: document.getElementById("filesAccessControlModalBtnText"),
+  filesAccessControlPendingBadge: document.getElementById("filesAccessControlPendingBadge"),
   filesUploadPanel: document.getElementById("filesUploadPanel"),
   filesUploadTitle: document.getElementById("filesUploadTitle"),
   filesUploadForm: document.getElementById("filesUploadForm"),
@@ -1099,6 +1304,8 @@ const elements = {
   filesSearchToggleText: document.getElementById("filesSearchToggleText"),
   filesGroupManagerToggleBtn: document.getElementById("filesGroupManagerToggleBtn"),
   filesGroupManagerToggleText: document.getElementById("filesGroupManagerToggleText"),
+  filesDisclaimerBtn: document.getElementById("filesDisclaimerBtn"),
+  filesDisclaimerBtnText: document.getElementById("filesDisclaimerBtnText"),
   filesSearchWrap: document.getElementById("filesSearchWrap"),
   filesGroupManagerWrap: document.getElementById("filesGroupManagerWrap"),
   filesSearchLabel: document.getElementById("filesSearchLabel"),
@@ -1258,6 +1465,9 @@ function hideFilesPage() {
   document.body.classList.remove("is-files");
   document.body.classList.remove("is-files-unauthorized", "is-files-guest");
   closeFilesDeleteModal({ force: true });
+  closeFilesDisclaimerModal();
+  closeFilesGroupRenameModal({ force: true });
+  closeFilesAdminModal();
   if (state.files.search.open || state.files.search.query) {
     setFilesSearchOpen(false, { clearQuery: true });
   }
@@ -1290,6 +1500,7 @@ function showIntelPage({ updateHash = true } = {}) {
 
 function showFilesPage({ updateHash = true } = {}) {
   closeClassifiedPageForNavigation();
+  markFilesDecisionNoticeSeen();
   startFilesLiveIdentityPolling();
   document.body.classList.add("is-files");
   if (elements.filesPage) {
@@ -1358,7 +1569,12 @@ function buildGuestFilesProfile() {
     accessRequestStatus: "none",
     accessRequestRequestedAt: "",
     accessRequestDecidedAt: "",
-    accessRequestReapplyAt: ""
+    accessRequestReapplyAt: "",
+    accessRequestDeclineReason: "",
+    accessDisclaimerDecision: "none",
+    accessDisclaimerDecidedAt: "",
+    accessDisclaimerReevaluationRequestedAt: "",
+    disclaimerRequired: false
   };
 }
 
@@ -1377,7 +1593,12 @@ function normalizeFilesProfile(payload) {
     accessRequestStatus: String(payload.accessRequestStatus || "none").trim().toLowerCase() || "none",
     accessRequestRequestedAt: String(payload.accessRequestRequestedAt || ""),
     accessRequestDecidedAt: String(payload.accessRequestDecidedAt || ""),
-    accessRequestReapplyAt: String(payload.accessRequestReapplyAt || "")
+    accessRequestReapplyAt: String(payload.accessRequestReapplyAt || ""),
+    accessRequestDeclineReason: String(payload.accessRequestDeclineReason || ""),
+    accessDisclaimerDecision: String(payload.accessDisclaimerDecision || "none").trim().toLowerCase() || "none",
+    accessDisclaimerDecidedAt: String(payload.accessDisclaimerDecidedAt || ""),
+    accessDisclaimerReevaluationRequestedAt: String(payload.accessDisclaimerReevaluationRequestedAt || ""),
+    disclaimerRequired: Boolean(payload.disclaimerRequired)
   };
 }
 
@@ -1387,6 +1608,147 @@ function normalizeFilesAccessRequestStatus(status) {
     return normalized;
   }
   return "none";
+}
+
+function normalizeFilesDisclaimerDecision(decision) {
+  const normalized = String(decision || "").trim().toLowerCase();
+  if (normalized === "accepted" || normalized === "declined") {
+    return normalized;
+  }
+  return "none";
+}
+
+function hasPendingFilesDisclaimerReevaluation(profile = null) {
+  const me = normalizeFilesProfile(profile || state.files.me);
+  return Boolean(String(me.accessDisclaimerReevaluationRequestedAt || "").trim());
+}
+
+function getFilesDecisionSeenStorageKey(discordId) {
+  const normalizedId = String(discordId || "").trim();
+  if (!normalizedId) {
+    return "";
+  }
+  return `${STORAGE_FILES_DECISION_SEEN_PREFIX}:${normalizedId}`;
+}
+
+function getFilesDecisionToken(profile = null) {
+  const me = normalizeFilesProfile(profile || state.files.me);
+  if (!me.loggedIn || !me.discordId) {
+    return "";
+  }
+
+  const status = normalizeFilesAccessRequestStatus(me.accessRequestStatus);
+  if (status !== "approved" && status !== "declined") {
+    return "";
+  }
+
+  const decidedAt = String(me.accessRequestDecidedAt || "").trim();
+  if (!decidedAt) {
+    return "";
+  }
+
+  return `${me.discordId}:${status}:${decidedAt}`;
+}
+
+function readFilesSeenDecisionToken(discordId) {
+  const storageKey = getFilesDecisionSeenStorageKey(discordId);
+  if (!storageKey) {
+    return "";
+  }
+
+  try {
+    return String(localStorage.getItem(storageKey) || "");
+  } catch {
+    return "";
+  }
+}
+
+function writeFilesSeenDecisionToken(discordId, token) {
+  const storageKey = getFilesDecisionSeenStorageKey(discordId);
+  if (!storageKey) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(storageKey, String(token || ""));
+  } catch {
+    // no-op
+  }
+}
+
+function renderFilesDecisionTabBadge() {
+  if (!elements.tabStatusDecisionBadge) {
+    return;
+  }
+
+  const showBadge = Boolean(state.files.decisionNotice.visible);
+  elements.tabStatusDecisionBadge.hidden = !showBadge;
+  elements.tabStatusDecisionBadge.textContent = showBadge ? "1" : "";
+  elements.tabStatusDecisionBadge.setAttribute("aria-label", t("files_decision_badge_aria_label"));
+  elements.tabStatusDecisionBadge.title = t("files_decision_badge_aria_label");
+}
+
+function syncFilesDecisionNoticeFromProfile(profile = null) {
+  const me = normalizeFilesProfile(profile || state.files.me);
+  const nextToken = getFilesDecisionToken(me);
+
+  if (!nextToken) {
+    state.files.decisionNotice.visible = false;
+    state.files.decisionNotice.token = "";
+    renderFilesDecisionTabBadge();
+    return;
+  }
+
+  const seenToken = readFilesSeenDecisionToken(me.discordId);
+  const alreadySeen = Boolean(seenToken && seenToken === nextToken);
+  const currentlyInFilesView = state.view === "files" && document.body.classList.contains("is-files");
+
+  if (currentlyInFilesView || alreadySeen) {
+    state.files.decisionNotice.visible = false;
+    state.files.decisionNotice.token = nextToken;
+    if (currentlyInFilesView && seenToken !== nextToken) {
+      writeFilesSeenDecisionToken(me.discordId, nextToken);
+    }
+    renderFilesDecisionTabBadge();
+    return;
+  }
+
+  state.files.decisionNotice.visible = true;
+  state.files.decisionNotice.token = nextToken;
+  renderFilesDecisionTabBadge();
+}
+
+function markFilesDecisionNoticeSeen() {
+  const me = normalizeFilesProfile(state.files.me);
+  const token = getFilesDecisionToken(me);
+  if (token && me.discordId) {
+    writeFilesSeenDecisionToken(me.discordId, token);
+  }
+  state.files.decisionNotice.visible = false;
+  state.files.decisionNotice.token = token || "";
+  renderFilesDecisionTabBadge();
+}
+
+function shouldShowFilesDisclaimerGate(profile = null) {
+  const me = normalizeFilesProfile(profile || state.files.me);
+  if (!me.loggedIn) {
+    return false;
+  }
+
+  if (normalizeFilesAccessRequestStatus(me.accessRequestStatus) !== "approved") {
+    return false;
+  }
+
+  if (me.isAuthorized) {
+    return false;
+  }
+
+  const decision = normalizeFilesDisclaimerDecision(me.accessDisclaimerDecision);
+  if (me.disclaimerRequired) {
+    return decision !== "accepted";
+  }
+
+  return decision === "none" || decision === "declined";
 }
 
 function getFilesAccessRequestStatusLabel(status) {
@@ -1894,6 +2256,152 @@ function clearFilesGroupManagerState({ clearTargetGroup = true } = {}) {
   }
 }
 
+function clearFilesGroupRenameState({ closeModal = true } = {}) {
+  state.files.groupRename.busy = false;
+  state.files.groupRename.key = "";
+  if (closeModal) {
+    state.files.groupRename.open = false;
+  }
+  state.files.groupRename.label = "";
+  state.files.groupRename.value = "";
+  state.files.groupRename.message = "";
+  state.files.groupRename.messageKind = "";
+}
+
+function setFilesGroupRenameFeedback(message = "", kind = "") {
+  state.files.groupRename.message = String(message || "");
+  state.files.groupRename.messageKind = kind === "success" ? "success" : kind === "error" ? "error" : "";
+}
+
+function getFilesGroupEntriesByKey(groupKey) {
+  const targetKey = String(groupKey || "").trim();
+  if (!targetKey) {
+    return [];
+  }
+
+  const source = Array.isArray(state.files.list) ? state.files.list : [];
+  return source.filter((file) => getFilesGroupKey(file?.group || "") === targetKey);
+}
+
+function renderFilesGroupRenameModal() {
+  const modalState = state.files.groupRename;
+  const isOpen = Boolean(modalState.open);
+  const groupLabel = normalizeFilesGroup(modalState.label || "") || t("files_group_default");
+
+  if (elements.filesGroupRenameTitle) {
+    elements.filesGroupRenameTitle.textContent = t("files_group_rename_modal_title");
+  }
+  if (elements.filesGroupRenameMessage) {
+    elements.filesGroupRenameMessage.textContent = t("files_group_rename_modal_body", { group: groupLabel });
+  }
+  if (elements.filesGroupRenameLabel) {
+    elements.filesGroupRenameLabel.textContent = t("files_group_rename_modal_label");
+  }
+  if (elements.filesGroupRenameInput) {
+    elements.filesGroupRenameInput.placeholder = t("files_group_rename_modal_placeholder");
+    if (elements.filesGroupRenameInput.value !== String(modalState.value || "")) {
+      elements.filesGroupRenameInput.value = String(modalState.value || "");
+    }
+    elements.filesGroupRenameInput.disabled = Boolean(modalState.busy);
+  }
+  if (elements.filesGroupRenameCancelBtn) {
+    elements.filesGroupRenameCancelBtn.textContent = t("files_group_rename_modal_cancel");
+    elements.filesGroupRenameCancelBtn.disabled = Boolean(modalState.busy);
+  }
+  if (elements.filesGroupRenameConfirmBtn) {
+    elements.filesGroupRenameConfirmBtn.textContent = modalState.busy
+      ? t("files_group_rename_modal_confirm_busy")
+      : t("files_group_rename_modal_confirm");
+    elements.filesGroupRenameConfirmBtn.disabled = Boolean(modalState.busy);
+  }
+  if (elements.filesGroupRenameFeedback) {
+    const message = String(modalState.message || "");
+    const hasMessage = Boolean(message);
+    elements.filesGroupRenameFeedback.hidden = !hasMessage;
+    elements.filesGroupRenameFeedback.textContent = message;
+    elements.filesGroupRenameFeedback.classList.toggle("is-error", modalState.messageKind === "error");
+    elements.filesGroupRenameFeedback.classList.toggle("is-success", modalState.messageKind === "success");
+  }
+  if (elements.filesGroupRenameOverlay) {
+    elements.filesGroupRenameOverlay.classList.toggle("is-active", isOpen);
+    elements.filesGroupRenameOverlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  }
+}
+
+function openFilesGroupRenameModal(groupKey, fallbackGroupLabel = "") {
+  if (!state.files.me?.isAdmin || state.files.groupRename.busy) {
+    return;
+  }
+
+  const targetGroupKey = String(groupKey || "").trim();
+  if (!targetGroupKey || targetGroupKey === "__ungrouped__") {
+    return;
+  }
+
+  const filesInGroup = getFilesGroupEntriesByKey(targetGroupKey);
+  if (!filesInGroup.length) {
+    return;
+  }
+
+  const resolvedLabel = normalizeFilesGroup(filesInGroup[0]?.group || "") || normalizeFilesGroup(fallbackGroupLabel || "");
+  if (!resolvedLabel) {
+    return;
+  }
+
+  state.files.groupRename.open = true;
+  state.files.groupRename.key = targetGroupKey;
+  state.files.groupRename.label = resolvedLabel;
+  state.files.groupRename.value = resolvedLabel;
+  setFilesGroupRenameFeedback("", "");
+  renderFilesGroupRenameModal();
+
+  if (elements.filesGroupRenameInput instanceof HTMLInputElement) {
+    elements.filesGroupRenameInput.focus();
+    elements.filesGroupRenameInput.select();
+  }
+}
+
+function closeFilesGroupRenameModal({ force = false } = {}) {
+  if (state.files.groupRename.busy && !force) {
+    return;
+  }
+
+  clearFilesGroupRenameState({ closeModal: true });
+  renderFilesGroupRenameModal();
+}
+
+function renderFilesDisclaimerModal() {
+  const me = normalizeFilesProfile(state.files.me);
+  const canShowDisclaimer = Boolean(me.isAuthorized);
+  const isOpen = canShowDisclaimer && Boolean(state.files.disclaimerModal.open);
+  state.files.disclaimerModal.open = isOpen;
+
+  if (elements.filesDisclaimerBtn) {
+    elements.filesDisclaimerBtn.hidden = !canShowDisclaimer;
+    elements.filesDisclaimerBtn.classList.toggle("is-active", isOpen);
+    elements.filesDisclaimerBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    elements.filesDisclaimerBtn.setAttribute("aria-label", t("files_disclaimer_button"));
+  }
+  if (elements.filesDisclaimerOverlay) {
+    elements.filesDisclaimerOverlay.classList.toggle("is-active", isOpen);
+    elements.filesDisclaimerOverlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  }
+}
+
+function openFilesDisclaimerModal() {
+  const me = normalizeFilesProfile(state.files.me);
+  if (!me.isAuthorized) {
+    return;
+  }
+  state.files.disclaimerModal.open = true;
+  renderFilesDisclaimerModal();
+}
+
+function closeFilesDisclaimerModal() {
+  state.files.disclaimerModal.open = false;
+  renderFilesDisclaimerModal();
+}
+
 function normalizeFilesEntry(payload) {
   if (!payload || typeof payload !== "object") {
     return null;
@@ -2072,6 +2580,7 @@ function normalizeFilesAdminRequestEntry(payload) {
     username: String(payload.username || "").trim(),
     email: String(payload.email || "").trim(),
     reason: String(payload.reason || "").trim(),
+    declineReason: String(payload.declineReason || "").trim(),
     status: normalizeFilesAccessRequestStatus(payload.status),
     requestedAt: String(payload.requestedAt || "").trim(),
     decidedAt: String(payload.decidedAt || "").trim(),
@@ -2083,6 +2592,47 @@ function normalizeFilesAdminRequestEntry(payload) {
   };
 }
 
+function openFilesAdminRequestsDeclineComposer(requestId, { focus = true } = {}) {
+  const normalizedRequestId = String(requestId || "").trim();
+  if (!normalizedRequestId) {
+    return;
+  }
+
+  const alreadyOpen = state.files.adminRequests.declineComposerRequestId === normalizedRequestId;
+  state.files.adminRequests.declineComposerRequestId = alreadyOpen ? "" : normalizedRequestId;
+  if (alreadyOpen) {
+    state.files.adminRequests.declineComposerValue = "";
+    renderFilesAccessView();
+    return;
+  }
+
+  state.files.adminRequests.declineComposerValue = "";
+  renderFilesAccessView();
+  if (!focus || !elements.filesAdminRequestsList) {
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    const textareaList = elements.filesAdminRequestsList.querySelectorAll("textarea[data-files-admin-decline-input=\"true\"]");
+    const targetTextarea = Array.from(textareaList).find((node) => {
+      return String(node.getAttribute("data-request-id") || "").trim() === normalizedRequestId;
+    });
+    if (targetTextarea instanceof HTMLTextAreaElement) {
+      targetTextarea.focus();
+      targetTextarea.selectionStart = targetTextarea.value.length;
+      targetTextarea.selectionEnd = targetTextarea.value.length;
+    }
+  });
+}
+
+function closeFilesAdminRequestsDeclineComposer({ render = true } = {}) {
+  state.files.adminRequests.declineComposerRequestId = "";
+  state.files.adminRequests.declineComposerValue = "";
+  if (render) {
+    renderFilesAccessView();
+  }
+}
+
 function clearFilesAdminRequestsState() {
   if (filesAdminRequestsFeedbackTimer) {
     clearTimeout(filesAdminRequestsFeedbackTimer);
@@ -2090,9 +2640,121 @@ function clearFilesAdminRequestsState() {
   }
   state.files.adminRequests.loading = false;
   state.files.adminRequests.list = [];
+  state.files.adminRequests.declineComposerRequestId = "";
+  state.files.adminRequests.declineComposerValue = "";
   state.files.adminRequests.busyActionKey = "";
   state.files.adminRequests.message = "";
   state.files.adminRequests.messageKind = "";
+}
+
+function normalizeFilesAdminModalType(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "upload" || normalized === "requests") {
+    return normalized;
+  }
+  return "";
+}
+
+function getFilesPendingAdminRequestCount() {
+  const entries = Array.isArray(state.files.adminRequests.list) ? state.files.adminRequests.list : [];
+  let pendingCount = 0;
+  for (const entry of entries) {
+    if (normalizeFilesAccessRequestStatus(entry?.status) === "pending") {
+      pendingCount += 1;
+    }
+  }
+  return pendingCount;
+}
+
+function renderFilesAdminModals() {
+  const me = normalizeFilesProfile(state.files.me);
+  const canUseAdminTools = Boolean(me.isAuthorized && me.isAdmin);
+  const activeModal = canUseAdminTools
+    ? normalizeFilesAdminModalType(state.files.adminModal.active)
+    : "";
+  state.files.adminModal.active = activeModal;
+
+  const uploadOpen = activeModal === "upload";
+  const requestsOpen = activeModal === "requests";
+  const modalOpen = uploadOpen || requestsOpen;
+  const pendingCount = getFilesPendingAdminRequestCount();
+  const pendingBadgeText = pendingCount > 99 ? "99+" : String(pendingCount);
+
+  document.body.classList.toggle("is-files-admin-modal-open", modalOpen);
+
+  if (elements.filesAdminToolsPanel) {
+    elements.filesAdminToolsPanel.hidden = !canUseAdminTools;
+  }
+  if (elements.filesAdminConsoleModalBtn) {
+    elements.filesAdminConsoleModalBtn.classList.toggle("is-active", uploadOpen);
+    elements.filesAdminConsoleModalBtn.setAttribute("aria-expanded", uploadOpen ? "true" : "false");
+  }
+  if (elements.filesAccessControlModalBtn) {
+    elements.filesAccessControlModalBtn.classList.toggle("is-active", requestsOpen);
+    elements.filesAccessControlModalBtn.setAttribute("aria-expanded", requestsOpen ? "true" : "false");
+    const showBadge = canUseAdminTools && pendingCount > 0;
+    elements.filesAccessControlModalBtn.classList.toggle("has-pending-badge", showBadge);
+    const baseLabel = t("files_admin_requests_title");
+    const fullLabel = pendingCount > 0
+      ? `${baseLabel}. ${t("files_admin_requests_pending_badge", { n: pendingCount })}`
+      : baseLabel;
+    elements.filesAccessControlModalBtn.setAttribute("aria-label", fullLabel);
+  }
+  if (elements.filesAccessControlPendingBadge) {
+    const showBadge = canUseAdminTools && pendingCount > 0;
+    elements.filesAccessControlPendingBadge.hidden = !showBadge;
+    elements.filesAccessControlPendingBadge.textContent = showBadge ? pendingBadgeText : "0";
+    const badgeLabel = t("files_admin_requests_pending_badge", { n: pendingCount });
+    elements.filesAccessControlPendingBadge.setAttribute("aria-label", badgeLabel);
+    elements.filesAccessControlPendingBadge.title = badgeLabel;
+  }
+  if (elements.filesUploadOverlay) {
+    elements.filesUploadOverlay.classList.toggle("is-active", uploadOpen);
+    elements.filesUploadOverlay.setAttribute("aria-hidden", uploadOpen ? "false" : "true");
+  }
+  if (elements.filesAdminRequestsOverlay) {
+    elements.filesAdminRequestsOverlay.classList.toggle("is-active", requestsOpen);
+    elements.filesAdminRequestsOverlay.setAttribute("aria-hidden", requestsOpen ? "false" : "true");
+  }
+  if (!requestsOpen) {
+    setFilesAdminRequestsFilterMenuOpen(false);
+  }
+  if (!uploadOpen) {
+    closeAllFilesGroupSuggestMenus();
+  }
+}
+
+function setFilesAdminModalOpen(nextModal, { focus = true } = {}) {
+  const me = normalizeFilesProfile(state.files.me);
+  const canUseAdminTools = Boolean(me.isAuthorized && me.isAdmin);
+  const normalizedModal = canUseAdminTools ? normalizeFilesAdminModalType(nextModal) : "";
+  state.files.adminModal.active = normalizedModal;
+  renderFilesAdminModals();
+
+  if (!normalizedModal || !focus) {
+    return;
+  }
+
+  if (normalizedModal === "upload") {
+    if (elements.filesUploadInput instanceof HTMLInputElement) {
+      elements.filesUploadInput.focus();
+    }
+    return;
+  }
+
+  if (normalizedModal === "requests") {
+    if (!state.files.adminRequests.loading) {
+      void refreshFilesAdminRequests({ silent: true });
+    }
+    if (elements.filesAdminRequestsSearchInput instanceof HTMLInputElement) {
+      elements.filesAdminRequestsSearchInput.focus();
+      elements.filesAdminRequestsSearchInput.select();
+    }
+  }
+}
+
+function closeFilesAdminModal() {
+  setFilesAdminModalOpen("", { focus: false });
 }
 
 function getFilesAdminRequestStatusLabel(status) {
@@ -2115,7 +2777,8 @@ function getFilesAdminRequestSearchText(entry) {
     entry.username,
     entry.discordId,
     entry.email,
-    entry.reason
+    entry.reason,
+    entry.declineReason
   ].join(" "));
 }
 
@@ -2158,6 +2821,16 @@ function renderFilesAdminRequestsPanel() {
   if (!showPanel) {
     setFilesAdminRequestsFilterMenuOpen(false);
     return;
+  }
+
+  if (state.files.adminRequests.declineComposerRequestId) {
+    const hasComposerEntry = state.files.adminRequests.list.some((entry) => {
+      return String(entry?.requestId || "").trim() === state.files.adminRequests.declineComposerRequestId;
+    });
+    if (!hasComposerEntry) {
+      state.files.adminRequests.declineComposerRequestId = "";
+      state.files.adminRequests.declineComposerValue = "";
+    }
   }
 
   syncFilesAdminRequestsFilterMenu();
@@ -2209,8 +2882,11 @@ function renderFilesAdminRequestsPanel() {
     const decidedAt = entry.decidedAt ? formatFileDateTime(entry.decidedAt) : t("files_unknown_value");
     const emailText = entry.email || t("files_unknown_value");
     const reasonText = entry.reason || t("files_unknown_value");
+    const declineReasonText = String(entry.declineReason || "").trim();
     const itemKey = entry.requestId || entry.discordId;
     const rowBusy = Boolean(state.files.adminRequests.busyActionKey) && state.files.adminRequests.busyActionKey === itemKey;
+    const isDeclineComposerOpen = Boolean(entry.requestId)
+      && state.files.adminRequests.declineComposerRequestId === entry.requestId;
 
     const card = document.createElement("article");
     card.className = "files-admin-request-item";
@@ -2260,6 +2936,16 @@ function renderFilesAdminRequestsPanel() {
     reason.appendChild(reasonLabel);
     reason.appendChild(document.createTextNode(reasonText));
 
+    let declineReason = null;
+    if (declineReasonText && declineReasonText !== reasonText) {
+      declineReason = document.createElement("p");
+      declineReason.className = "files-admin-request-reason";
+      const declineReasonLabel = document.createElement("span");
+      declineReasonLabel.textContent = t("files_admin_requests_meta_decline_reason");
+      declineReason.appendChild(declineReasonLabel);
+      declineReason.appendChild(document.createTextNode(declineReasonText));
+    }
+
     const actions = document.createElement("div");
     actions.className = "files-admin-request-actions";
 
@@ -2276,15 +2962,17 @@ function renderFilesAdminRequestsPanel() {
     }
 
     if (entry.canDecline && entry.requestId) {
-      const denyBtn = document.createElement("button");
-      denyBtn.type = "button";
-      denyBtn.className = "files-card-action files-admin-request-action is-delete";
-      denyBtn.textContent = rowBusy ? t("files_admin_requests_action_busy") : t("files_admin_requests_action_deny");
-      denyBtn.dataset.filesAdminAction = "deny";
-      denyBtn.dataset.requestId = entry.requestId;
-      denyBtn.dataset.actionKey = itemKey;
-      denyBtn.disabled = rowBusy || state.files.adminRequests.loading;
-      actions.appendChild(denyBtn);
+      if (!isDeclineComposerOpen) {
+        const denyBtn = document.createElement("button");
+        denyBtn.type = "button";
+        denyBtn.className = "files-card-action files-admin-request-action is-delete";
+        denyBtn.textContent = rowBusy ? t("files_admin_requests_action_busy") : t("files_admin_requests_action_deny");
+        denyBtn.dataset.filesAdminAction = "deny-open";
+        denyBtn.dataset.requestId = entry.requestId;
+        denyBtn.dataset.actionKey = itemKey;
+        denyBtn.disabled = rowBusy || state.files.adminRequests.loading;
+        actions.appendChild(denyBtn);
+      }
     }
 
     if (entry.canUnauthorize) {
@@ -2321,7 +3009,59 @@ function renderFilesAdminRequestsPanel() {
     card.appendChild(top);
     card.appendChild(meta);
     card.appendChild(reason);
+    if (declineReason) {
+      card.appendChild(declineReason);
+    }
     card.appendChild(actions);
+    if (isDeclineComposerOpen && entry.requestId) {
+      const declineEditor = document.createElement("div");
+      declineEditor.className = "files-admin-request-decline-editor";
+
+      const declineLabel = document.createElement("label");
+      declineLabel.className = "files-admin-request-decline-label";
+      declineLabel.textContent = t("files_admin_requests_action_decline_reason_label");
+
+      const declineInput = document.createElement("textarea");
+      declineInput.className = "files-admin-request-decline-input";
+      declineInput.rows = 3;
+      declineInput.maxLength = FILES_ACCESS_REQUEST_REASON_MAX;
+      declineInput.placeholder = t("files_admin_requests_action_decline_reason_placeholder");
+      declineInput.value = String(state.files.adminRequests.declineComposerValue || "");
+      declineInput.setAttribute("data-files-admin-decline-input", "true");
+      declineInput.setAttribute("data-request-id", entry.requestId);
+      declineInput.disabled = rowBusy || state.files.adminRequests.loading;
+
+      const declineEditorActions = document.createElement("div");
+      declineEditorActions.className = "files-admin-request-decline-actions";
+
+      const declineCancelBtn = document.createElement("button");
+      declineCancelBtn.type = "button";
+      declineCancelBtn.className = "files-card-action files-admin-request-action";
+      declineCancelBtn.textContent = t("files_admin_requests_action_deny_cancel");
+      declineCancelBtn.dataset.filesAdminAction = "deny-cancel";
+      declineCancelBtn.dataset.requestId = entry.requestId;
+      declineCancelBtn.dataset.actionKey = itemKey;
+      declineCancelBtn.disabled = rowBusy || state.files.adminRequests.loading;
+
+      const declineConfirmBtn = document.createElement("button");
+      declineConfirmBtn.type = "button";
+      declineConfirmBtn.className = "files-card-action files-admin-request-action is-delete";
+      declineConfirmBtn.textContent = rowBusy
+        ? t("files_admin_requests_action_busy")
+        : t("files_admin_requests_action_deny_confirm");
+      declineConfirmBtn.dataset.filesAdminAction = "deny-submit";
+      declineConfirmBtn.dataset.requestId = entry.requestId;
+      declineConfirmBtn.dataset.actionKey = itemKey;
+      declineConfirmBtn.disabled = rowBusy || state.files.adminRequests.loading;
+
+      declineEditorActions.appendChild(declineCancelBtn);
+      declineEditorActions.appendChild(declineConfirmBtn);
+
+      declineEditor.appendChild(declineLabel);
+      declineEditor.appendChild(declineInput);
+      declineEditor.appendChild(declineEditorActions);
+      card.appendChild(declineEditor);
+    }
     fragment.appendChild(card);
   }
 
@@ -2999,7 +3739,9 @@ function renderFilesRestrictedView({
   accessRequestStatus,
   accessRequestRequestedAt,
   accessRequestDecidedAt,
-  accessRequestReapplyAt
+  accessRequestReapplyAt,
+  accessRequestDeclineReason,
+  accessDisclaimerDecision
 } = {}) {
   if (!elements.filesRestrictedView) {
     return;
@@ -3012,7 +3754,12 @@ function renderFilesRestrictedView({
     accessRequestDecidedAt,
     accessRequestReapplyAt
   });
-  const showRestricted = resolvedLoggedIn && !resolvedAuthorized && !cooldownActive;
+  const resolvedRequestStatus = normalizeFilesAccessRequestStatus(accessRequestStatus);
+  const resolvedDisclaimerDecision = normalizeFilesDisclaimerDecision(accessDisclaimerDecision);
+  const disclaimerGateActive = resolvedRequestStatus === "approved"
+    && !resolvedAuthorized
+    && (resolvedDisclaimerDecision === "none" || resolvedDisclaimerDecision === "declined");
+  const showRestricted = resolvedLoggedIn && !resolvedAuthorized && !cooldownActive && !disclaimerGateActive;
   elements.filesRestrictedView.hidden = !showRestricted;
   if (elements.filesRestrictedRequestFeedback) {
     if (!showRestricted) {
@@ -3031,7 +3778,7 @@ function renderFilesRestrictedView({
   const unknown = t("files_unknown_value");
   const resolvedUsername = String(username || "").trim() || unknown;
   const resolvedDiscordId = String(discordId || "").trim() || unknown;
-  const resolvedRequestStatus = normalizeFilesAccessRequestStatus(accessRequestStatus);
+  const declineReason = String(accessRequestDeclineReason || "").trim();
   const hideReasonSection = resolvedRequestStatus === "pending";
   const incidentCode = createFilesRestrictedIncidentCode(resolvedDiscordId !== unknown ? resolvedDiscordId : resolvedUsername);
   const locale = state.lang === "es" ? "es-ES" : "en-US";
@@ -3045,6 +3792,12 @@ function renderFilesRestrictedView({
 
   if (elements.filesRestrictedIncident) {
     elements.filesRestrictedIncident.textContent = t("files_restricted_incident", { code: incidentCode });
+  }
+  if (elements.filesRestrictedSubtitle) {
+    const showDeclinedReason = resolvedRequestStatus === "declined" && Boolean(declineReason);
+    elements.filesRestrictedSubtitle.textContent = showDeclinedReason
+      ? t("files_restricted_subtitle_declined_reason", { reason: declineReason })
+      : t("files_restricted_subtitle");
   }
   if (elements.filesRestrictedIdentityValue) {
     elements.filesRestrictedIdentityValue.textContent = resolvedUsername;
@@ -3101,7 +3854,8 @@ function renderFilesDeniedView({
   authorized,
   accessRequestStatus,
   accessRequestDecidedAt,
-  accessRequestReapplyAt
+  accessRequestReapplyAt,
+  accessRequestDeclineReason
 } = {}) {
   if (!elements.filesDeniedView) {
     return;
@@ -3110,6 +3864,7 @@ function renderFilesDeniedView({
   const resolvedLoggedIn = Boolean(loggedIn);
   const resolvedAuthorized = Boolean(authorized) && resolvedLoggedIn;
   const resolvedStatus = normalizeFilesAccessRequestStatus(accessRequestStatus);
+  const declineReason = String(accessRequestDeclineReason || "").trim();
   const remainingMs = getFilesDeclinedCooldownRemainingMs({
     accessRequestStatus: resolvedStatus,
     accessRequestDecidedAt,
@@ -3130,6 +3885,17 @@ function renderFilesDeniedView({
     ? new Date(reapplyAtMs)
     : null;
 
+  if (elements.filesDeniedSubtitle) {
+    elements.filesDeniedSubtitle.textContent = t("files_denied_subtitle");
+  }
+  if (elements.filesDeniedReasonSection) {
+    const showReason = declineReason.length > 0;
+    elements.filesDeniedReasonSection.hidden = !showReason;
+    if (elements.filesDeniedReasonValue) {
+      elements.filesDeniedReasonValue.textContent = showReason ? declineReason : t("files_unknown_value");
+    }
+  }
+
   if (elements.filesDeniedStatusValue) {
     elements.filesDeniedStatusValue.textContent = t("files_denied_status_value");
   }
@@ -3140,6 +3906,335 @@ function renderFilesDeniedView({
   }
 
   updateFilesDeniedCountdown();
+}
+
+function setFilesDisclaimerGateFeedback(message = "", kind = "") {
+  state.files.disclaimerGate.message = String(message || "");
+  state.files.disclaimerGate.messageKind = kind === "success" ? "success" : kind === "error" ? "error" : "";
+}
+
+function clearFilesDisclaimerAcceptTransitionTimer() {
+  if (!filesDisclaimerAcceptTransitionTimer) {
+    return;
+  }
+  clearTimeout(filesDisclaimerAcceptTransitionTimer);
+  filesDisclaimerAcceptTransitionTimer = null;
+}
+
+function startFilesDisclaimerAcceptTransition() {
+  clearFilesDisclaimerAcceptTransitionTimer();
+  state.files.disclaimerGate.acceptTransitionActive = true;
+  state.files.disclaimerGate.acceptTransitionExiting = false;
+  state.files.disclaimerGate.acceptTransitionStartedAt = Date.now();
+}
+
+function stopFilesDisclaimerAcceptTransition({ immediate = false } = {}) {
+  clearFilesDisclaimerAcceptTransitionTimer();
+  if (immediate) {
+    state.files.disclaimerGate.acceptTransitionActive = false;
+    state.files.disclaimerGate.acceptTransitionExiting = false;
+    state.files.disclaimerGate.acceptTransitionStartedAt = 0;
+    return;
+  }
+
+  if (!state.files.disclaimerGate.acceptTransitionActive) {
+    state.files.disclaimerGate.acceptTransitionExiting = false;
+    state.files.disclaimerGate.acceptTransitionStartedAt = 0;
+    return;
+  }
+
+  state.files.disclaimerGate.acceptTransitionExiting = true;
+  if (state.view === "files" && document.body.classList.contains("is-files")) {
+    renderFilesAccessView();
+  }
+  filesDisclaimerAcceptTransitionTimer = setTimeout(() => {
+    filesDisclaimerAcceptTransitionTimer = null;
+    state.files.disclaimerGate.acceptTransitionActive = false;
+    state.files.disclaimerGate.acceptTransitionExiting = false;
+    state.files.disclaimerGate.acceptTransitionStartedAt = 0;
+    if (state.view === "files" && document.body.classList.contains("is-files")) {
+      renderFilesAccessView();
+    }
+  }, FILES_DISCLAIMER_ACCEPT_FADE_MS);
+}
+
+function resetFilesDisclaimerGateContactState({ clearText = true } = {}) {
+  state.files.disclaimerGate.contactOpen = false;
+  state.files.disclaimerGate.contactBusy = false;
+  if (clearText) {
+    state.files.disclaimerGate.contactText = "";
+  }
+  if (elements.filesDisclaimerContactInput) {
+    if (clearText) {
+      elements.filesDisclaimerContactInput.value = "";
+    }
+    elements.filesDisclaimerContactInput.classList.remove("is-invalid");
+  }
+}
+
+function openFilesDisclaimerContactView() {
+  const me = normalizeFilesProfile(state.files.me);
+  if (!shouldShowFilesDisclaimerGate(me)) {
+    return;
+  }
+  if (normalizeFilesDisclaimerDecision(me.accessDisclaimerDecision) !== "declined") {
+    return;
+  }
+  if (hasPendingFilesDisclaimerReevaluation(me)) {
+    resetFilesDisclaimerGateContactState({ clearText: false });
+    setFilesDisclaimerGateFeedback(t("files_disclaimer_gate_contact_pending"), "error");
+    renderFilesAccessView();
+    return;
+  }
+
+  state.files.disclaimerGate.contactOpen = true;
+  state.files.disclaimerGate.contactBusy = false;
+  setFilesDisclaimerGateFeedback("", "");
+  renderFilesAccessView();
+
+  if (elements.filesDisclaimerContactInput instanceof HTMLTextAreaElement) {
+    elements.filesDisclaimerContactInput.focus();
+    elements.filesDisclaimerContactInput.selectionStart = elements.filesDisclaimerContactInput.value.length;
+    elements.filesDisclaimerContactInput.selectionEnd = elements.filesDisclaimerContactInput.value.length;
+  }
+}
+
+function closeFilesDisclaimerContactView({ clearText = false } = {}) {
+  resetFilesDisclaimerGateContactState({ clearText });
+  setFilesDisclaimerGateFeedback("", "");
+  renderFilesAccessView();
+}
+
+function renderFilesDisclaimerGateView({
+  loggedIn,
+  authorized,
+  accessRequestStatus,
+  accessDisclaimerDecision
+} = {}) {
+  if (!elements.filesDisclaimerGateView) {
+    return;
+  }
+
+  const resolvedLoggedIn = Boolean(loggedIn);
+  const resolvedAuthorized = Boolean(authorized) && resolvedLoggedIn;
+  const resolvedStatus = normalizeFilesAccessRequestStatus(accessRequestStatus);
+  const resolvedDecision = normalizeFilesDisclaimerDecision(accessDisclaimerDecision);
+  const showGate = resolvedLoggedIn && !resolvedAuthorized && resolvedStatus === "approved";
+  const showDeclinedState = showGate && resolvedDecision === "declined";
+  const showContactView = showDeclinedState && Boolean(state.files.disclaimerGate.contactOpen);
+  elements.filesDisclaimerGateView.hidden = !showGate;
+
+  if (!showGate) {
+    state.files.disclaimerGate.busy = false;
+    state.files.disclaimerGate.pendingDecision = "";
+    setFilesDisclaimerGateFeedback("", "");
+    resetFilesDisclaimerGateContactState({ clearText: true });
+    return;
+  }
+  if (!showDeclinedState) {
+    resetFilesDisclaimerGateContactState({ clearText: true });
+  }
+
+  const busy = Boolean(state.files.disclaimerGate.busy);
+  const pendingDecision = String(state.files.disclaimerGate.pendingDecision || "").trim().toLowerCase();
+  const contactBusy = Boolean(state.files.disclaimerGate.contactBusy);
+
+  if (elements.filesDisclaimerGateBadge) {
+    elements.filesDisclaimerGateBadge.textContent = showDeclinedState
+      ? t("files_disclaimer_gate_declined_badge")
+      : t("files_disclaimer_gate_badge");
+  }
+
+  if (elements.filesDisclaimerGateActions) {
+    elements.filesDisclaimerGateActions.hidden = showDeclinedState;
+  }
+  if (elements.filesDisclaimerAgreeBtn) {
+    elements.filesDisclaimerAgreeBtn.disabled = busy || showDeclinedState;
+    elements.filesDisclaimerAgreeBtn.textContent = busy && pendingDecision === "accepted"
+      ? t("files_disclaimer_gate_agree_busy")
+      : t("files_disclaimer_gate_agree_button");
+  }
+  if (elements.filesDisclaimerDeclineBtn) {
+    elements.filesDisclaimerDeclineBtn.disabled = busy || showDeclinedState;
+    elements.filesDisclaimerDeclineBtn.textContent = busy && pendingDecision === "declined"
+      ? t("files_disclaimer_gate_decline_busy")
+      : t("files_disclaimer_gate_decline_button");
+  }
+
+  if (elements.filesDisclaimerDeclinedPanel) {
+    elements.filesDisclaimerDeclinedPanel.hidden = !showDeclinedState || showContactView;
+  }
+  if (elements.filesDisclaimerContactBtn) {
+    elements.filesDisclaimerContactBtn.disabled = contactBusy;
+  }
+  if (elements.filesDisclaimerContactView) {
+    elements.filesDisclaimerContactView.hidden = !showContactView;
+  }
+  if (elements.filesDisclaimerContactInput) {
+    if (elements.filesDisclaimerContactInput.value !== state.files.disclaimerGate.contactText) {
+      elements.filesDisclaimerContactInput.value = state.files.disclaimerGate.contactText;
+    }
+    elements.filesDisclaimerContactInput.disabled = contactBusy;
+  }
+  if (elements.filesDisclaimerContactCancelBtn) {
+    elements.filesDisclaimerContactCancelBtn.disabled = contactBusy;
+  }
+  if (elements.filesDisclaimerContactSendBtn) {
+    elements.filesDisclaimerContactSendBtn.disabled = contactBusy;
+    elements.filesDisclaimerContactSendBtn.textContent = contactBusy
+      ? t("files_disclaimer_gate_contact_send_busy")
+      : t("files_disclaimer_gate_contact_send_button");
+  }
+
+  if (elements.filesDisclaimerGateFeedback) {
+    const message = String(state.files.disclaimerGate.message || "");
+    const hasMessage = Boolean(message);
+    elements.filesDisclaimerGateFeedback.hidden = !hasMessage;
+    elements.filesDisclaimerGateFeedback.textContent = hasMessage ? message : "";
+    elements.filesDisclaimerGateFeedback.classList.toggle("is-success", state.files.disclaimerGate.messageKind === "success");
+    elements.filesDisclaimerGateFeedback.classList.toggle("is-error", state.files.disclaimerGate.messageKind === "error");
+  }
+}
+
+async function submitFilesDisclaimerReevaluation() {
+  if (state.files.disclaimerGate.contactBusy) {
+    return;
+  }
+
+  const me = normalizeFilesProfile(state.files.me);
+  if (!shouldShowFilesDisclaimerGate(me)) {
+    return;
+  }
+  if (normalizeFilesDisclaimerDecision(me.accessDisclaimerDecision) !== "declined") {
+    return;
+  }
+
+  const rawExplanation = elements.filesDisclaimerContactInput instanceof HTMLTextAreaElement
+    ? String(elements.filesDisclaimerContactInput.value || "")
+    : String(state.files.disclaimerGate.contactText || "");
+  const explanation = rawExplanation.trim();
+  state.files.disclaimerGate.contactText = rawExplanation;
+
+  if (!explanation) {
+    setFilesDisclaimerGateFeedback(t("files_disclaimer_gate_contact_required"), "error");
+    if (elements.filesDisclaimerContactInput instanceof HTMLTextAreaElement) {
+      elements.filesDisclaimerContactInput.classList.add("is-invalid");
+      elements.filesDisclaimerContactInput.focus();
+    }
+    renderFilesAccessView();
+    return;
+  }
+  if (explanation.length > FILES_ACCESS_REQUEST_REASON_MAX) {
+    setFilesDisclaimerGateFeedback(t("files_disclaimer_gate_contact_too_long"), "error");
+    if (elements.filesDisclaimerContactInput instanceof HTMLTextAreaElement) {
+      elements.filesDisclaimerContactInput.classList.add("is-invalid");
+      elements.filesDisclaimerContactInput.focus();
+    }
+    renderFilesAccessView();
+    return;
+  }
+  if (elements.filesDisclaimerContactInput instanceof HTMLTextAreaElement) {
+    elements.filesDisclaimerContactInput.classList.remove("is-invalid");
+  }
+
+  state.files.disclaimerGate.contactBusy = true;
+  setFilesDisclaimerGateFeedback("", "");
+  renderFilesAccessView();
+
+  try {
+    await requestJson("/api/files/disclaimer-reevaluation", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        explanation
+      })
+    });
+    state.files.me = {
+      ...normalizeFilesProfile(state.files.me),
+      accessDisclaimerReevaluationRequestedAt: new Date().toISOString()
+    };
+    resetFilesDisclaimerGateContactState({ clearText: true });
+    setFilesDisclaimerGateFeedback(t("files_disclaimer_gate_contact_success"), "success");
+  } catch (error) {
+    const serverMessage = String(error?.message || "").trim().toLowerCase();
+    let message = t("files_disclaimer_gate_contact_error");
+    if (error?.status === 503) {
+      message = t("files_disclaimer_gate_contact_unavailable");
+    } else if (error?.status === 429 || serverMessage.includes("pending")) {
+      message = t("files_disclaimer_gate_contact_pending");
+      resetFilesDisclaimerGateContactState({ clearText: false });
+    } else if (error?.status === 400) {
+      message = serverMessage.includes("required")
+        ? t("files_disclaimer_gate_contact_required")
+        : (serverMessage.includes("long") || serverMessage.includes("exceed") || serverMessage.includes("character"))
+            ? t("files_disclaimer_gate_contact_too_long")
+            : t("files_disclaimer_gate_contact_error");
+    }
+    setFilesDisclaimerGateFeedback(message, "error");
+  } finally {
+    state.files.disclaimerGate.contactBusy = false;
+    renderFilesAccessView();
+  }
+}
+
+async function submitFilesDisclaimerDecision(decision) {
+  const normalizedDecision = normalizeFilesDisclaimerDecision(decision);
+  const isAcceptDecision = normalizedDecision === "accepted";
+  if (normalizedDecision !== "accepted" && normalizedDecision !== "declined") {
+    return;
+  }
+  if (state.files.disclaimerGate.busy) {
+    return;
+  }
+
+  const me = normalizeFilesProfile(state.files.me);
+  if (!shouldShowFilesDisclaimerGate(me)) {
+    return;
+  }
+
+  state.files.disclaimerGate.busy = true;
+  state.files.disclaimerGate.pendingDecision = normalizedDecision;
+  setFilesDisclaimerGateFeedback("", "");
+  if (isAcceptDecision) {
+    startFilesDisclaimerAcceptTransition();
+    resetFilesDisclaimerGateContactState({ clearText: true });
+  }
+  renderFilesAccessView();
+
+  try {
+    await requestJson("/api/files/disclaimer-decision", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        decision: normalizedDecision
+      })
+    });
+    await refreshFilesIdentity({ loadFiles: isAcceptDecision });
+    if (isAcceptDecision) {
+      const startedAt = Number(state.files.disclaimerGate.acceptTransitionStartedAt) || Date.now();
+      const elapsedMs = Math.max(0, Date.now() - startedAt);
+      const remainingMs = Math.max(0, FILES_DISCLAIMER_ACCEPT_MIN_MS - elapsedMs);
+      if (remainingMs > 0) {
+        await sleep(remainingMs);
+      }
+      stopFilesDisclaimerAcceptTransition({ immediate: false });
+    }
+  } catch (error) {
+    if (isAcceptDecision) {
+      stopFilesDisclaimerAcceptTransition({ immediate: true });
+    }
+    const serverMessage = String(error?.message || "").trim();
+    const message = serverMessage || t("files_disclaimer_gate_error");
+    setFilesDisclaimerGateFeedback(message, "error");
+  } finally {
+    state.files.disclaimerGate.busy = false;
+    state.files.disclaimerGate.pendingDecision = "";
+    renderFilesAccessView();
+  }
 }
 
 function renderFilesSearchResults() {
@@ -3265,7 +4360,7 @@ function renderFilesList() {
 
   const me = normalizeFilesProfile(state.files.me);
   const canReadFiles = Boolean(me.isAuthorized);
-  const showRestrictedNotice = me.loggedIn && !canReadFiles;
+  const showRestrictedNotice = me.loggedIn && !canReadFiles && !shouldShowFilesDisclaimerGate(me);
   const pendingTransition = String(state.files.transition || "");
   const reuseManagerMode = Boolean(state.files.groupManager.open && me.isAdmin);
   const reuseSelectedId = String(state.files.selectedId || "");
@@ -3318,6 +4413,7 @@ function renderFilesList() {
 
   if (!canReadFiles) {
     clearFilesGroupManagerState();
+    clearFilesGroupRenameState();
     if (state.files.search.open || state.files.search.query) {
       setFilesSearchOpen(false, { clearQuery: true });
       return;
@@ -3643,6 +4739,9 @@ function renderFilesList() {
 
     const groupHead = document.createElement("div");
     groupHead.className = "files-group-head";
+    const canRenameFocusedGroup = hasFocusedGroup
+      && Boolean(state.files.me?.isAdmin)
+      && groupEntry.key !== "__ungrouped__";
 
     const groupToggle = document.createElement("button");
     groupToggle.type = "button";
@@ -3681,6 +4780,20 @@ function renderFilesList() {
     groupToggle.appendChild(groupTitle);
     groupToggle.appendChild(groupMeta);
     groupHead.appendChild(groupToggle);
+
+    if (canRenameFocusedGroup) {
+      const renameGroupButton = document.createElement("button");
+      renameGroupButton.type = "button";
+      renameGroupButton.className = "files-group-rename-btn";
+      renameGroupButton.textContent = "✎";
+      renameGroupButton.setAttribute("data-files-action", "rename-group");
+      renameGroupButton.setAttribute("data-group-key", groupEntry.key);
+      renameGroupButton.setAttribute("data-group-label", groupEntry.label || "");
+      const renameLabel = t("files_group_rename_button_label", { group: groupEntry.label || t("files_group_default") });
+      renameGroupButton.setAttribute("aria-label", renameLabel);
+      renameGroupButton.disabled = Boolean(state.files.groupRename.busy);
+      groupHead.appendChild(renameGroupButton);
+    }
 
     const groupList = document.createElement("div");
     groupList.className = "files-group-list";
@@ -3866,9 +4979,33 @@ function renderFilesAccessView() {
   const loggedIn = me.loggedIn;
   const authorized = me.isAuthorized;
   const isAdmin = me.isAdmin;
+  const showDisclaimerGate = shouldShowFilesDisclaimerGate(me);
   const showRestrictedLayout = loggedIn && !authorized;
   const showAuthorizedLayout = authorized || showRestrictedLayout;
   const showUploadPanel = authorized && isAdmin;
+  const disclaimerAcceptTransitionActive = Boolean(state.files.disclaimerGate.acceptTransitionActive);
+  const disclaimerAcceptTransitionExiting = Boolean(state.files.disclaimerGate.acceptTransitionExiting);
+  const showDisclaimerAcceptLoader = disclaimerAcceptTransitionActive || disclaimerAcceptTransitionExiting;
+
+  if (elements.filesBrowserPanel) {
+    elements.filesBrowserPanel.classList.toggle("is-disclaimer-accept-loading", showDisclaimerAcceptLoader);
+  }
+  if (elements.filesDisclaimerAcceptLoader) {
+    elements.filesDisclaimerAcceptLoader.hidden = !showDisclaimerAcceptLoader;
+    elements.filesDisclaimerAcceptLoader.classList.toggle("is-visible", showDisclaimerAcceptLoader);
+    elements.filesDisclaimerAcceptLoader.classList.toggle(
+      "is-active",
+      disclaimerAcceptTransitionActive && !disclaimerAcceptTransitionExiting
+    );
+    elements.filesDisclaimerAcceptLoader.classList.toggle("is-exiting", disclaimerAcceptTransitionExiting);
+  }
+
+  if (showDisclaimerGate) {
+    state.files.accessRequestBusy = false;
+    setFilesRestrictedRequestFeedback("", "");
+  }
+
+  syncFilesDecisionNoticeFromProfile(me);
 
   if ((!authorized || !isAdmin) && state.files.deleteModal.open) {
     closeFilesDeleteModal({ force: true });
@@ -3878,12 +5015,25 @@ function renderFilesAccessView() {
   document.body.classList.toggle("is-files-guest", !loggedIn && !authorized);
 
   if (elements.filesBrowserTitle) {
-    elements.filesBrowserTitle.textContent = showRestrictedLayout
-      ? t("files_restricted_browser_title")
-      : t("files_file_index_title");
+    if (showDisclaimerGate) {
+      elements.filesBrowserTitle.textContent = t("files_disclaimer_gate_browser_title");
+    } else {
+      elements.filesBrowserTitle.textContent = showRestrictedLayout
+        ? t("files_restricted_browser_title")
+        : t("files_file_index_title");
+    }
   }
 
   if (isFileProtocol) {
+    if (state.files.adminModal.active) {
+      state.files.adminModal.active = "";
+    }
+    if (state.files.groupRename.open) {
+      clearFilesGroupRenameState();
+    }
+    if (state.files.disclaimerModal.open) {
+      state.files.disclaimerModal.open = false;
+    }
     renderFilesSessionProfile({
       loggedIn: false,
       authorized: false,
@@ -3930,6 +5080,13 @@ function renderFilesAccessView() {
     if (elements.filesDeniedView) {
       elements.filesDeniedView.hidden = true;
     }
+    if (elements.filesDisclaimerGateView) {
+      elements.filesDisclaimerGateView.hidden = true;
+    }
+    renderFilesAdminModals();
+    renderFilesGroupRenameModal();
+    renderFilesDisclaimerModal();
+    renderFilesDecisionTabBadge();
     renderFilesList();
     return;
   }
@@ -4007,6 +5164,8 @@ function renderFilesAccessView() {
   if (!showUploadPanel) {
     state.files.groupManager.open = false;
     clearFilesGroupManagerState();
+    clearFilesGroupRenameState();
+    state.files.adminModal.active = "";
   }
 
   renderFilesSessionProfile({
@@ -4017,6 +5176,12 @@ function renderFilesAccessView() {
     discordId: me.discordId,
     accessRequestStatus: me.accessRequestStatus
   });
+  renderFilesDisclaimerGateView({
+    loggedIn,
+    authorized,
+    accessRequestStatus: me.accessRequestStatus,
+    accessDisclaimerDecision: me.accessDisclaimerDecision
+  });
   renderFilesRestrictedView({
     loggedIn,
     authorized,
@@ -4025,14 +5190,17 @@ function renderFilesAccessView() {
     accessRequestStatus: me.accessRequestStatus,
     accessRequestRequestedAt: me.accessRequestRequestedAt,
     accessRequestDecidedAt: me.accessRequestDecidedAt,
-    accessRequestReapplyAt: me.accessRequestReapplyAt
+    accessRequestReapplyAt: me.accessRequestReapplyAt,
+    accessRequestDeclineReason: me.accessRequestDeclineReason,
+    accessDisclaimerDecision: me.accessDisclaimerDecision
   });
   renderFilesDeniedView({
     loggedIn,
     authorized,
     accessRequestStatus: me.accessRequestStatus,
     accessRequestDecidedAt: me.accessRequestDecidedAt,
-    accessRequestReapplyAt: me.accessRequestReapplyAt
+    accessRequestReapplyAt: me.accessRequestReapplyAt,
+    accessRequestDeclineReason: me.accessRequestDeclineReason
   });
 
   if (elements.filesUploadBtn) {
@@ -4071,6 +5239,10 @@ function renderFilesAccessView() {
   }
 
   renderFilesAdminRequestsPanel();
+  renderFilesAdminModals();
+  renderFilesGroupRenameModal();
+  renderFilesDisclaimerModal();
+  renderFilesDecisionTabBadge();
   renderFilesList();
   renderFilesGroupManagerPanel();
 }
@@ -4266,6 +5438,11 @@ function hasFilesIdentityChanged(previousProfile, nextProfile) {
     || prev.accessRequestRequestedAt !== next.accessRequestRequestedAt
     || prev.accessRequestDecidedAt !== next.accessRequestDecidedAt
     || prev.accessRequestReapplyAt !== next.accessRequestReapplyAt
+    || prev.accessRequestDeclineReason !== next.accessRequestDeclineReason
+    || prev.accessDisclaimerDecision !== next.accessDisclaimerDecision
+    || prev.accessDisclaimerDecidedAt !== next.accessDisclaimerDecidedAt
+    || prev.accessDisclaimerReevaluationRequestedAt !== next.accessDisclaimerReevaluationRequestedAt
+    || prev.disclaimerRequired !== next.disclaimerRequired
   );
 }
 
@@ -4291,6 +5468,7 @@ async function pollFilesIdentityLive({ force = false } = {}) {
     }
 
     state.files.me = nextProfile;
+    syncFilesDecisionNoticeFromProfile(nextProfile);
 
     if (nextProfile.isAuthorized) {
       const identityChanged = previousProfile.discordId !== nextProfile.discordId;
@@ -4317,6 +5495,7 @@ async function pollFilesIdentityLive({ force = false } = {}) {
       state.files.rename.value = "";
       state.files.rename.busy = false;
       clearFilesGroupManagerState();
+      clearFilesGroupRenameState();
       state.files.listError = "";
       state.files.loadingList = false;
       state.files.selectedId = "";
@@ -4345,6 +5524,7 @@ async function refreshFilesList() {
     state.files.rename.value = "";
     state.files.rename.busy = false;
     clearFilesGroupManagerState();
+    clearFilesGroupRenameState();
     state.files.listError = "";
     state.files.selectedId = "";
     state.files.detailOrigin = "";
@@ -4372,6 +5552,7 @@ async function refreshFilesList() {
     ) {
       state.files.activeGroupKey = "";
       clearFilesGroupManagerState();
+      clearFilesGroupRenameState();
     }
     if (
       state.files.rename.fileId
@@ -4397,6 +5578,7 @@ async function refreshFilesList() {
     state.files.rename.value = "";
     state.files.rename.busy = false;
     clearFilesGroupManagerState();
+    clearFilesGroupRenameState();
     state.files.listError = String(error?.message || t("files_empty_state"));
   } finally {
     state.files.loadingList = false;
@@ -4448,9 +5630,11 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
   try {
     const payload = await requestJson("/api/me");
     state.files.me = normalizeFilesProfile(payload);
+    syncFilesDecisionNoticeFromProfile(state.files.me);
   } catch (error) {
     state.files.me = buildGuestFilesProfile();
     state.files.meError = String(error?.message || "");
+    syncFilesDecisionNoticeFromProfile(state.files.me);
   } finally {
     state.files.loadingMe = false;
   }
@@ -4472,6 +5656,7 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
     state.files.rename.value = "";
     state.files.rename.busy = false;
     clearFilesGroupManagerState();
+    clearFilesGroupRenameState();
     state.files.listError = "";
     state.files.loadingList = false;
     state.files.selectedId = "";
@@ -4490,6 +5675,18 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
   renderFilesAccessView();
 }
 
+async function refreshFilesIdentityBadgeOnly() {
+  try {
+    const payload = await requestJson("/api/me");
+    state.files.me = normalizeFilesProfile(payload);
+  } catch {
+    state.files.me = buildGuestFilesProfile();
+  }
+
+  syncFilesDecisionNoticeFromProfile(state.files.me);
+  renderFilesDecisionTabBadge();
+}
+
 async function handleFilesLogout() {
   try {
     await requestJson("/auth/logout", { method: "POST" });
@@ -4504,6 +5701,7 @@ async function handleFilesLogout() {
   state.files.rename.value = "";
   state.files.rename.busy = false;
   clearFilesGroupManagerState();
+  clearFilesGroupRenameState();
   state.files.listError = "";
   state.files.selectedId = "";
   state.files.detailOrigin = "";
@@ -4512,12 +5710,20 @@ async function handleFilesLogout() {
   setFilesUploadFeedback("", "");
   state.files.accessRequestBusy = false;
   setFilesRestrictedRequestFeedback("", "");
+  stopFilesDisclaimerAcceptTransition({ immediate: true });
+  state.files.disclaimerGate.busy = false;
+  state.files.disclaimerGate.pendingDecision = "";
+  resetFilesDisclaimerGateContactState({ clearText: true });
+  setFilesDisclaimerGateFeedback("", "");
   clearFilesAdminRequestsState();
   state.files.adminRequests.query = "";
   state.files.adminRequests.filter = "pending";
   setFilesUploadInputInvalid(false, { isMissingFileError: false });
   state.files.search.query = "";
   state.files.search.open = false;
+  state.files.decisionNotice.visible = false;
+  state.files.decisionNotice.token = "";
+  renderFilesDecisionTabBadge();
   renderFilesAccessView();
   await refreshFilesIdentity({ loadFiles: false });
 }
@@ -4582,8 +5788,14 @@ async function handleFilesAccessRequest() {
       accessRequestStatus: "pending",
       accessRequestRequestedAt: new Date().toISOString(),
       accessRequestDecidedAt: "",
-      accessRequestReapplyAt: ""
+      accessRequestReapplyAt: "",
+      accessRequestDeclineReason: "",
+      accessDisclaimerDecision: "none",
+      accessDisclaimerDecidedAt: "",
+      accessDisclaimerReevaluationRequestedAt: "",
+      disclaimerRequired: false
     };
+    syncFilesDecisionNoticeFromProfile(state.files.me);
     if (elements.filesRestrictedReasonInput) {
       elements.filesRestrictedReasonInput.value = "";
       elements.filesRestrictedReasonInput.classList.remove("is-invalid");
@@ -4774,6 +5986,16 @@ async function handleFilesAdminRequestsAction(actionElement) {
   const requestId = String(actionElement.dataset.requestId || "").trim();
   const discordId = String(actionElement.dataset.discordId || "").trim();
   const actionKey = String(actionElement.dataset.actionKey || requestId || discordId).trim();
+
+  if (action === "deny-open" && requestId) {
+    openFilesAdminRequestsDeclineComposer(requestId);
+    return;
+  }
+  if (action === "deny-cancel") {
+    closeFilesAdminRequestsDeclineComposer();
+    return;
+  }
+
   if (!actionKey) {
     return;
   }
@@ -4782,11 +6004,26 @@ async function handleFilesAdminRequestsAction(actionElement) {
   let requestBody = null;
   let successMessage = "";
 
-  if ((action === "approve" || action === "deny") && requestId) {
+  if ((action === "approve" || action === "deny-submit") && requestId) {
+    let declineReason = "";
+    if (action === "deny-submit") {
+      declineReason = String(state.files.adminRequests.declineComposerValue || "")
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .trim();
+      if (declineReason.length > FILES_ACCESS_REQUEST_REASON_MAX) {
+        setFilesAdminRequestsFeedback(t("files_admin_requests_action_decline_reason_too_long"), "error");
+        renderFilesAccessView();
+        return;
+      }
+    }
     requestUrl = `/api/files/access-requests/${encodeURIComponent(requestId)}/decision`;
     requestBody = {
       action: action === "approve" ? "approve" : "decline"
     };
+    if (action === "deny-submit" && declineReason) {
+      requestBody.declineReason = declineReason;
+    }
     successMessage = action === "approve"
       ? t("files_admin_requests_action_approve_success")
       : t("files_admin_requests_action_deny_success");
@@ -4814,6 +6051,10 @@ async function handleFilesAdminRequestsAction(actionElement) {
         : undefined,
       body: requestBody ? JSON.stringify(requestBody) : undefined
     });
+    if (action === "approve" || action === "deny-submit") {
+      state.files.adminRequests.declineComposerRequestId = "";
+      state.files.adminRequests.declineComposerValue = "";
+    }
     setFilesAdminRequestsFeedback(successMessage, "success");
     await refreshFilesAdminRequests({ silent: true });
   } catch (error) {
@@ -4842,6 +6083,22 @@ function handleFilesAdminRequestsListClick(event) {
     return;
   }
   void handleFilesAdminRequestsAction(actionTarget);
+}
+
+function handleFilesAdminRequestsListInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLTextAreaElement)) {
+    return;
+  }
+  if (String(target.getAttribute("data-files-admin-decline-input") || "") !== "true") {
+    return;
+  }
+
+  const requestId = String(target.getAttribute("data-request-id") || "").trim();
+  if (!requestId || state.files.adminRequests.declineComposerRequestId !== requestId) {
+    return;
+  }
+  state.files.adminRequests.declineComposerValue = String(target.value || "");
 }
 
 async function handleFilesDelete(fileId) {
@@ -4916,6 +6173,87 @@ async function handleFilesRenameSubmit(formElement) {
     setFilesUploadFeedback(String(error?.message || t("files_upload_error")), "error");
     renderFilesAccessView();
   }
+}
+
+async function handleFilesRenameGroupSubmit() {
+  if (!state.files.me?.isAdmin || state.files.groupRename.busy || !state.files.groupRename.open) {
+    return;
+  }
+
+  const targetGroupKey = String(state.files.groupRename.key || "").trim();
+  if (!targetGroupKey || targetGroupKey === "__ungrouped__") {
+    closeFilesGroupRenameModal({ force: true });
+    return;
+  }
+
+  const filesInGroup = getFilesGroupEntriesByKey(targetGroupKey);
+  if (!filesInGroup.length) {
+    closeFilesGroupRenameModal({ force: true });
+    return;
+  }
+
+  const currentGroup = normalizeFilesGroup(filesInGroup[0]?.group || "") || normalizeFilesGroup(state.files.groupRename.label || "");
+  if (!currentGroup) {
+    closeFilesGroupRenameModal({ force: true });
+    return;
+  }
+
+  const nextValueRaw = elements.filesGroupRenameInput instanceof HTMLInputElement
+    ? String(elements.filesGroupRenameInput.value || "")
+    : String(state.files.groupRename.value || "");
+  state.files.groupRename.value = nextValueRaw;
+  const nextGroup = normalizeFilesGroup(nextValueRaw);
+  if (!nextGroup) {
+    setFilesGroupRenameFeedback(t("files_group_rename_error_required"), "error");
+    if (elements.filesGroupRenameInput instanceof HTMLInputElement) {
+      elements.filesGroupRenameInput.focus();
+      elements.filesGroupRenameInput.select();
+    }
+    renderFilesGroupRenameModal();
+    return;
+  }
+
+  if (normalizeSearchText(nextGroup) === normalizeSearchText(currentGroup)) {
+    closeFilesGroupRenameModal({ force: true });
+    return;
+  }
+
+  state.files.groupRename.busy = true;
+  setFilesGroupRenameFeedback("", "");
+  renderFilesGroupRenameModal();
+
+  let renamed = false;
+  try {
+    await Promise.all(filesInGroup.map((file) => {
+      const fileId = String(file?.id || "").trim();
+      if (!fileId) {
+        return Promise.resolve();
+      }
+
+      const formData = new FormData();
+      formData.append("group", nextGroup);
+      return requestJson(`/api/files/${encodeURIComponent(fileId)}`, {
+        method: "PATCH",
+        body: formData
+      });
+    }));
+    state.files.activeGroupKey = getFilesGroupKey(nextGroup);
+    state.files.groupTransition = "";
+    setFilesUploadFeedback(t("files_group_rename_success", { group: nextGroup }), "success");
+    renamed = true;
+  } catch (error) {
+    setFilesGroupRenameFeedback(String(error?.message || t("files_group_manager_error_update")), "error");
+  } finally {
+    state.files.groupRename.busy = false;
+  }
+
+  if (renamed) {
+    closeFilesGroupRenameModal({ force: true });
+    await refreshFilesList();
+    return;
+  }
+
+  renderFilesGroupRenameModal();
 }
 
 async function handleFilesAssignSelectedGroup() {
@@ -5187,6 +6525,15 @@ function handleFilesListClick(event) {
     cancelFilesRename({ render: false });
     renderFilesList();
     renderFilesGroupManagerPanel();
+    return;
+  }
+  if (action === "rename-group") {
+    const renameGroupKey = String(actionTarget.getAttribute("data-group-key") || "").trim();
+    const renameGroupLabel = String(actionTarget.getAttribute("data-group-label") || "").trim();
+    if (!renameGroupKey) {
+      return;
+    }
+    openFilesGroupRenameModal(renameGroupKey, renameGroupLabel);
     return;
   }
 
@@ -8840,10 +10187,15 @@ function applyLanguage(lang, persist = true) {
   elements.hackOpenClassifiedBtn.textContent = t("hack_open_files");
 
   elements.microText.textContent = t("micro_text");
-  elements.tabStatus.textContent = t("tab_status");
+  if (elements.tabStatusText) {
+    elements.tabStatusText.textContent = t("tab_status");
+  } else {
+    elements.tabStatus.textContent = t("tab_status");
+  }
   elements.tabIntel.textContent = t("tab_intel");
   elements.tabData.textContent = t("tab_data");
   elements.langLabel.textContent = t("lang_label");
+  renderFilesDecisionTabBadge();
 
   elements.labelUtc.textContent = t("label_utc");
   elements.labelLastSync.textContent = t("label_last_sync");
@@ -8942,6 +10294,12 @@ function applyLanguage(lang, persist = true) {
   elements.filesDeniedBadge.textContent = t("files_denied_badge");
   elements.filesDeniedTitle.textContent = t("files_denied_title");
   elements.filesDeniedSubtitle.textContent = t("files_denied_subtitle");
+  if (elements.filesDeniedReasonLabel) {
+    elements.filesDeniedReasonLabel.textContent = t("files_denied_reason_label");
+  }
+  if (elements.filesDeniedReasonValue) {
+    elements.filesDeniedReasonValue.textContent = t("files_unknown_value");
+  }
   elements.filesDeniedStatusLabel.textContent = t("files_denied_status_label");
   elements.filesDeniedStatusValue.textContent = t("files_denied_status_value");
   elements.filesDeniedNextWindowLabel.textContent = t("files_denied_next_window_label");
@@ -8952,7 +10310,61 @@ function applyLanguage(lang, persist = true) {
   elements.filesDeniedDirectiveLine1.textContent = t("files_denied_directive_line_1");
   elements.filesDeniedDirectiveLine2.textContent = t("files_denied_directive_line_2");
   elements.filesDeniedDirectiveLine3.textContent = t("files_denied_directive_line_3");
+  if (elements.filesDeniedDirectiveLine4) {
+    elements.filesDeniedDirectiveLine4.textContent = t("files_denied_directive_line_4");
+  }
   elements.filesDeniedLogoutBtn.textContent = t("files_logout_button");
+  if (elements.filesDisclaimerGateBadge) {
+    elements.filesDisclaimerGateBadge.textContent = t("files_disclaimer_gate_badge");
+  }
+  if (elements.filesDisclaimerGateTitle) {
+    elements.filesDisclaimerGateTitle.textContent = t("files_disclaimer_gate_title");
+  }
+  if (elements.filesDisclaimerGateIntro) {
+    elements.filesDisclaimerGateIntro.textContent = t("files_disclaimer_gate_intro");
+  }
+  if (elements.filesDisclaimerGateBody1) {
+    elements.filesDisclaimerGateBody1.textContent = t("files_disclaimer_modal_body_1");
+  }
+  if (elements.filesDisclaimerGateBody2) {
+    elements.filesDisclaimerGateBody2.textContent = t("files_disclaimer_modal_body_2");
+  }
+  if (elements.filesDisclaimerAgreeBtn) {
+    elements.filesDisclaimerAgreeBtn.textContent = t("files_disclaimer_gate_agree_button");
+  }
+  if (elements.filesDisclaimerDeclineBtn) {
+    elements.filesDisclaimerDeclineBtn.textContent = t("files_disclaimer_gate_decline_button");
+  }
+  if (elements.filesDisclaimerDeclinedTitle) {
+    elements.filesDisclaimerDeclinedTitle.textContent = t("files_disclaimer_gate_declined_title");
+  }
+  if (elements.filesDisclaimerDeclinedMessage) {
+    elements.filesDisclaimerDeclinedMessage.textContent = t("files_disclaimer_gate_declined_message");
+  }
+  if (elements.filesDisclaimerContactBtn) {
+    elements.filesDisclaimerContactBtn.textContent = t("files_disclaimer_gate_contact_button");
+  }
+  if (elements.filesDisclaimerContactTitle) {
+    elements.filesDisclaimerContactTitle.textContent = t("files_disclaimer_gate_contact_title");
+  }
+  if (elements.filesDisclaimerContactHint) {
+    elements.filesDisclaimerContactHint.textContent = t("files_disclaimer_gate_contact_hint");
+  }
+  if (elements.filesDisclaimerContactLabel) {
+    elements.filesDisclaimerContactLabel.textContent = t("files_disclaimer_gate_contact_label");
+  }
+  if (elements.filesDisclaimerContactInput) {
+    elements.filesDisclaimerContactInput.placeholder = t("files_disclaimer_gate_contact_placeholder");
+  }
+  if (elements.filesDisclaimerContactCancelBtn) {
+    elements.filesDisclaimerContactCancelBtn.textContent = t("files_disclaimer_gate_contact_cancel_button");
+  }
+  if (elements.filesDisclaimerContactSendBtn) {
+    elements.filesDisclaimerContactSendBtn.textContent = t("files_disclaimer_gate_contact_send_button");
+  }
+  if (elements.filesDisclaimerAcceptLoaderText) {
+    elements.filesDisclaimerAcceptLoaderText.textContent = t("files_disclaimer_gate_accept_loading");
+  }
   if (!state.files.accessRequestMessage) {
     elements.filesRestrictedRequestFeedback.hidden = true;
     elements.filesRestrictedRequestFeedback.textContent = "";
@@ -8974,6 +10386,21 @@ function applyLanguage(lang, persist = true) {
   elements.filesSessionState.textContent = t("files_unknown_value");
   elements.filesSessionBadge.classList.remove("is-admin");
   elements.filesSessionClearance.classList.remove("is-admin");
+  if (elements.filesAdminToolsTitle) {
+    elements.filesAdminToolsTitle.textContent = t("files_admin_tools_title");
+  }
+  if (elements.filesAdminConsoleModalBtnText) {
+    elements.filesAdminConsoleModalBtnText.textContent = t("files_admin_console_title");
+  }
+  if (elements.filesAccessControlModalBtnText) {
+    elements.filesAccessControlModalBtnText.textContent = t("files_admin_requests_title");
+  }
+  if (elements.filesUploadModalCloseBtn) {
+    elements.filesUploadModalCloseBtn.textContent = t("files_admin_modal_close");
+  }
+  if (elements.filesAdminRequestsModalCloseBtn) {
+    elements.filesAdminRequestsModalCloseBtn.textContent = t("files_admin_modal_close");
+  }
   elements.filesUploadTitle.textContent = t("files_admin_console_title");
   elements.filesAdminRequestsTitle.textContent = t("files_admin_requests_title");
   elements.filesAdminRequestsHint.textContent = t("files_admin_requests_hint");
@@ -9023,6 +10450,39 @@ function applyLanguage(lang, persist = true) {
   elements.filesDeleteMessage.textContent = t("files_delete_modal_body", { name: t("files_unknown_value") });
   elements.filesDeleteCancelBtn.textContent = t("files_delete_modal_cancel");
   elements.filesDeleteConfirmBtn.textContent = t("files_delete_modal_confirm");
+  if (elements.filesGroupRenameTitle) {
+    elements.filesGroupRenameTitle.textContent = t("files_group_rename_modal_title");
+  }
+  if (elements.filesGroupRenameMessage) {
+    elements.filesGroupRenameMessage.textContent = t("files_group_rename_modal_body", { group: t("files_group_default") });
+  }
+  if (elements.filesGroupRenameLabel) {
+    elements.filesGroupRenameLabel.textContent = t("files_group_rename_modal_label");
+  }
+  if (elements.filesGroupRenameInput) {
+    elements.filesGroupRenameInput.placeholder = t("files_group_rename_modal_placeholder");
+  }
+  if (elements.filesGroupRenameCancelBtn) {
+    elements.filesGroupRenameCancelBtn.textContent = t("files_group_rename_modal_cancel");
+  }
+  if (elements.filesGroupRenameConfirmBtn) {
+    elements.filesGroupRenameConfirmBtn.textContent = t("files_group_rename_modal_confirm");
+  }
+  if (elements.filesDisclaimerBtnText) {
+    elements.filesDisclaimerBtnText.textContent = t("files_disclaimer_button");
+  }
+  if (elements.filesDisclaimerTitle) {
+    elements.filesDisclaimerTitle.textContent = t("files_disclaimer_modal_title");
+  }
+  if (elements.filesDisclaimerBody1) {
+    elements.filesDisclaimerBody1.textContent = t("files_disclaimer_modal_body_1");
+  }
+  if (elements.filesDisclaimerBody2) {
+    elements.filesDisclaimerBody2.textContent = t("files_disclaimer_modal_body_2");
+  }
+  if (elements.filesDisclaimerCloseBtn) {
+    elements.filesDisclaimerCloseBtn.textContent = t("files_disclaimer_modal_close");
+  }
 
   if (elements.minervaAwaiting) {
     elements.minervaAwaiting.textContent = t("minerva_awaiting");
@@ -9059,6 +10519,9 @@ function applyLanguage(lang, persist = true) {
   renderFilesAccessView();
   setFilesSearchOpen(state.files.search.open);
   renderFilesDeleteModal();
+  renderFilesAdminModals();
+  renderFilesGroupRenameModal();
+  renderFilesDisclaimerModal();
   if (document.body.classList.contains("is-classified")) {
     elements.mainTitle.textContent = t("classified_main_title");
   } else if (document.body.classList.contains("is-files")) {
@@ -9180,12 +10643,40 @@ async function startBootSequence() {
 
 function wireEvents() {
   const hackInteractiveRoot = elements.hackOverlay?.querySelector(".hack-core") || null;
+  const filesGroupRenameModalRoot = elements.filesGroupRenameOverlay?.querySelector(".files-group-rename-core") || null;
+  const filesDisclaimerModalRoot = elements.filesDisclaimerOverlay?.querySelector(".files-disclaimer-core") || null;
+  const filesUploadModalRoot = elements.filesUploadOverlay?.querySelector(".files-admin-modal-core") || null;
+  const filesAdminRequestsModalRoot = elements.filesAdminRequestsOverlay?.querySelector(".files-admin-modal-core") || null;
   const shouldBlockBackgroundForActiveOverlay = (target) => {
     if (document.body.classList.contains("is-syncing") && elements.syncOverlay?.classList.contains("is-active")) {
       return true;
     }
     if (document.body.classList.contains("is-classified-loading") && elements.classifiedLoadOverlay?.classList.contains("is-active")) {
       return true;
+    }
+    if (elements.filesGroupRenameOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node) || !(filesGroupRenameModalRoot instanceof Node)) {
+        return true;
+      }
+      return !filesGroupRenameModalRoot.contains(target);
+    }
+    if (elements.filesDisclaimerOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node) || !(filesDisclaimerModalRoot instanceof Node)) {
+        return true;
+      }
+      return !filesDisclaimerModalRoot.contains(target);
+    }
+    if (elements.filesUploadOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node) || !(filesUploadModalRoot instanceof Node)) {
+        return true;
+      }
+      return !filesUploadModalRoot.contains(target);
+    }
+    if (elements.filesAdminRequestsOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node) || !(filesAdminRequestsModalRoot instanceof Node)) {
+        return true;
+      }
+      return !filesAdminRequestsModalRoot.contains(target);
     }
     if (!document.body.classList.contains("is-hacking")) {
       return false;
@@ -9271,6 +10762,35 @@ function wireEvents() {
   elements.filesRestrictedRetryBtn?.addEventListener("click", () => {
     void handleFilesAccessRequest();
   });
+  elements.filesDisclaimerAgreeBtn?.addEventListener("click", () => {
+    void submitFilesDisclaimerDecision("accepted");
+  });
+  elements.filesDisclaimerDeclineBtn?.addEventListener("click", () => {
+    void submitFilesDisclaimerDecision("declined");
+  });
+  elements.filesDisclaimerContactBtn?.addEventListener("click", () => {
+    openFilesDisclaimerContactView();
+  });
+  elements.filesDisclaimerContactCancelBtn?.addEventListener("click", () => {
+    closeFilesDisclaimerContactView({ clearText: false });
+  });
+  elements.filesDisclaimerContactSendBtn?.addEventListener("click", () => {
+    void submitFilesDisclaimerReevaluation();
+  });
+  elements.filesDisclaimerContactInput?.addEventListener("input", () => {
+    state.files.disclaimerGate.contactText = String(elements.filesDisclaimerContactInput?.value || "");
+    if (elements.filesDisclaimerContactInput) {
+      elements.filesDisclaimerContactInput.classList.remove("is-invalid");
+    }
+    if (state.files.disclaimerGate.messageKind === "error" && state.files.disclaimerGate.message) {
+      const required = t("files_disclaimer_gate_contact_required");
+      const tooLong = t("files_disclaimer_gate_contact_too_long");
+      if (state.files.disclaimerGate.message === required || state.files.disclaimerGate.message === tooLong) {
+        setFilesDisclaimerGateFeedback("", "");
+        renderFilesAccessView();
+      }
+    }
+  });
   elements.filesRestrictedReasonInput?.addEventListener("input", () => {
     const value = String(elements.filesRestrictedReasonInput.value || "").trim();
     if (value) {
@@ -9287,6 +10807,64 @@ function wireEvents() {
   });
   elements.filesUploadForm?.addEventListener("submit", (event) => {
     void handleFilesUpload(event);
+  });
+  elements.filesGroupRenameInput?.addEventListener("input", () => {
+    state.files.groupRename.value = String(elements.filesGroupRenameInput?.value || "");
+    if (state.files.groupRename.messageKind === "error" && state.files.groupRename.message) {
+      setFilesGroupRenameFeedback("", "");
+      renderFilesGroupRenameModal();
+    }
+  });
+  elements.filesGroupRenameForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void handleFilesRenameGroupSubmit();
+  });
+  elements.filesGroupRenameCancelBtn?.addEventListener("click", () => {
+    closeFilesGroupRenameModal();
+  });
+  elements.filesGroupRenameOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.filesGroupRenameOverlay) {
+      closeFilesGroupRenameModal();
+    }
+  });
+  elements.filesAdminConsoleModalBtn?.addEventListener("click", () => {
+    const isOpen = normalizeFilesAdminModalType(state.files.adminModal.active) === "upload";
+    setFilesAdminModalOpen(isOpen ? "" : "upload");
+  });
+  elements.filesAccessControlModalBtn?.addEventListener("click", () => {
+    const isOpen = normalizeFilesAdminModalType(state.files.adminModal.active) === "requests";
+    setFilesAdminModalOpen(isOpen ? "" : "requests");
+  });
+  elements.filesUploadModalCloseBtn?.addEventListener("click", () => {
+    closeFilesAdminModal();
+  });
+  elements.filesAdminRequestsModalCloseBtn?.addEventListener("click", () => {
+    closeFilesAdminModal();
+  });
+  elements.filesDisclaimerBtn?.addEventListener("click", () => {
+    if (state.files.disclaimerModal.open) {
+      closeFilesDisclaimerModal();
+      return;
+    }
+    openFilesDisclaimerModal();
+  });
+  elements.filesDisclaimerCloseBtn?.addEventListener("click", () => {
+    closeFilesDisclaimerModal();
+  });
+  elements.filesDisclaimerOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.filesDisclaimerOverlay) {
+      closeFilesDisclaimerModal();
+    }
+  });
+  elements.filesUploadOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.filesUploadOverlay) {
+      closeFilesAdminModal();
+    }
+  });
+  elements.filesAdminRequestsOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.filesAdminRequestsOverlay) {
+      closeFilesAdminModal();
+    }
   });
   elements.filesAdminRequestsSearchInput?.addEventListener("input", () => {
     state.files.adminRequests.query = String(elements.filesAdminRequestsSearchInput.value || "");
@@ -9364,6 +10942,7 @@ function wireEvents() {
   elements.filesGroupManagerWrap?.addEventListener("change", handleFilesListChange);
   elements.filesSearchResults?.addEventListener("click", handleFilesListClick);
   elements.filesAdminRequestsList?.addEventListener("click", handleFilesAdminRequestsListClick);
+  elements.filesAdminRequestsList?.addEventListener("input", handleFilesAdminRequestsListInput);
   elements.filesDeleteCancelBtn?.addEventListener("click", () => {
     closeFilesDeleteModal();
   });
@@ -9505,6 +11084,11 @@ function wireEvents() {
       return;
     }
 
+    if (elements.filesDisclaimerOverlay?.classList.contains("is-active")) {
+      closeFilesDisclaimerModal();
+      return;
+    }
+
     if (elements.hackOverlay.classList.contains("is-active")) {
       hideHackOverlay();
       return;
@@ -9512,6 +11096,24 @@ function wireEvents() {
 
     if (elements.filesDeleteOverlay?.classList.contains("is-active")) {
       closeFilesDeleteModal();
+      return;
+    }
+
+    if (elements.filesGroupRenameOverlay?.classList.contains("is-active")) {
+      closeFilesGroupRenameModal();
+      return;
+    }
+
+    if (
+      elements.filesUploadOverlay?.classList.contains("is-active")
+      || elements.filesAdminRequestsOverlay?.classList.contains("is-active")
+    ) {
+      closeFilesAdminModal();
+      return;
+    }
+
+    if (state.files.disclaimerGate.contactOpen && elements.filesDisclaimerGateView && !elements.filesDisclaimerGateView.hidden) {
+      closeFilesDisclaimerContactView({ clearText: false });
       return;
     }
 
@@ -9555,6 +11157,9 @@ async function init() {
     setHashView("intel", { replace: true });
   }
   applyViewFromHash();
+  if (state.view !== "files") {
+    void refreshFilesIdentityBadgeOnly();
+  }
   prewarmStaticSiteImages();
   prewarmMinervaDetailImages();
   void loadMinervaDetailFallback();

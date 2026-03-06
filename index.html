@@ -129,6 +129,197 @@
         </div>
       </div>
     </div>
+    <div id="filesGroupRenameOverlay" class="files-delete-overlay files-group-rename-overlay" aria-hidden="true">
+      <div
+        class="files-delete-core files-group-rename-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesGroupRenameTitle"
+        aria-describedby="filesGroupRenameMessage"
+      >
+        <p id="filesGroupRenameTitle" class="files-delete-title">RENAME GROUP</p>
+        <p id="filesGroupRenameMessage" class="files-group-rename-message">
+          Update this group label for all files currently inside it.
+        </p>
+        <form id="filesGroupRenameForm" class="files-group-rename-form" novalidate>
+          <label id="filesGroupRenameLabel" class="files-group-rename-label" for="filesGroupRenameInput">Group name</label>
+          <input
+            id="filesGroupRenameInput"
+            class="files-upload-text files-group-rename-input"
+            type="text"
+            maxlength="80"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="New group name..."
+          />
+          <p id="filesGroupRenameFeedback" class="files-upload-feedback files-group-rename-feedback" aria-live="polite" hidden></p>
+          <div class="files-delete-actions files-group-rename-actions">
+            <button id="filesGroupRenameCancelBtn" class="files-btn" type="button">CANCEL</button>
+            <button id="filesGroupRenameConfirmBtn" class="files-btn" type="submit">SAVE GROUP</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="filesDisclaimerOverlay" class="files-delete-overlay files-disclaimer-overlay" aria-hidden="true">
+      <div
+        class="files-delete-core files-disclaimer-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesDisclaimerTitle"
+        aria-describedby="filesDisclaimerBody1"
+      >
+        <img
+          src="assets/images/StopVaultBoy.png"
+          alt="Vault Boy stop warning"
+          class="files-disclaimer-image"
+        />
+        <p id="filesDisclaimerTitle" class="files-delete-title">DISCLAIMER</p>
+        <div class="files-disclaimer-body">
+          <p id="filesDisclaimerBody1">
+            By using any files or modifications available through this site, you acknowledge that using mods in online games may violate game policies and may result in account suspension or permanent bans.
+          </p>
+          <p id="filesDisclaimerBody2">
+            You are solely responsible for all actions taken on your account. The website owner and team assume no liability for account penalties, losses, or other consequences related to the use of these files or mods.
+          </p>
+        </div>
+        <div class="files-delete-actions files-disclaimer-actions">
+          <button id="filesDisclaimerCloseBtn" class="files-btn" type="button">CLOSE</button>
+        </div>
+      </div>
+    </div>
+    <div id="filesUploadOverlay" class="files-admin-modal-overlay" aria-hidden="true">
+      <div
+        class="files-admin-modal-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesUploadTitle"
+      >
+        <div class="files-admin-modal-head">
+          <button id="filesUploadModalCloseBtn" class="files-btn files-admin-modal-close" type="button">CLOSE</button>
+        </div>
+        <article id="filesUploadPanel" class="panel files-upload-panel" hidden>
+          <h2 id="filesUploadTitle">ADMIN CONSOLE</h2>
+          <form id="filesUploadForm" class="files-upload-form" novalidate>
+            <label id="filesUploadFileLabel" for="filesUploadInput">File</label>
+            <input id="filesUploadInput" class="files-upload-input" type="file" name="file" />
+            <label id="filesUploadImageLabel" for="filesImageInput">Image</label>
+            <input id="filesImageInput" class="files-upload-input files-upload-image-input" type="file" name="image" accept="image/*" />
+            <label id="filesUploadGroupLabel" for="filesGroupInput">Group</label>
+            <input
+              id="filesGroupInput"
+              name="group"
+              class="files-upload-text"
+              type="text"
+              maxlength="80"
+              placeholder="Optional group..."
+            />
+            <div id="filesGroupSuggestDropdown" class="files-admin-requests-filter-dropdown files-group-suggest-dropdown" data-files-group-suggest-dropdown="true" data-files-group-suggest-target="filesGroupInput">
+              <button
+                id="filesGroupSuggestBtn"
+                class="files-admin-requests-filter-trigger files-group-suggest-trigger"
+                type="button"
+                data-files-action="toggle-group-suggest-menu"
+                data-files-group-suggest-toggle="true"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-label="Select existing group"
+              >
+                <span id="filesGroupSuggestCurrent" data-files-group-suggest-current="true">Select existing group...</span>
+                <span class="files-admin-requests-filter-caret" aria-hidden="true">▾</span>
+              </button>
+              <ul id="filesGroupSuggestMenu" class="files-admin-requests-filter-menu files-group-suggest-menu" data-files-group-suggest-menu="true" role="listbox" hidden></ul>
+            </div>
+            <label id="filesUploadDescLabel" for="filesDescriptionInput">Description</label>
+            <textarea
+              id="filesDescriptionInput"
+              name="description"
+              class="files-upload-description"
+              rows="3"
+              maxlength="500"
+              placeholder="Optional dossier note..."
+            ></textarea>
+            <button id="filesUploadBtn" class="files-btn" type="submit">UPLOAD FILE</button>
+          </form>
+          <p id="filesUploadFeedback" class="files-upload-feedback" aria-live="polite" hidden></p>
+        </article>
+      </div>
+    </div>
+    <div id="filesAdminRequestsOverlay" class="files-admin-modal-overlay" aria-hidden="true">
+      <div
+        class="files-admin-modal-core files-admin-requests-modal-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesAdminRequestsTitle"
+        aria-describedby="filesAdminRequestsHint"
+      >
+        <div class="files-admin-modal-head">
+          <button id="filesAdminRequestsModalCloseBtn" class="files-btn files-admin-modal-close" type="button">CLOSE</button>
+        </div>
+        <article id="filesAdminRequestsPanel" class="panel files-admin-requests-panel" hidden>
+          <h2 id="filesAdminRequestsTitle">ACCESS CONTROL</h2>
+          <p id="filesAdminRequestsHint" class="files-admin-requests-hint">
+            Search users and process pending applications from this console.
+          </p>
+          <div class="files-admin-requests-controls">
+            <div class="files-admin-requests-control">
+              <label id="filesAdminRequestsSearchLabel" for="filesAdminRequestsSearchInput">Search</label>
+              <input
+                id="filesAdminRequestsSearchInput"
+                class="files-admin-requests-search-input"
+                type="search"
+                inputmode="search"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Search by nick, username, Discord ID, or email..."
+              />
+            </div>
+            <div class="files-admin-requests-control-row">
+              <div class="files-admin-requests-control">
+                <label id="filesAdminRequestsFilterLabel" for="filesAdminRequestsFilterBtn">Filter</label>
+                <div id="filesAdminRequestsFilterDropdown" class="files-admin-requests-filter-dropdown">
+                  <button
+                    id="filesAdminRequestsFilterBtn"
+                    class="files-admin-requests-filter-trigger"
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    aria-labelledby="filesAdminRequestsFilterLabel"
+                  >
+                    <span id="filesAdminRequestsFilterCurrent">Pending</span>
+                    <span class="files-admin-requests-filter-caret" aria-hidden="true">▾</span>
+                  </button>
+                  <ul
+                    id="filesAdminRequestsFilterMenu"
+                    class="files-admin-requests-filter-menu"
+                    role="listbox"
+                    aria-labelledby="filesAdminRequestsFilterLabel"
+                    hidden
+                  >
+                    <li><button id="filesAdminRequestsFilterPending" class="files-admin-requests-filter-option" type="button" role="option" data-filter="pending">Pending</button></li>
+                    <li><button id="filesAdminRequestsFilterApproved" class="files-admin-requests-filter-option" type="button" role="option" data-filter="approved">Approved</button></li>
+                    <li><button id="filesAdminRequestsFilterDeclined" class="files-admin-requests-filter-option" type="button" role="option" data-filter="declined">Declined</button></li>
+                    <li><button id="filesAdminRequestsFilterAuthorized" class="files-admin-requests-filter-option" type="button" role="option" data-filter="authorized">Authorized</button></li>
+                    <li><button id="filesAdminRequestsFilterAll" class="files-admin-requests-filter-option" type="button" role="option" data-filter="all">All</button></li>
+                  </ul>
+                </div>
+                <select id="filesAdminRequestsFilter" class="files-admin-requests-filter-select" aria-label="Access control filter" hidden>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="declined">Declined</option>
+                  <option value="authorized">Authorized</option>
+                  <option value="all">All</option>
+                </select>
+              </div>
+              <button id="filesAdminRequestsRefreshBtn" class="files-btn files-admin-requests-refresh" type="button">
+                REFRESH
+              </button>
+            </div>
+          </div>
+          <p id="filesAdminRequestsFeedback" class="files-upload-feedback files-admin-requests-feedback" aria-live="polite" hidden></p>
+          <div id="filesAdminRequestsList" class="files-admin-requests-list"></div>
+        </article>
+      </div>
+    </div>
     <header class="topbar">
       <span class="topbar-sweep" aria-hidden="true"></span>
       <div class="topbar-left">
@@ -137,7 +328,10 @@
       </div>
       <div class="topbar-right">
         <div class="tab-strip" aria-hidden="true">
-          <span id="tabStatus" class="tab">FILES</span>
+          <span id="tabStatus" class="tab">
+            <span id="tabStatusText">FILES</span>
+            <span id="tabStatusDecisionBadge" class="tab-notification-badge" hidden>1</span>
+          </span>
           <span id="tabIntel" class="tab active">INTEL</span>
           <span id="tabData" class="tab">DATA</span>
         </div>
@@ -417,114 +611,31 @@
             <button id="filesSessionLogoutBtn" class="files-btn" type="button">LOGOUT</button>
           </article>
 
-          <article id="filesUploadPanel" class="panel files-upload-panel" hidden>
-            <h2 id="filesUploadTitle">ADMIN CONSOLE</h2>
-            <form id="filesUploadForm" class="files-upload-form" novalidate>
-              <label id="filesUploadFileLabel" for="filesUploadInput">File</label>
-              <input id="filesUploadInput" class="files-upload-input" type="file" name="file" />
-              <label id="filesUploadImageLabel" for="filesImageInput">Image</label>
-              <input id="filesImageInput" class="files-upload-input files-upload-image-input" type="file" name="image" accept="image/*" />
-              <label id="filesUploadGroupLabel" for="filesGroupInput">Group</label>
-              <input
-                id="filesGroupInput"
-                name="group"
-                class="files-upload-text"
-                type="text"
-                maxlength="80"
-                placeholder="Optional group..."
-              />
-              <div id="filesGroupSuggestDropdown" class="files-admin-requests-filter-dropdown files-group-suggest-dropdown" data-files-group-suggest-dropdown="true" data-files-group-suggest-target="filesGroupInput">
-                <button
-                  id="filesGroupSuggestBtn"
-                  class="files-admin-requests-filter-trigger files-group-suggest-trigger"
-                  type="button"
-                  data-files-action="toggle-group-suggest-menu"
-                  data-files-group-suggest-toggle="true"
-                  aria-haspopup="listbox"
-                  aria-expanded="false"
-                  aria-label="Select existing group"
-                >
-                  <span id="filesGroupSuggestCurrent" data-files-group-suggest-current="true">Select existing group...</span>
-                  <span class="files-admin-requests-filter-caret" aria-hidden="true">▾</span>
-                </button>
-                <ul id="filesGroupSuggestMenu" class="files-admin-requests-filter-menu files-group-suggest-menu" data-files-group-suggest-menu="true" role="listbox" hidden></ul>
-              </div>
-              <label id="filesUploadDescLabel" for="filesDescriptionInput">Description</label>
-              <textarea
-                id="filesDescriptionInput"
-                name="description"
-                class="files-upload-description"
-                rows="3"
-                maxlength="500"
-                placeholder="Optional dossier note..."
-              ></textarea>
-              <button id="filesUploadBtn" class="files-btn" type="submit">UPLOAD FILE</button>
-            </form>
-            <p id="filesUploadFeedback" class="files-upload-feedback" aria-live="polite" hidden></p>
-          </article>
-
-          <article id="filesAdminRequestsPanel" class="panel files-admin-requests-panel" hidden>
-            <h2 id="filesAdminRequestsTitle">ACCESS CONTROL</h2>
-            <p id="filesAdminRequestsHint" class="files-admin-requests-hint">
-              Search users and process pending applications from this console.
-            </p>
-            <div class="files-admin-requests-controls">
-              <div class="files-admin-requests-control">
-                <label id="filesAdminRequestsSearchLabel" for="filesAdminRequestsSearchInput">Search</label>
-                <input
-                  id="filesAdminRequestsSearchInput"
-                  class="files-admin-requests-search-input"
-                  type="search"
-                  inputmode="search"
-                  autocomplete="off"
-                  spellcheck="false"
-                  placeholder="Search by nick, username, Discord ID, or email..."
-                />
-              </div>
-              <div class="files-admin-requests-control-row">
-                <div class="files-admin-requests-control">
-                  <label id="filesAdminRequestsFilterLabel" for="filesAdminRequestsFilterBtn">Filter</label>
-                  <div id="filesAdminRequestsFilterDropdown" class="files-admin-requests-filter-dropdown">
-                    <button
-                      id="filesAdminRequestsFilterBtn"
-                      class="files-admin-requests-filter-trigger"
-                      type="button"
-                      aria-haspopup="listbox"
-                      aria-expanded="false"
-                      aria-labelledby="filesAdminRequestsFilterLabel"
-                    >
-                      <span id="filesAdminRequestsFilterCurrent">Pending</span>
-                      <span class="files-admin-requests-filter-caret" aria-hidden="true">▾</span>
-                    </button>
-                    <ul
-                      id="filesAdminRequestsFilterMenu"
-                      class="files-admin-requests-filter-menu"
-                      role="listbox"
-                      aria-labelledby="filesAdminRequestsFilterLabel"
-                      hidden
-                    >
-                      <li><button id="filesAdminRequestsFilterPending" class="files-admin-requests-filter-option" type="button" role="option" data-filter="pending">Pending</button></li>
-                      <li><button id="filesAdminRequestsFilterApproved" class="files-admin-requests-filter-option" type="button" role="option" data-filter="approved">Approved</button></li>
-                      <li><button id="filesAdminRequestsFilterDeclined" class="files-admin-requests-filter-option" type="button" role="option" data-filter="declined">Declined</button></li>
-                      <li><button id="filesAdminRequestsFilterAuthorized" class="files-admin-requests-filter-option" type="button" role="option" data-filter="authorized">Authorized</button></li>
-                      <li><button id="filesAdminRequestsFilterAll" class="files-admin-requests-filter-option" type="button" role="option" data-filter="all">All</button></li>
-                    </ul>
-                  </div>
-                  <select id="filesAdminRequestsFilter" class="files-admin-requests-filter-select" aria-label="Access control filter" hidden>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="declined">Declined</option>
-                    <option value="authorized">Authorized</option>
-                    <option value="all">All</option>
-                  </select>
-                </div>
-                <button id="filesAdminRequestsRefreshBtn" class="files-btn files-admin-requests-refresh" type="button">
-                  REFRESH
-                </button>
-              </div>
+          <article id="filesAdminToolsPanel" class="panel files-admin-tools-panel" hidden>
+            <h2 id="filesAdminToolsTitle">ADMIN TOOLS</h2>
+            <div class="files-admin-tools-actions">
+              <button
+                id="filesAdminConsoleModalBtn"
+                class="files-btn files-admin-tools-btn"
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded="false"
+                aria-controls="filesUploadOverlay"
+              >
+                <span id="filesAdminConsoleModalBtnText">ADMIN CONSOLE</span>
+              </button>
+              <button
+                id="filesAccessControlModalBtn"
+                class="files-btn files-admin-tools-btn files-access-control-modal-btn"
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded="false"
+                aria-controls="filesAdminRequestsOverlay"
+              >
+                <span id="filesAccessControlModalBtnText">ACCESS CONTROL</span>
+                <span id="filesAccessControlPendingBadge" class="files-access-control-pending-badge" hidden>0</span>
+              </button>
             </div>
-            <p id="filesAdminRequestsFeedback" class="files-upload-feedback files-admin-requests-feedback" aria-live="polite" hidden></p>
-            <div id="filesAdminRequestsList" class="files-admin-requests-list"></div>
           </article>
         </div>
 
@@ -623,6 +734,10 @@
             <p id="filesDeniedSubtitle" class="files-denied-subtitle">
               This request was declined by an administrator.
             </p>
+            <section id="filesDeniedReasonSection" class="files-denied-reason" hidden>
+              <p id="filesDeniedReasonLabel" class="files-denied-reason-label">Decline reason</p>
+              <p id="filesDeniedReasonValue" class="files-denied-reason-value">--</p>
+            </section>
             <dl class="files-denied-matrix">
               <div class="files-denied-row">
                 <dt id="filesDeniedStatusLabel">Application status</dt>
@@ -643,12 +758,80 @@
                 <li id="filesDeniedDirectiveLine1">Wait until the cooldown reaches zero.</li>
                 <li id="filesDeniedDirectiveLine2">Then reopen this panel and submit a new reason.</li>
                 <li id="filesDeniedDirectiveLine3">Or log out and return later.</li>
+                <li id="filesDeniedDirectiveLine4">Reapplying after cooldown does not guarantee approval. You may be declined again.</li>
               </ul>
             </section>
             <div class="files-denied-actions">
               <button id="filesDeniedLogoutBtn" class="files-btn" type="button">LOGOUT</button>
             </div>
           </section>
+          <section id="filesDisclaimerGateView" class="files-disclaimer-gate-view" hidden>
+            <p id="filesDisclaimerGateBadge" class="files-disclaimer-gate-badge">DISCLAIMER REQUIRED</p>
+            <img
+              src="assets/images/StopVaultBoy.png"
+              alt="Vault Boy warning"
+              class="files-disclaimer-gate-image"
+              loading="lazy"
+            />
+            <h3 id="filesDisclaimerGateTitle" class="files-disclaimer-gate-title">
+              YOUR REQUEST WAS APPROVED, BUT BEFORE ACCESSING THE FILE INDEX, REVIEW THIS DISCLAIMER
+            </h3>
+            <p id="filesDisclaimerGateIntro" class="files-disclaimer-gate-intro">
+              If you do not agree, access to the file index will remain blocked.
+            </p>
+            <div class="files-disclaimer-gate-copy">
+              <p id="filesDisclaimerGateBody1">
+                By using any files or modifications available through this site, you acknowledge that using mods in online games may violate game policies and may result in account suspension or permanent bans.
+              </p>
+              <p id="filesDisclaimerGateBody2">
+                You are solely responsible for all actions taken on your account. The website owner and team assume no liability for account penalties, losses, or other consequences related to the use of these files or mods.
+              </p>
+            </div>
+            <div id="filesDisclaimerGateActions" class="files-disclaimer-gate-actions">
+              <button id="filesDisclaimerAgreeBtn" class="files-btn" type="button">I AGREE</button>
+              <button id="filesDisclaimerDeclineBtn" class="files-btn files-disclaimer-gate-decline" type="button">I DO NOT AGREE</button>
+            </div>
+            <section id="filesDisclaimerDeclinedPanel" class="files-disclaimer-declined-panel" hidden>
+              <p id="filesDisclaimerDeclinedTitle" class="files-disclaimer-declined-title">FILE INDEX ACCESS BLOCKED</p>
+              <p id="filesDisclaimerDeclinedMessage" class="files-disclaimer-declined-message">
+                You did not agree to the disclaimer, so access remains blocked. If you believe this was an error, contact us below and explain what happened so we can reevaluate your application.
+              </p>
+              <button
+                id="filesDisclaimerContactBtn"
+                class="files-btn files-disclaimer-contact-btn"
+                type="button"
+              >CONTACT US</button>
+            </section>
+            <section id="filesDisclaimerContactView" class="files-disclaimer-contact-view" hidden>
+              <p id="filesDisclaimerContactTitle" class="files-disclaimer-contact-title">REQUEST REEVALUATION</p>
+              <p id="filesDisclaimerContactHint" class="files-disclaimer-contact-hint">
+                Explain why this should be reviewed again. Your message will be sent to the admin team by email.
+              </p>
+              <label id="filesDisclaimerContactLabel" class="files-disclaimer-contact-label" for="filesDisclaimerContactInput">
+                Explanation
+              </label>
+              <textarea
+                id="filesDisclaimerContactInput"
+                class="files-disclaimer-contact-input"
+                rows="5"
+                maxlength="1200"
+                placeholder="Describe what happened and why your application should be reevaluated..."
+              ></textarea>
+              <div class="files-disclaimer-contact-actions">
+                <button id="filesDisclaimerContactCancelBtn" class="files-btn" type="button">BACK</button>
+                <button id="filesDisclaimerContactSendBtn" class="files-btn" type="button">SEND REQUEST</button>
+              </div>
+            </section>
+            <p id="filesDisclaimerGateFeedback" class="files-notice files-disclaimer-gate-feedback" hidden></p>
+          </section>
+          <div id="filesDisclaimerAcceptLoader" class="files-disclaimer-accept-loader" hidden aria-live="polite" aria-atomic="true">
+            <div class="files-disclaimer-accept-loader-core">
+              <span class="files-disclaimer-accept-loader-spinner" aria-hidden="true"></span>
+              <p id="filesDisclaimerAcceptLoaderText" class="files-disclaimer-accept-loader-text">
+                Finalizing authorization. Loading file index...
+              </p>
+            </div>
+          </div>
           <div id="filesSearchWrap" class="files-search-wrap" hidden>
             <div class="files-search-head">
               <label id="filesSearchLabel" class="files-search-label" for="filesSearchInput">Search file</label>
@@ -669,6 +852,17 @@
           <div id="filesSearchResults" class="files-search-results" hidden></div>
           <p id="filesEmptyState" class="files-empty-state" hidden>No files available.</p>
           <div id="filesList" class="files-list" aria-live="polite"></div>
+          <button
+            id="filesDisclaimerBtn"
+            class="files-search-toggle files-disclaimer-toggle files-disclaimer-fab"
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls="filesDisclaimerOverlay"
+          >
+            <span class="files-search-toggle-icon" aria-hidden="true">&#9888;</span>
+            <span id="filesDisclaimerBtnText" class="files-search-toggle-text">DISCLAIMER</span>
+          </button>
         </article>
       </section>
     </section>
