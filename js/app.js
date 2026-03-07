@@ -2415,6 +2415,25 @@ function focusFilesOpenTarget(inputTarget, { fallback = null, selectText = false
   }
 }
 
+function scheduleFilesListPostMutationRefresh() {
+  if (!shouldAvoidTextInputFocusOnOpen() || typeof window.requestAnimationFrame !== "function") {
+    return;
+  }
+
+  const currentScrollTop = elements.filesList instanceof HTMLElement
+    ? elements.filesList.scrollTop
+    : 0;
+
+  requestAnimationFrame(() => {
+    renderFilesList();
+    renderFilesGroupManagerPanel();
+    if (elements.filesList instanceof HTMLElement) {
+      elements.filesList.scrollTop = currentScrollTop;
+      void elements.filesList.offsetHeight;
+    }
+  });
+}
+
 function renderFilesDisclaimerModal() {
   const me = normalizeFilesProfile(state.files.me);
   const canShowDisclaimer = Boolean(me.isAuthorized);
@@ -6324,8 +6343,13 @@ async function handleFilesRenameGroupSubmit() {
 
   if (renamed) {
     closeFilesGroupRenameModal({ force: true });
+    state.files.transition = "to-list";
     renderFilesAccessView();
+    scheduleFilesListPostMutationRefresh();
     await refreshFilesList();
+    state.files.transition = "to-list";
+    renderFilesAccessView();
+    scheduleFilesListPostMutationRefresh();
     return;
   }
 

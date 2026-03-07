@@ -8691,7 +8691,7 @@ body.is-classified .classified-layout {
   }
 
   to {
-    max-height: 1600px;
+    max-height: 100000px;
     transform: translateY(0);
   }
 }
