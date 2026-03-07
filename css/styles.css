@@ -2438,14 +2438,36 @@ body.error-page.is-unauthorized .error-radar-sweep {
 
 .files-group-rename-overlay {
   z-index: 1130;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
 }
 
 .files-disclaimer-overlay {
   z-index: 1132;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  place-content: center;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
 }
 
 .files-group-rename-core {
   width: min(620px, 100%);
+  max-height: min(92svh, 92vh);
+  overflow-y: auto;
+  overflow-x: hidden;
   border-color: rgba(255, 225, 122, 0.46);
   background:
     radial-gradient(150% 120% at 100% 0%, rgba(255, 225, 122, 0.16), rgba(0, 0, 0, 0) 58%),
@@ -2500,6 +2522,9 @@ body.error-page.is-unauthorized .error-radar-sweep {
 
 .files-disclaimer-core {
   width: min(700px, 100%);
+  max-height: min(92svh, 92vh);
+  overflow-y: auto;
+  overflow-x: hidden;
   border-color: rgba(255, 225, 122, 0.5);
   text-align: center;
   background:
@@ -2511,9 +2536,11 @@ body.error-page.is-unauthorized .error-radar-sweep {
 .files-disclaimer-image {
   display: block;
   width: min(170px, 45vw);
+  aspect-ratio: 945 / 873;
   max-width: 100%;
   height: auto;
   margin: 2px auto 10px;
+  object-fit: contain;
   filter: drop-shadow(0 0 14px rgba(255, 225, 122, 0.22));
 }
 
@@ -2620,6 +2647,7 @@ body.error-page.is-unauthorized .error-radar-sweep {
 }
 
 body.is-files-admin-modal-open,
+body.is-files-group-rename-open,
 body.is-files-disclaimer-open {
   overflow: hidden;
 }
@@ -9067,6 +9095,7 @@ body.is-classified .classified-layout {
   }
 
   body.is-files-admin-modal-open .pipboy-terminal,
+  body.is-files-group-rename-open .pipboy-terminal,
   body.is-files-disclaimer-open .pipboy-terminal {
     overflow: hidden !important;
     overscroll-behavior: none;
@@ -9075,6 +9104,7 @@ body.is-classified .classified-layout {
   }
 
   body.is-files-admin-modal-open .files-page,
+  body.is-files-group-rename-open .files-page,
   body.is-files-disclaimer-open .files-page {
     overflow: hidden !important;
     overscroll-behavior: none;
@@ -9816,6 +9846,28 @@ body.is-classified .classified-layout {
     padding: 10px;
   }
 
+  .files-group-rename-overlay {
+    place-items: center;
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  .files-group-rename-core {
+    max-height: min(92svh, 92vh);
+    padding: 10px;
+  }
+
+  .files-disclaimer-overlay {
+    place-items: center;
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  .files-disclaimer-core {
+    max-height: min(92svh, 92vh);
+    padding: 10px;
+  }
+
   .files-admin-modal-close {
     width: 100%;
     min-width: 0;
@@ -9877,6 +9929,17 @@ body.is-classified .classified-layout {
   .files-unauth-directive-list {
     margin-top: 7px;
     gap: 4px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .files-search-input,
+  .files-group-manager-input,
+  .files-admin-modal-overlay .files-upload-text,
+  .files-admin-modal-overlay .files-upload-description,
+  .files-admin-modal-overlay .files-admin-requests-search-input,
+  .files-group-rename-overlay .files-group-rename-input {
+    font-size: 16px;
   }
 }
 

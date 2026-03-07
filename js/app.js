@@ -54,6 +54,7 @@ const MINERVA_LOCATION_IMAGE_HINTS = [
 const STATIC_SITE_IMAGE_PRELOAD_URLS = [
   "assets/images/appalachia-map-texture.svg",
   "assets/images/output-onlinegiftools.gif",
+  "assets/images/StopVaultBoy.png",
   "assets/images/minerva-plan-fallback.png",
   "assets/images/where-is-minerva.png",
   "assets/images/minerva-route-map.svg",
@@ -2288,6 +2289,8 @@ function renderFilesGroupRenameModal() {
   const isOpen = Boolean(modalState.open);
   const groupLabel = normalizeFilesGroup(modalState.label || "") || t("files_group_default");
 
+  document.body.classList.toggle("is-files-group-rename-open", isOpen);
+
   if (elements.filesGroupRenameTitle) {
     elements.filesGroupRenameTitle.textContent = t("files_group_rename_modal_title");
   }
@@ -2356,8 +2359,10 @@ function openFilesGroupRenameModal(groupKey, fallbackGroupLabel = "") {
   renderFilesGroupRenameModal();
 
   if (elements.filesGroupRenameInput instanceof HTMLInputElement) {
-    elements.filesGroupRenameInput.focus();
-    elements.filesGroupRenameInput.select();
+    focusFilesOpenTarget(elements.filesGroupRenameInput, {
+      fallback: elements.filesGroupRenameCancelBtn,
+      selectText: true
+    });
   }
 }
 
@@ -2375,6 +2380,39 @@ function isDesktopModalViewport() {
     return window.matchMedia("(min-width: 1025px)").matches;
   }
   return (Number(window.innerWidth) || 0) >= 1025;
+}
+
+function shouldAvoidTextInputFocusOnOpen() {
+  if (typeof window.matchMedia === "function") {
+    if (window.matchMedia("(pointer: coarse)").matches || window.matchMedia("(hover: none)").matches) {
+      return true;
+    }
+  }
+  return !isDesktopModalViewport();
+}
+
+function focusFilesOpenTarget(inputTarget, { fallback = null, selectText = false } = {}) {
+  const preferredTarget = shouldAvoidTextInputFocusOnOpen() && fallback instanceof HTMLElement
+    ? fallback
+    : inputTarget instanceof HTMLElement
+      ? inputTarget
+      : fallback instanceof HTMLElement
+        ? fallback
+        : null;
+
+  if (!(preferredTarget instanceof HTMLElement)) {
+    return;
+  }
+
+  try {
+    preferredTarget.focus({ preventScroll: true });
+  } catch {
+    preferredTarget.focus();
+  }
+
+  if (preferredTarget === inputTarget && selectText && typeof inputTarget?.select === "function") {
+    inputTarget.select();
+  }
 }
 
 function renderFilesDisclaimerModal() {
@@ -2745,7 +2783,9 @@ function setFilesAdminModalOpen(nextModal, { focus = true } = {}) {
 
   if (normalizedModal === "upload") {
     if (elements.filesUploadInput instanceof HTMLInputElement) {
-      elements.filesUploadInput.focus();
+      focusFilesOpenTarget(elements.filesUploadInput, {
+        fallback: elements.filesUploadModalCloseBtn
+      });
     }
     return;
   }
@@ -2755,8 +2795,10 @@ function setFilesAdminModalOpen(nextModal, { focus = true } = {}) {
       void refreshFilesAdminRequests({ silent: true });
     }
     if (elements.filesAdminRequestsSearchInput instanceof HTMLInputElement) {
-      elements.filesAdminRequestsSearchInput.focus();
-      elements.filesAdminRequestsSearchInput.select();
+      focusFilesOpenTarget(elements.filesAdminRequestsSearchInput, {
+        fallback: elements.filesAdminRequestsModalCloseBtn,
+        selectText: true
+      });
     }
   }
 }
@@ -3130,6 +3172,11 @@ function setFilesSearchCount(text = "") {
 
 function setFilesSearchOpen(active, { focusInput = false, clearQuery = false } = {}) {
   const open = Boolean(active);
+
+  if (open && state.files.groupManager.open) {
+    setFilesGroupManagerOpen(false, { focusInput: false, clearSelection: true });
+  }
+
   state.files.search.open = open;
 
   if (open) {
@@ -3162,8 +3209,10 @@ function setFilesSearchOpen(active, { focusInput = false, clearQuery = false } =
   renderFilesGroupManagerPanel();
 
   if (open && focusInput && elements.filesSearchInput) {
-    elements.filesSearchInput.focus();
-    elements.filesSearchInput.select();
+    focusFilesOpenTarget(elements.filesSearchInput, {
+      fallback: elements.filesSearchToggleBtn,
+      selectText: true
+    });
   }
 }
 
@@ -3171,6 +3220,11 @@ function setFilesGroupManagerOpen(active, { focusInput = false, clearSelection =
   const me = normalizeFilesProfile(state.files.me);
   const canUseManager = Boolean(me.isAuthorized && me.isAdmin);
   const open = canUseManager && Boolean(active);
+
+  if (open && state.files.search.open) {
+    setFilesSearchOpen(false, { focusInput: false, clearQuery: true });
+  }
+
   state.files.groupManager.open = open;
 
   if (open) {
@@ -3208,8 +3262,10 @@ function setFilesGroupManagerOpen(active, { focusInput = false, clearSelection =
   if (open && focusInput) {
     const managerInput = elements.filesGroupManagerWrap?.querySelector("[data-files-group-input]");
     if (managerInput instanceof HTMLInputElement) {
-      managerInput.focus();
-      managerInput.select();
+      focusFilesOpenTarget(managerInput, {
+        fallback: elements.filesGroupManagerToggleBtn,
+        selectText: true
+      });
     }
   }
 }
