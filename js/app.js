@@ -6301,8 +6301,19 @@ async function handleFilesRenameGroupSubmit() {
         body: formData
       });
     }));
+    state.files.list = (Array.isArray(state.files.list) ? state.files.list : []).map((file) => {
+      if (getFilesGroupKey(file?.group || "") !== targetGroupKey) {
+        return file;
+      }
+      return {
+        ...file,
+        group: nextGroup
+      };
+    });
     state.files.activeGroupKey = getFilesGroupKey(nextGroup);
     state.files.groupTransition = "";
+    state.files.selectedId = "";
+    state.files.detailOrigin = "";
     setFilesUploadFeedback(t("files_group_rename_success", { group: nextGroup }), "success");
     renamed = true;
   } catch (error) {
@@ -6313,6 +6324,7 @@ async function handleFilesRenameGroupSubmit() {
 
   if (renamed) {
     closeFilesGroupRenameModal({ force: true });
+    renderFilesAccessView();
     await refreshFilesList();
     return;
   }
