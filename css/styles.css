@@ -497,6 +497,94 @@ body.is-ready:not(.error-page) .pipboy-terminal::-webkit-scrollbar {
   gap: 8px;
 }
 
+.intel-bot-invite {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 7px;
+  border: 1px solid rgba(255, 225, 122, 0.52);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(255, 225, 122, 0.2), rgba(255, 225, 122, 0.04) 42%, rgba(0, 0, 0, 0.2)),
+    rgba(0, 0, 0, 0.34);
+  color: #fff1bd;
+  text-decoration: none;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.52) inset,
+    0 0 22px rgba(255, 225, 122, 0.22),
+    0 10px 24px rgba(0, 0, 0, 0.24);
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    transform 140ms ease,
+    border-color 160ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+  animation: intelBotInvitePulse 2.8s ease-in-out infinite;
+}
+
+.intel-bot-invite::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 225, 122, 0.16);
+  pointer-events: none;
+}
+
+.intel-bot-invite::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(255, 225, 122, 0) 0 32%, rgba(255, 225, 122, 0.18) 48%, rgba(255, 225, 122, 0) 64% 100%);
+  transform: translateX(-140%);
+  pointer-events: none;
+  animation: intelBotInviteSweep 3.4s linear infinite;
+}
+
+.intel-bot-invite:hover,
+.intel-bot-invite:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(255, 225, 122, 0.72);
+  background:
+    linear-gradient(135deg, rgba(255, 225, 122, 0.26), rgba(255, 225, 122, 0.08) 42%, rgba(0, 0, 0, 0.18)),
+    rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.54) inset,
+    0 0 28px rgba(255, 225, 122, 0.3),
+    0 14px 30px rgba(0, 0, 0, 0.28);
+}
+
+.intel-bot-invite[hidden] {
+  display: none !important;
+}
+
+.intel-bot-invite-label,
+.intel-bot-invite-hint {
+  position: relative;
+  z-index: 1;
+}
+
+.intel-bot-invite-label {
+  color: #fff6d4;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(255, 225, 122, 0.16);
+}
+
+.intel-bot-invite-hint {
+  padding: 4px 8px 3px;
+  border: 1px solid rgba(255, 225, 122, 0.28);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  color: rgba(255, 239, 175, 0.9);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 #langLabel {
   letter-spacing: 0.04em;
   color: var(--fg-faint);
@@ -2347,6 +2435,7 @@ body.error-page.is-unauthorized .error-radar-sweep {
 .sync-overlay,
 .hack-overlay,
 .classified-load-overlay,
+.intel-bot-modal-overlay,
 .silo-dossier-overlay,
 .files-delete-overlay,
 .files-admin-modal-overlay,
@@ -2358,6 +2447,7 @@ body.error-page.is-unauthorized .error-radar-sweep {
 .sync-overlay,
 .hack-overlay,
 .classified-load-overlay,
+.intel-bot-modal-overlay,
 .silo-dossier-overlay,
 .files-delete-overlay,
 .files-admin-modal-overlay {
@@ -2412,6 +2502,7 @@ body.error-page.is-unauthorized .error-radar-sweep {
 
 .hack-overlay,
 .classified-load-overlay,
+.intel-bot-modal-overlay,
 .silo-dossier-overlay,
 .files-delete-overlay,
 .files-admin-modal-overlay {
@@ -2467,6 +2558,7 @@ body.is-silo-dossier-open {
 .sync-overlay.is-active,
 .hack-overlay.is-active,
 .classified-load-overlay.is-active,
+.intel-bot-modal-overlay.is-active,
 .silo-dossier-overlay.is-active,
 .files-delete-overlay.is-active,
 .files-admin-modal-overlay.is-active {
@@ -2559,6 +2651,121 @@ body.is-silo-dossier-open {
     linear-gradient(to bottom, rgba(139, 255, 139, 0.08), rgba(139, 255, 139, 0.02) 58%, rgba(0, 0, 0, 0.24)),
     rgba(0, 0, 0, 0.76);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.65) inset, 0 18px 80px rgba(0, 0, 0, 0.78);
+}
+
+.intel-bot-modal-core {
+  position: relative;
+  width: min(520px, 100%);
+  border: 1px solid rgba(255, 225, 122, 0.34);
+  border-radius: 20px;
+  padding: 18px 18px 16px;
+  background:
+    linear-gradient(135deg, rgba(255, 225, 122, 0.12), rgba(255, 225, 122, 0.02) 36%, rgba(0, 0, 0, 0.12)),
+    linear-gradient(to bottom, rgba(139, 255, 139, 0.06), rgba(0, 0, 0, 0.18)),
+    rgba(4, 13, 8, 0.94);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.66) inset,
+    0 0 0 1px rgba(255, 225, 122, 0.08),
+    0 26px 80px rgba(0, 0, 0, 0.84);
+  overflow: hidden;
+}
+
+.intel-bot-modal-core::before,
+.intel-bot-modal-core::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.intel-bot-modal-core::before {
+  inset: 8px;
+  border: 1px solid rgba(255, 225, 122, 0.12);
+  border-radius: 14px;
+}
+
+.intel-bot-modal-core::after {
+  inset: 0;
+  opacity: 0.14;
+  background-image:
+    linear-gradient(to right, rgba(139, 255, 139, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(139, 255, 139, 0.06) 1px, transparent 1px);
+  background-size: 34px 100%, 100% 18px;
+}
+
+.intel-bot-modal-badge,
+.intel-bot-modal-title,
+.intel-bot-modal-body,
+.intel-bot-modal-actions {
+  position: relative;
+  z-index: 1;
+}
+
+.intel-bot-modal-badge {
+  margin: 0 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 4px;
+  border: 1px solid rgba(255, 225, 122, 0.36);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  color: #fff1bd;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.intel-bot-modal-title {
+  margin: 0;
+  color: #fff4cb;
+  font-size: clamp(1.1rem, 2.2vw, 1.5rem);
+  line-height: 1.08;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 0 18px rgba(255, 225, 122, 0.14);
+}
+
+.intel-bot-modal-body {
+  margin: 12px 0 0;
+  color: rgba(255, 239, 175, 0.88);
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 44ch;
+}
+
+.intel-bot-modal-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.intel-bot-modal-confirm {
+  border-color: rgba(255, 225, 122, 0.44);
+  background:
+    linear-gradient(to bottom, rgba(255, 225, 122, 0.2), rgba(0, 0, 0, 0.2)),
+    rgba(0, 0, 0, 0.24);
+  color: #fff4cb;
+  text-decoration: none;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.48) inset, 0 0 22px rgba(255, 225, 122, 0.18);
+}
+
+.intel-bot-modal-confirm:hover,
+.intel-bot-modal-confirm:focus-visible {
+  border-color: rgba(255, 225, 122, 0.62);
+  background:
+    linear-gradient(to bottom, rgba(255, 225, 122, 0.26), rgba(0, 0, 0, 0.22)),
+    rgba(0, 0, 0, 0.28);
+}
+
+.intel-bot-modal-confirm.is-disabled {
+  pointer-events: none;
+  opacity: 0.58;
+}
+
+.intel-bot-modal-cancel {
+  border-color: var(--line);
 }
 
 .silo-dossier-core {
@@ -2812,6 +3019,32 @@ body.is-silo-dossier-open {
   .silo-dossier-close,
   .silo-dossier-link {
     width: 100%;
+  }
+}
+
+@keyframes intelBotInvitePulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.52) inset,
+      0 0 18px rgba(255, 225, 122, 0.18),
+      0 10px 24px rgba(0, 0, 0, 0.24);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.52) inset,
+      0 0 28px rgba(255, 225, 122, 0.3),
+      0 12px 28px rgba(0, 0, 0, 0.28);
+  }
+}
+
+@keyframes intelBotInviteSweep {
+  0% {
+    transform: translateX(-140%);
+  }
+  56%,
+  100% {
+    transform: translateX(180%);
   }
 }
 

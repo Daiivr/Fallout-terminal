@@ -172,6 +172,14 @@ const STRINGS = {
     tab_status: "FILES",
     tab_intel: "INTEL",
     tab_data: "DATA",
+    discord_bot_invite_label: "DISCORD BOT",
+    discord_bot_invite_hint: "ADD TO SERVER",
+    discord_bot_invite_title: "Invite the Fallout Codex Discord bot to your server",
+    discord_bot_modal_badge: "DISCORD BOT RELAY",
+    discord_bot_modal_title: "DEPLOY BOT TO YOUR SERVER",
+    discord_bot_modal_body: "Add the Fallout Codex bot to your Discord server to receive live silo code alerts, Minerva sale intel, and future broadcast updates.",
+    discord_bot_modal_cancel: "CANCEL",
+    discord_bot_modal_confirm: "OPEN DISCORD INVITE",
     files_main_title: "PIP-BOY FILE SYSTEM ACCESS",
     files_unauthorized_title: "UNAUTHORIZED ACCESS TO FILE SYSTEM",
     files_unauthorized_subtitle: "IDENTITY VERIFICATION REQUIRED",
@@ -581,6 +589,14 @@ const STRINGS = {
     tab_status: "ARCHIVOS",
     tab_intel: "INTEL",
     tab_data: "DATOS",
+    discord_bot_invite_label: "DISCORD BOT",
+    discord_bot_invite_hint: "INVITAR AL SERVIDOR",
+    discord_bot_invite_title: "Invita el bot de Discord de Fallout Codex a tu servidor",
+    discord_bot_modal_badge: "RELAY DEL BOT DISCORD",
+    discord_bot_modal_title: "DESPLEGAR BOT EN TU SERVIDOR",
+    discord_bot_modal_body: "Agrega el bot de Fallout Codex a tu servidor de Discord para recibir alertas en vivo de codigos de silo, intel de ventas de Minerva y futuros avisos del relay.",
+    discord_bot_modal_cancel: "CANCELAR",
+    discord_bot_modal_confirm: "ABRIR INVITACION",
     files_main_title: "ACCESO AL SISTEMA DE ARCHIVOS PIP-BOY",
     files_unauthorized_title: "ACCESO NO AUTORIZADO AL SISTEMA DE ARCHIVOS",
     files_unauthorized_subtitle: "SE REQUIERE VERIFICACION DE IDENTIDAD",
@@ -989,6 +1005,12 @@ const state = {
   lang: "en",
   signalKey: "booting",
   view: "intel",
+  publicConfig: {
+    botInviteLink: ""
+  },
+  intelBotInvite: {
+    open: false
+  },
   minervaLists: null,
   silo: {
     error: false,
@@ -1190,6 +1212,13 @@ const elements = {
   syncTitle: document.getElementById("syncTitle"),
   classifiedLoadOverlay: document.getElementById("classifiedLoadOverlay"),
   classifiedLoadTitle: document.getElementById("classifiedLoadTitle"),
+  intelBotInviteOverlay: document.getElementById("intelBotInviteOverlay"),
+  intelBotInviteCore: document.getElementById("intelBotInviteCore"),
+  intelBotInviteBadge: document.getElementById("intelBotInviteBadge"),
+  intelBotInviteTitle: document.getElementById("intelBotInviteTitle"),
+  intelBotInviteBody: document.getElementById("intelBotInviteBody"),
+  intelBotInviteCancelBtn: document.getElementById("intelBotInviteCancelBtn"),
+  intelBotInviteConfirmBtn: document.getElementById("intelBotInviteConfirmBtn"),
   microText: document.getElementById("microText"),
   mainTitle: document.getElementById("mainTitle"),
   tabStatus: document.getElementById("tabStatus"),
@@ -1197,6 +1226,9 @@ const elements = {
   tabStatusDecisionBadge: document.getElementById("tabStatusDecisionBadge"),
   tabIntel: document.getElementById("tabIntel"),
   tabData: document.getElementById("tabData"),
+  discordBotInviteBtn: document.getElementById("discordBotInviteBtn"),
+  discordBotInviteLabel: document.getElementById("discordBotInviteLabel"),
+  discordBotInviteHint: document.getElementById("discordBotInviteHint"),
   langLabel: document.getElementById("langLabel"),
   langDropdown: document.getElementById("langDropdown"),
   langToggleBtn: document.getElementById("langToggleBtn"),
@@ -1537,16 +1569,101 @@ function setTopTabActive(view) {
   elements.tabData?.classList.toggle("active", view === "data");
 }
 
+function normalizePublicConfig(payload) {
+  if (!payload || typeof payload !== "object") {
+    return {
+      botInviteLink: ""
+    };
+  }
+
+  return {
+    botInviteLink: String(payload.botInviteLink || "").trim()
+  };
+}
+
+function syncDiscordBotInviteButton() {
+  if (!elements.discordBotInviteBtn) {
+    return;
+  }
+
+  const inviteLink = String(state.publicConfig?.botInviteLink || "").trim();
+  const shouldShow = state.view === "intel" && Boolean(inviteLink);
+  elements.discordBotInviteBtn.hidden = !shouldShow;
+  elements.discordBotInviteBtn.href = shouldShow ? inviteLink : "#";
+  elements.discordBotInviteBtn.setAttribute("aria-hidden", shouldShow ? "false" : "true");
+}
+
+function renderIntelBotInviteModal() {
+  if (!elements.intelBotInviteOverlay || !elements.intelBotInviteConfirmBtn) {
+    return;
+  }
+
+  const inviteLink = String(state.publicConfig?.botInviteLink || "").trim();
+  elements.intelBotInviteConfirmBtn.href = inviteLink || "#";
+  elements.intelBotInviteConfirmBtn.setAttribute("aria-disabled", inviteLink ? "false" : "true");
+  elements.intelBotInviteConfirmBtn.classList.toggle("is-disabled", !inviteLink);
+}
+
+function openIntelBotInviteModal() {
+  if (!elements.intelBotInviteOverlay) {
+    return;
+  }
+  if (!String(state.publicConfig?.botInviteLink || "").trim()) {
+    return;
+  }
+
+  state.intelBotInvite.open = true;
+  renderIntelBotInviteModal();
+  elements.intelBotInviteOverlay.classList.add("is-active");
+  elements.intelBotInviteOverlay.setAttribute("aria-hidden", "false");
+}
+
+function closeIntelBotInviteModal() {
+  if (!elements.intelBotInviteOverlay) {
+    return;
+  }
+
+  state.intelBotInvite.open = false;
+  elements.intelBotInviteOverlay.classList.remove("is-active");
+  elements.intelBotInviteOverlay.setAttribute("aria-hidden", "true");
+}
+
 function syncTopTabForCurrentView() {
   if (state.view === "classified") {
     setTopTabActive("data");
+    syncDiscordBotInviteButton();
     return;
   }
   if (state.view === "files") {
     setTopTabActive("files");
+    syncDiscordBotInviteButton();
     return;
   }
   setTopTabActive("intel");
+  syncDiscordBotInviteButton();
+}
+
+async function loadPublicConfig() {
+  try {
+    const response = await fetch("/api/public-config", {
+      cache: "no-store",
+      headers: {
+        Accept: "application/json"
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+    state.publicConfig = normalizePublicConfig(payload);
+  } catch (_error) {
+    state.publicConfig = {
+      botInviteLink: ""
+    };
+  }
+
+  syncDiscordBotInviteButton();
 }
 
 function getActiveSiloResetTargetMs(nowMs = Date.now()) {
@@ -1683,6 +1800,7 @@ function hideSiloDossier({ updateHash = true } = {}) {
 }
 
 function hideFilesPage() {
+  closeIntelBotInviteModal();
   stopFilesLiveIdentityPolling();
   document.body.classList.remove("is-files");
   document.body.classList.remove("is-files-unauthorized", "is-files-guest");
@@ -1721,6 +1839,7 @@ function showIntelPage({ updateHash = true } = {}) {
 }
 
 function showFilesPage({ updateHash = true } = {}) {
+  closeIntelBotInviteModal();
   hideSiloDossier({ updateHash: false });
   closeClassifiedPageForNavigation();
   markFilesDecisionNoticeSeen();
@@ -9208,6 +9327,7 @@ async function ensureClassifiedMinervaArchive() {
 }
 
 function showClassifiedPage({ updateHash = true } = {}) {
+  closeIntelBotInviteModal();
   if (!state.easterEgg.unlocked && !state.easterEgg.hack?.solved) {
     return;
   }
@@ -10792,8 +10912,34 @@ function applyLanguage(lang, persist = true) {
   }
   elements.tabIntel.textContent = t("tab_intel");
   elements.tabData.textContent = t("tab_data");
+  if (elements.discordBotInviteLabel) {
+    elements.discordBotInviteLabel.textContent = t("discord_bot_invite_label");
+  }
+  if (elements.discordBotInviteHint) {
+    elements.discordBotInviteHint.textContent = t("discord_bot_invite_hint");
+  }
+  if (elements.discordBotInviteBtn) {
+    elements.discordBotInviteBtn.title = t("discord_bot_invite_title");
+    elements.discordBotInviteBtn.setAttribute("aria-label", t("discord_bot_invite_title"));
+  }
+  if (elements.intelBotInviteBadge) {
+    elements.intelBotInviteBadge.textContent = t("discord_bot_modal_badge");
+  }
+  if (elements.intelBotInviteTitle) {
+    elements.intelBotInviteTitle.textContent = t("discord_bot_modal_title");
+  }
+  if (elements.intelBotInviteBody) {
+    elements.intelBotInviteBody.textContent = t("discord_bot_modal_body");
+  }
+  if (elements.intelBotInviteCancelBtn) {
+    elements.intelBotInviteCancelBtn.textContent = t("discord_bot_modal_cancel");
+  }
+  if (elements.intelBotInviteConfirmBtn) {
+    elements.intelBotInviteConfirmBtn.textContent = t("discord_bot_modal_confirm");
+  }
   elements.langLabel.textContent = t("lang_label");
   renderFilesDecisionTabBadge();
+  renderIntelBotInviteModal();
 
   elements.labelUtc.textContent = t("label_utc");
   elements.labelLastSync.textContent = t("label_last_sync");
@@ -11257,6 +11403,7 @@ async function startBootSequence() {
 
 function wireEvents() {
   const hackInteractiveRoot = elements.hackOverlay?.querySelector(".hack-core") || null;
+  const intelBotInviteRoot = elements.intelBotInviteCore || null;
   const filesGroupRenameModalRoot = elements.filesGroupRenameOverlay?.querySelector(".files-group-rename-core") || null;
   const filesDisclaimerModalRoot = elements.filesDisclaimerOverlay?.querySelector(".files-disclaimer-core") || null;
   const filesUploadModalRoot = elements.filesUploadOverlay?.querySelector(".files-admin-modal-core") || null;
@@ -11267,6 +11414,12 @@ function wireEvents() {
     }
     if (document.body.classList.contains("is-classified-loading") && elements.classifiedLoadOverlay?.classList.contains("is-active")) {
       return true;
+    }
+    if (elements.intelBotInviteOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node) || !(intelBotInviteRoot instanceof Node)) {
+        return true;
+      }
+      return !intelBotInviteRoot.contains(target);
     }
     if (elements.filesGroupRenameOverlay?.classList.contains("is-active")) {
       if (!(target instanceof Node) || !(filesGroupRenameModalRoot instanceof Node)) {
@@ -11342,6 +11495,21 @@ function wireEvents() {
       elements.langSelect.dispatchEvent(new Event("change", { bubbles: true }));
       setLanguageMenuOpen(false);
     });
+  });
+  elements.discordBotInviteBtn?.addEventListener("click", (event) => {
+    event.preventDefault();
+    openIntelBotInviteModal();
+  });
+  elements.intelBotInviteCancelBtn?.addEventListener("click", () => {
+    closeIntelBotInviteModal();
+  });
+  elements.intelBotInviteConfirmBtn?.addEventListener("click", () => {
+    closeIntelBotInviteModal();
+  });
+  elements.intelBotInviteOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.intelBotInviteOverlay) {
+      closeIntelBotInviteModal();
+    }
   });
   elements.siloDossierCloseBtn?.addEventListener("click", () => {
     hideSiloDossier({ updateHash: true });
@@ -11719,6 +11887,11 @@ function wireEvents() {
       return;
     }
 
+    if (elements.intelBotInviteOverlay?.classList.contains("is-active")) {
+      closeIntelBotInviteModal();
+      return;
+    }
+
     if (elements.filesAdminRequestsFilterDropdown?.classList.contains("is-open")) {
       setFilesAdminRequestsFilterMenuOpen(false);
       return;
@@ -11807,6 +11980,7 @@ async function init() {
 
   const initialLang = detectInitialLanguage();
   applyLanguage(initialLang, false);
+  void loadPublicConfig();
   state.files.me = buildGuestFilesProfile();
   if (!getHashView()) {
     setHashView("intel", { replace: true });

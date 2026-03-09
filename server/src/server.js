@@ -49,6 +49,7 @@ const ACCESS_REQUEST_DECISION_TTL_MS_RAW = String(process.env.ACCESS_REQUEST_DEC
 const ACCESS_REQUEST_REAPPLY_COOLDOWN_MS_RAW = String(process.env.ACCESS_REQUEST_REAPPLY_COOLDOWN_MS || "").trim();
 const ACCESS_REQUEST_TOKEN_SECRET = String(process.env.ACCESS_REQUEST_TOKEN_SECRET || "").trim() || SESSION_SECRET;
 const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || "").trim();
+const BOT_INVITE_LINK = String(process.env.BOT_INVITE_LINK || "").trim();
 const ACCESS_REQUEST_MAX_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 
 function parsePositiveInteger(value, fallback) {
@@ -1449,6 +1450,42 @@ function resolveAccessRequestIdentity(user, requestEntry = null) {
   };
 }
 
+function resolveDiscordDefaultAvatarIndex(user) {
+  const profile = user?.discordProfile && typeof user.discordProfile === "object" ? user.discordProfile : null;
+  const discriminator = String(profile?.discriminator || "").trim();
+  if (discriminator && discriminator !== "0") {
+    const legacyIndex = Number.parseInt(discriminator, 10);
+    if (Number.isFinite(legacyIndex)) {
+      return Math.abs(legacyIndex) % 5;
+    }
+  }
+
+  const discordId = String(user?.discordId || "").trim();
+  if (!/^\d+$/.test(discordId)) {
+    return 0;
+  }
+
+  try {
+    return Number((BigInt(discordId) >> 22n) % 6n);
+  } catch {
+    return 0;
+  }
+}
+
+function resolveDiscordAvatarUrl(user, size = 128) {
+  const profile = user?.discordProfile && typeof user.discordProfile === "object" ? user.discordProfile : null;
+  const discordId = String(user?.discordId || "").trim();
+  const safeSize = Math.max(32, Math.min(512, Number(size) || 128));
+  const avatarHash = String(profile?.avatar || "").trim();
+  if (discordId && avatarHash) {
+    const format = avatarHash.startsWith("a_") ? "gif" : "png";
+    return `https://cdn.discordapp.com/avatars/${discordId}/${avatarHash}.${format}?size=${safeSize}`;
+  }
+
+  const index = resolveDiscordDefaultAvatarIndex(user);
+  return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
+}
+
 function getRequestBaseUrl(req) {
   const configuredBaseUrl = String(PUBLIC_BASE_URL || "").trim();
   if (configuredBaseUrl) {
@@ -1663,17 +1700,196 @@ function buildAccessRequestDecisionPage({
 </html>`;
 }
 
+function buildFalloutEmailButtonStyle({ tone = "neutral", enabled = true } = {}) {
+  const palettes = {
+    approve: {
+      border: enabled ? "rgba(139,255,139,0.52)" : "rgba(139,255,139,0.22)",
+      text: enabled ? "#dcffcf" : "#7ea87b",
+      glow: enabled ? "rgba(139,255,139,0.18)" : "rgba(0,0,0,0)"
+    },
+    decline: {
+      border: enabled ? "rgba(255,133,133,0.58)" : "rgba(255,133,133,0.24)",
+      text: enabled ? "#ffd0d0" : "#c38b8b",
+      glow: enabled ? "rgba(255,133,133,0.16)" : "rgba(0,0,0,0)"
+    },
+    neutral: {
+      border: enabled ? "rgba(255,225,122,0.46)" : "rgba(255,225,122,0.22)",
+      text: enabled ? "#fff1bd" : "#bba874",
+      glow: enabled ? "rgba(255,225,122,0.14)" : "rgba(0,0,0,0)"
+    }
+  };
+
+  const palette = palettes[tone] || palettes.neutral;
+  return [
+    "display:inline-block",
+    "padding:12px 16px",
+    "border-radius:12px",
+    `border:1px solid ${palette.border}`,
+    `color:${palette.text}`,
+    "background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.18)),rgba(6,10,6,0.84)",
+    `box-shadow:inset 0 0 0 1px rgba(0,0,0,0.35), 0 0 24px ${palette.glow}`,
+    "text-decoration:none",
+    "text-transform:uppercase",
+    "letter-spacing:.12em",
+    "font-size:12px",
+    "font-weight:700",
+    "font-family:Consolas,'Courier New',monospace",
+    enabled ? "" : "pointer-events:none"
+  ].filter(Boolean).join(";");
+}
+
+function buildFalloutEmailCardsGrid(cards = []) {
+  const safeCards = Array.isArray(cards) ? cards.filter(Boolean) : [];
+  if (!safeCards.length) {
+    return "";
+  }
+
+  const rows = [];
+  for (let index = 0; index < safeCards.length; index += 2) {
+    const left = safeCards[index];
+    const right = safeCards[index + 1] || null;
+    const renderCell = (card) => {
+      if (!card) {
+        return "<td width=\"50%\" style=\"padding:0 0 12px 10px;vertical-align:top;\">&nbsp;</td>";
+      }
+      return `<td width="50%" style="padding:0 ${card === left ? "10px 12px 0" : "0 0 12px 10px"};vertical-align:top;">
+        <div style="min-height:94px;padding:12px 14px;border:1px solid rgba(139,255,139,0.2);border-radius:16px;background:linear-gradient(140deg,rgba(255,225,122,0.08),rgba(255,225,122,0.01) 34%,rgba(0,0,0,0.18)),rgba(8,12,8,0.84);box-shadow:inset 0 0 0 1px rgba(0,0,0,0.42),0 10px 24px rgba(0,0,0,0.18);">
+          <div style="margin:0 0 8px;color:#ffe88d;font-size:11px;letter-spacing:.22em;text-transform:uppercase;">${card.label}</div>
+          <div style="color:#e6ffd7;font-size:${card.mono ? "15px" : "16px"};line-height:1.45;${card.mono ? "font-family:Consolas,'Courier New',monospace;" : ""}white-space:pre-wrap;word-break:break-word;">${card.value}</div>
+        </div>
+      </td>`;
+    };
+
+    rows.push(`<tr>${renderCell(left)}${renderCell(right)}</tr>`);
+  }
+
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:separate;border-spacing:0;">${rows.join("")}</table>`;
+}
+
+function buildFalloutEmailPanel({ kicker, title = "", bodyHtml = "", accent = "green" } = {}) {
+  const accentColor = accent === "amber" ? "#ffefaf" : "#d8ffd8";
+  const borderColor = accent === "amber" ? "rgba(255,225,122,0.28)" : "rgba(139,255,139,0.24)";
+  const glow = accent === "amber" ? "rgba(255,225,122,0.08)" : "rgba(139,255,139,0.08)";
+  return `<div style="margin-top:14px;padding:14px 16px;border:1px solid ${borderColor};border-radius:16px;background:linear-gradient(135deg,${glow},rgba(0,0,0,0) 48%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.2)),rgba(8,12,8,0.8);box-shadow:inset 0 0 0 1px rgba(0,0,0,0.4),0 14px 28px rgba(0,0,0,0.16);">
+    <div style="margin:0 0 8px;color:#ffe88d;font-size:11px;letter-spacing:.22em;text-transform:uppercase;">${kicker}</div>
+    ${title ? `<div style="margin:0 0 10px;color:${accentColor};font-size:18px;line-height:1.2;letter-spacing:.06em;text-transform:uppercase;">${title}</div>` : ""}
+    <div style="color:#d8ffd8;font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word;">${bodyHtml}</div>
+  </div>`;
+}
+
+function buildFalloutEmailDiscordProfileCard({ user, identity, metaRows = [] } = {}) {
+  const safeAvatarUrl = escapeHtml(resolveDiscordAvatarUrl(user, 160));
+  const safeDisplayName = escapeHtml(identity?.nick || "Unknown");
+  const safeUsername = escapeHtml(identity?.username || "unknown");
+  const safeDiscordId = escapeHtml(identity?.discordId || "Unknown");
+  const safeAccountAge = escapeHtml(identity?.accountAge || "Unknown");
+  const rows = Array.isArray(metaRows) ? metaRows.filter(Boolean) : [];
+  const renderedRows = rows.map((row) => {
+    const label = escapeHtml(String(row.label || "").trim());
+    const value = String(row.value || "").trim();
+    if (!label || !value) {
+      return "";
+    }
+    return `<tr>
+      <td style="padding:9px 0;border-top:1px solid rgba(255,255,255,0.06);color:#a8b3cf;font-size:11px;letter-spacing:.16em;text-transform:uppercase;">${label}</td>
+      <td style="padding:9px 0 9px 12px;border-top:1px solid rgba(255,255,255,0.06);color:#f1f5ff;font-size:13px;line-height:1.45;text-align:right;word-break:break-word;">${escapeHtml(value)}</td>
+    </tr>`;
+  }).join("");
+
+  return `<div style="margin-bottom:16px;border:1px solid rgba(129,150,255,0.22);border-radius:18px;overflow:hidden;background:linear-gradient(180deg,rgba(88,101,242,0.08),rgba(0,0,0,0.08) 38%,rgba(8,10,16,0.96)),#101320;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03),0 18px 34px rgba(0,0,0,0.22);">
+    <div style="height:74px;background:
+      radial-gradient(320px 140px at 0% 0%, rgba(88,101,242,0.36), rgba(88,101,242,0.02) 56%),
+      linear-gradient(135deg, rgba(88,101,242,0.34), rgba(35,39,52,0.92) 58%, rgba(10,12,18,0.98));"></div>
+    <div style="padding:0 18px 16px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="width:90px;vertical-align:top;padding-right:14px;">
+            <img src="${safeAvatarUrl}" alt="" width="80" height="80" style="display:block;width:80px;height:80px;margin-top:-38px;border-radius:50%;border:6px solid #101320;background:#101320;box-shadow:0 0 0 1px rgba(255,255,255,0.08);" />
+          </td>
+          <td style="vertical-align:top;padding-top:12px;">
+            <div style="color:#ffffff;font-size:21px;line-height:1.2;font-weight:700;">${safeDisplayName}</div>
+            <div style="margin-top:4px;color:#b9c0d4;font-size:13px;line-height:1.4;">@${safeUsername}</div>
+            <div style="margin-top:10px;">
+              <span style="display:inline-block;margin:0 8px 8px 0;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.06);color:#d8def1;font-size:11px;letter-spacing:.12em;text-transform:uppercase;">Account Age: ${safeAccountAge}</span>
+              <span style="display:inline-block;margin:0 8px 8px 0;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.06);color:#d8def1;font-size:11px;letter-spacing:.12em;text-transform:uppercase;">ID: ${safeDiscordId}</span>
+            </div>
+          </td>
+        </tr>
+      </table>
+      ${renderedRows ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin-top:12px;border-collapse:collapse;">${renderedRows}</table>` : ""}
+    </div>
+  </div>`;
+}
+
+function buildFalloutEmailShell({
+  preheader = "",
+  badge = "",
+  headerEyebrow = "",
+  title = "",
+  lead = "",
+  accent = "green",
+  cardsHtml = "",
+  sectionsHtml = "",
+  actionsTitle = "",
+  actionsHtml = "",
+  footerNote = "",
+  footerActionHtml = ""
+} = {}) {
+  const accentLine = accent === "amber" ? "rgba(255,225,122,0.34)" : "rgba(139,255,139,0.34)";
+  const badgeBorder = accent === "amber" ? "rgba(255,225,122,0.48)" : "rgba(139,255,139,0.44)";
+  const badgeText = accent === "amber" ? "#fff1bd" : "#dcffcf";
+
+  return `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#070803;color:#d8ffd8;font-family:Consolas,'Courier New',monospace;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">${preheader}</div>
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;border-collapse:collapse;background:
+      radial-gradient(1200px 700px at 100% 0%, rgba(255,225,122,0.12), rgba(0,0,0,0) 54%),
+      radial-gradient(1000px 700px at 0% 100%, rgba(139,255,139,0.10), rgba(0,0,0,0) 58%),
+      #070803;">
+      <tr>
+        <td align="center" style="padding:24px 12px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:720px;width:100%;border-collapse:separate;border-spacing:0;border:1px solid ${accentLine};border-radius:20px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.2)),rgba(7,10,7,0.92);box-shadow:0 0 0 1px rgba(0,0,0,0.45) inset,0 20px 60px rgba(0,0,0,0.62);">
+            <tr>
+              <td style="padding:0;">
+                <div style="height:6px;background:
+                  linear-gradient(90deg,rgba(139,255,139,0.34),rgba(255,225,122,0.24) 45%,rgba(0,0,0,0) 100%);"></div>
+                <div style="padding:16px 18px;border-bottom:1px solid ${accentLine};background:
+                  linear-gradient(90deg,rgba(255,225,122,0.16),rgba(255,225,122,0.02) 45%,rgba(0,0,0,0) 70%),
+                  linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.15));">
+                <div style="margin:0 0 10px;color:#97cf97;font-size:11px;letter-spacing:.24em;text-transform:uppercase;">${headerEyebrow}</div>
+                <span style="display:inline-block;padding:5px 10px;border:1px solid ${badgeBorder};border-radius:999px;color:${badgeText};background:rgba(0,0,0,0.32);font-size:11px;letter-spacing:.12em;text-transform:uppercase;">${badge}</span>
+                <div style="margin:14px 0 8px;color:#fff3ca;font-size:22px;line-height:1.2;letter-spacing:.08em;text-transform:uppercase;">${title}</div>
+                <div style="color:#cfeecf;font-size:14px;line-height:1.6;">${lead}</div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px;">
+                ${cardsHtml}
+                ${sectionsHtml}
+                <div style="margin-top:16px;padding:14px 16px;border:1px solid rgba(255,225,122,0.24);border-radius:16px;background:linear-gradient(180deg,rgba(255,225,122,0.05),rgba(0,0,0,0.16)),rgba(8,12,8,0.82);box-shadow:inset 0 0 0 1px rgba(0,0,0,0.4);">
+                  <div style="margin:0 0 10px;color:#ffe88d;font-size:11px;letter-spacing:.22em;text-transform:uppercase;">${actionsTitle}</div>
+                  <div style="font-size:0;line-height:0;">${actionsHtml}</div>
+                  ${footerNote ? `<div style="margin-top:12px;color:#a7d7a7;font-size:12px;line-height:1.5;">${footerNote}</div>` : ""}
+                </div>
+                ${footerActionHtml ? `<div style="margin-top:14px;text-align:right;">${footerActionHtml}</div>` : ""}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
 function buildAccessRequestEmailContent({ user, requestEntry, req }) {
   const identity = resolveAccessRequestIdentity(user, requestEntry);
-  const safeNick = escapeHtml(identity.nick);
-  const safeUsername = escapeHtml(identity.username);
-  const safeEmail = escapeHtml(identity.email);
   const safeReason = escapeHtml(identity.reason);
   const safeReasonHtml = safeReason ? safeReason.replace(/\n/g, "<br />") : "";
-  const safeDiscordId = escapeHtml(identity.discordId);
-  const safeAccountAge = escapeHtml(identity.accountAge);
-  const safeRequestTime = escapeHtml(identity.requestTime);
   const baseUrl = getRequestBaseUrl(req);
+  const returnUrl = baseUrl ? `${baseUrl}/#files` : "";
   const requestedAtMs = Date.parse(String(requestEntry?.requestedAt || "").trim());
   const decisionWindowStartMs = Number.isFinite(requestedAtMs) && requestedAtMs > 0 ? requestedAtMs : Date.now();
   const decisionExpiresAtMs = decisionWindowStartMs + ACCESS_REQUEST_DECISION_TTL_MS;
@@ -1696,12 +1912,59 @@ function buildAccessRequestEmailContent({ user, requestEntry, req }) {
     : "";
   const safeApproveHref = escapeHtml(approveLink || "#");
   const safeDeclineHref = escapeHtml(declineLink || "#");
-  const approveButtonStyle = approveLink
-    ? "display:inline-block;padding:9px 14px;border:1px solid rgba(139,255,139,0.5);border-radius:9px;background:rgba(0,0,0,0.34);color:#d8ffd8;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;"
-    : "display:inline-block;padding:9px 14px;border:1px solid rgba(139,255,139,0.22);border-radius:9px;background:rgba(0,0,0,0.24);color:#7fb07f;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;pointer-events:none;";
-  const declineButtonStyle = declineLink
-    ? "display:inline-block;padding:9px 14px;border:1px solid rgba(255,120,120,0.54);border-radius:9px;background:rgba(0,0,0,0.34);color:#ffc2c2;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;"
-    : "display:inline-block;padding:9px 14px;border:1px solid rgba(255,120,120,0.24);border-radius:9px;background:rgba(0,0,0,0.24);color:#c08a8a;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;pointer-events:none;";
+  const safeRequestId = escapeHtml(String(requestEntry?.requestId || "Unknown"));
+  const cardsHtml = [
+    buildFalloutEmailDiscordProfileCard({
+      user,
+      identity,
+      metaRows: [
+        { label: "Linked Mail", value: identity.email },
+        { label: "Request Logged (UTC)", value: identity.requestTime }
+      ]
+    }),
+    buildFalloutEmailCardsGrid([
+      {
+        label: escapeHtml("Request ID"),
+        value: safeRequestId,
+        mono: true
+      },
+      {
+        label: escapeHtml("Review Window Ends"),
+        value: escapeHtml(decisionExpiresAtLabel),
+        mono: true
+      }
+    ])
+  ].join("");
+  const sectionsHtml = [
+    buildFalloutEmailPanel({
+      kicker: escapeHtml("Filed Purpose"),
+      title: escapeHtml("Requested Archive Access"),
+      bodyHtml: safeReasonHtml || "No access reason was provided.",
+      accent: "amber"
+    }),
+    buildFalloutEmailPanel({
+      kicker: escapeHtml("Relay Notes"),
+      title: escapeHtml("Operational Summary"),
+      bodyHtml: [
+        "A new clearance request has been intercepted from the restricted archive intake relay.",
+        `Decision links expire at <strong>${escapeHtml(decisionExpiresAtLabel)}</strong>.`,
+        baseUrl
+          ? "If no action is taken before expiration, this request is automatically declined."
+          : "Direct action links are unavailable because PUBLIC_BASE_URL is not configured on the server."
+      ].join("<br /><br />"),
+      accent: "green"
+    })
+  ].join("");
+  const actionsHtml = [
+    `<a href="${safeApproveHref}" style="${buildFalloutEmailButtonStyle({ tone: "approve", enabled: Boolean(approveLink) })};margin:0 10px 10px 0;">Approve Clearance</a>`,
+    `<a href="${safeDeclineHref}" style="${buildFalloutEmailButtonStyle({ tone: "decline", enabled: Boolean(declineLink) })};margin:0 10px 10px 0;">Decline Request</a>`,
+    returnUrl
+      ? `<a href="${escapeHtml(returnUrl)}" style="${buildFalloutEmailButtonStyle({ tone: "neutral", enabled: true })};margin:0 10px 10px 0;">Open Fallout Codex</a>`
+      : ""
+  ].join("");
+  const footerNote = baseUrl
+    ? "Use the command buttons above to decide the request directly from the relay message."
+    : "Set PUBLIC_BASE_URL to a public origin if you want clickable decision links inside admin email alerts.";
 
   const subject = `[Fallout Codex] Access Review Required - ${identity.username} (${identity.discordId})`;
   const text = [
@@ -1723,45 +1986,22 @@ function buildAccessRequestEmailContent({ user, requestEntry, req }) {
     identity.reason || "Not provided"
   ].join("\n");
 
-  const html = `<!doctype html>
-<html>
-  <body style="margin:0;padding:24px;background:#060a06;color:#c7f7c7;font-family:Consolas,'Courier New',monospace;">
-    <div style="max-width:620px;margin:0 auto;border:1px solid rgba(139,255,139,0.34);border-radius:14px;overflow:hidden;background:linear-gradient(to bottom,rgba(139,255,139,0.08),rgba(0,0,0,0.42)),rgba(0,0,0,0.44);box-shadow:0 0 0 1px rgba(0,0,0,.48) inset,0 18px 60px rgba(0,0,0,.58);">
-      <div style="padding:12px 16px;background:linear-gradient(to right,rgba(139,255,139,0.22),rgba(0,0,0,0));border-bottom:1px solid rgba(139,255,139,0.28);">
-        <span style="display:inline-block;padding:3px 8px;border:1px solid rgba(255,225,122,0.48);border-radius:999px;font-size:11px;letter-spacing:.08em;color:#ffefaf;text-transform:uppercase;">Access Review Required</span>
-        <p style="margin:10px 0 0;font-size:16px;letter-spacing:.06em;color:#fff4cb;text-transform:uppercase;">Fallout Codex - New Access Request</p>
-      </div>
-      <div style="padding:16px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
-          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Nick</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeNick}</td></tr>
-          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Username</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeUsername}</td></tr>
-          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Email</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeEmail}</td></tr>
-          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Discord ID</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-family:Consolas,Menlo,monospace;font-size:14px;color:#d8ffd8;">${safeDiscordId}</td></tr>
-          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Account Age</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeAccountAge}</td></tr>
-          <tr><td style="padding:10px 0;color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Request Time (UTC)</td><td style="padding:10px 0;text-align:right;font-family:Consolas,Menlo,monospace;font-size:14px;color:#d8ffd8;">${safeRequestTime}</td></tr>
-        </table>
-        <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,225,122,0.24);">
-          <p style="margin:0 0 10px;color:#ffefaf;font-size:12px;letter-spacing:.06em;text-transform:uppercase;">Admin Decision Actions</p>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <a href="${safeApproveHref}" style="${approveButtonStyle}">Approve</a>
-            <a href="${safeDeclineHref}" style="${declineButtonStyle}">Decline</a>
-          </div>
-          <p style="margin:10px 0 0;font-size:12px;color:#9ccf9c;">Decision link expires: ${escapeHtml(decisionExpiresAtLabel)}</p>
-          <p style="margin:6px 0 0;font-size:12px;color:#9ccf9c;">If no action is taken before expiration, this request is auto-declined.</p>
-          <div style="margin-top:12px;padding:10px;border:1px solid rgba(255,225,122,0.24);border-radius:10px;background:rgba(0,0,0,0.28);">
-            <p style="margin:0;color:#ffefaf;font-size:11px;letter-spacing:.06em;text-transform:uppercase;">Access Reason</p>
-            <p style="margin:7px 0 0;color:#d8ffd8;font-size:13px;line-height:1.4;white-space:pre-wrap;word-break:break-word;">${safeReasonHtml || "Not provided"}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </body>
-</html>`;
-
   return {
     subject,
     text,
-    html
+    html: buildFalloutEmailShell({
+      preheader: escapeHtml(`New access request from ${identity.username} is waiting for review.`),
+      badge: escapeHtml("Access Review Required"),
+      headerEyebrow: escapeHtml("Fallout Codex // Secure File Intake"),
+      title: escapeHtml("New Clearance Request"),
+      lead: "A new visitor has requested access to the restricted archive. Review the identity relay, inspect the stated purpose, and issue a command before the review window closes.",
+      accent: "green",
+      cardsHtml,
+      sectionsHtml,
+      actionsTitle: escapeHtml("Command Actions"),
+      actionsHtml,
+      footerNote
+    })
   };
 }
 
@@ -1792,21 +2032,13 @@ function buildDisclaimerReevaluationEmailContent({ user, accessRequestState, exp
     requestedAt: accessRequestState?.requestedAt || ""
   });
 
-  const safeNick = escapeHtml(identity.nick);
-  const safeUsername = escapeHtml(identity.username);
-  const safeEmail = escapeHtml(identity.email);
-  const safeDiscordId = escapeHtml(identity.discordId);
   const safeRequestId = escapeHtml(String(accessRequestState?.requestId || "Unknown"));
-  const safeAccountAge = escapeHtml(identity.accountAge);
-  const safeRequestTime = escapeHtml(formatUtcTimestamp(accessRequestState?.requestedAt || ""));
-  const safeDecisionTime = escapeHtml(formatUtcTimestamp(accessRequestState?.decidedAt || ""));
-  const safeDisclaimerDecisionTime = escapeHtml(formatUtcTimestamp(accessRequestState?.disclaimerDecidedAt || ""));
   const safeOriginalReason = escapeHtml(sanitizeAccessRequestReason(accessRequestState?.reason || ""));
   const safeOriginalReasonHtml = safeOriginalReason ? safeOriginalReason.replace(/\n/g, "<br />") : "";
   const safeExplanation = escapeHtml(sanitizedExplanation);
   const safeExplanationHtml = safeExplanation ? safeExplanation.replace(/\n/g, "<br />") : "";
   const baseUrl = getRequestBaseUrl(req);
-  const returnUrl = baseUrl ? `${baseUrl}/#files` : "/#files";
+  const returnUrl = baseUrl ? `${baseUrl}/#files` : "";
   const decisionExpiresAtMs = Date.now() + ACCESS_REQUEST_DECISION_TTL_MS;
   const decisionExpiresAtLabel = formatUtcTimestamp(decisionExpiresAtMs);
   const reapproveLink = baseUrl
@@ -1827,12 +2059,74 @@ function buildDisclaimerReevaluationEmailContent({ user, accessRequestState, exp
     : "";
   const safeReapproveHref = escapeHtml(reapproveLink || "#");
   const safeDeclineHref = escapeHtml(declineLink || "#");
-  const reapproveButtonStyle = reapproveLink
-    ? "display:inline-block;padding:9px 14px;border:1px solid rgba(139,255,139,0.5);border-radius:9px;background:rgba(0,0,0,0.34);color:#d8ffd8;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;"
-    : "display:inline-block;padding:9px 14px;border:1px solid rgba(139,255,139,0.22);border-radius:9px;background:rgba(0,0,0,0.24);color:#7fb07f;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;pointer-events:none;";
-  const declineButtonStyle = declineLink
-    ? "display:inline-block;padding:9px 14px;border:1px solid rgba(255,120,120,0.54);border-radius:9px;background:rgba(0,0,0,0.34);color:#ffc2c2;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;"
-    : "display:inline-block;padding:9px 14px;border:1px solid rgba(255,120,120,0.24);border-radius:9px;background:rgba(0,0,0,0.24);color:#c08a8a;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;pointer-events:none;";
+  const cardsHtml = [
+    buildFalloutEmailDiscordProfileCard({
+      user,
+      identity,
+      metaRows: [
+        { label: "Linked Mail", value: identity.email },
+        { label: "Request ID", value: String(accessRequestState?.requestId || "Unknown") }
+      ]
+    }),
+    buildFalloutEmailCardsGrid([
+      {
+        label: escapeHtml("Request Submitted (UTC)"),
+        value: escapeHtml(formatUtcTimestamp(accessRequestState?.requestedAt || "")),
+        mono: true
+      },
+      {
+        label: escapeHtml("Previously Approved (UTC)"),
+        value: escapeHtml(formatUtcTimestamp(accessRequestState?.decidedAt || "")),
+        mono: true
+      },
+      {
+        label: escapeHtml("Disclaimer Declined (UTC)"),
+        value: escapeHtml(formatUtcTimestamp(accessRequestState?.disclaimerDecidedAt || "")),
+        mono: true
+      },
+      {
+        label: escapeHtml("Review Window Ends"),
+        value: escapeHtml(decisionExpiresAtLabel),
+        mono: true
+      }
+    ])
+  ].join("");
+  const sectionsHtml = [
+    buildFalloutEmailPanel({
+      kicker: escapeHtml("Original Filing"),
+      title: escapeHtml("Access Request Reason"),
+      bodyHtml: safeOriginalReasonHtml || "No original access reason was recorded.",
+      accent: "green"
+    }),
+    buildFalloutEmailPanel({
+      kicker: escapeHtml("Reevaluation Statement"),
+      title: escapeHtml("User Follow-up Explanation"),
+      bodyHtml: safeExplanationHtml || "No reevaluation explanation was provided.",
+      accent: "amber"
+    }),
+    buildFalloutEmailPanel({
+      kicker: escapeHtml("Relay Notes"),
+      title: escapeHtml("Appeal Summary"),
+      bodyHtml: [
+        "This user was previously approved for archive access but declined the disclaimer gate.",
+        `The renewed decision window closes at <strong>${escapeHtml(decisionExpiresAtLabel)}</strong>.`,
+        baseUrl
+          ? "Use the action controls below to restore access or leave the rejection in place."
+          : "Direct action links are unavailable because PUBLIC_BASE_URL is not configured on the server."
+      ].join("<br /><br />"),
+      accent: "green"
+    })
+  ].join("");
+  const actionsHtml = [
+    `<a href="${safeReapproveHref}" style="${buildFalloutEmailButtonStyle({ tone: "approve", enabled: Boolean(reapproveLink) })};margin:0 10px 10px 0;">Restore Access</a>`,
+    `<a href="${safeDeclineHref}" style="${buildFalloutEmailButtonStyle({ tone: "decline", enabled: Boolean(declineLink) })};margin:0 10px 10px 0;">Keep Declined</a>`,
+    returnUrl
+      ? `<a href="${escapeHtml(returnUrl)}" style="${buildFalloutEmailButtonStyle({ tone: "neutral", enabled: true })};margin:0 10px 10px 0;">Open Fallout Codex</a>`
+      : ""
+  ].join("");
+  const footerNote = baseUrl
+    ? "The appeal can be resolved directly from this email while the signed links remain valid."
+    : "Set PUBLIC_BASE_URL to a public origin if you want clickable appeal decision links inside admin email alerts.";
 
   const subject = `[Fallout Codex] Disclaimer Reevaluation Request - ${identity.username} (${identity.discordId})`;
   const text = [
@@ -1859,54 +2153,22 @@ function buildDisclaimerReevaluationEmailContent({ user, accessRequestState, exp
     `Decision link expires: ${decisionExpiresAtLabel}`
   ].join("\n");
 
-  const html = `<!doctype html>
-<html>
-  <body style="margin:0;padding:24px;background:#060a06;color:#c7f7c7;font-family:Consolas,'Courier New',monospace;">
-    <div style="max-width:620px;margin:0 auto;border:1px solid rgba(139,255,139,0.34);border-radius:14px;overflow:hidden;background:linear-gradient(to bottom,rgba(139,255,139,0.08),rgba(0,0,0,0.42)),rgba(0,0,0,0.44);box-shadow:0 0 0 1px rgba(0,0,0,.48) inset,0 18px 60px rgba(0,0,0,.58);">
-      <div style="padding:12px 16px;background:linear-gradient(to right,rgba(255,225,122,0.22),rgba(0,0,0,0));border-bottom:1px solid rgba(255,225,122,0.28);">
-        <span style="display:inline-block;padding:3px 8px;border:1px solid rgba(255,225,122,0.48);border-radius:999px;font-size:11px;letter-spacing:.08em;color:#ffefaf;text-transform:uppercase;">Reevaluation Request</span>
-        <p style="margin:10px 0 0;font-size:16px;letter-spacing:.06em;color:#fff4cb;text-transform:uppercase;">Disclaimer Reevaluation Submission</p>
-      </div>
-      <div style="padding:16px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
-          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Nick</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeNick}</td></tr>
-          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Username</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeUsername}</td></tr>
-          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Email</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeEmail}</td></tr>
-          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Discord ID</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-family:Consolas,Menlo,monospace;font-size:14px;color:#d8ffd8;">${safeDiscordId}</td></tr>
-          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Account Age</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-size:15px;color:#d8ffd8;">${safeAccountAge}</td></tr>
-          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Request ID</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-family:Consolas,Menlo,monospace;font-size:14px;color:#d8ffd8;">${safeRequestId}</td></tr>
-          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Request Submitted (UTC)</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-family:Consolas,Menlo,monospace;font-size:14px;color:#d8ffd8;">${safeRequestTime}</td></tr>
-          <tr><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Approved (UTC)</td><td style="padding:10px 0;border-bottom:1px solid rgba(139,255,139,0.2);text-align:right;font-family:Consolas,Menlo,monospace;font-size:14px;color:#d8ffd8;">${safeDecisionTime}</td></tr>
-          <tr><td style="padding:10px 0;color:#97cf97;font-size:12px;text-transform:uppercase;letter-spacing:.06em;">Disclaimer Declined (UTC)</td><td style="padding:10px 0;text-align:right;font-family:Consolas,Menlo,monospace;font-size:14px;color:#d8ffd8;">${safeDisclaimerDecisionTime}</td></tr>
-        </table>
-        <div style="margin-top:12px;padding:10px;border:1px solid rgba(255,225,122,0.24);border-radius:10px;background:rgba(0,0,0,0.28);">
-          <p style="margin:0;color:#ffefaf;font-size:11px;letter-spacing:.06em;text-transform:uppercase;">Original Access Reason</p>
-          <p style="margin:7px 0 0;color:#d8ffd8;font-size:13px;line-height:1.4;white-space:pre-wrap;word-break:break-word;">${safeOriginalReasonHtml || "Not provided"}</p>
-        </div>
-        <div style="margin-top:12px;padding:10px;border:1px solid rgba(255,225,122,0.32);border-radius:10px;background:rgba(0,0,0,0.28);">
-          <p style="margin:0;color:#ffefaf;font-size:11px;letter-spacing:.06em;text-transform:uppercase;">User Reevaluation Explanation</p>
-          <p style="margin:7px 0 0;color:#d8ffd8;font-size:13px;line-height:1.4;white-space:pre-wrap;word-break:break-word;">${safeExplanationHtml || "Not provided"}</p>
-        </div>
-        <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,225,122,0.24);">
-          <p style="margin:0 0 10px;color:#ffefaf;font-size:12px;letter-spacing:.06em;text-transform:uppercase;">Admin Reevaluation Actions</p>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <a href="${safeReapproveHref}" style="${reapproveButtonStyle}">Re-approve</a>
-            <a href="${safeDeclineHref}" style="${declineButtonStyle}">Decline</a>
-          </div>
-          <p style="margin:10px 0 0;font-size:12px;color:#9ccf9c;">Decision link expires: ${escapeHtml(decisionExpiresAtLabel)}</p>
-        </div>
-        <div style="margin-top:14px;text-align:right;">
-          <a href="${escapeHtml(returnUrl)}" style="display:inline-block;padding:9px 14px;border:1px solid rgba(139,255,139,0.5);border-radius:9px;background:rgba(0,0,0,0.34);color:#d8ffd8;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;">Open Fallout Codex</a>
-        </div>
-      </div>
-    </div>
-  </body>
-</html>`;
-
   return {
     subject,
     text,
-    html
+    html: buildFalloutEmailShell({
+      preheader: escapeHtml(`Disclaimer reevaluation request received from ${identity.username}.`),
+      badge: escapeHtml("Reevaluation Request"),
+      headerEyebrow: escapeHtml("Fallout Codex // Disclaimer Appeal Relay"),
+      title: escapeHtml("Disclaimer Appeal Received"),
+      lead: "An approved archive user declined the disclaimer gate and submitted a follow-up explanation. Review the original request reason and the appeal statement before restoring archive access.",
+      accent: "amber",
+      cardsHtml,
+      sectionsHtml,
+      actionsTitle: escapeHtml("Appeal Commands"),
+      actionsHtml,
+      footerNote
+    })
   };
 }
 
@@ -3066,6 +3328,13 @@ app.get("/api/intel/minerva", async (_req, res) => {
       error: "Unable to fetch Minerva intel"
     });
   }
+});
+
+app.get("/api/public-config", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    botInviteLink: BOT_INVITE_LINK || ""
+  });
 });
 
 app.use(express.static(SITE_ROOT));
