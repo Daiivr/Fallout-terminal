@@ -139,8 +139,7 @@ const HACK_BRACKET_PAIRS = [
 const VIEW_HASHES = {
   intel: "#intel",
   files: "#files",
-  classified: "#clasified",
-  silo: "#silos"
+  classified: "#clasified"
 };
 const FILES_ACCESS_REQUEST_REASON_MAX = 1200;
 const FILES_ACCESS_DECLINED_REAPPLY_MS = 7 * 24 * 60 * 60 * 1000;
@@ -1520,15 +1519,12 @@ function t(key, vars = {}) {
 }
 
 function isSiloDossierHash(hashValue = window.location.hash) {
-  const hash = String(hashValue || "").trim().toLowerCase();
-  return hash === VIEW_HASHES.silo || hash === "#silo";
+  void hashValue;
+  return false;
 }
 
 function getHashView() {
   const hash = String(window.location.hash || "").trim().toLowerCase();
-  if (isSiloDossierHash(hash)) {
-    return "intel";
-  }
   if (hash === VIEW_HASHES.files) {
     return "files";
   }
@@ -1546,9 +1542,7 @@ function setHashView(view, { replace = false } = {}) {
     ? VIEW_HASHES.files
     : view === "classified"
       ? VIEW_HASHES.classified
-      : view === "silo"
-        ? VIEW_HASHES.silo
-        : VIEW_HASHES.intel;
+      : VIEW_HASHES.intel;
   const currentHash = String(window.location.hash || "").trim().toLowerCase();
   if (currentHash === targetHash) {
     return;
@@ -1867,7 +1861,6 @@ function showFilesPage({ updateHash = true } = {}) {
 
 function applyViewFromHash() {
   const hashView = getHashView();
-  const openSiloDossier = isSiloDossierHash();
   if (!hashView) {
     setHashView("intel", { replace: true });
     showIntelPage({ updateHash: false });
@@ -1902,15 +1895,11 @@ function applyViewFromHash() {
     state.view === "intel"
     && !document.body.classList.contains("is-classified")
     && !document.body.classList.contains("is-files")
-    && state.siloDossier.open === openSiloDossier
+    && !state.siloDossier.open
   ) {
     return;
   }
   showIntelPage({ updateHash: false });
-  if (openSiloDossier) {
-    showSiloDossier({ updateHash: false });
-    return;
-  }
   hideSiloDossier({ updateHash: false });
 }
 
@@ -10950,19 +10939,23 @@ function applyLanguage(lang, persist = true) {
   elements.siloHint.textContent = t("silo_hint");
   elements.siloSourcePrefix.textContent = t("silo_source_prefix");
   elements.siloSourceSuffix.textContent = t("silo_source_suffix");
-  if (state.siloDossier.open) {
-    renderSiloDossier();
+  if (elements.siloDossierOverlay) {
+    if (state.siloDossier.open) {
+      renderSiloDossier();
+    } else {
+      elements.siloDossierEyebrow.textContent = t("silo_dossier_eyebrow");
+      elements.siloDossierTitle.textContent = t("silo_dossier_title");
+      elements.siloDossierSummary.textContent = t("silo_dossier_loading");
+      elements.siloDossierSourceLink.textContent = t("silo_dossier_open_source");
+      elements.siloDossierCloseBtn.textContent = t("silo_dossier_close");
+      elements.siloDossierResetLabel.textContent = t("silo_dossier_reset_label");
+      elements.siloDossierCountdownLabel.textContent = t("silo_dossier_countdown_label");
+      elements.siloDossierStatusLabel.textContent = t("silo_dossier_status_label");
+      elements.siloDossierSignalLabel.textContent = t("silo_dossier_signal_label");
+      elements.siloDossierBackBtn.textContent = t("silo_dossier_back");
+    }
   } else {
-    elements.siloDossierEyebrow.textContent = t("silo_dossier_eyebrow");
-    elements.siloDossierTitle.textContent = t("silo_dossier_title");
-    elements.siloDossierSummary.textContent = t("silo_dossier_loading");
-    elements.siloDossierSourceLink.textContent = t("silo_dossier_open_source");
-    elements.siloDossierCloseBtn.textContent = t("silo_dossier_close");
-    elements.siloDossierResetLabel.textContent = t("silo_dossier_reset_label");
-    elements.siloDossierCountdownLabel.textContent = t("silo_dossier_countdown_label");
-    elements.siloDossierStatusLabel.textContent = t("silo_dossier_status_label");
-    elements.siloDossierSignalLabel.textContent = t("silo_dossier_signal_label");
-    elements.siloDossierBackBtn.textContent = t("silo_dossier_back");
+    state.siloDossier.open = false;
   }
 
   elements.minervaTitle.textContent = t("minerva_title");

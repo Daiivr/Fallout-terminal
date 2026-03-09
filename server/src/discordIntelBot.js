@@ -32,6 +32,7 @@ const MINERVA_LISTS_FILE = "data/minerva-lists.json";
 const MINERVA_DETAIL_FALLBACK_FILE = "data/minerva-detail-fallback.json";
 const MINERVA_DETAIL_FALLBACK_IMAGE = "assets/images/minerva-plan-fallback.png";
 const MINERVA_ITEM_SELECT_PREFIX = "minerva-item-select";
+const WELCOME_LANGUAGE_SELECT_ID = "welcome-language-select";
 const LANGUAGE_OPTIONS = new Set(["en", "es"]);
 let cachedMinervaListsSiteRoot = "";
 let cachedMinervaLists = null;
@@ -51,8 +52,28 @@ const STRINGS = Object.freeze({
     cmd_failed: "Command failed. Check bot logs and verify the upstream intel sources are reachable.",
     cmd_language_set: "Bot language set to `{language}` for this server.",
     cmd_language_invalid_scope: "This command only works inside a Discord server.",
+    welcome_language_admin_only: "You need `Manage Server` to change the bot language for this server.",
     language_name_en: "English",
     language_name_es: "Spanish",
+    welcome_author: "Fallout Codex | Server Relay",
+    welcome_title: "Fallout Codex Is Online",
+    welcome_description: "The relay is now active in **{server}**. Fallout Codex can broadcast silo code rotations, Minerva status updates, and interactive sale intel straight to your Discord server.",
+    welcome_overview_label: "What The Bot Does",
+    welcome_overview_value: "• Tracks Appalachian silo codes\n• Posts Minerva transit, arrival, and departure updates\n• Lets users inspect Minerva sale items from arrival embeds",
+    welcome_setup_label: "Getting Started",
+    welcome_setup_value: "Use `/intel-subscribe` to choose a channel and the feed you want.\nUse `/intel-preview` to test the embeds before going live.",
+    welcome_commands_label: "Core Commands",
+    welcome_commands_value: "`/intel-subscribe`\n`/intel-status`\n`/intel-preview`\n`/intel-language`",
+    welcome_links_label: "Intel Links",
+    welcome_links_site: "Website",
+    welcome_links_silos: "Silos",
+    welcome_links_minerva: "Minerva",
+    welcome_links_privacy: "Privacy",
+    welcome_links_terms: "Terms",
+    welcome_language_field_label: "Bot Language",
+    welcome_language_field_value: "Current server language: **{language}**",
+    welcome_language_placeholder: "Select bot language ({language})",
+    welcome_footer: "Server admins can change the bot language below.",
     label_absolute: "Absolute",
     label_relative: "Relative",
     label_unknown: "Unknown",
@@ -130,8 +151,28 @@ const STRINGS = Object.freeze({
     cmd_failed: "El comando fallo. Revisa los logs del bot y verifica que las fuentes esten disponibles.",
     cmd_language_set: "El idioma del bot ahora es `{language}` para este servidor.",
     cmd_language_invalid_scope: "Este comando solo funciona dentro de un servidor de Discord.",
+    welcome_language_admin_only: "Necesitas `Administrar servidor` para cambiar el idioma del bot en este servidor.",
     language_name_en: "Ingles",
     language_name_es: "Espanol",
+    welcome_author: "Fallout Codex | Relay de Servidor",
+    welcome_title: "Fallout Codex Ya Esta En Linea",
+    welcome_description: "El relay ya esta activo en **{server}**. Fallout Codex puede emitir rotaciones de codigos de silo, actualizaciones del estado de Minerva e intel interactivo de ventas directo a tu servidor de Discord.",
+    welcome_overview_label: "Que Hace El Bot",
+    welcome_overview_value: "• Rastrea los codigos de los silos de Appalachia\n• Publica actualizaciones de Minerva en transito, llegada y salida\n• Permite inspeccionar items de venta de Minerva desde los embeds de llegada",
+    welcome_setup_label: "Primeros Pasos",
+    welcome_setup_value: "Usa `/intel-subscribe` para elegir un canal y el feed que quieres.\nUsa `/intel-preview` para probar los embeds antes de activarlos.",
+    welcome_commands_label: "Comandos Principales",
+    welcome_commands_value: "`/intel-subscribe`\n`/intel-status`\n`/intel-preview`\n`/intel-language`",
+    welcome_links_label: "Enlaces De Intel",
+    welcome_links_site: "Sitio",
+    welcome_links_silos: "Silos",
+    welcome_links_minerva: "Minerva",
+    welcome_links_privacy: "Privacidad",
+    welcome_links_terms: "Terminos",
+    welcome_language_field_label: "Idioma Del Bot",
+    welcome_language_field_value: "Idioma actual del servidor: **{language}**",
+    welcome_language_placeholder: "Elegir idioma del bot ({language})",
+    welcome_footer: "Los administradores del servidor pueden cambiar el idioma abajo.",
     label_absolute: "Absoluto",
     label_relative: "Relativo",
     label_unknown: "Desconocido",
@@ -1126,7 +1167,7 @@ function createDiscordIntelBot(options = {}) {
 
   function buildSiloEmbed(data, lang) {
     const homeUrl = buildPageUrl(publicBaseUrl, "/");
-    const dossierUrl = buildPageUrl(publicBaseUrl, `/silos/?lang=${normalizeLanguage(lang)}`);
+    const dossierUrl = buildPageUrl(publicBaseUrl, "/silos/");
     const resetTarget = data?.resetTargetUtc instanceof Date ? data.resetTargetUtc : null;
     const openTerminalValue = homeUrl
       ? `[${t(lang, "silo_open_terminal")}](${homeUrl})`
@@ -1491,6 +1532,112 @@ function createDiscordIntelBot(options = {}) {
     return embed;
   }
 
+  function buildWelcomeLanguageComponents(lang) {
+    const normalizedLang = normalizeLanguage(lang, defaultLanguage);
+    const menu = new StringSelectMenuBuilder()
+      .setCustomId(WELCOME_LANGUAGE_SELECT_ID)
+      .setPlaceholder(t(normalizedLang, "welcome_language_placeholder", {
+        language: t(normalizedLang, `language_name_${normalizedLang}`)
+      }))
+      .addOptions(
+        {
+          label: t(normalizedLang, "language_name_en"),
+          value: "en",
+          default: normalizedLang === "en"
+        },
+        {
+          label: t(normalizedLang, "language_name_es"),
+          value: "es",
+          default: normalizedLang === "es"
+        }
+      );
+
+    return [new ActionRowBuilder().addComponents(menu)];
+  }
+
+  function buildWelcomeEmbed(guild, lang) {
+    const normalizedLang = normalizeLanguage(lang, defaultLanguage);
+    const guildName = String(guild?.name || "your server").trim() || "your server";
+    const siteUrl = buildPageUrl(publicBaseUrl, "/");
+    const silosUrl = buildPageUrl(publicBaseUrl, "/silos/");
+    const minervaUrl = buildPageUrl(publicBaseUrl, "/minerva/");
+    const privacyUrl = buildPageUrl(publicBaseUrl, "/privacy/");
+    const termsUrl = buildPageUrl(publicBaseUrl, "/terms/");
+    const linkParts = [];
+
+    if (siteUrl) {
+      linkParts.push(`[${t(normalizedLang, "welcome_links_site")}](${siteUrl})`);
+    }
+    if (silosUrl) {
+      linkParts.push(`[${t(normalizedLang, "welcome_links_silos")}](${silosUrl})`);
+    }
+    if (minervaUrl) {
+      linkParts.push(`[${t(normalizedLang, "welcome_links_minerva")}](${minervaUrl})`);
+    }
+    if (privacyUrl) {
+      linkParts.push(`[${t(normalizedLang, "welcome_links_privacy")}](${privacyUrl})`);
+    }
+    if (termsUrl) {
+      linkParts.push(`[${t(normalizedLang, "welcome_links_terms")}](${termsUrl})`);
+    }
+
+    const embed = new EmbedBuilder()
+      .setColor(0x39ff14)
+      .setAuthor({
+        name: t(normalizedLang, "welcome_author"),
+        url: siteUrl || undefined
+      })
+      .setTitle(t(normalizedLang, "welcome_title"))
+      .setDescription(t(normalizedLang, "welcome_description", { server: guildName }))
+      .addFields(
+        {
+          name: t(normalizedLang, "welcome_overview_label"),
+          value: t(normalizedLang, "welcome_overview_value"),
+          inline: false
+        },
+        {
+          name: t(normalizedLang, "welcome_setup_label"),
+          value: t(normalizedLang, "welcome_setup_value"),
+          inline: false
+        },
+        {
+          name: t(normalizedLang, "welcome_commands_label"),
+          value: t(normalizedLang, "welcome_commands_value"),
+          inline: true
+        },
+        {
+          name: t(normalizedLang, "welcome_language_field_label"),
+          value: t(normalizedLang, "welcome_language_field_value", {
+            language: t(normalizedLang, `language_name_${normalizedLang}`)
+          }),
+          inline: true
+        }
+      )
+      .setTimestamp(new Date())
+      .setFooter({ text: t(normalizedLang, "welcome_footer") });
+
+    if (linkParts.length) {
+      embed.addFields({
+        name: t(normalizedLang, "welcome_links_label"),
+        value: linkParts.join(" • "),
+        inline: false
+      });
+    }
+
+    if (siteUrl) {
+      embed.setURL(siteUrl);
+    }
+
+    return embed;
+  }
+
+  function buildWelcomePayload(guild, lang) {
+    return {
+      embeds: [buildWelcomeEmbed(guild, lang)],
+      components: buildWelcomeLanguageComponents(lang)
+    };
+  }
+
   function buildEmbeds(snapshot, feedList = ["silos", "minerva"], lang = defaultLanguage, options = {}) {
     const embeds = [];
 
@@ -1502,6 +1649,51 @@ function createDiscordIntelBot(options = {}) {
     }
 
     return embeds;
+  }
+
+  function canSendToGuildChannel(channel) {
+    if (!channel || !channel.isTextBased() || channel.isDMBased?.()) {
+      return false;
+    }
+
+    const permissions = channel.permissionsFor(client.user);
+    if (!permissions) {
+      return false;
+    }
+
+    return permissions.has(PermissionFlagsBits.ViewChannel)
+      && permissions.has(PermissionFlagsBits.SendMessages)
+      && permissions.has(PermissionFlagsBits.EmbedLinks);
+  }
+
+  async function resolveGuildWelcomeChannel(guild) {
+    const preferredChannels = [
+      guild?.systemChannel || null,
+      guild?.rulesChannel || null,
+      guild?.publicUpdatesChannel || null
+    ].filter(Boolean);
+
+    for (const channel of preferredChannels) {
+      if (canSendToGuildChannel(channel)) {
+        return channel;
+      }
+    }
+
+    const channels = await guild.channels.fetch();
+    const candidates = [...channels.values()]
+      .filter((channel) => channel
+        && (channel.type === ChannelType.GuildText || channel.type === ChannelType.GuildAnnouncement)
+        && canSendToGuildChannel(channel))
+      .sort((left, right) => {
+        const leftPosition = Number(left?.rawPosition || 0);
+        const rightPosition = Number(right?.rawPosition || 0);
+        if (leftPosition !== rightPosition) {
+          return leftPosition - rightPosition;
+        }
+        return String(left?.name || "").localeCompare(String(right?.name || ""));
+      });
+
+    return candidates[0] || null;
   }
 
   function buildPreviewEmbeds(snapshot, feedList = ["silos", "minerva"], lang = defaultLanguage, options = {}) {
@@ -1838,8 +2030,61 @@ function createDiscordIntelBot(options = {}) {
     });
   }
 
+  async function handleWelcomeLanguageSelect(interaction) {
+    const guildId = String(interaction.guildId || "").trim();
+    const currentLang = resolveInteractionLanguage(interaction);
+    if (!guildId) {
+      await interaction.reply({
+        content: t(currentLang, "cmd_language_invalid_scope"),
+        ephemeral: true
+      });
+      return;
+    }
+
+    if (interaction.memberPermissions && !interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)) {
+      await interaction.reply({
+        content: t(currentLang, "welcome_language_admin_only"),
+        ephemeral: true
+      });
+      return;
+    }
+
+    const selectedLanguage = normalizeLanguage(interaction.values?.[0], defaultLanguage);
+    const nextLanguage = setGuildLanguage(guildId, selectedLanguage);
+    const payload = buildWelcomePayload(interaction.guild, nextLanguage);
+    await interaction.update(payload);
+  }
+
+  async function postWelcomeMessage(guild) {
+    const guildId = String(guild?.id || "").trim();
+    if (!guildId) {
+      return;
+    }
+
+    const defaultGuildLanguage = languageFromLocale(guild?.preferredLocale || "", defaultLanguage);
+    const lang = ensureGuildLanguage(guildId, defaultGuildLanguage);
+    const channel = await resolveGuildWelcomeChannel(guild);
+
+    if (!channel) {
+      log.warn(`[discord-bot] No suitable welcome channel found for guild ${guildId}.`);
+      return;
+    }
+
+    try {
+      await channel.send(buildWelcomePayload(guild, lang));
+    } catch (error) {
+      log.error(`[discord-bot] Failed to post welcome embed in guild ${guildId}.`);
+      log.error(error);
+    }
+  }
+
   async function handleInteraction(interaction) {
     try {
+      if (interaction.isStringSelectMenu() && String(interaction.customId || "") === WELCOME_LANGUAGE_SELECT_ID) {
+        await handleWelcomeLanguageSelect(interaction);
+        return;
+      }
+
       if (interaction.isStringSelectMenu() && String(interaction.customId || "").startsWith(MINERVA_ITEM_SELECT_PREFIX)) {
         await handleMinervaItemSelect(interaction);
         return;
@@ -1905,6 +2150,9 @@ function createDiscordIntelBot(options = {}) {
     started = true;
     client.on("interactionCreate", (interaction) => {
       void handleInteraction(interaction);
+    });
+    client.on("guildCreate", (guild) => {
+      void postWelcomeMessage(guild);
     });
     client.on("ready", () => {
       log.info(`[discord-bot] Logged in as ${client.user?.tag || client.user?.id}.`);
