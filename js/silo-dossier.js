@@ -3,9 +3,17 @@
   const SILO_RESET_DAY_UTC = 4;
   const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
   const TICK_INTERVAL_MS = 1000;
+  const STORAGE_LANG_KEY = "pipboy_lang";
+  const loader = window.createDossierLoader?.({ minDelayMs: 860 }) || {
+    ready() {},
+    fail() {}
+  };
   const STRINGS = {
     en: {
       pageTitle: "Silo Intel | Fallout Codex",
+      loaderKicker: "FALLOUT CODEX // RELAY SYNC",
+      loaderTitle: "SYNCING NUCLEAR INTEL",
+      loaderCopy: "Decrypting silo telemetry and assembling launch fragments...",
       eyebrow: "NUCLEAR COMMAND INTEL",
       title: "APPALACHIAN SILO STATUS",
       summaryLoading: "Loading silo telemetry...",
@@ -43,6 +51,9 @@
     },
     es: {
       pageTitle: "Intel de Silos | Fallout Codex",
+      loaderKicker: "FALLOUT CODEX // SINCRONIA DEL RELAY",
+      loaderTitle: "SINCRONIZANDO INTEL NUCLEAR",
+      loaderCopy: "Descifrando telemetria de silos y ensamblando fragmentos de lanzamiento...",
       eyebrow: "INTEL DE COMANDO NUCLEAR",
       title: "ESTADO DE LOS SILOS DE APPALACHIA",
       summaryLoading: "Cargando telemetria de los silos...",
@@ -123,7 +134,15 @@
 
   function detectLanguage() {
     const params = new URLSearchParams(window.location.search);
-    return normalizeLanguage(params.get("lang") || navigator.language || "en");
+    return normalizeLanguage(params.get("lang") || safeStorageGet(STORAGE_LANG_KEY) || navigator.language || "en");
+  }
+
+  function safeStorageGet(key) {
+    try {
+      return window.localStorage.getItem(key);
+    } catch (_error) {
+      return "";
+    }
   }
 
   function t(key) {
@@ -239,6 +258,11 @@
   function applyStaticText() {
     document.documentElement.lang = state.lang;
     document.title = t("pageTitle");
+    window.setDossierLoaderText?.({
+      kicker: t("loaderKicker"),
+      title: t("loaderTitle"),
+      copy: t("loaderCopy")
+    });
     elements.dossierEyebrow.textContent = t("eyebrow");
     elements.dossierTitle.textContent = t("title");
     elements.dossierChipClearance.textContent = t("chipClearance");
@@ -335,6 +359,7 @@
     } finally {
       state.loading = false;
       render();
+      loader.ready();
     }
   }
 

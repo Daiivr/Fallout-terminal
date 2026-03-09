@@ -15,10 +15,19 @@
   <link href="https://fonts.cdnfonts.com/css/overseer" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="/assets/icons/terminal-favicon.svg">
-  <link rel="stylesheet" href="/css/legal-dossier.css?v=20260309-bot-legal-lang-1">
+  <link rel="stylesheet" href="/css/legal-dossier.css?v=20260309-legal-chip-loader-2">
+  <link rel="stylesheet" href="/css/dossier-loader.css?v=20260309-dossier-loader-lang-2">
 </head>
-<body class="legal-theme-terms" data-legal-page="terms">
-  <main class="legal-page-shell">
+<body class="legal-theme-terms is-dossier-loading" data-legal-page="terms">
+  <div id="dossierLoader" class="dossier-loader" aria-hidden="true">
+    <div class="dossier-loader-core">
+      <p id="dossierLoaderKicker" class="dossier-loader-kicker">FALLOUT CODEX // BOT DIRECTIVE</p>
+      <p id="dossierLoaderTitle" class="dossier-loader-title">LOADING SERVICE TERMS</p>
+      <div class="dossier-loader-bar"><span></span></div>
+      <p id="dossierLoaderCopy" class="dossier-loader-copy">Syncing operational directives, server rules, and usage conditions...</p>
+    </div>
+  </div>
+  <main class="legal-page-shell dossier-page-shell">
     <header class="legal-page-header">
       <div class="legal-page-copy">
         <p id="legalPageEyebrow" class="legal-page-eyebrow"></p>
@@ -65,6 +74,7 @@
       </div>
     </section>
   </main>
-  <script src="/js/terms-dossier.js?v=20260309-bot-legal-lang-1"></script>
+  <script src="/js/dossier-loader.js?v=20260309-dossier-loader-lang-2"></script>
+  <script src="/js/terms-dossier.js?v=20260309-dossier-loader-lang-2"></script>
 </body>
 </html>

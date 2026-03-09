@@ -1,10 +1,17 @@
 (function termsDossierPage() {
   const STORAGE_LANG_KEY = "pipboy_lang";
+  const loader = window.createDossierLoader?.({ minDelayMs: 700 }) || {
+    ready() {},
+    fail() {}
+  };
   const CONTENT = {
     en: {
       pageTitle: "Terms of Service | Fallout Codex Bot",
       metaDescription:
         "Terms of Service for the Fallout Codex Discord bot, including intended use, server admin responsibilities, uptime disclaimers, and limits of liability.",
+      loaderKicker: "FALLOUT CODEX // BOT DIRECTIVE",
+      loaderTitle: "LOADING SERVICE TERMS",
+      loaderCopy: "Syncing operational directives, server rules, and usage conditions...",
       langLabel: "LANGUAGE",
       eyebrow: "FALLOUT CODEX // BOT OPERATIONS DIRECTIVE",
       title: "TERMS OF SERVICE",
@@ -132,6 +139,9 @@
       pageTitle: "Terminos de Servicio | Fallout Codex Bot",
       metaDescription:
         "Terminos de Servicio para el bot de Discord Fallout Codex, incluyendo uso previsto, responsabilidades de administradores, avisos de disponibilidad y limites de responsabilidad.",
+      loaderKicker: "FALLOUT CODEX // DIRECTIVA DEL BOT",
+      loaderTitle: "CARGANDO TERMINOS DEL SERVICIO",
+      loaderCopy: "Sincronizando directivas operativas, reglas del servidor y condiciones de uso...",
       langLabel: "IDIOMA",
       eyebrow: "FALLOUT CODEX // DIRECTIVA DE OPERACIONES DEL BOT",
       title: "TERMINOS DE SERVICIO",
@@ -383,6 +393,11 @@
 
     document.documentElement.lang = normalized;
     document.title = dictionary.pageTitle;
+    window.setDossierLoaderText?.({
+      kicker: dictionary.loaderKicker,
+      title: dictionary.loaderTitle,
+      copy: dictionary.loaderCopy
+    });
     elements.metaDescription?.setAttribute("content", dictionary.metaDescription);
     elements.pageEyebrow.textContent = dictionary.eyebrow;
     elements.pageTitle.textContent = dictionary.title;
@@ -417,4 +432,5 @@
   });
 
   applyLanguage(detectLanguage(), false);
+  loader.ready();
 })();

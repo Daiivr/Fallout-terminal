@@ -1,10 +1,17 @@
 (function privacyDossierPage() {
   const STORAGE_LANG_KEY = "pipboy_lang";
+  const loader = window.createDossierLoader?.({ minDelayMs: 700 }) || {
+    ready() {},
+    fail() {}
+  };
   const CONTENT = {
     en: {
       pageTitle: "Privacy Policy | Fallout Codex Bot",
       metaDescription:
         "Privacy Policy for the Fallout Codex Discord bot, including what data is stored, how it is used, and how subscriptions are managed.",
+      loaderKicker: "FALLOUT CODEX // BOT DIRECTIVE",
+      loaderTitle: "LOADING PRIVACY INTEL",
+      loaderCopy: "Assembling data-handling records and relay policy fragments...",
       langLabel: "LANGUAGE",
       eyebrow: "FALLOUT CODEX // DATA HANDLING INTEL",
       title: "PRIVACY POLICY",
@@ -125,6 +132,9 @@
       pageTitle: "Politica de Privacidad | Fallout Codex Bot",
       metaDescription:
         "Politica de Privacidad para el bot de Discord Fallout Codex, incluyendo que datos se guardan, como se usan y como se gestionan las suscripciones.",
+      loaderKicker: "FALLOUT CODEX // DIRECTIVA DEL BOT",
+      loaderTitle: "CARGANDO INTEL DE PRIVACIDAD",
+      loaderCopy: "Ensamblando registros de manejo de datos y fragmentos de politica del relay...",
       langLabel: "IDIOMA",
       eyebrow: "FALLOUT CODEX // INTEL DE MANEJO DE DATOS",
       title: "POLITICA DE PRIVACIDAD",
@@ -368,6 +378,11 @@
 
     document.documentElement.lang = normalizeLanguage(lang);
     document.title = dictionary.pageTitle;
+    window.setDossierLoaderText?.({
+      kicker: dictionary.loaderKicker,
+      title: dictionary.loaderTitle,
+      copy: dictionary.loaderCopy
+    });
     elements.metaDescription?.setAttribute("content", dictionary.metaDescription);
     elements.pageEyebrow.textContent = dictionary.eyebrow;
     elements.pageTitle.textContent = dictionary.title;
@@ -402,4 +417,5 @@
   });
 
   applyLanguage(detectLanguage(), false);
+  loader.ready();
 })();

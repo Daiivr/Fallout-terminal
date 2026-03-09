@@ -12,9 +12,18 @@
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="/assets/icons/terminal-favicon.svg">
   <link rel="stylesheet" href="/css/minerva-dossier.css?v=20260308-minerva-split-stats">
+  <link rel="stylesheet" href="/css/dossier-loader.css?v=20260309-dossier-loader-lang-2">
 </head>
-<body>
-  <main class="minerva-page-shell">
+<body class="is-dossier-loading">
+  <div id="dossierLoader" class="dossier-loader" aria-hidden="true">
+    <div class="dossier-loader-core">
+      <p id="dossierLoaderKicker" class="dossier-loader-kicker">FALLOUT CODEX // RELAY SYNC</p>
+      <p id="dossierLoaderTitle" class="dossier-loader-title">SYNCING MERCHANT INTEL</p>
+      <div class="dossier-loader-bar"><span></span></div>
+      <p id="dossierLoaderCopy" class="dossier-loader-copy">Tracking caravan signals, sale windows, and bullion inventory...</p>
+    </div>
+  </div>
+  <main class="minerva-page-shell dossier-page-shell">
     <header class="minerva-page-header">
       <div class="minerva-page-copy">
         <p id="minervaEyebrow" class="minerva-page-eyebrow">WASTELAND MERCHANT INTEL</p>
@@ -123,6 +132,7 @@
     </section>
   </main>
 
-  <script src="/js/minerva-dossier.js?v=20260308-minerva-split-stats"></script>
+  <script src="/js/dossier-loader.js?v=20260309-dossier-loader-lang-2"></script>
+  <script src="/js/minerva-dossier.js?v=20260309-dossier-loader-lang-2"></script>
 </body>
 </html>

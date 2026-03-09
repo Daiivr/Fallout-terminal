@@ -2,6 +2,11 @@
   const MINERVA_API_URL = "/api/intel/minerva";
   const MINERVA_LISTS_PATH = "/data/minerva-lists.json";
   const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+  const STORAGE_LANG_KEY = "pipboy_lang";
+  const loader = window.createDossierLoader?.({ minDelayMs: 900 }) || {
+    ready() {},
+    fail() {}
+  };
   const WIKI_BASE = "https://fallout.fandom.com";
   const MINERVA_INFO_LOCAL_IMAGE_BASE = "/assets/images/minerva-locations";
   const MINERVA_LOCATION_MAP_BY_LOCATION = {
@@ -26,6 +31,9 @@
   const STRINGS = {
     en: {
       pageTitle: "Minerva Intel | Fallout Codex",
+      loaderKicker: "FALLOUT CODEX // RELAY SYNC",
+      loaderTitle: "SYNCING MERCHANT INTEL",
+      loaderCopy: "Tracking caravan signals, sale windows, and bullion inventory...",
       eyebrow: "WASTELAND MERCHANT INTEL",
       title: "MINERVA INTEL",
       summaryLoading: "Loading Minerva routing intel...",
@@ -80,6 +88,9 @@
     },
     es: {
       pageTitle: "Intel de Minerva | Fallout Codex",
+      loaderKicker: "FALLOUT CODEX // SINCRONIA DEL RELAY",
+      loaderTitle: "SINCRONIZANDO INTEL DE MERCADER",
+      loaderCopy: "Rastreando senales de caravana, ventanas de venta e inventario de bullion...",
       eyebrow: "INTEL DE MERCADER DEL YERMO",
       title: "INTEL DE MINERVA",
       summaryLoading: "Cargando intel de ruta de Minerva...",
@@ -196,7 +207,15 @@
 
   function detectLanguage() {
     const params = new URLSearchParams(window.location.search);
-    return normalizeLanguage(params.get("lang") || navigator.language || "en");
+    return normalizeLanguage(params.get("lang") || safeStorageGet(STORAGE_LANG_KEY) || navigator.language || "en");
+  }
+
+  function safeStorageGet(key) {
+    try {
+      return window.localStorage.getItem(key);
+    } catch (_error) {
+      return "";
+    }
   }
 
   function t(key, vars = {}) {
@@ -809,6 +828,11 @@
   function applyStaticText() {
     document.documentElement.lang = state.lang;
     document.title = t("pageTitle");
+    window.setDossierLoaderText?.({
+      kicker: t("loaderKicker"),
+      title: t("loaderTitle"),
+      copy: t("loaderCopy")
+    });
     elements.minervaEyebrow.textContent = t("eyebrow");
     elements.minervaTitle.textContent = t("title");
     elements.minervaChipVendor.textContent = t("chipVendor");
@@ -980,6 +1004,7 @@
     } finally {
       state.loading = false;
       render();
+      loader.ready();
     }
   }
 
