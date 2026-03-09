@@ -9,10 +9,7 @@ const { createClient } = require("redis");
 const { RedisStore } = require("connect-redis");
 const multer = require("multer");
 const nodemailer = require("nodemailer");
-
-require("dotenv").config({
-  path: path.resolve(__dirname, "..", ".env")
-});
+const { fetchMinervaIntel, fetchSiloIntel } = require("./intel");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -3022,6 +3019,55 @@ app.get("/api/files/:id/download", requireAuthorized, (req, res) => {
   res.download(storedPath, entry.name);
 });
 
+app.get("/api/intel/silo", async (_req, res) => {
+  try {
+    const silo = await fetchSiloIntel();
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      codes: silo.codes || {},
+      isExpired: Boolean(silo.isExpired),
+      resetTargetUtc: silo.resetTargetUtc instanceof Date ? silo.resetTargetUtc.toISOString() : null,
+      source: String(silo.source || "").trim() || "https://nukacrypt.com/"
+    });
+  } catch (error) {
+    console.error("[intel] Failed to fetch silo data for web client.");
+    console.error(error);
+    res.status(502).json({
+      error: "Unable to fetch silo intel"
+    });
+  }
+});
+
+app.get("/api/intel/minerva", async (_req, res) => {
+  try {
+    const minerva = await fetchMinervaIntel(SITE_ROOT);
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      location: String(minerva?.location || "").trim() || "--",
+      listNumber: Number.isFinite(Number(minerva?.listNumber)) ? Number(minerva.listNumber) : null,
+      active: Boolean(minerva?.active),
+      nextChange: String(minerva?.nextChange || "").trim() || null,
+      eventStart: minerva?.eventStart instanceof Date ? minerva.eventStart.toISOString() : null,
+      eventEnd: minerva?.eventEnd instanceof Date ? minerva.eventEnd.toISOString() : null,
+      items: Array.isArray(minerva?.items)
+        ? minerva.items.map((item) => ({
+          name: String(item?.name || "").trim() || "--",
+          price: Number.isFinite(Number(item?.price)) ? Number(item.price) : null,
+          url: String(item?.url || "").trim()
+        }))
+        : [],
+      source: String(minerva?.source || "").trim() || "fallback",
+      locationMapImage: String(minerva?.locationMapImage || "").trim()
+    });
+  } catch (error) {
+    console.error("[intel] Failed to fetch Minerva data for web client.");
+    console.error(error);
+    res.status(502).json({
+      error: "Unable to fetch Minerva intel"
+    });
+  }
+});
+
 app.use(express.static(SITE_ROOT));
 
 app.get("/", (_req, res) => {
@@ -3092,4 +3138,6 @@ async function startServer() {
   });
 }
 
-void startServer();
+module.exports = {
+  startServer
+};

@@ -11,10 +11,127 @@ Express backend for Discord auth, session-based allowlist checks, protected file
 ```bash
 cd server
 npm install
-npm run dev
+npm run web
 ```
 
 Open `http://localhost:3000`.
+
+Run the bot locally in a second terminal:
+
+```bash
+cd server
+npm run bot
+```
+
+## Discord Intel Bot
+
+The server can also run a Discord bot that watches the same silo code and Minerva intel sources used by the site and posts rich embeds when either feed changes.
+
+### What it does
+
+- Polls silo code intel and Minerva intel on an interval
+- Detects changes using stored fingerprints so it does not spam unchanged data
+- Posts a rich embed when silo codes change
+- Posts a rich embed when Minerva changes location, list, timing, or inventory
+- Lets you manage subscriptions inside Discord with slash commands
+
+### Required env vars
+
+- `DISCORD_BOT_TOKEN`
+- `DISCORD_BOT_CLIENT_ID`
+
+If your bot and site OAuth use the same Discord application, `DISCORD_BOT_CLIENT_ID` can be the same value as `DISCORD_CLIENT_ID`.
+
+### Optional env vars
+
+- `DISCORD_BOT_GUILD_ID`
+  - Recommended for local/dev testing because guild slash commands appear almost immediately
+- `DISCORD_INTEL_CHANNEL_IDS`
+  - Comma-separated channel IDs that should always receive both intel feeds
+- `DISCORD_INTEL_POLL_INTERVAL_MS`
+  - Defaults to `300000` (5 minutes)
+- `DISCORD_INTEL_POST_ON_STARTUP`
+  - Defaults to `false`
+- `DISCORD_BOT_DEFAULT_LANG`
+  - Defaults to `en`
+- `DISCORD_BOT_GOLD_BULLION_EMOJI`
+  - Defaults to `<:Gold:1480101994520645703>`
+- `PUBLIC_BASE_URL`
+  - Recommended so embeds can link back to your deployed site and use your site images
+
+### Slash commands
+
+- `/intel-subscribe channel:#your-channel feed:Both`
+- `/intel-unsubscribe channel:#your-channel`
+- `/intel-status`
+- `/intel-preview feed:Both`
+- `/intel-language language:Espanol`
+
+The bot stores channel subscriptions and last-posted intel state in your `STORAGE_DIR`, so it survives restarts when persistent storage is configured.
+
+### Discord setup notes
+
+- Enable the Bot for your Discord application in the Discord Developer Portal
+- Invite it with the `bot` and `applications.commands` scopes
+- Give it permission to view channels, send messages, and embed links in the target channel
+
+### Render deployment
+
+If you already have the website running on Render, the safest path is to keep that existing web service and add a new worker service for the bot. Do not create a second web service unless you actually want a new deployment stack.
+
+#### Existing Render site: recommended manual setup
+
+1. Keep your current web service, but change its start command to:
+
+```bash
+cd server && npm run web
+```
+
+2. Make sure its build command is:
+
+```bash
+cd server && npm ci
+```
+
+3. In that web service, keep or set the env vars your site already needs.
+4. Create a new **Background Worker** service in Render from the same repo.
+5. Set the worker build command to:
+
+```bash
+cd server && npm ci
+```
+
+6. Set the worker start command to:
+
+```bash
+cd server && npm run bot
+```
+
+7. Set these worker env vars:
+   - `DISCORD_BOT_TOKEN`
+   - `DISCORD_BOT_CLIENT_ID`
+   - `PUBLIC_BASE_URL`
+   - Optional: `DISCORD_BOT_GUILD_ID`
+   - Optional: `DISCORD_INTEL_CHANNEL_IDS`
+   - Optional: `DISCORD_INTEL_POLL_INTERVAL_MS`
+   - Optional: `DISCORD_INTEL_POST_ON_STARTUP`
+
+If your bot and site OAuth use the same Discord application, `DISCORD_BOT_CLIENT_ID` can be the same as `DISCORD_CLIENT_ID`.
+
+#### Persistent storage on Render
+
+- Web service:
+  - If you use file uploads or metadata persistence, attach a persistent disk and set `STORAGE_DIR` to that mount path, for example `/var/data/fallout-codex-web`.
+- Bot worker:
+  - If you want subscriptions and last-posted fingerprints to survive redeploys, attach a persistent disk and set `STORAGE_DIR` to something like `/var/data/fallout-codex-bot`.
+
+The web service disk and the bot worker disk are separate. They do not share files with each other.
+
+#### Fresh Render setup with Blueprint
+
+A sample Render blueprint is included at [render.yaml](C:/Users/ohits/Downloads/Fallout-terminal/render.yaml). Use that if you want Render to create both services from scratch.
+
+If you already have existing Render services, treat `render.yaml` as a reference unless you are intentionally replacing your current setup.
 
 ## Access Request Emails
 

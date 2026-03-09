@@ -1,0 +1,772 @@
+:root {
+  --panel: rgba(24, 16, 6, 0.84);
+  --panel-strong: rgba(28, 18, 7, 0.94);
+  --line: rgba(247, 201, 72, 0.22);
+  --line-strong: rgba(247, 201, 72, 0.4);
+  --fg: #ffeeb7;
+  --fg-bright: #fff8d8;
+  --fg-dim: rgba(255, 238, 183, 0.82);
+  --accent: #f7c948;
+  --accent-soft: #ffb347;
+  --shadow: rgba(0, 0, 0, 0.72);
+}
+
+@font-face {
+  font-family: "Fallout76IconTags";
+  src: url("../assets/fonts/Fallout76IconTags_v10.3.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  color: var(--fg);
+  font-family: "Rajdhani", sans-serif;
+  background:
+    radial-gradient(1200px 620px at 100% 0%, rgba(247, 201, 72, 0.12), rgba(247, 201, 72, 0) 48%),
+    radial-gradient(900px 560px at 0% 100%, rgba(255, 179, 71, 0.08), rgba(255, 179, 71, 0) 52%),
+    linear-gradient(180deg, #090502 0%, #120904 32%, #1a1107 62%, #080401 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-color: #080401;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+html,
+body,
+.minerva-page-inventory-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(247, 201, 72, 0.56) rgba(0, 0, 0, 0.38);
+}
+
+body::-webkit-scrollbar,
+.minerva-page-inventory-list::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+body::-webkit-scrollbar-track,
+.minerva-page-inventory-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.34);
+  border: 1px solid rgba(247, 201, 72, 0.16);
+}
+
+body::-webkit-scrollbar-thumb,
+.minerva-page-inventory-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(247, 201, 72, 0.64), rgba(247, 201, 72, 0.24));
+  border: 1px solid rgba(247, 201, 72, 0.72);
+}
+
+body::-webkit-scrollbar-thumb:hover,
+.minerva-page-inventory-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 179, 71, 0.76), rgba(255, 179, 71, 0.34));
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+body::before {
+  opacity: 0.12;
+  background-image:
+    linear-gradient(to right, rgba(247, 201, 72, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(247, 201, 72, 0.05) 1px, transparent 1px),
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.015) 0 1px, transparent 1px 4px);
+  background-size: 44px 100%, 100% 22px, 100% 4px;
+}
+
+body::after {
+  opacity: 0.18;
+  background:
+    radial-gradient(circle at 14% 20%, rgba(247, 201, 72, 0.1), transparent 32%),
+    radial-gradient(circle at 82% 70%, rgba(255, 179, 71, 0.08), transparent 28%);
+}
+
+.minerva-page-shell {
+  position: relative;
+  z-index: 1;
+  width: min(1320px, calc(100% - 24px));
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 12px 0 18px;
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 12px;
+}
+
+.minerva-page-header,
+.minerva-page-stage,
+.minerva-meta-card,
+.minerva-page-map-panel,
+.minerva-page-briefing-panel,
+.minerva-page-inventory-panel,
+.minerva-page-route-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  background:
+    linear-gradient(to right, rgba(255, 179, 71, 0.06), rgba(255, 179, 71, 0) 35%),
+    linear-gradient(to bottom, rgba(247, 201, 72, 0.08), rgba(247, 201, 72, 0.01) 42%, rgba(0, 0, 0, 0.3)),
+    var(--panel);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.48) inset,
+    0 24px 70px var(--shadow);
+}
+
+.minerva-page-header {
+  border-radius: 22px;
+  padding: 18px 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(250px, 320px);
+  gap: 24px;
+}
+
+.minerva-page-copy,
+.minerva-page-side,
+.minerva-page-stage {
+  position: relative;
+  z-index: 1;
+}
+
+.minerva-page-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.minerva-page-eyebrow,
+.minerva-meta-label,
+.minerva-page-side-label,
+.minerva-page-map-kicker,
+.minerva-page-briefing-kicker,
+.minerva-page-inventory-title {
+  margin: 0;
+  color: rgba(255, 216, 107, 0.92);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+.minerva-page-title {
+  margin: 0;
+  color: var(--accent);
+  font-family: "Overseer", "Rajdhani", sans-serif;
+  font-size: clamp(2.8rem, 5.2vw, 4.8rem);
+  line-height: 0.86;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow: 0 0 18px rgba(247, 201, 72, 0.16);
+}
+
+.minerva-page-summary,
+.minerva-page-briefing {
+  margin: 0;
+  color: var(--fg);
+  font-size: clamp(1rem, 1.36vw, 1.2rem);
+  line-height: 1.42;
+}
+
+.minerva-page-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.minerva-page-chip,
+.minerva-page-status-pill,
+.minerva-page-briefing-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.minerva-page-chip {
+  border: 1px solid rgba(255, 179, 71, 0.22);
+  color: #fff3ce;
+  background:
+    linear-gradient(to right, rgba(255, 179, 71, 0.14), rgba(255, 179, 71, 0.04) 54%, rgba(0, 0, 0, 0.14)),
+    rgba(22, 14, 6, 0.74);
+}
+
+.minerva-page-status-pill {
+  border: 1px solid rgba(247, 201, 72, 0.28);
+  color: var(--fg-bright);
+  background:
+    linear-gradient(to right, rgba(247, 201, 72, 0.16), rgba(247, 201, 72, 0.05) 54%, rgba(0, 0, 0, 0.14)),
+    rgba(22, 14, 6, 0.74);
+}
+
+.minerva-page-side {
+  display: grid;
+  align-content: space-between;
+  gap: 14px;
+}
+
+.minerva-page-route-card {
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.minerva-page-side-value,
+.minerva-page-map-location {
+  color: var(--fg-bright);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.minerva-page-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  padding: 12px 18px;
+  border: 1px solid rgba(247, 201, 72, 0.34);
+  border-radius: 16px;
+  color: var(--fg-bright);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.95rem;
+  background:
+    linear-gradient(to right, rgba(247, 201, 72, 0.14), rgba(247, 201, 72, 0.03) 48%, rgba(0, 0, 0, 0.18)),
+    var(--panel-strong);
+}
+
+.minerva-page-button:hover,
+.minerva-page-button:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  border-color: rgba(255, 179, 71, 0.56);
+  background:
+    linear-gradient(to right, rgba(255, 179, 71, 0.18), rgba(255, 179, 71, 0.05) 48%, rgba(0, 0, 0, 0.22)),
+    var(--panel-strong);
+}
+
+.minerva-page-stage {
+  border-radius: 24px;
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.minerva-page-map-panel,
+.minerva-page-portrait-panel,
+.minerva-page-briefing-panel,
+.minerva-page-inventory-panel,
+.minerva-meta-card {
+  border-radius: 18px;
+}
+
+.minerva-page-main-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.68fr) minmax(420px, 1.14fr) minmax(320px, 0.98fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.minerva-page-left-stack,
+.minerva-page-sidebar {
+  display: grid;
+  gap: 12px;
+}
+
+.minerva-page-sidebar {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+}
+
+.minerva-page-portrait-panel,
+.minerva-page-map-panel {
+  padding: 14px 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.minerva-page-portrait-panel {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.minerva-page-map-head {
+  display: grid;
+  gap: 6px;
+}
+
+.minerva-page-portrait-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.minerva-page-portrait-status {
+  color: var(--fg-bright);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.76rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.minerva-page-portrait-wrap,
+.minerva-page-map-wrap {
+  position: relative;
+  min-height: 0;
+  border: 1px solid rgba(247, 201, 72, 0.2);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.minerva-page-portrait-wrap {
+  min-height: 260px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(247, 201, 72, 0.12), transparent 48%),
+    linear-gradient(180deg, rgba(255, 179, 71, 0.08), rgba(0, 0, 0, 0.38)),
+    rgba(0, 0, 0, 0.24);
+}
+
+.minerva-page-portrait-image,
+.minerva-page-map-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.minerva-page-portrait-image {
+  min-height: 260px;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.minerva-page-map-image {
+  min-height: 500px;
+  object-fit: cover;
+  transition:
+    opacity 220ms ease,
+    transform 320ms ease,
+    filter 220ms ease;
+  transform: scale(1);
+  opacity: 1;
+  filter: blur(0);
+  will-change: opacity, transform, filter;
+}
+
+.minerva-page-map-image.is-switching {
+  opacity: 0.18;
+  transform: scale(1.025);
+  filter: blur(6px);
+}
+
+.minerva-page-map-controls {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.minerva-page-map-nav,
+.minerva-page-map-slide-label {
+  pointer-events: auto;
+}
+
+.minerva-page-map-nav {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgba(247, 201, 72, 0.36);
+  border-radius: 50%;
+  color: var(--fg-bright);
+  background:
+    radial-gradient(circle at 50% 36%, rgba(247, 201, 72, 0.16), rgba(247, 201, 72, 0.02) 64%),
+    rgba(20, 12, 4, 0.86);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.36) inset,
+    0 10px 18px rgba(0, 0, 0, 0.26);
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    opacity 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
+}
+
+.minerva-page-map-nav:hover,
+.minerva-page-map-nav:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  border-color: rgba(255, 179, 71, 0.56);
+  box-shadow:
+    0 0 0 1px rgba(247, 201, 72, 0.22) inset,
+    0 0 18px rgba(247, 201, 72, 0.18);
+}
+
+.minerva-page-map-nav:disabled {
+  opacity: 0.38;
+  cursor: default;
+  transform: none;
+}
+
+.minerva-page-map-slide-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 16px;
+  border: 1px solid rgba(247, 201, 72, 0.24);
+  border-radius: 999px;
+  color: var(--fg-bright);
+  background:
+    linear-gradient(to right, rgba(247, 201, 72, 0.08), rgba(247, 201, 72, 0.02) 58%, rgba(0, 0, 0, 0.26)),
+    rgba(14, 8, 3, 0.82);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: center;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.28) inset;
+}
+
+.minerva-page-portrait-caption {
+  margin: 0;
+  color: var(--fg-dim);
+  font-size: 0.98rem;
+  line-height: 1.42;
+}
+
+.minerva-page-availability {
+  display: grid;
+  gap: 4px;
+  padding: 2px 2px 0;
+}
+
+.minerva-page-availability-label {
+  color: rgba(255, 216, 107, 0.9);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.minerva-page-availability-value {
+  color: var(--accent);
+  font-family: "Overseer", "Rajdhani", sans-serif;
+  font-size: clamp(1.6rem, 2.5vw, 2.3rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 0.98;
+}
+
+.minerva-page-availability-meta {
+  color: var(--fg-dim);
+  font-size: 0.96rem;
+  line-height: 1.35;
+}
+
+.minerva-meta-card {
+  min-height: 108px;
+  padding: 14px 16px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.minerva-card-list {
+  grid-column: 1 / -1;
+}
+
+.minerva-meta-value {
+  margin: 0;
+  color: var(--fg-bright);
+  font-family: "Share Tech Mono", monospace;
+  font-size: clamp(1rem, 1.28vw, 1.18rem);
+  line-height: 1.36;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.minerva-meta-value-stack {
+  display: grid;
+  gap: 6px;
+}
+
+.minerva-bullion-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.minerva-meta-stat-number {
+  color: var(--fg-bright);
+  font-size: clamp(1.32rem, 1.88vw, 1.74rem);
+  line-height: 1;
+}
+
+.minerva-meta-inline-label {
+  color: rgba(255, 216, 107, 0.9);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.minerva-bullion-line {
+  color: var(--accent);
+  font-size: 1.02em;
+}
+
+.fo76-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1em;
+  font-family: "Fallout76IconTags", "Segoe UI Symbol", monospace;
+  font-size: 1.04em;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.fo76-icon:empty {
+  display: none;
+}
+
+.minerva-page-briefing-panel {
+  grid-column: 1 / -1;
+  min-height: 152px;
+  padding: 16px 18px;
+  display: grid;
+  align-content: space-between;
+  gap: 12px;
+  background:
+    linear-gradient(135deg, rgba(255, 179, 71, 0.1), rgba(255, 179, 71, 0) 38%),
+    linear-gradient(to bottom, rgba(247, 201, 72, 0.08), rgba(247, 201, 72, 0.01) 42%, rgba(0, 0, 0, 0.32)),
+    rgba(24, 16, 6, 0.9);
+}
+
+.minerva-page-briefing-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.minerva-page-briefing-badge {
+  border: 1px solid rgba(247, 201, 72, 0.26);
+  color: var(--fg-bright);
+  background: rgba(247, 201, 72, 0.1);
+}
+
+.minerva-page-inventory-panel {
+  padding: 14px 16px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  min-height: 320px;
+}
+
+.minerva-page-inventory-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.minerva-page-inventory-scroll {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  max-height: min(42dvh, 420px);
+  border: 1px solid rgba(247, 201, 72, 0.18);
+  border-radius: 14px;
+  padding: 0;
+  background:
+    linear-gradient(to bottom, rgba(247, 201, 72, 0.05), rgba(247, 201, 72, 0) 18%),
+    rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.minerva-page-inventory-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(132px, 168px);
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 12px 16px 10px 16px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(247, 201, 72, 0.28);
+  border-radius: 12px 12px 0 0;
+  background:
+    linear-gradient(to right, rgba(247, 201, 72, 0.08), rgba(247, 201, 72, 0.03) 38%, rgba(0, 0, 0, 0) 72%),
+    linear-gradient(to bottom, rgba(247, 201, 72, 0.12), rgba(247, 201, 72, 0.02) 54%, rgba(0, 0, 0, 0));
+  box-shadow: inset 0 -1px 0 rgba(255, 225, 122, 0.14);
+  overflow: hidden;
+}
+
+.minerva-page-inventory-header-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  color: rgba(255, 239, 175, 0.9);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.76rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(247, 201, 72, 0.12);
+}
+
+.minerva-page-inventory-header-label:first-child::before {
+  content: "";
+  width: 10px;
+  height: 1px;
+  margin-right: 10px;
+  background: rgba(247, 201, 72, 0.58);
+  box-shadow: 0 0 10px rgba(247, 201, 72, 0.18);
+}
+
+.minerva-page-inventory-header-label:last-child {
+  text-align: right;
+  justify-self: end;
+}
+
+.minerva-page-inventory-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 10px 0 16px;
+  overflow: auto;
+  display: grid;
+  gap: 0;
+  max-height: min(42dvh, 400px);
+}
+
+.minerva-page-inventory-list li {
+  color: var(--fg-dim);
+  line-height: 1.28;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(132px, 168px);
+  align-items: start;
+  gap: 16px;
+  padding: 12px 6px 12px 0;
+  border-bottom: 1px solid rgba(247, 201, 72, 0.12);
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.minerva-page-inventory-list li:last-child {
+  border-bottom: 0;
+}
+
+.minerva-page-inventory-list li:hover {
+  background:
+    linear-gradient(to right, rgba(247, 201, 72, 0.08), rgba(247, 201, 72, 0.02) 42%, rgba(0, 0, 0, 0));
+  border-bottom-color: rgba(247, 201, 72, 0.2);
+}
+
+.minerva-page-inventory-link {
+  color: var(--fg-bright);
+  text-decoration: none;
+  min-width: 0;
+  flex: 1;
+}
+
+.minerva-page-inventory-link:hover,
+.minerva-page-inventory-link:focus-visible {
+  text-decoration: underline;
+}
+
+.minerva-page-item-name {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.minerva-page-item-name .fo76-icon {
+  margin-top: 0.14em;
+  flex-shrink: 0;
+}
+
+.minerva-page-price {
+  color: var(--accent);
+  font-family: "Share Tech Mono", monospace;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-top: 1px;
+  text-align: right;
+}
+
+@media (max-width: 1040px) {
+  body {
+    overflow-y: auto;
+  }
+
+  .minerva-page-shell {
+    width: min(100% - 18px, 1320px);
+    min-height: 100dvh;
+    padding: 10px 0 18px;
+  }
+
+  .minerva-page-header,
+  .minerva-page-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .minerva-page-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .minerva-card-list,
+  .minerva-card-items,
+  .minerva-card-bullion {
+    grid-column: auto;
+  }
+
+  .minerva-page-button {
+    width: 100%;
+  }
+}

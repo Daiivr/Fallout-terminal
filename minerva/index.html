@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minerva Intel | Fallout Codex</title>
+  <meta name="description" content="Standalone Minerva intel page for Fallout Codex.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.cdnfonts.com">
+  <link href="https://fonts.cdnfonts.com/css/overseer" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/terminal-favicon.svg">
+  <link rel="stylesheet" href="/css/minerva-dossier.css?v=20260308-minerva-split-stats">
+</head>
+<body>
+  <main class="minerva-page-shell">
+    <header class="minerva-page-header">
+      <div class="minerva-page-copy">
+        <p id="minervaEyebrow" class="minerva-page-eyebrow">WASTELAND MERCHANT INTEL</p>
+        <h1 id="minervaTitle" class="minerva-page-title">MINERVA INTEL</h1>
+        <p id="minervaSummary" class="minerva-page-summary" aria-live="polite">Loading Minerva routing intel...</p>
+        <div class="minerva-page-chip-row">
+          <span id="minervaChipVendor" class="minerva-page-chip">GOLD BULLION VENDOR</span>
+          <span id="minervaChipRoute" class="minerva-page-chip">CARAVAN NETWORK</span>
+          <span id="minervaStatusPill" class="minerva-page-status-pill">TRACKING</span>
+        </div>
+      </div>
+      <aside class="minerva-page-side">
+        <div class="minerva-page-route-card">
+          <span id="minervaRouteLabel" class="minerva-page-side-label">CURRENT ROUTE</span>
+          <span id="minervaRouteValue" class="minerva-page-side-value">--</span>
+        </div>
+        <a id="minervaBackBtn" class="minerva-page-button" href="/">RETURN TO FALLOUT CODEX</a>
+      </aside>
+    </header>
+
+    <section class="minerva-page-stage">
+      <div class="minerva-page-main-grid">
+        <div class="minerva-page-left-stack">
+          <section class="minerva-page-portrait-panel">
+            <div class="minerva-page-portrait-head">
+              <span id="minervaPortraitKicker" class="minerva-page-map-kicker">MERCHANT SIGNAL</span>
+              <span id="minervaPortraitStatus" class="minerva-page-portrait-status">TRACKING</span>
+            </div>
+            <div class="minerva-page-portrait-wrap">
+              <img
+                id="minervaPortraitImage"
+                class="minerva-page-portrait-image"
+                src="/assets/images/where-is-minerva.png"
+                alt="Minerva portrait"
+              >
+            </div>
+            <p id="minervaPortraitCaption" class="minerva-page-portrait-caption">Loading merchant intel...</p>
+          </section>
+
+          <div class="minerva-page-availability" aria-live="polite">
+            <span id="minervaAvailabilityLabel" class="minerva-page-availability-label">AVAILABLE IN</span>
+            <strong id="minervaAvailabilityValue" class="minerva-page-availability-value">--</strong>
+            <span id="minervaAvailabilityMeta" class="minerva-page-availability-meta">--</span>
+          </div>
+        </div>
+
+        <section class="minerva-page-map-panel">
+          <div class="minerva-page-map-head">
+            <span id="minervaMapKicker" class="minerva-page-map-kicker">LOCATION INTEL</span>
+            <span id="minervaLocationValue" class="minerva-page-map-location">--</span>
+          </div>
+          <div class="minerva-page-map-wrap">
+            <img id="minervaMapImage" class="minerva-page-map-image" src="/assets/images/minerva-route-map.svg" alt="Minerva route map">
+            <div class="minerva-page-map-controls">
+              <button id="minervaMapPrevBtn" class="minerva-page-map-nav" type="button" aria-label="Previous image">&lt;</button>
+              <span id="minervaMapSlideLabel" class="minerva-page-map-slide-label">ROUTE INTEL</span>
+              <button id="minervaMapNextBtn" class="minerva-page-map-nav" type="button" aria-label="Next image">&gt;</button>
+            </div>
+          </div>
+        </section>
+
+        <div class="minerva-page-sidebar">
+          <article class="minerva-meta-card minerva-card-list">
+            <p id="minervaListLabel" class="minerva-meta-label">LIST ROTATION</p>
+            <p id="minervaListValue" class="minerva-meta-value">--</p>
+          </article>
+          <article class="minerva-meta-card minerva-card-items">
+            <p id="minervaItemsLabel" class="minerva-meta-label">ITEM COUNT</p>
+            <p id="minervaItemsValue" class="minerva-meta-value">--</p>
+          </article>
+          <article class="minerva-meta-card minerva-card-bullion">
+            <p id="minervaBullionLabel" class="minerva-meta-label">TOTAL BULLION</p>
+            <div id="minervaBullionValue" class="minerva-meta-value">--</div>
+          </article>
+          <article class="minerva-meta-card minerva-card-arrives">
+            <p id="minervaArrivesLabel" class="minerva-meta-label">ARRIVES</p>
+            <p id="minervaArrivesValue" class="minerva-meta-value">--</p>
+          </article>
+          <article class="minerva-meta-card minerva-card-leaves">
+            <p id="minervaLeavesLabel" class="minerva-meta-label">LEAVES</p>
+            <p id="minervaLeavesValue" class="minerva-meta-value">--</p>
+          </article>
+
+          <section class="minerva-page-briefing-panel">
+            <div class="minerva-page-briefing-head">
+              <span id="minervaBriefingKicker" class="minerva-page-briefing-kicker">TRADE BRIEFING</span>
+              <span id="minervaBriefingBadge" class="minerva-page-briefing-badge">BROADCAST LIVE</span>
+            </div>
+            <p id="minervaBriefing" class="minerva-page-briefing">Awaiting merchant telemetry...</p>
+          </section>
+        </div>
+      </div>
+
+      <section class="minerva-page-inventory-panel">
+        <div class="minerva-page-inventory-head">
+          <span id="minervaInventoryTitle" class="minerva-page-inventory-title">INVENTORY CATALOG</span>
+        </div>
+        <div class="minerva-page-inventory-scroll">
+          <div class="minerva-page-inventory-header">
+            <span id="minervaInventoryNameHeader" class="minerva-page-inventory-header-label">PLAN / ITEM</span>
+            <span id="minervaInventoryPriceHeader" class="minerva-page-inventory-header-label">GOLD BULLION</span>
+          </div>
+          <ul id="minervaInventoryList" class="minerva-page-inventory-list"></ul>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/js/minerva-dossier.js?v=20260308-minerva-split-stats"></script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Silo Intel | Fallout Codex</title>
+  <meta name="description" content="Standalone Appalachian silo intel page for Fallout Codex.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.cdnfonts.com">
+  <link href="https://fonts.cdnfonts.com/css/overseer" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/terminal-favicon.svg">
+  <link rel="stylesheet" href="/css/silo-dossier.css?v=20260308-resetfix">
+</head>
+<body>
+  <main class="silo-page-shell">
+    <header class="silo-page-header">
+      <div class="silo-page-copy">
+        <p id="dossierEyebrow" class="silo-page-eyebrow">NUCLEAR COMMAND INTEL</p>
+        <h1 id="dossierTitle" class="silo-page-title">APPALACHIAN SILO STATUS</h1>
+        <p id="dossierSummary" class="silo-page-summary" aria-live="polite">Loading silo telemetry...</p>
+        <div class="silo-page-chip-row" aria-label="Intel highlights">
+          <span id="dossierChipClearance" class="silo-page-chip">CLEARANCE OMEGA</span>
+          <span id="dossierChipGrid" class="silo-page-chip">APPALACHIA GRID</span>
+          <p id="dossierRelayValue" class="silo-page-relay-pill">FALLOUT CODEX ONLINE</p>
+        </div>
+      </div>
+      <aside class="silo-page-header-side" aria-hidden="true">
+        <div class="silo-page-radar">
+          <div class="silo-page-radar-ring is-outer"></div>
+          <div class="silo-page-radar-ring is-mid"></div>
+          <div class="silo-page-radar-ring is-inner"></div>
+          <div class="silo-page-radar-sweep"></div>
+          <div class="silo-page-radar-dot is-alpha"></div>
+          <div class="silo-page-radar-dot is-bravo"></div>
+          <div class="silo-page-radar-dot is-charlie"></div>
+        </div>
+        <div class="silo-page-side-readout">
+          <span id="dossierSideLabel" class="silo-page-side-label">TACTICAL READOUT</span>
+          <span id="dossierSideValue" class="silo-page-side-value">ALPHA / BRAVO / CHARLIE</span>
+        </div>
+        <a id="dossierBackTop" class="silo-page-button" href="/">RETURN TO FALLOUT CODEX</a>
+      </aside>
+    </header>
+
+    <section class="silo-page-stage">
+      <div class="silo-page-code-grid">
+        <article class="silo-code-card">
+          <p class="silo-code-label">
+            <span class="silo-card-icon fo76-icon" aria-hidden="true">&#xF24B;</span>
+            <span id="dossierAlphaLabel">SITE ALPHA</span>
+          </p>
+          <p id="dossierCodeAlpha" class="silo-code-value">--- -- ---</p>
+        </article>
+        <article class="silo-code-card">
+          <p class="silo-code-label">
+            <span class="silo-card-icon fo76-icon" aria-hidden="true">&#xF24C;</span>
+            <span id="dossierBravoLabel">SITE BRAVO</span>
+          </p>
+          <p id="dossierCodeBravo" class="silo-code-value">--- -- ---</p>
+        </article>
+        <article class="silo-code-card">
+          <p class="silo-code-label">
+            <span class="silo-card-icon fo76-icon" aria-hidden="true">&#xF24D;</span>
+            <span id="dossierCharlieLabel">SITE CHARLIE</span>
+          </p>
+          <p id="dossierCodeCharlie" class="silo-code-value">--- -- ---</p>
+        </article>
+      </div>
+
+      <div class="silo-page-lower">
+        <div class="silo-page-meta-grid">
+          <article class="silo-meta-card">
+            <p id="dossierResetLabel" class="silo-meta-label">RESET TARGET</p>
+            <p id="dossierResetValue" class="silo-meta-value">--</p>
+          </article>
+          <article class="silo-meta-card">
+            <p id="dossierCountdownLabel" class="silo-meta-label">COUNTDOWN</p>
+            <p id="dossierCountdownValue" class="silo-meta-value">--</p>
+          </article>
+          <article class="silo-meta-card">
+            <p id="dossierStatusLabel" class="silo-meta-label">STATUS</p>
+            <p id="dossierStatusValue" class="silo-meta-value">SYNCING</p>
+          </article>
+          <article class="silo-meta-card">
+            <p id="dossierUpdatedLabel" class="silo-meta-label">LAST RELAY</p>
+            <p id="dossierUpdatedValue" class="silo-meta-value">--</p>
+          </article>
+        </div>
+
+        <section class="silo-page-briefing-panel">
+          <div class="silo-page-briefing-head">
+            <span id="dossierBriefingKicker" class="silo-page-briefing-kicker">TACTICAL BRIEFING</span>
+            <span id="dossierBriefingBadge" class="silo-page-briefing-badge">LIVE INTEL</span>
+          </div>
+          <p id="dossierBriefing" class="silo-page-briefing">Awaiting live telemetry...</p>
+          <div class="silo-page-briefing-accent"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/silo-dossier.js?v=20260308-silo-intel-wording"></script>
+</body>
+</html>

@@ -37,7 +37,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="preload" as="image" href="assets/images/minerva-plan-fallback.png" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/styles.css?v=20260308-minerva-main-slider-pill-lite" />
 </head>
 <body class="is-booting">
   <div id="bootOverlay" class="boot-overlay">
@@ -76,6 +76,71 @@
       <div class="sync-core">
         <p id="syncTitle" class="sync-title">SYNCING FIELD DATA...</p>
         <div class="sync-bar"><span></span></div>
+      </div>
+    </div>
+    <div id="siloDossierOverlay" class="silo-dossier-overlay" aria-hidden="true">
+      <div
+        class="silo-dossier-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="siloDossierTitle"
+        aria-describedby="siloDossierSummary"
+      >
+        <div class="silo-dossier-head">
+          <div class="silo-dossier-copy">
+            <p id="siloDossierEyebrow" class="silo-dossier-eyebrow">NUCLEAR COMMAND INTEL</p>
+            <h2 id="siloDossierTitle" class="silo-dossier-title">APPALACHIAN SILO STATUS</h2>
+            <p id="siloDossierSummary" class="silo-dossier-summary">
+              Loading silo command telemetry...
+            </p>
+          </div>
+          <div class="silo-dossier-head-actions">
+            <a
+              id="siloDossierSourceLink"
+              class="silo-dossier-link"
+              href="https://nukacrypt.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >OPEN NUKACRYPT</a>
+            <button id="siloDossierCloseBtn" class="silo-dossier-close" type="button">RETURN TO FALLOUT CODEX</button>
+          </div>
+        </div>
+
+        <div class="silo-dossier-layout">
+          <section class="silo-dossier-block silo-dossier-block-codes" aria-label="Silo launch codes">
+            <div id="siloDossierCodes" class="silo-dossier-codes"></div>
+          </section>
+
+          <section class="silo-dossier-block silo-dossier-block-meta" aria-label="Silo timing and status">
+            <div class="silo-dossier-meta-grid">
+              <article class="silo-dossier-meta-card">
+                <span id="siloDossierResetLabel" class="silo-dossier-label">RESET TARGET</span>
+                <span id="siloDossierResetValue" class="silo-dossier-value">--</span>
+              </article>
+              <article class="silo-dossier-meta-card">
+                <span id="siloDossierCountdownLabel" class="silo-dossier-label">COUNTDOWN</span>
+                <span id="siloDossierCountdownValue" class="silo-dossier-value">--</span>
+              </article>
+              <article class="silo-dossier-meta-card">
+                <span id="siloDossierStatusLabel" class="silo-dossier-label">STATUS</span>
+                <span id="siloDossierStatusValue" class="silo-dossier-value">--</span>
+              </article>
+              <article class="silo-dossier-meta-card">
+                <span id="siloDossierSignalLabel" class="silo-dossier-label">UPLINK</span>
+                <span id="siloDossierSignalValue" class="silo-dossier-value">--</span>
+              </article>
+            </div>
+          </section>
+
+          <section class="silo-dossier-block silo-dossier-block-briefing" aria-label="Mission briefing">
+            <p id="siloDossierBriefing" class="silo-dossier-briefing">
+              Live tactical notes unavailable.
+            </p>
+            <div class="silo-dossier-actions">
+              <button id="siloDossierBackBtn" class="silo-dossier-back" type="button">GO BACK</button>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
     <div id="classifiedLoadOverlay" class="classified-load-overlay" aria-hidden="true">
@@ -368,7 +433,7 @@
 
     <section id="statusStrip" class="status-strip">
       <div class="status-item">
-        <span id="labelUtc" class="label">UTC CLOCK</span>
+        <span id="labelUtc" class="label">LOCAL TIME</span>
         <span id="utcTime" class="mono-value">--:--:--</span>
       </div>
       <div class="status-item">
@@ -385,7 +450,7 @@
     <section id="intelGrid" class="grid">
       <article class="panel silo-panel">
         <h2 id="siloTitle">SILO CODES</h2>
-        <p id="siloHint" class="hint">Weekly reset target: Monday 00:00 UTC</p>
+        <p id="siloHint" class="hint">Weekly reset target: Wednesday 00:00 UTC</p>
         <div id="siloExpiry" class="expiry">Reset in: --</div>
         <div class="code-grid" id="siloCodes"></div>
         <p class="source">
@@ -455,7 +520,7 @@
             >OPEN SOURCE PAGE</a>
           </div>
           <h3 id="minervaDetailName" class="minerva-detail-name">--</h3>
-          <p id="minervaDetailStatus" class="minerva-detail-status">Loading plan dossier...</p>
+          <p id="minervaDetailStatus" class="minerva-detail-status">Loading plan intel...</p>
           <div id="minervaDetailContent" class="minerva-detail-content" hidden>
             <figure class="minerva-detail-figure">
               <img id="minervaDetailImage" class="minerva-detail-image" alt="" loading="eager" decoding="async" fetchpriority="high" />
@@ -500,6 +565,20 @@
                   alt="Appalachia route map"
                   loading="lazy"
                 />
+                <button
+                  id="minervaLocationMapPrevBtn"
+                  class="minerva-location-map-nav is-prev"
+                  type="button"
+                  aria-label="Previous image"
+                  hidden
+                >&lt;</button>
+                <button
+                  id="minervaLocationMapNextBtn"
+                  class="minerva-location-map-nav is-next"
+                  type="button"
+                  aria-label="Next image"
+                  hidden
+                >&gt;</button>
                 <div id="minervaLocationPins" class="minerva-location-pins" aria-hidden="true">
                   <span class="minerva-loc-pin" data-location="Crater">CRATER</span>
                   <span class="minerva-loc-pin" data-location="Foundation">FOUNDATION</span>
@@ -954,7 +1033,7 @@
                   <button id="classifiedInlineCloseBtn" class="minerva-detail-back" type="button">RETURN TO LIST</button>
                 </div>
               </div>
-              <p id="classifiedInlineStatus" class="minerva-detail-status">Loading plan dossier...</p>
+              <p id="classifiedInlineStatus" class="minerva-detail-status">Loading plan intel...</p>
               <div id="classifiedInlineContent" class="minerva-detail-content" hidden>
                 <figure class="minerva-detail-figure">
                   <img id="classifiedInlineImage" class="minerva-detail-image" alt="" loading="lazy" decoding="async" />
@@ -983,6 +1062,6 @@
 
   <script src="data/minerva-lists.js"></script>
   <script src="data/minerva-detail-fallback.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=20260308-minerva-noon-fix"></script>
 </body>
 </html>

@@ -1,4 +1,6 @@
 ﻿const PROXY_BASE = "https://api.codetabs.com/v1/proxy/?quest=";
+const SILO_API_URL = "/api/intel/silo";
+const SILO_RESET_DAY_UTC = 3;
 const SOURCE_URLS = {
   silo: [
     "https://r.jina.ai/http://nukacrypt.com/",
@@ -14,7 +16,7 @@ const SOURCE_URLS = {
   ]
 };
 
-const FALLBACK_MINERVA_ANCHOR_UTC = Date.parse("2026-02-16T17:00:00Z");
+const FALLBACK_MINERVA_ANCHOR_DATE_UTC = Date.UTC(2026, 1, 16);
 const MS_DAY = 24 * 60 * 60 * 1000;
 const MS_WEEK = 7 * MS_DAY;
 const CYCLE_WEEKS = 24;
@@ -44,6 +46,12 @@ const MINERVA_LOCATION_MAP_BY_LOCATION = {
   Crater: `${MINERVA_INFO_LOCAL_IMAGE_BASE}/minerva_crater.png`,
   "Fort Atlas": `${MINERVA_INFO_LOCAL_IMAGE_BASE}/minerva_atlas.png`,
   "The Whitespring": `${MINERVA_INFO_LOCAL_IMAGE_BASE}/minerva_whitespring.jpg`
+};
+const MINERVA_STORE_IMAGE_BY_LOCATION = {
+  Foundation: `${MINERVA_INFO_LOCAL_IMAGE_BASE}/store_minerva_foundation.png`,
+  Crater: `${MINERVA_INFO_LOCAL_IMAGE_BASE}/store_minerva_crater.png`,
+  "Fort Atlas": `${MINERVA_INFO_LOCAL_IMAGE_BASE}/store_minerva_atlas.png`,
+  "The Whitespring": `${MINERVA_INFO_LOCAL_IMAGE_BASE}/store_minerva_whitespring.jpg`
 };
 const MINERVA_LOCATION_IMAGE_HINTS = [
   { token: "foundation", location: "Foundation" },
@@ -131,7 +139,8 @@ const HACK_BRACKET_PAIRS = [
 const VIEW_HASHES = {
   intel: "#intel",
   files: "#files",
-  classified: "#clasified"
+  classified: "#clasified",
+  silo: "#silos"
 };
 const FILES_ACCESS_REQUEST_REASON_MAX = 1200;
 const FILES_ACCESS_DECLINED_REAPPLY_MS = 7 * 24 * 60 * 60 * 1000;
@@ -424,14 +433,33 @@ const STRINGS = {
     files_uploader_label: "Uploaded By",
     files_unknown_value: "--",
     lang_label: "LANG",
-    label_utc: "UTC CLOCK",
+    label_utc: "LOCAL TIME",
     label_last_sync: "LAST SYNC",
     label_data_link: "DATA LINK",
     refresh_button: "MANUAL SYNC",
     silo_title: "SILO CODES",
-    silo_hint: "Weekly reset target: Monday 00:00 UTC",
+    silo_hint: "Weekly reset target: Wednesday 00:00 UTC",
     silo_source_prefix: "Source:",
-    silo_source_suffix: "via CORS proxy",
+    silo_source_suffix: "via Fallout Codex relay",
+    silo_dossier_eyebrow: "NUCLEAR COMMAND INTEL",
+    silo_dossier_title: "APPALACHIAN SILO STATUS",
+    silo_dossier_loading: "Loading silo command telemetry...",
+    silo_dossier_summary_live: "Launch access keys are stable. Review each silo before authorizing a strike.",
+    silo_dossier_summary_expired: "Current launch keys are flagged as expired. Await the next weekly refresh before using a silo.",
+    silo_dossier_summary_error: "Live silo telemetry is unavailable. Review the last known reset window and try syncing again.",
+    silo_dossier_reset_label: "RESET TARGET",
+    silo_dossier_countdown_label: "COUNTDOWN",
+    silo_dossier_status_label: "STATUS",
+    silo_dossier_signal_label: "UPLINK",
+    silo_dossier_status_live: "CODES VALID",
+    silo_dossier_status_expired: "AWAITING REFRESH",
+    silo_dossier_status_error: "SIGNAL LOST",
+    silo_dossier_briefing_live: "All three silos are broadcasting valid launch key fragments. Cross-check the code you need, then return to terminal when ready.",
+    silo_dossier_briefing_expired: "Upstream reports the current keyset has expired. Hold launch prep until fresh authorization data clears the relay.",
+    silo_dossier_briefing_error: "The relay could not confirm silo telemetry. Use manual sync or verify upstream data from NukaCrypt.",
+    silo_dossier_open_source: "OPEN NUKACRYPT",
+    silo_dossier_close: "RETURN TO FALLOUT CODEX",
+    silo_dossier_back: "GO BACK",
     minerva_title: "MINERVA INTEL",
     minerva_scanning: "Scanning trade routes...",
     minerva_location_label: "Location",
@@ -446,6 +474,8 @@ const STRINGS = {
     minerva_location_view_title: "MINERVA LOCATION TRACKER",
     minerva_location_view_back: "RETURN TO INTEL",
     minerva_location_map_label: "Known Route Map",
+    minerva_location_map_prev: "Previous image",
+    minerva_location_map_next: "Next image",
     minerva_location_status_active: "Minerva is currently at {location}.",
     minerva_location_status_inactive: "Minerva will arrive at {location}.",
     minerva_location_status_unknown: "Location data unavailable.",
@@ -456,7 +486,7 @@ const STRINGS = {
     minerva_location_countdown_now: "Now",
     minerva_detail_back: "RETURN TO LIST",
     minerva_detail_open_source: "OPEN SOURCE PAGE",
-    minerva_detail_loading: "Loading plan dossier...",
+    minerva_detail_loading: "Loading plan intel...",
     minerva_detail_error: "Unable to load plan details right now.",
     minerva_detail_where_label: "Where Else To Get It",
     minerva_detail_unlocks_label: "What This Plan Unlocks",
@@ -812,14 +842,33 @@ const STRINGS = {
     files_uploader_label: "Subido Por",
     files_unknown_value: "--",
     lang_label: "IDIOMA",
-    label_utc: "RELOJ UTC",
+    label_utc: "HORA LOCAL",
     label_last_sync: "ULTIMA SINCRONIZACION",
     label_data_link: "ENLACE DE DATOS",
     refresh_button: "SINCRONIZAR",
     silo_title: "CODIGOS DE SILO",
-    silo_hint: "Reinicio semanal objetivo: lunes 00:00 UTC",
+    silo_hint: "Reinicio semanal objetivo: miercoles 00:00 UTC",
     silo_source_prefix: "Fuente:",
-    silo_source_suffix: "por proxy CORS",
+    silo_source_suffix: "por relay de Fallout Codex",
+    silo_dossier_eyebrow: "INTEL DE COMANDO NUCLEAR",
+    silo_dossier_title: "ESTADO DE LOS SILOS DE APPALACHIA",
+    silo_dossier_loading: "Cargando telemetria de comando de los silos...",
+    silo_dossier_summary_live: "Las claves de lanzamiento estan estables. Revisa cada silo antes de autorizar un ataque.",
+    silo_dossier_summary_expired: "Las claves de lanzamiento actuales estan marcadas como vencidas. Espera el proximo reinicio semanal antes de usar un silo.",
+    silo_dossier_summary_error: "La telemetria en vivo de los silos no esta disponible. Revisa la ultima ventana conocida y sincroniza otra vez.",
+    silo_dossier_reset_label: "OBJETIVO DE REINICIO",
+    silo_dossier_countdown_label: "CUENTA REGRESIVA",
+    silo_dossier_status_label: "ESTADO",
+    silo_dossier_signal_label: "ENLACE",
+    silo_dossier_status_live: "CODIGOS VALIDOS",
+    silo_dossier_status_expired: "ESPERANDO REINICIO",
+    silo_dossier_status_error: "SENAL PERDIDA",
+    silo_dossier_briefing_live: "Los tres silos estan transmitiendo fragmentos validos de claves de lanzamiento. Verifica el codigo que necesitas y luego vuelve a la terminal.",
+    silo_dossier_briefing_expired: "La fuente indica que el set actual de claves ha vencido. Deten la preparacion del lanzamiento hasta que lleguen datos nuevos.",
+    silo_dossier_briefing_error: "El relay no pudo confirmar la telemetria del silo. Usa sincronizacion manual o verifica la fuente en NukaCrypt.",
+    silo_dossier_open_source: "ABRIR NUKACRYPT",
+    silo_dossier_close: "VOLVER A FALLOUT CODEX",
+    silo_dossier_back: "REGRESAR",
     minerva_title: "INTEL DE MINERVA",
     minerva_scanning: "Escaneando rutas comerciales...",
     minerva_location_label: "Ubicacion",
@@ -834,6 +883,8 @@ const STRINGS = {
     minerva_location_view_title: "RASTREADOR DE UBICACION DE MINERVA",
     minerva_location_view_back: "VOLVER A INTEL",
     minerva_location_map_label: "MAPA DE RUTA CONOCIDA",
+    minerva_location_map_prev: "Imagen anterior",
+    minerva_location_map_next: "Imagen siguiente",
     minerva_location_status_active: "Minerva esta actualmente en {location}.",
     minerva_location_status_inactive: "Minerva llegara a {location}.",
     minerva_location_status_unknown: "No hay datos de ubicacion disponibles.",
@@ -844,7 +895,7 @@ const STRINGS = {
     minerva_location_countdown_now: "Ahora",
     minerva_detail_back: "VOLVER A LISTA",
     minerva_detail_open_source: "ABRIR FUENTE",
-    minerva_detail_loading: "Cargando dossier del plano...",
+    minerva_detail_loading: "Cargando intel del plano...",
     minerva_detail_error: "No se pudieron cargar los detalles del plano.",
     minerva_detail_where_label: "Donde Conseguirlo Ademas",
     minerva_detail_unlocks_label: "Que Desbloquea Este Plano",
@@ -943,7 +994,11 @@ const state = {
     error: false,
     codes: null,
     isExpired: false,
-    resetTargetUtc: null
+    resetTargetUtc: null,
+    source: ""
+  },
+  siloDossier: {
+    open: false
   },
   minerva: {
     error: false,
@@ -965,7 +1020,11 @@ const state = {
   minervaLocation: {
     open: false,
     countdownTargetMs: null,
-    countdownMode: ""
+    countdownMode: "",
+    slides: [],
+    slideIndex: 0,
+    slideKey: "",
+    transitionToken: 0
   },
   classifiedSearch: {
     query: "",
@@ -1322,6 +1381,23 @@ const elements = {
   siloCodes: document.getElementById("siloCodes"),
   siloSourcePrefix: document.getElementById("siloSourcePrefix"),
   siloSourceSuffix: document.getElementById("siloSourceSuffix"),
+  siloDossierOverlay: document.getElementById("siloDossierOverlay"),
+  siloDossierEyebrow: document.getElementById("siloDossierEyebrow"),
+  siloDossierTitle: document.getElementById("siloDossierTitle"),
+  siloDossierSummary: document.getElementById("siloDossierSummary"),
+  siloDossierSourceLink: document.getElementById("siloDossierSourceLink"),
+  siloDossierCloseBtn: document.getElementById("siloDossierCloseBtn"),
+  siloDossierCodes: document.getElementById("siloDossierCodes"),
+  siloDossierResetLabel: document.getElementById("siloDossierResetLabel"),
+  siloDossierResetValue: document.getElementById("siloDossierResetValue"),
+  siloDossierCountdownLabel: document.getElementById("siloDossierCountdownLabel"),
+  siloDossierCountdownValue: document.getElementById("siloDossierCountdownValue"),
+  siloDossierStatusLabel: document.getElementById("siloDossierStatusLabel"),
+  siloDossierStatusValue: document.getElementById("siloDossierStatusValue"),
+  siloDossierSignalLabel: document.getElementById("siloDossierSignalLabel"),
+  siloDossierSignalValue: document.getElementById("siloDossierSignalValue"),
+  siloDossierBriefing: document.getElementById("siloDossierBriefing"),
+  siloDossierBackBtn: document.getElementById("siloDossierBackBtn"),
   minervaTitle: document.getElementById("minervaTitle"),
   minervaSummary: document.getElementById("minervaSummary"),
   minervaLocationLabel: document.getElementById("minervaLocationLabel"),
@@ -1356,6 +1432,8 @@ const elements = {
   minervaLocationStatus: document.getElementById("minervaLocationStatus"),
   minervaLocationMapLabel: document.getElementById("minervaLocationMapLabel"),
   minervaLocationMapImage: document.getElementById("minervaLocationMapImage"),
+  minervaLocationMapPrevBtn: document.getElementById("minervaLocationMapPrevBtn"),
+  minervaLocationMapNextBtn: document.getElementById("minervaLocationMapNextBtn"),
   minervaLocationPinsWrap: document.getElementById("minervaLocationPins"),
   minervaLocationMapName: document.getElementById("minervaLocationMapName"),
   minervaLocationArrivesLabel: document.getElementById("minervaLocationArrivesLabel"),
@@ -1409,8 +1487,16 @@ function t(key, vars = {}) {
   return template.replace(/\{(\w+)\}/g, (_, name) => String(vars[name] ?? ""));
 }
 
+function isSiloDossierHash(hashValue = window.location.hash) {
+  const hash = String(hashValue || "").trim().toLowerCase();
+  return hash === VIEW_HASHES.silo || hash === "#silo";
+}
+
 function getHashView() {
   const hash = String(window.location.hash || "").trim().toLowerCase();
+  if (isSiloDossierHash(hash)) {
+    return "intel";
+  }
   if (hash === VIEW_HASHES.files) {
     return "files";
   }
@@ -1428,7 +1514,9 @@ function setHashView(view, { replace = false } = {}) {
     ? VIEW_HASHES.files
     : view === "classified"
       ? VIEW_HASHES.classified
-      : VIEW_HASHES.intel;
+      : view === "silo"
+        ? VIEW_HASHES.silo
+        : VIEW_HASHES.intel;
   const currentHash = String(window.location.hash || "").trim().toLowerCase();
   if (currentHash === targetHash) {
     return;
@@ -1459,6 +1547,139 @@ function syncTopTabForCurrentView() {
     return;
   }
   setTopTabActive("intel");
+}
+
+function getActiveSiloResetTargetMs(nowMs = Date.now()) {
+  const fallbackTarget = nextResetUtc().getTime();
+  return Number.isFinite(state.silo.resetTargetUtc) && state.silo.resetTargetUtc > nowMs
+    ? state.silo.resetTargetUtc
+    : fallbackTarget;
+}
+
+function formatSiloCountdownValue(totalSeconds) {
+  const d = Math.floor(totalSeconds / 86400);
+  const h = Math.floor((totalSeconds % 86400) / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${d}d ${h}h ${m}m ${s}s`;
+}
+
+function renderSiloDossier() {
+  if (!elements.siloDossierOverlay || !elements.siloDossierCodes) {
+    return;
+  }
+
+  elements.siloDossierEyebrow.textContent = t("silo_dossier_eyebrow");
+  elements.siloDossierTitle.textContent = t("silo_dossier_title");
+  elements.siloDossierResetLabel.textContent = t("silo_dossier_reset_label");
+  elements.siloDossierCountdownLabel.textContent = t("silo_dossier_countdown_label");
+  elements.siloDossierStatusLabel.textContent = t("silo_dossier_status_label");
+  elements.siloDossierSignalLabel.textContent = t("silo_dossier_signal_label");
+  elements.siloDossierSourceLink.textContent = t("silo_dossier_open_source");
+  elements.siloDossierCloseBtn.textContent = t("silo_dossier_close");
+  elements.siloDossierBackBtn.textContent = t("silo_dossier_back");
+
+  const rawSourceUrl = String(state.silo.source || "").trim();
+  const sourceUrl = /nukacrypt/i.test(rawSourceUrl)
+    ? "https://nukacrypt.com/"
+    : (rawSourceUrl || "https://nukacrypt.com/");
+  elements.siloDossierSourceLink.href = sourceUrl;
+
+  const cardsFragment = document.createDocumentFragment();
+  const codes = state.silo.codes || {
+    Alpha: null,
+    Bravo: null,
+    Charlie: null
+  };
+  const hasCodes = Object.values(codes).some(Boolean);
+
+  for (const site of ["Alpha", "Bravo", "Charlie"]) {
+    const card = document.createElement("article");
+    card.className = "silo-dossier-code-card";
+
+    const label = document.createElement("div");
+    label.className = "silo-dossier-code-label";
+    label.appendChild(createIconTag(SILO_SITE_GLYPHS[site] || ""));
+    label.append(`SITE ${site.toUpperCase()}`);
+
+    const value = document.createElement("div");
+    value.className = "silo-dossier-code-value";
+    value.textContent = formatSiloCodeForDisplay(codes[site]);
+
+    card.appendChild(label);
+    card.appendChild(value);
+    cardsFragment.appendChild(card);
+  }
+
+  elements.siloDossierCodes.innerHTML = "";
+  elements.siloDossierCodes.appendChild(cardsFragment);
+
+  const nowMs = Date.now();
+  const targetUtc = getActiveSiloResetTargetMs(nowMs);
+  const totalSeconds = Math.max(0, Math.floor((targetUtc - nowMs) / 1000));
+  elements.siloDossierResetValue.textContent = formatReadableDateTime(new Date(targetUtc), {
+    includeSeconds: false,
+    timeZone: "UTC",
+    includeWeekday: true,
+    includeYear: false,
+    zoneLabel: "UTC"
+  });
+  elements.siloDossierCountdownValue.textContent = formatSiloCountdownValue(totalSeconds);
+
+  if (!hasCodes && !state.silo.error) {
+    elements.siloDossierSummary.textContent = t("silo_dossier_loading");
+    elements.siloDossierStatusValue.textContent = t("signal_syncing");
+    elements.siloDossierBriefing.textContent = t("silo_dossier_loading");
+  } else if (state.silo.error) {
+    elements.siloDossierSummary.textContent = t("silo_dossier_summary_error");
+    elements.siloDossierStatusValue.textContent = t("silo_dossier_status_error");
+    elements.siloDossierBriefing.textContent = t("silo_dossier_briefing_error");
+  } else if (state.silo.isExpired) {
+    elements.siloDossierSummary.textContent = t("silo_dossier_summary_expired");
+    elements.siloDossierStatusValue.textContent = t("silo_dossier_status_expired");
+    elements.siloDossierBriefing.textContent = t("silo_dossier_briefing_expired");
+  } else {
+    elements.siloDossierSummary.textContent = t("silo_dossier_summary_live");
+    elements.siloDossierStatusValue.textContent = t("silo_dossier_status_live");
+    elements.siloDossierBriefing.textContent = t("silo_dossier_briefing_live");
+  }
+
+  elements.siloDossierSignalValue.textContent = t(`signal_${state.signalKey}`);
+}
+
+function showSiloDossier({ updateHash = true } = {}) {
+  if (!elements.siloDossierOverlay) {
+    return;
+  }
+
+  if (state.view !== "intel") {
+    showIntelPage({ updateHash: false });
+  }
+
+  state.siloDossier.open = true;
+  document.body.classList.add("is-silo-dossier-open");
+  elements.siloDossierOverlay.classList.add("is-active");
+  elements.siloDossierOverlay.setAttribute("aria-hidden", "false");
+  renderSiloDossier();
+
+  if (updateHash) {
+    setHashView("silo");
+  }
+}
+
+function hideSiloDossier({ updateHash = true } = {}) {
+  if (!elements.siloDossierOverlay) {
+    return;
+  }
+
+  state.siloDossier.open = false;
+  document.body.classList.remove("is-silo-dossier-open");
+  elements.siloDossierOverlay.classList.remove("is-active");
+  elements.siloDossierOverlay.setAttribute("aria-hidden", "true");
+
+  if (updateHash && isSiloDossierHash()) {
+    setHashView("intel");
+  }
 }
 
 function hideFilesPage() {
@@ -1500,6 +1721,7 @@ function showIntelPage({ updateHash = true } = {}) {
 }
 
 function showFilesPage({ updateHash = true } = {}) {
+  hideSiloDossier({ updateHash: false });
   closeClassifiedPageForNavigation();
   markFilesDecisionNoticeSeen();
   startFilesLiveIdentityPolling();
@@ -1526,9 +1748,11 @@ function showFilesPage({ updateHash = true } = {}) {
 
 function applyViewFromHash() {
   const hashView = getHashView();
+  const openSiloDossier = isSiloDossierHash();
   if (!hashView) {
     setHashView("intel", { replace: true });
     showIntelPage({ updateHash: false });
+    hideSiloDossier({ updateHash: false });
     return;
   }
 
@@ -1541,6 +1765,7 @@ function applyViewFromHash() {
   }
 
   if (hashView === "classified") {
+    hideSiloDossier({ updateHash: false });
     if (!state.easterEgg.unlocked && !state.easterEgg.hack?.solved) {
       setHashView("intel", { replace: true });
       showIntelPage({ updateHash: false });
@@ -1554,10 +1779,20 @@ function applyViewFromHash() {
     return;
   }
 
-  if (state.view === "intel" && !document.body.classList.contains("is-classified") && !document.body.classList.contains("is-files")) {
+  if (
+    state.view === "intel"
+    && !document.body.classList.contains("is-classified")
+    && !document.body.classList.contains("is-files")
+    && state.siloDossier.open === openSiloDossier
+  ) {
     return;
   }
   showIntelPage({ updateHash: false });
+  if (openSiloDossier) {
+    showSiloDossier({ updateHash: false });
+    return;
+  }
+  hideSiloDossier({ updateHash: false });
 }
 
 function buildGuestFilesProfile() {
@@ -6951,7 +7186,8 @@ function formatReadableDateTime(
     timeZone = "UTC",
     includeWeekday = true,
     includeYear = true,
-    zoneLabel = ""
+    zoneLabel = "",
+    hour12 = false
   } = {}
 ) {
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
@@ -6975,7 +7211,7 @@ function formatReadableDateTime(
   const timeOptions = {
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
+    hour12,
     timeZone
   };
 
@@ -6984,9 +7220,73 @@ function formatReadableDateTime(
   }
 
   const datePart = new Intl.DateTimeFormat(locale, dateOptions).format(date).replace(/,/g, "");
-  const timePart = new Intl.DateTimeFormat(locale, timeOptions).format(date);
+  const timePart = normalizeMeridiemText(
+    new Intl.DateTimeFormat(locale, timeOptions).format(date)
+  );
   const zonePart = zoneLabel ? ` ${zoneLabel}` : "";
   return `${datePart} ${timePart}${zonePart}`;
+}
+
+function normalizeMeridiemText(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b([ap])\s*\.\s*m\s*\./gi, (_match, token) => `${token.toLowerCase()}m`)
+    .replace(/\b([AP])M\b/g, (_match, token) => `${token.toLowerCase()}m`);
+}
+
+function extractTimeZoneParts(date, timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).formatToParts(date);
+  const byType = Object.create(null);
+
+  for (const part of parts) {
+    if (part.type !== "literal") {
+      byType[part.type] = part.value;
+    }
+  }
+
+  return {
+    year: Number(byType.year),
+    month: Number(byType.month),
+    day: Number(byType.day),
+    hour: Number(byType.hour),
+    minute: Number(byType.minute),
+    second: Number(byType.second || "0")
+  };
+}
+
+function buildEasternDate(year, month, day, hour, minute) {
+  const timeZone = "America/New_York";
+  let utcMs = Date.UTC(year, month - 1, day, hour, minute, 0);
+
+  for (let index = 0; index < 4; index += 1) {
+    const actual = extractTimeZoneParts(new Date(utcMs), timeZone);
+    const targetMs = Date.UTC(year, month - 1, day, hour, minute, 0);
+    const actualMs = Date.UTC(
+      actual.year,
+      actual.month - 1,
+      actual.day,
+      actual.hour,
+      actual.minute,
+      actual.second
+    );
+    const diff = targetMs - actualMs;
+    if (!diff) {
+      return new Date(utcMs);
+    }
+    utcMs += diff;
+  }
+
+  return new Date(utcMs);
 }
 
 function parseBethesdaRawDateTime(raw) {
@@ -7009,9 +7309,7 @@ function parseBethesdaRawDateTime(raw) {
     hour = 0;
   }
 
-  // NukaCrypt/Minerva source uses Bethesda Time (US Eastern). Convert approximately via UTC-05:00 baseline.
-  const utcMs = Date.UTC(year, month - 1, day, hour + 5, minute, 0);
-  return Number.isNaN(utcMs) ? null : new Date(utcMs);
+  return buildEasternDate(year, month, day, hour, minute);
 }
 
 function formatBethesdaRawDateTime(raw) {
@@ -7025,20 +7323,37 @@ function formatBethesdaRawDateTime(raw) {
 function formatUtc(now = new Date()) {
   return formatReadableDateTime(now, {
     includeSeconds: true,
-    timeZone: "UTC",
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     includeWeekday: true,
     includeYear: false,
-    zoneLabel: "UTC"
+    zoneLabel: getLocalZoneLabel(now),
+    hour12: true
   });
+}
+
+function getLocalZoneLabel(date = new Date()) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const locale = state.lang === "es" ? "es-ES" : "en-US";
+  const parts = new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short"
+  }).formatToParts(date);
+
+  return parts.find((part) => part.type === "timeZoneName")?.value || "";
 }
 
 function formatLastSync(now = new Date()) {
   return formatReadableDateTime(now, {
     includeSeconds: false,
-    timeZone: "UTC",
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     includeWeekday: true,
     includeYear: false,
-    zoneLabel: "UTC"
+    zoneLabel: getLocalZoneLabel(now),
+    hour12: true
   });
 }
 
@@ -7072,7 +7387,7 @@ function formatEtDisplay(date, { includeWeekday = true, includeYear = true } = {
   };
 
   const datePart = new Intl.DateTimeFormat(locale, dateOptions).format(date).replace(/,/g, "");
-  const timePart = new Intl.DateTimeFormat(locale, timeOptions).format(date).replace(/\s+/g, " ").trim();
+  const timePart = normalizeMeridiemText(new Intl.DateTimeFormat(locale, timeOptions).format(date));
   return `${datePart} | ${timePart} ET`;
 }
 
@@ -7126,9 +7441,7 @@ function formatEtCompact(date) {
     hour12: true,
     timeZone: "America/New_York"
   }).format(date).replace(/\s+/g, " ").trim();
-  timePart = timePart
-    .replace(/a\.?\s*m\.?/i, "AM")
-    .replace(/p\.?\s*m\.?/i, "PM");
+  timePart = normalizeMeridiemText(timePart);
 
   return `${weekdayPart} ${dayPart} ${timePart}`.trim();
 }
@@ -7242,6 +7555,138 @@ function syncMinervaLocationMapPins(location) {
   });
 }
 
+function resolveMinervaLocationSlides(data) {
+  const defaultMapImage = "assets/images/minerva-route-map.svg";
+  if (!data) {
+    return [{
+      key: "route-default",
+      src: defaultMapImage,
+      alt: "Appalachia route map",
+      showPins: true
+    }];
+  }
+
+  const location = normalizeLocation(data.location || "--");
+  const locationByMapImage = inferLocationFromMapImage(data.locationMapImage || "");
+  const mapLocation = location !== "--" ? location : locationByMapImage;
+  const localizedMapLocation = localizeLocation(mapLocation);
+  const mapImageSrc = String(data.locationMapImage || "").trim();
+  const primarySrc = mapImageSrc || defaultMapImage;
+  const slides = [{
+    key: mapImageSrc ? "route-known" : "route-default",
+    src: primarySrc,
+    alt: mapImageSrc
+      ? `${localizedMapLocation === "--" ? "Appalachia" : localizedMapLocation} map marker`
+      : "Appalachia route map",
+    showPins: !mapImageSrc
+  }];
+
+  const storeSrc = String(MINERVA_STORE_IMAGE_BY_LOCATION[mapLocation] || "").trim();
+  if (storeSrc && storeSrc !== primarySrc) {
+    slides.push({
+      key: "store",
+      src: storeSrc,
+      alt: `${localizedMapLocation === "--" ? "Minerva" : localizedMapLocation} store location`,
+      showPins: false
+    });
+  }
+
+  return slides;
+}
+
+function syncMinervaLocationSlides(data) {
+  const slides = resolveMinervaLocationSlides(data);
+  const nextKey = slides.map((slide) => `${slide.key}:${slide.src}`).join("|");
+  if (state.minervaLocation.slideKey !== nextKey) {
+    state.minervaLocation.slides = slides;
+    state.minervaLocation.slideKey = nextKey;
+    state.minervaLocation.slideIndex = 0;
+  } else {
+    state.minervaLocation.slides = slides;
+    state.minervaLocation.slideIndex = Math.min(
+      state.minervaLocation.slideIndex,
+      Math.max(0, slides.length - 1)
+    );
+  }
+}
+
+function renderMinervaLocationSlide(data, activeLocation) {
+  if (!elements.minervaLocationMapImage) {
+    return;
+  }
+
+  syncMinervaLocationSlides(data);
+  const slides = state.minervaLocation.slides;
+  const activeSlide = slides[state.minervaLocation.slideIndex] || slides[0] || null;
+  const hasMultipleSlides = slides.length > 1;
+
+  if (elements.minervaLocationMapPrevBtn) {
+    elements.minervaLocationMapPrevBtn.hidden = !hasMultipleSlides;
+  }
+  if (elements.minervaLocationMapNextBtn) {
+    elements.minervaLocationMapNextBtn.hidden = !hasMultipleSlides;
+  }
+
+  if (!activeSlide) {
+    return;
+  }
+
+  const currentSrc = elements.minervaLocationMapImage.dataset.slideSrc
+    || elements.minervaLocationMapImage.getAttribute("src")
+    || "";
+  if (currentSrc !== activeSlide.src) {
+    const token = ++state.minervaLocation.transitionToken;
+    const preload = new Image();
+    elements.minervaLocationMapImage.classList.add("is-switching");
+    preload.onload = () => {
+      if (token !== state.minervaLocation.transitionToken) {
+        return;
+      }
+      window.setTimeout(() => {
+        if (token !== state.minervaLocation.transitionToken) {
+          return;
+        }
+        elements.minervaLocationMapImage.src = activeSlide.src;
+        elements.minervaLocationMapImage.alt = activeSlide.alt;
+        elements.minervaLocationMapImage.dataset.slideSrc = activeSlide.src;
+        requestAnimationFrame(() => {
+          elements.minervaLocationMapImage.classList.remove("is-switching");
+        });
+      }, 120);
+    };
+    preload.onerror = () => {
+      if (token !== state.minervaLocation.transitionToken) {
+        return;
+      }
+      elements.minervaLocationMapImage.classList.remove("is-switching");
+    };
+    preload.src = activeSlide.src;
+  } else {
+    elements.minervaLocationMapImage.alt = activeSlide.alt;
+    elements.minervaLocationMapImage.dataset.slideSrc = activeSlide.src;
+    elements.minervaLocationMapImage.classList.remove("is-switching");
+  }
+
+  if (elements.minervaLocationPinsWrap) {
+    elements.minervaLocationPinsWrap.hidden = !activeSlide.showPins;
+  }
+  if (activeSlide.showPins) {
+    syncMinervaLocationMapPins(activeLocation);
+  }
+}
+
+function cycleMinervaLocationSlide(direction) {
+  const slides = state.minervaLocation.slides;
+  if (!Array.isArray(slides) || slides.length < 2) {
+    return;
+  }
+
+  state.minervaLocation.slideIndex = (
+    state.minervaLocation.slideIndex + direction + slides.length
+  ) % slides.length;
+  renderMinervaLocationView();
+}
+
 function renderMinervaLocationView() {
   if (
     !state.minervaLocation.open
@@ -7258,20 +7703,11 @@ function renderMinervaLocationView() {
     elements.minervaLocationStatus.textContent = t("minerva_location_status_unknown");
     elements.minervaLocationArrives.textContent = "--";
     elements.minervaLocationLeaves.textContent = "--";
-    if (elements.minervaLocationMapImage) {
-      const defaultMapImage = "assets/images/minerva-route-map.svg";
-      void queueImagePreload(defaultMapImage);
-      elements.minervaLocationMapImage.src = defaultMapImage;
-      elements.minervaLocationMapImage.alt = "Appalachia route map";
-    }
-    if (elements.minervaLocationPinsWrap) {
-      elements.minervaLocationPinsWrap.hidden = false;
-    }
     if (elements.minervaLocationMapName) {
       elements.minervaLocationMapName.textContent = "--";
       elements.minervaLocationMapName.hidden = true;
     }
-    syncMinervaLocationMapPins("--");
+    renderMinervaLocationSlide(null, "--");
     setMinervaLocationCountdownTarget(null, "arrives");
     return;
   }
@@ -7303,35 +7739,14 @@ function renderMinervaLocationView() {
   elements.minervaLocationLeaves.textContent = eventEnd
     ? formatMinervaLocationDate(eventEnd, data.mode)
     : "--";
-
-  if (elements.minervaLocationMapImage) {
-    const defaultMapImage = "assets/images/minerva-route-map.svg";
-    const mapImageSrc = String(data.locationMapImage || "").trim();
-    const useLocationImage = Boolean(mapImageSrc);
-    const finalMapSrc = useLocationImage ? mapImageSrc : defaultMapImage;
-    void queueImagePreload(finalMapSrc);
-
-    if ((elements.minervaLocationMapImage.getAttribute("src") || "") !== finalMapSrc) {
-      elements.minervaLocationMapImage.src = finalMapSrc;
-    }
-    elements.minervaLocationMapImage.alt = useLocationImage
-      ? `${localizedMapLocation === "--" ? "Appalachia" : localizedMapLocation} map marker`
-      : "Appalachia route map";
-
-    if (elements.minervaLocationPinsWrap) {
-      elements.minervaLocationPinsWrap.hidden = useLocationImage;
-    }
-  }
-
-  if (!elements.minervaLocationPinsWrap?.hidden) {
-    syncMinervaLocationMapPins(location);
-  }
+  renderMinervaLocationSlide(data, location);
   setMinervaLocationCountdownTarget(data.active ? eventEnd : eventStart, data.active ? "leaves" : "arrives");
 }
 
 function nextResetUtc(now = new Date()) {
   const reset = new Date(now);
-  reset.setUTCDate(now.getUTCDate() + ((8 - now.getUTCDay()) % 7));
+  const daysUntilReset = ((SILO_RESET_DAY_UTC + 7 - now.getUTCDay()) % 7) || 7;
+  reset.setUTCDate(now.getUTCDate() + daysUntilReset);
   reset.setUTCHours(0, 0, 0, 0);
   if (reset <= now) {
     reset.setUTCDate(reset.getUTCDate() + 7);
@@ -7343,10 +7758,7 @@ function updateClock() {
   elements.utcTime.textContent = formatUtc();
 
   const nowMs = Date.now();
-  const fallbackTarget = nextResetUtc().getTime();
-  const targetUtc = Number.isFinite(state.silo.resetTargetUtc) && state.silo.resetTargetUtc > nowMs
-    ? state.silo.resetTargetUtc
-    : fallbackTarget;
+  const targetUtc = getActiveSiloResetTargetMs(nowMs);
 
   const totalSeconds = Math.max(0, Math.floor((targetUtc - nowMs) / 1000));
   const d = Math.floor(totalSeconds / 86400);
@@ -7362,6 +7774,9 @@ function updateClock() {
   });
 
   elements.siloExpiry.textContent = t("reset_in", { d, h, m, s, ts });
+  if (state.siloDossier.open) {
+    renderSiloDossier();
+  }
   updateMinervaLocationCountdown(nowMs);
   updateFilesDeniedCountdown(nowMs);
 }
@@ -7369,6 +7784,9 @@ function updateClock() {
 function setSignal(key) {
   state.signalKey = key;
   elements.dataSignal.textContent = t(`signal_${key}`);
+  if (state.siloDossier.open) {
+    renderSiloDossier();
+  }
 }
 
 function sleep(ms) {
@@ -8190,7 +8608,7 @@ function nextAvailabilityForList(listNumber, now = new Date()) {
   }
 
   const targetCycleIndex = mod(listValue - 1, CYCLE_WEEKS);
-  const currentWeek = Math.floor((now.getTime() - FALLBACK_MINERVA_ANCHOR_UTC) / MS_WEEK);
+  const currentWeek = resolveFallbackWeekNumber(now);
   const currentCycleIndex = mod(currentWeek, CYCLE_WEEKS);
 
   let weekCandidate = currentWeek + mod(targetCycleIndex - currentCycleIndex, CYCLE_WEEKS);
@@ -8795,6 +9213,7 @@ function showClassifiedPage({ updateHash = true } = {}) {
   }
 
   state.easterEgg.unlocked = true;
+  hideSiloDossier({ updateHash: false });
   showClassifiedLoadOverlay(false);
   hideHackOverlay();
   hideFilesPage();
@@ -8860,6 +9279,43 @@ async function fetchTextWithTimeout(url, timeoutMs = 20000) {
     }
 
     return response.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchSiloDataFromApi(timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(SILO_API_URL, {
+      signal: controller.signal,
+      cache: "no-store",
+      headers: {
+        Accept: "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+    const codes = payload && typeof payload.codes === "object" ? payload.codes : {};
+    const resetTargetRaw = String(payload?.resetTargetUtc || "").trim();
+    const resetTargetMs = resetTargetRaw ? Date.parse(resetTargetRaw) : NaN;
+
+    return {
+      codes: {
+        Alpha: typeof codes.Alpha === "string" ? codes.Alpha : null,
+        Bravo: typeof codes.Bravo === "string" ? codes.Bravo : null,
+        Charlie: typeof codes.Charlie === "string" ? codes.Charlie : null
+      },
+      isExpired: Boolean(payload?.isExpired),
+      resetTargetUtc: Number.isFinite(resetTargetMs) ? resetTargetMs : null,
+      source: String(payload?.source || "").trim() || "https://nukacrypt.com/"
+    };
   } finally {
     clearTimeout(timer);
   }
@@ -8954,6 +9410,9 @@ function renderSiloFromState() {
 
   if (state.silo.error) {
     elements.siloCodes.innerHTML = `<div class="error">${t("silo_error")}</div>`;
+    if (state.siloDossier.open) {
+      renderSiloDossier();
+    }
     return;
   }
 
@@ -8992,22 +9451,38 @@ function renderSiloFromState() {
   }
 
   applyStaggeredReveal(cards, 55, 6);
+  if (state.siloDossier.open) {
+    renderSiloDossier();
+  }
 }
 
 async function refreshSiloPanel() {
   const previousResetTarget = state.silo.resetTargetUtc;
 
   try {
-    const { text } = await fetchFromCandidates(SOURCE_URLS.silo, 25000);
-    const parsed = parseSiloData(text);
-    const hasAtLeastOne = Object.values(parsed.codes).some(Boolean);
-    const resetTargetUtc = countdownToUtc(parsed.resetCountdown);
+    let nextSiloData;
+
+    try {
+      nextSiloData = await fetchSiloDataFromApi(12000);
+    } catch (_apiError) {
+      const { text, source } = await fetchFromCandidates(SOURCE_URLS.silo, 25000);
+      const parsed = parseSiloData(text);
+      nextSiloData = {
+        codes: parsed.codes,
+        isExpired: parsed.isExpired,
+        resetTargetUtc: countdownToUtc(parsed.resetCountdown),
+        source
+      };
+    }
+
+    const hasAtLeastOne = Object.values(nextSiloData.codes || {}).some(Boolean);
 
     state.silo = {
       error: !hasAtLeastOne,
-      codes: parsed.codes,
-      isExpired: parsed.isExpired,
-      resetTargetUtc: resetTargetUtc || previousResetTarget || null
+      codes: nextSiloData.codes,
+      isExpired: nextSiloData.isExpired,
+      resetTargetUtc: nextSiloData.resetTargetUtc || previousResetTarget || null,
+      source: nextSiloData.source
     };
 
     renderSiloFromState();
@@ -9017,7 +9492,8 @@ async function refreshSiloPanel() {
       error: true,
       codes: null,
       isExpired: false,
-      resetTargetUtc: previousResetTarget || null
+      resetTargetUtc: previousResetTarget || null,
+      source: state.silo.source || "https://nukacrypt.com/"
     };
     renderSiloFromState();
     return { ok: false };
@@ -9892,12 +10368,8 @@ function parseMinervaInfoApiDateAt18(dateValue) {
     return null;
   }
 
-  const date = new Date(normalized);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-  date.setHours(18, 0, 0, 0);
-  return date;
+  const [year, month, day] = normalized.split("-").map((part) => Number(part));
+  return buildEasternDate(year, month, day, 12, 0);
 }
 
 function normalizeMinervaInfoImagePath(fileName) {
@@ -10053,21 +10525,47 @@ function mod(value, base) {
   return ((value % base) + base) % base;
 }
 
+function buildFallbackCycleDate(weekNumber, dayOffset = 0) {
+  const shifted = new Date(FALLBACK_MINERVA_ANCHOR_DATE_UTC);
+  shifted.setUTCDate(shifted.getUTCDate() + weekNumber * 7 + dayOffset);
+  return buildEasternDate(
+    shifted.getUTCFullYear(),
+    shifted.getUTCMonth() + 1,
+    shifted.getUTCDate(),
+    12,
+    0
+  );
+}
+
+function resolveFallbackWeekNumber(now = new Date()) {
+  const anchorStart = buildFallbackCycleDate(0);
+  let weekNumber = Math.floor((now.getTime() - anchorStart.getTime()) / MS_WEEK);
+
+  while (now < buildFallbackCycleDate(weekNumber)) {
+    weekNumber -= 1;
+  }
+  while (now >= buildFallbackCycleDate(weekNumber + 1)) {
+    weekNumber += 1;
+  }
+
+  return weekNumber;
+}
+
 function cycleForWeek(weekNumber) {
   const cycleIndex = mod(weekNumber, CYCLE_WEEKS);
   const listNumber = cycleIndex + 1;
   const phase = cycleIndex % 4;
   const location = CYCLE_LOCATIONS[phase];
 
-  const weekStart = new Date(FALLBACK_MINERVA_ANCHOR_UTC + weekNumber * MS_WEEK);
-  let eventStart = new Date(weekStart);
+  const weekStart = buildFallbackCycleDate(weekNumber);
+  let eventStart = weekStart;
   let eventEnd;
 
   if (phase === 3) {
-    eventStart = new Date(weekStart.getTime() + 3 * MS_DAY);
-    eventEnd = new Date(weekStart.getTime() + 7 * MS_DAY);
+    eventStart = buildFallbackCycleDate(weekNumber, 3);
+    eventEnd = buildFallbackCycleDate(weekNumber, 7);
   } else {
-    eventEnd = new Date(weekStart.getTime() + 2 * MS_DAY);
+    eventEnd = buildFallbackCycleDate(weekNumber, 2);
   }
 
   return {
@@ -10080,7 +10578,7 @@ function cycleForWeek(weekNumber) {
 
 function buildFallbackMinerva(lists) {
   const now = new Date();
-  const currentWeek = Math.floor((now.getTime() - FALLBACK_MINERVA_ANCHOR_UTC) / MS_WEEK);
+  const currentWeek = resolveFallbackWeekNumber(now);
 
   let cycle = cycleForWeek(currentWeek);
   const isActive = now >= cycle.eventStart && now < cycle.eventEnd;
@@ -10306,6 +10804,20 @@ function applyLanguage(lang, persist = true) {
   elements.siloHint.textContent = t("silo_hint");
   elements.siloSourcePrefix.textContent = t("silo_source_prefix");
   elements.siloSourceSuffix.textContent = t("silo_source_suffix");
+  if (state.siloDossier.open) {
+    renderSiloDossier();
+  } else {
+    elements.siloDossierEyebrow.textContent = t("silo_dossier_eyebrow");
+    elements.siloDossierTitle.textContent = t("silo_dossier_title");
+    elements.siloDossierSummary.textContent = t("silo_dossier_loading");
+    elements.siloDossierSourceLink.textContent = t("silo_dossier_open_source");
+    elements.siloDossierCloseBtn.textContent = t("silo_dossier_close");
+    elements.siloDossierResetLabel.textContent = t("silo_dossier_reset_label");
+    elements.siloDossierCountdownLabel.textContent = t("silo_dossier_countdown_label");
+    elements.siloDossierStatusLabel.textContent = t("silo_dossier_status_label");
+    elements.siloDossierSignalLabel.textContent = t("silo_dossier_signal_label");
+    elements.siloDossierBackBtn.textContent = t("silo_dossier_back");
+  }
 
   elements.minervaTitle.textContent = t("minerva_title");
   elements.minervaLocationLabel.textContent = t("minerva_location_label");
@@ -10319,6 +10831,8 @@ function applyLanguage(lang, persist = true) {
   elements.minervaLocationTitle.textContent = t("minerva_location_view_title");
   elements.minervaLocationBackBtn.textContent = t("minerva_location_view_back");
   elements.minervaLocationMapLabel.textContent = t("minerva_location_map_label");
+  elements.minervaLocationMapPrevBtn?.setAttribute("aria-label", t("minerva_location_map_prev"));
+  elements.minervaLocationMapNextBtn?.setAttribute("aria-label", t("minerva_location_map_next"));
   elements.minervaLocationArrivesLabel.textContent = t("minerva_location_arrives");
   elements.minervaLocationLeavesLabel.textContent = t("minerva_location_leaves");
   elements.minervaDetailBackBtn.textContent = t("minerva_detail_back");
@@ -10778,6 +11292,12 @@ function wireEvents() {
       }
       return !filesAdminRequestsModalRoot.contains(target);
     }
+    if (elements.siloDossierOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node)) {
+        return true;
+      }
+      return target !== elements.siloDossierOverlay && !elements.siloDossierOverlay.contains(target);
+    }
     if (!document.body.classList.contains("is-hacking")) {
       return false;
     }
@@ -10823,8 +11343,25 @@ function wireEvents() {
       setLanguageMenuOpen(false);
     });
   });
+  elements.siloDossierCloseBtn?.addEventListener("click", () => {
+    hideSiloDossier({ updateHash: true });
+  });
+  elements.siloDossierBackBtn?.addEventListener("click", () => {
+    hideSiloDossier({ updateHash: true });
+  });
+  elements.siloDossierOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.siloDossierOverlay) {
+      hideSiloDossier({ updateHash: true });
+    }
+  });
   elements.minervaLocationCardBtn?.addEventListener("click", openMinervaLocationView);
   elements.minervaLocationBackBtn?.addEventListener("click", closeMinervaLocationView);
+  elements.minervaLocationMapPrevBtn?.addEventListener("click", () => {
+    cycleMinervaLocationSlide(-1);
+  });
+  elements.minervaLocationMapNextBtn?.addEventListener("click", () => {
+    cycleMinervaLocationSlide(1);
+  });
   if (elements.tabStatus) {
     elements.tabStatus.classList.add("secret-trigger");
     elements.tabStatus.addEventListener("click", () => {
@@ -11202,6 +11739,11 @@ function wireEvents() {
 
     if (elements.hackOverlay.classList.contains("is-active")) {
       hideHackOverlay();
+      return;
+    }
+
+    if (elements.siloDossierOverlay?.classList.contains("is-active")) {
+      hideSiloDossier({ updateHash: true });
       return;
     }
 
