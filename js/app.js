@@ -1,6 +1,6 @@
 ﻿const PROXY_BASE = "https://api.codetabs.com/v1/proxy/?quest=";
 const SILO_API_URL = "/api/intel/silo";
-const SILO_RESET_DAY_UTC = 3;
+const SILO_RESET_DAY_UTC = 4;
 const SOURCE_URLS = {
   silo: [
     "https://r.jina.ai/http://nukacrypt.com/",
@@ -445,7 +445,7 @@ const STRINGS = {
     label_data_link: "DATA LINK",
     refresh_button: "MANUAL SYNC",
     silo_title: "SILO CODES",
-    silo_hint: "Weekly reset target: Wednesday 00:00 UTC",
+    silo_hint: "Weekly reset target: Thursday 00:00 UTC",
     silo_source_prefix: "Source:",
     silo_source_suffix: "via Fallout Codex relay",
     silo_dossier_eyebrow: "NUCLEAR COMMAND INTEL",
@@ -862,7 +862,7 @@ const STRINGS = {
     label_data_link: "ENLACE DE DATOS",
     refresh_button: "SINCRONIZAR",
     silo_title: "CODIGOS DE SILO",
-    silo_hint: "Reinicio semanal objetivo: miercoles 00:00 UTC",
+    silo_hint: "Reinicio semanal objetivo: jueves 00:00 UTC",
     silo_source_prefix: "Fuente:",
     silo_source_suffix: "por relay de Fallout Codex",
     silo_dossier_eyebrow: "INTEL DE COMANDO NUCLEAR",

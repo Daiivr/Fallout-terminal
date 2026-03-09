@@ -1,6 +1,6 @@
 (function siloDossierPage() {
   const SILO_API_URL = "/api/intel/silo";
-  const SILO_RESET_DAY_UTC = 3;
+  const SILO_RESET_DAY_UTC = 4;
   const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
   const TICK_INTERVAL_MS = 1000;
   const STRINGS = {

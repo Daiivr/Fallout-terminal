@@ -19,8 +19,8 @@ const SOURCE_URLS = {
   ]
 };
 const NUKACRYPT_GRAPHQL_URL = "https://api.nukacrypt.com/graphql";
-const SILO_RESET_DAY_UTC = 3;
-const SILO_FINGERPRINT_VERSION = 2;
+const SILO_RESET_DAY_UTC = 4;
+const SILO_FINGERPRINT_VERSION = 3;
 
 const FALLBACK_MINERVA_ANCHOR_DATE_UTC = Date.UTC(2026, 1, 16);
 const MS_DAY = 24 * 60 * 60 * 1000;
@@ -503,6 +503,23 @@ function nextSiloResetUtc(now = new Date()) {
   return reset;
 }
 
+function nextSiloResetUtcFromSinceEpoch(sinceEpoch, now = new Date()) {
+  const baseSeconds = Number(sinceEpoch);
+  if (!Number.isFinite(baseSeconds) || baseSeconds <= 0) {
+    return null;
+  }
+
+  const cycleMs = 7 * 24 * 60 * 60 * 1000;
+  let targetMs = baseSeconds * 1000;
+  const nowMs = now.getTime();
+
+  while (targetMs <= nowMs) {
+    targetMs += cycleMs;
+  }
+
+  return new Date(targetMs);
+}
+
 function parseSiloData(text) {
   const normalized = String(text || "").replace(/\u00A0/g, " ");
 
@@ -537,11 +554,12 @@ async function fetchSiloIntel() {
         "content-type": "application/json"
       },
       body: JSON.stringify({
-        query: "query { nukeCodes { alpha bravo charlie } }"
+        query: "query { nukeCodes { alpha bravo charlie sinceEpoch } }"
       })
     }, 12000);
     const parsed = JSON.parse(String(text || "").replace(/^\uFEFF/, ""));
     const rawCodes = parsed?.data?.nukeCodes;
+    const resetTargetUtc = nextSiloResetUtcFromSinceEpoch(rawCodes?.sinceEpoch) || nextSiloResetUtc();
     const codes = {
       Alpha: typeof rawCodes?.alpha === "string" ? rawCodes.alpha.trim() : null,
       Bravo: typeof rawCodes?.bravo === "string" ? rawCodes.bravo.trim() : null,
@@ -551,7 +569,7 @@ async function fetchSiloIntel() {
       return {
         codes,
         isExpired: false,
-        resetTargetUtc: nextSiloResetUtc(),
+        resetTargetUtc,
         source: "https://nukacrypt.com/"
       };
     }
