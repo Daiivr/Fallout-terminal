@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const {
   ActionRowBuilder,
+  ActivityType,
   ChannelType,
   Client,
   EmbedBuilder,
@@ -26,6 +27,7 @@ const INTEL_STATE_FILE = "discord-intel-state.json";
 const INTEL_SUBSCRIPTIONS_FILE = "discord-intel-subscriptions.json";
 const INTEL_SETTINGS_FILE = "discord-intel-settings.json";
 const DEFAULT_POLL_INTERVAL_MS = 5 * 60 * 1000;
+const DEFAULT_STATUS_ROTATION_MS = 60 * 1000;
 const DEFAULT_GOLD_BULLION_EMOJI = "<:Gold:1480101994520645703>";
 const WIKI_BASE = "https://fallout.fandom.com";
 const MINERVA_LISTS_FILE = "data/minerva-lists.json";
@@ -34,6 +36,28 @@ const MINERVA_DETAIL_FALLBACK_IMAGE = "assets/images/minerva-plan-fallback.png";
 const MINERVA_ITEM_SELECT_PREFIX = "minerva-item-select";
 const WELCOME_LANGUAGE_SELECT_ID = "welcome-language-select";
 const LANGUAGE_OPTIONS = new Set(["en", "es"]);
+const STATUS_ROTATION_ACTIVITIES = Object.freeze([
+  Object.freeze({
+    type: ActivityType.Playing,
+    name: "Fallout 76",
+    label: "Playing Fallout 76"
+  }),
+  Object.freeze({
+    type: ActivityType.Watching,
+    name: "Silo Codes",
+    label: "Watching Silo Codes"
+  }),
+  Object.freeze({
+    type: ActivityType.Watching,
+    name: "Minerva Sales",
+    label: "Watching Minerva Sales"
+  }),
+  Object.freeze({
+    type: ActivityType.Listening,
+    name: "Appalachia Radio",
+    label: "Listening to Appalachia Radio"
+  })
+]);
 let cachedMinervaListsSiteRoot = "";
 let cachedMinervaLists = null;
 let cachedMinervaDetailFallbackSiteRoot = "";
@@ -256,6 +280,39 @@ function parseBoolean(value, fallback = false) {
 function parsePositiveInteger(value, fallback) {
   const parsed = Number.parseInt(String(value || "").trim(), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parseDurationMs(value, fallback) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) {
+    return fallback;
+  }
+
+  const match = normalized.match(/^(\d+)\s*(ms|milliseconds?|s|sec(?:ond)?s?|m|min(?:ute)?s?|h|hr|hours?)?$/i);
+  if (!match) {
+    return fallback;
+  }
+
+  const amount = Number.parseInt(match[1], 10);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return fallback;
+  }
+
+  const unit = String(match[2] || "ms").toLowerCase();
+  if (unit === "ms" || unit.startsWith("millisecond")) {
+    return amount;
+  }
+  if (unit === "s" || unit.startsWith("sec")) {
+    return amount * 1000;
+  }
+  if (unit === "m" || unit.startsWith("min")) {
+    return amount * 60 * 1000;
+  }
+  if (unit === "h" || unit === "hr" || unit.startsWith("hour")) {
+    return amount * 60 * 60 * 1000;
+  }
+
+  return fallback;
 }
 
 function normalizeLanguage(value, fallback = "en") {
@@ -858,6 +915,10 @@ function createDiscordIntelBot(options = {}) {
   const inviteLink = String(process.env.BOT_INVITE_LINK || "").trim();
   const developmentGuildId = String(process.env.DISCORD_BOT_GUILD_ID || "").trim();
   const pollIntervalMs = parsePositiveInteger(process.env.DISCORD_INTEL_POLL_INTERVAL_MS, DEFAULT_POLL_INTERVAL_MS);
+  const statusRotationIntervalMs = parseDurationMs(
+    process.env.DISCORD_BOT_STATUS_ROTATION_INTERVAL,
+    DEFAULT_STATUS_ROTATION_MS
+  );
   const postOnStartup = parseBoolean(process.env.DISCORD_INTEL_POST_ON_STARTUP, false);
   const defaultLanguage = normalizeLanguage(process.env.DISCORD_BOT_DEFAULT_LANG || "en", "en");
   const goldBullionEmoji = String(process.env.DISCORD_BOT_GOLD_BULLION_EMOJI || DEFAULT_GOLD_BULLION_EMOJI).trim() || DEFAULT_GOLD_BULLION_EMOJI;
@@ -1000,14 +1061,67 @@ function createDiscordIntelBot(options = {}) {
     ? new Client({ intents: [GatewayIntentBits.Guilds] })
     : null;
   let pollTimer = null;
+  let statusRotationTimer = null;
   let activePollPromise = null;
   let started = false;
   let startedAtMs = 0;
   let readyAtMs = 0;
+  let statusRotationIndex = 0;
+  let activeStatusLabel = "";
   const minervaDetailReplyByUser = new Map();
 
   function isEnabled() {
     return Boolean(client && token && applicationId);
+  }
+
+  function currentStatusRotationLabel() {
+    return activeStatusLabel;
+  }
+
+  function applyRotatingPresence() {
+    if (!client?.user || !STATUS_ROTATION_ACTIVITIES.length) {
+      return;
+    }
+
+    const entry = STATUS_ROTATION_ACTIVITIES[statusRotationIndex % STATUS_ROTATION_ACTIVITIES.length];
+    if (!entry?.name) {
+      return;
+    }
+
+    activeStatusLabel = String(entry.label || "").trim();
+    client.user.setPresence({
+      status: "online",
+      activities: [{
+        type: entry.type,
+        name: entry.name
+      }]
+    });
+
+    statusRotationIndex = (statusRotationIndex + 1) % STATUS_ROTATION_ACTIVITIES.length;
+  }
+
+  function clearStatusRotation() {
+    if (!statusRotationTimer) {
+      return;
+    }
+    clearInterval(statusRotationTimer);
+    statusRotationTimer = null;
+  }
+
+  function scheduleStatusRotation() {
+    clearStatusRotation();
+    statusRotationIndex = 0;
+    activeStatusLabel = "";
+    applyRotatingPresence();
+
+    if (STATUS_ROTATION_ACTIVITIES.length <= 1) {
+      return;
+    }
+
+    statusRotationTimer = setInterval(() => {
+      applyRotatingPresence();
+    }, statusRotationIntervalMs);
+    statusRotationTimer.unref?.();
   }
 
   function readSubscriptions() {
@@ -1158,6 +1272,9 @@ function createDiscordIntelBot(options = {}) {
           avatarUrl: "",
           defaultLanguage,
           pollIntervalMs,
+          statusRotationIntervalMs,
+          statusRotationActivities: STATUS_ROTATION_ACTIVITIES.map((entry) => entry.label),
+          currentStatus: "",
           postOnStartup,
           startedAt: "",
           readyAt: "",
@@ -1214,6 +1331,9 @@ function createDiscordIntelBot(options = {}) {
           : "",
         defaultLanguage,
         pollIntervalMs,
+        statusRotationIntervalMs,
+        statusRotationActivities: STATUS_ROTATION_ACTIVITIES.map((entry) => entry.label),
+        currentStatus: currentStatusRotationLabel(),
         postOnStartup,
         startedAt: startedAtMs ? new Date(startedAtMs).toISOString() : "",
         readyAt: readyAtMs ? new Date(readyAtMs).toISOString() : "",
@@ -2420,6 +2540,7 @@ function createDiscordIntelBot(options = {}) {
     });
     client.on("ready", () => {
       readyAtMs = Date.now();
+      scheduleStatusRotation();
       log.info(`[discord-bot] Logged in as ${client.user?.tag || client.user?.id}.`);
     });
 
@@ -2445,6 +2566,7 @@ function createDiscordIntelBot(options = {}) {
       clearInterval(pollTimer);
       pollTimer = null;
     }
+    clearStatusRotation();
     if (activePollPromise) {
       try {
         await activePollPromise;
@@ -2458,6 +2580,8 @@ function createDiscordIntelBot(options = {}) {
     started = false;
     startedAtMs = 0;
     readyAtMs = 0;
+    statusRotationIndex = 0;
+    activeStatusLabel = "";
   }
 
   return {

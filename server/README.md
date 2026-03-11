@@ -33,6 +33,7 @@ The server can also run a Discord bot that watches the same silo code and Minerv
 - Detects changes using stored fingerprints so it does not spam unchanged data
 - Posts a rich embed when silo codes change
 - Posts a rich embed when Minerva changes location, list, timing, or inventory
+- Rotates the bot presence between Playing Fallout 76, Watching Silo Codes, Watching Minerva Sales, and Listening to Appalachia Radio
 - Lets you manage subscriptions inside Discord with slash commands
 
 ### Required env vars
@@ -50,6 +51,8 @@ If your bot and site OAuth use the same Discord application, `DISCORD_BOT_CLIENT
   - Comma-separated channel IDs that should always receive both intel feeds
 - `DISCORD_INTEL_POLL_INTERVAL_MS`
   - Defaults to `300000` (5 minutes)
+- `DISCORD_BOT_STATUS_ROTATION_INTERVAL`
+  - Defaults to `60s`; accepts values like `30s`, `5m`, `1h`, or raw milliseconds
 - `DISCORD_INTEL_POST_ON_STARTUP`
   - Defaults to `false`
 - `DISCORD_BOT_DEFAULT_LANG`
