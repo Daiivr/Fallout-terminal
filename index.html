@@ -37,7 +37,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="preload" as="image" href="assets/images/minerva-plan-fallback.png" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="css/styles.css?v=20260309-silo-dossier-cleanup" />
+  <link rel="stylesheet" href="css/styles.css?v=20260310-bot-hidden-attr-fix" />
 </head>
 <body class="is-booting">
   <div id="bootOverlay" class="boot-overlay">
@@ -152,6 +152,25 @@
         <div class="files-delete-actions">
           <button id="filesDeleteCancelBtn" class="files-btn" type="button">CANCEL</button>
           <button id="filesDeleteConfirmBtn" class="files-btn is-delete" type="button">DELETE FILE</button>
+        </div>
+      </div>
+    </div>
+    <div id="filesBotAdminLeaveOverlay" class="files-delete-overlay files-bot-admin-leave-overlay" aria-hidden="true">
+      <div
+        class="files-delete-core files-bot-admin-leave-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesBotAdminLeaveTitle"
+        aria-describedby="filesBotAdminLeaveMessage"
+      >
+        <p id="filesBotAdminLeaveBadge" class="files-bot-admin-leave-badge">BOT SAFEGUARD</p>
+        <p id="filesBotAdminLeaveTitle" class="files-delete-title">REMOVE BOT</p>
+        <p id="filesBotAdminLeaveMessage" class="files-delete-message">
+          Remove the bot from this Discord server immediately?
+        </p>
+        <div class="files-delete-actions files-bot-admin-leave-actions">
+          <button id="filesBotAdminLeaveCancelBtn" class="files-btn" type="button">CANCEL</button>
+          <button id="filesBotAdminLeaveConfirmBtn" class="files-btn is-delete" type="button">REMOVE NOW</button>
         </div>
       </div>
     </div>
@@ -345,6 +364,84 @@
           </div>
           <p id="filesAdminRequestsFeedback" class="files-upload-feedback files-admin-requests-feedback" aria-live="polite" hidden></p>
           <div id="filesAdminRequestsList" class="files-admin-requests-list"></div>
+        </article>
+      </div>
+    </div>
+    <div id="filesBotAdminOverlay" class="files-admin-modal-overlay" aria-hidden="true">
+      <div
+        class="files-admin-modal-core files-bot-admin-modal-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesBotAdminTitle"
+        aria-describedby="filesBotAdminHint"
+      >
+        <div class="files-admin-modal-head">
+          <button id="filesBotAdminModalCloseBtn" class="files-btn files-admin-modal-close" type="button">CLOSE</button>
+        </div>
+        <article id="filesBotAdminPanel" class="panel files-bot-admin-panel" hidden>
+          <section class="files-bot-admin-hero">
+            <div class="files-bot-admin-head">
+              <div class="files-bot-admin-head-copy">
+                <p id="filesBotAdminBadge" class="files-bot-admin-badge">DISCORD BOT OPS</p>
+                <h2 id="filesBotAdminTitle">BOT COMMAND CENTER</h2>
+                <p id="filesBotAdminHint" class="files-bot-admin-hint">
+                  Review live relay telemetry, inspect every Discord server the bot is in, and remove it from any server you do not want to support anymore.
+                </p>
+              </div>
+              <div class="files-bot-admin-utilities">
+                <button id="filesBotAdminRefreshBtn" class="files-btn files-bot-admin-utility-btn" type="button">REFRESH DATA</button>
+                <button id="filesBotAdminSyncBtn" class="files-btn files-bot-admin-utility-btn" type="button">SYNC COMMANDS</button>
+                <a
+                  id="filesBotAdminInviteLink"
+                  class="files-btn files-bot-admin-utility-btn"
+                  href="#"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >OPEN INVITE</a>
+              </div>
+            </div>
+          </section>
+          <section class="files-bot-admin-notices" aria-live="polite">
+            <p id="filesBotAdminMeta" class="files-bot-admin-meta">Awaiting live bot snapshot...</p>
+            <p id="filesBotAdminFeedback" class="files-upload-feedback files-bot-admin-feedback" hidden></p>
+          </section>
+          <section id="filesBotAdminOverview" class="files-bot-admin-overview" aria-label="Bot overview">
+            <div class="files-bot-admin-summary">
+              <article class="files-bot-admin-summary-card">
+                <span id="filesBotAdminStatusLabel" class="files-bot-admin-summary-label">Status</span>
+                <strong id="filesBotAdminStatusValue" class="files-bot-admin-summary-value">--</strong>
+              </article>
+              <article class="files-bot-admin-summary-card">
+                <span id="filesBotAdminServersLabel" class="files-bot-admin-summary-label">Servers</span>
+                <strong id="filesBotAdminServersValue" class="files-bot-admin-summary-value">--</strong>
+              </article>
+              <article class="files-bot-admin-summary-card">
+                <span id="filesBotAdminUsersLabel" class="files-bot-admin-summary-label">Users</span>
+                <strong id="filesBotAdminUsersValue" class="files-bot-admin-summary-value">--</strong>
+              </article>
+              <article class="files-bot-admin-summary-card">
+                <span id="filesBotAdminChannelsLabel" class="files-bot-admin-summary-label">Relay channels</span>
+                <strong id="filesBotAdminChannelsValue" class="files-bot-admin-summary-value">--</strong>
+              </article>
+            </div>
+          </section>
+          <section class="files-bot-admin-workspace" aria-label="Server workspace">
+            <div id="filesBotAdminToolbar" class="files-bot-admin-toolbar">
+              <div class="files-bot-admin-search-wrap">
+                <label id="filesBotAdminSearchLabel" for="filesBotAdminSearchInput">Server search</label>
+                <input
+                  id="filesBotAdminSearchInput"
+                  class="files-admin-requests-search-input files-bot-admin-search-input"
+                  type="search"
+                  inputmode="search"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="Search by server name, id, locale, or owner..."
+                />
+              </div>
+            </div>
+            <div id="filesBotAdminServerList" class="files-bot-admin-stage"></div>
+          </section>
         </article>
       </div>
     </div>
@@ -1027,13 +1124,41 @@
       </div>
     </section>
 
-    <footer id="footerText" class="footer-note">
+  <footer id="footerText" class="footer-note">
       Community data only. Not affiliated with Bethesda.
     </footer>
   </main>
 
+  <button
+    id="filesBotAdminFloatingBtn"
+    class="files-bot-admin-pill"
+    type="button"
+    aria-haspopup="dialog"
+    aria-expanded="false"
+    aria-controls="filesBotAdminOverlay"
+    hidden
+  >
+    <span class="files-bot-admin-pill-icon" aria-hidden="true">
+      <svg class="files-bot-admin-pill-icon-svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+        <path d="M12 3v3" />
+        <path d="M7.5 8h9a2.5 2.5 0 0 1 2.5 2.5v5A2.5 2.5 0 0 1 16.5 18h-9A2.5 2.5 0 0 1 5 15.5v-5A2.5 2.5 0 0 1 7.5 8Z" />
+        <path d="M8 18v2.5" />
+        <path d="M16 18v2.5" />
+        <path d="M5 11H3.5" />
+        <path d="M20.5 11H19" />
+        <circle cx="9.25" cy="12.25" r="1" />
+        <circle cx="14.75" cy="12.25" r="1" />
+        <path d="M9 15h6" />
+      </svg>
+    </span>
+    <span class="files-bot-admin-pill-copy" aria-hidden="true">
+      <span id="filesBotAdminFloatingBtnLabel" class="files-bot-admin-pill-label">BOT OPS</span>
+      <span id="filesBotAdminFloatingBtnHint" class="files-bot-admin-pill-hint">MANAGE RELAY</span>
+    </span>
+  </button>
+
   <script src="data/minerva-lists.js"></script>
   <script src="data/minerva-detail-fallback.js"></script>
-  <script src="js/app.js?v=20260309-silo-reset-thursday"></script>
+  <script src="js/app.js?v=20260310-bot-hidden-attr-fix"></script>
 </body>
 </html>

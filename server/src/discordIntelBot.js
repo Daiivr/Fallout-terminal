@@ -840,14 +840,22 @@ function createJsonStore(filePath, normalizeItem, emptyValue) {
   };
 }
 
+function createStatusError(message, status = 500) {
+  const error = new Error(String(message || "Bot admin request failed."));
+  error.status = Number.isFinite(Number(status)) ? Number(status) : 500;
+  return error;
+}
+
 function createDiscordIntelBot(options = {}) {
   const siteRoot = path.resolve(String(options.siteRoot || path.join(__dirname, "..", "..")));
   const storageDir = path.resolve(String(options.storageDir || path.join(__dirname, "..", "storage")));
   const log = options.log && typeof options.log === "object" ? options.log : console;
+  const observerOnly = options.observerOnly === true;
   const configuredPublicBaseUrl = sanitizePublicBaseUrl(options.publicBaseUrl || process.env.PUBLIC_BASE_URL || "");
   const publicBaseUrl = configuredPublicBaseUrl || discoverPublicBaseUrl(siteRoot);
   const token = String(process.env.DISCORD_BOT_TOKEN || "").trim();
   const applicationId = String(process.env.DISCORD_BOT_CLIENT_ID || process.env.DISCORD_CLIENT_ID || "").trim();
+  const inviteLink = String(process.env.BOT_INVITE_LINK || "").trim();
   const developmentGuildId = String(process.env.DISCORD_BOT_GUILD_ID || "").trim();
   const pollIntervalMs = parsePositiveInteger(process.env.DISCORD_INTEL_POLL_INTERVAL_MS, DEFAULT_POLL_INTERVAL_MS);
   const postOnStartup = parseBoolean(process.env.DISCORD_INTEL_POST_ON_STARTUP, false);
@@ -994,6 +1002,8 @@ function createDiscordIntelBot(options = {}) {
   let pollTimer = null;
   let activePollPromise = null;
   let started = false;
+  let startedAtMs = 0;
+  let readyAtMs = 0;
   const minervaDetailReplyByUser = new Map();
 
   function isEnabled() {
@@ -1050,6 +1060,254 @@ function createDiscordIntelBot(options = {}) {
 
   function writeSettings(entries) {
     settingsStore.write(entries);
+  }
+
+  function isReady() {
+    return Boolean(client && typeof client.isReady === "function" && client.isReady());
+  }
+
+  function pruneGuildData(guildId) {
+    const normalizedGuildId = String(guildId || "").trim();
+    if (!normalizedGuildId) {
+      return;
+    }
+
+    const nextSubscriptions = readSubscriptions().filter((entry) => entry.guildId !== normalizedGuildId);
+    const nextSettings = readSettings().filter((entry) => entry.guildId !== normalizedGuildId);
+    writeSubscriptions(nextSubscriptions);
+    writeSettings(nextSettings);
+  }
+
+  function getGuildSubscriptions(guildId) {
+    const normalizedGuildId = String(guildId || "").trim();
+    if (!normalizedGuildId) {
+      return [];
+    }
+    return readSubscriptions().filter((entry) => entry.guildId === normalizedGuildId);
+  }
+
+  async function buildGuildAdminSnapshot(guild) {
+    const subscriptions = getGuildSubscriptions(guild?.id);
+    const memberCount = Number.isFinite(Number(guild?.memberCount)) ? Number(guild.memberCount) : null;
+    const ownerId = String(guild?.ownerId || "").trim();
+    const ownerMember = ownerId && guild?.members?.cache?.get
+      ? guild.members.cache.get(ownerId) || null
+      : null;
+    let ownerUser = ownerMember?.user
+      || (ownerId && guild?.client?.users?.cache?.get ? guild.client.users.cache.get(ownerId) || null : null);
+    let ownerName = String(
+      ownerMember?.displayName
+      || ownerUser?.globalName
+      || ownerUser?.username
+      || ""
+    ).trim();
+
+    if (!ownerName && ownerId && typeof guild?.fetchOwner === "function") {
+      try {
+        const fetchedOwner = await guild.fetchOwner();
+        ownerUser = fetchedOwner?.user || ownerUser;
+        ownerName = String(
+          fetchedOwner?.displayName
+          || ownerUser?.globalName
+          || ownerUser?.username
+          || ""
+        ).trim();
+      } catch {
+        ownerName = String(
+          ownerMember?.displayName
+          || ownerUser?.globalName
+          || ownerUser?.username
+          || ""
+        ).trim();
+      }
+    }
+
+    return {
+      id: String(guild?.id || "").trim(),
+      name: String(guild?.name || "").trim() || "Unknown server",
+      iconUrl: typeof guild?.iconURL === "function"
+        ? (guild.iconURL({ extension: "png", size: 128 }) || "")
+        : "",
+      ownerId,
+      ownerName,
+      preferredLocale: String(guild?.preferredLocale || "").trim(),
+      joinedAt: guild?.joinedAt instanceof Date ? guild.joinedAt.toISOString() : "",
+      memberCount,
+      language: getGuildLanguage(guild?.id, defaultLanguage),
+      subscriptionCount: subscriptions.length,
+      subscriptions: subscriptions.map((entry) => ({
+        channelId: String(entry.channelId || "").trim(),
+        channelName: String(entry.channelName || "").trim(),
+        feeds: Array.isArray(entry.feeds) ? entry.feeds.filter((feed) => feed === "silos" || feed === "minerva") : []
+      }))
+    };
+  }
+
+  async function getAdminSnapshot() {
+    if (!isEnabled()) {
+      return {
+        enabled: false,
+        ready: false,
+        generatedAt: new Date().toISOString(),
+        inviteLink,
+        bot: {
+          applicationId,
+          userId: "",
+          username: "",
+          tag: "",
+          avatarUrl: "",
+          defaultLanguage,
+          pollIntervalMs,
+          postOnStartup,
+          startedAt: "",
+          readyAt: "",
+          uptimeMs: 0,
+          publicBaseUrl
+        },
+        stats: {
+          guildCount: 0,
+          userCount: 0,
+          subscriptionCount: 0,
+          orphanSubscriptionCount: 0,
+          latencyMs: null
+        },
+        state: readState(),
+        guilds: []
+      };
+    }
+
+    const subscriptions = readSubscriptions();
+    const state = readState();
+    const guilds = isReady()
+      ? (await Promise.all(
+          Array.from(client.guilds.cache.values()).map((guild) => buildGuildAdminSnapshot(guild))
+        ))
+          .sort((left, right) => {
+            const leftMembers = Number.isFinite(Number(left.memberCount)) ? Number(left.memberCount) : -1;
+            const rightMembers = Number.isFinite(Number(right.memberCount)) ? Number(right.memberCount) : -1;
+            if (rightMembers !== leftMembers) {
+              return rightMembers - leftMembers;
+            }
+            return String(left.name || "").localeCompare(String(right.name || ""), "en", { sensitivity: "base" });
+          })
+      : [];
+
+    const userCount = guilds.reduce((total, guild) => {
+      return total + (Number.isFinite(Number(guild.memberCount)) ? Number(guild.memberCount) : 0);
+    }, 0);
+    const latencyMs = client?.ws && Number.isFinite(Number(client.ws.ping))
+      ? Math.round(Number(client.ws.ping))
+      : null;
+
+    return {
+      enabled: true,
+      ready: isReady(),
+      generatedAt: new Date().toISOString(),
+      inviteLink,
+      bot: {
+        applicationId,
+        userId: String(client?.user?.id || "").trim(),
+        username: String(client?.user?.username || "").trim(),
+        tag: String(client?.user?.tag || "").trim(),
+        avatarUrl: typeof client?.user?.displayAvatarURL === "function"
+          ? (client.user.displayAvatarURL({ extension: "png", size: 128 }) || "")
+          : "",
+        defaultLanguage,
+        pollIntervalMs,
+        postOnStartup,
+        startedAt: startedAtMs ? new Date(startedAtMs).toISOString() : "",
+        readyAt: readyAtMs ? new Date(readyAtMs).toISOString() : "",
+        uptimeMs: readyAtMs > 0 ? Math.max(0, Date.now() - readyAtMs) : 0,
+        publicBaseUrl
+      },
+      stats: {
+        guildCount: guilds.length,
+        userCount,
+        subscriptionCount: guilds.reduce((total, guild) => total + Number(guild.subscriptionCount || 0), 0),
+        orphanSubscriptionCount: subscriptions.filter((entry) => !String(entry.guildId || "").trim()).length,
+        latencyMs
+      },
+      state,
+      guilds
+    };
+  }
+
+  function assertAdminBotReady() {
+    if (!isEnabled()) {
+      throw createStatusError("Discord bot is disabled.", 503);
+    }
+    if (!started || !isReady()) {
+      throw createStatusError("Discord bot is starting up. Try again in a moment.", 503);
+    }
+  }
+
+  async function syncCommands() {
+    if (!isEnabled()) {
+      throw createStatusError("Discord bot is disabled.", 503);
+    }
+    await registerCommands();
+    return {
+      ok: true,
+      scope: developmentGuildId ? "guild" : "global",
+      guildId: developmentGuildId
+    };
+  }
+
+  async function sendWelcomeToGuild(guildId) {
+    assertAdminBotReady();
+    const normalizedGuildId = String(guildId || "").trim();
+    if (!/^\d{6,32}$/.test(normalizedGuildId)) {
+      throw createStatusError("Invalid guild id.", 400);
+    }
+
+    const guild = client.guilds.cache.get(normalizedGuildId) || null;
+    if (!guild) {
+      throw createStatusError("Guild not found.", 404);
+    }
+
+    const defaultGuildLanguage = languageFromLocale(guild?.preferredLocale || "", defaultLanguage);
+    const lang = ensureGuildLanguage(normalizedGuildId, defaultGuildLanguage);
+    const channel = await resolveGuildWelcomeChannel(guild);
+    if (!channel) {
+      throw createStatusError("No suitable welcome channel was found for this guild.", 409);
+    }
+
+    try {
+      await channel.send(buildWelcomePayload(guild, lang));
+    } catch (error) {
+      log.error(`[discord-bot] Failed to post manual welcome embed in guild ${normalizedGuildId}.`);
+      log.error(error);
+      throw createStatusError("Unable to send a welcome message in this guild right now.", 502);
+    }
+
+    return {
+      ok: true,
+      guildId: normalizedGuildId,
+      guildName: String(guild.name || "").trim()
+    };
+  }
+
+  async function leaveGuild(guildId) {
+    assertAdminBotReady();
+    const normalizedGuildId = String(guildId || "").trim();
+    if (!/^\d{6,32}$/.test(normalizedGuildId)) {
+      throw createStatusError("Invalid guild id.", 400);
+    }
+
+    const guild = client.guilds.cache.get(normalizedGuildId) || null;
+    if (!guild) {
+      throw createStatusError("Guild not found.", 404);
+    }
+
+    const guildName = String(guild.name || "").trim();
+    await guild.leave();
+    pruneGuildData(normalizedGuildId);
+
+    return {
+      ok: true,
+      guildId: normalizedGuildId,
+      guildName
+    };
   }
 
   function getGuildLanguage(guildId, fallback = defaultLanguage) {
@@ -2148,21 +2406,30 @@ function createDiscordIntelBot(options = {}) {
     }
 
     started = true;
-    client.on("interactionCreate", (interaction) => {
-      void handleInteraction(interaction);
-    });
-    client.on("guildCreate", (guild) => {
-      void postWelcomeMessage(guild);
+    startedAtMs = Date.now();
+    if (!observerOnly) {
+      client.on("interactionCreate", (interaction) => {
+        void handleInteraction(interaction);
+      });
+      client.on("guildCreate", (guild) => {
+        void postWelcomeMessage(guild);
+      });
+    }
+    client.on("guildDelete", (guild) => {
+      pruneGuildData(guild?.id);
     });
     client.on("ready", () => {
+      readyAtMs = Date.now();
       log.info(`[discord-bot] Logged in as ${client.user?.tag || client.user?.id}.`);
     });
 
     try {
-      await registerCommands();
       await client.login(token);
-      queuePoll({ hydrateOnly: true });
-      schedulePolling();
+      if (!observerOnly) {
+        await registerCommands();
+        queuePoll({ hydrateOnly: true });
+        schedulePolling();
+      }
 
       return {
         enabled: true
@@ -2189,12 +2456,19 @@ function createDiscordIntelBot(options = {}) {
       client.destroy();
     }
     started = false;
+    startedAtMs = 0;
+    readyAtMs = 0;
   }
 
   return {
     start,
     stop,
-    isEnabled
+    isEnabled,
+    isReady,
+    getAdminSnapshot,
+    syncCommands,
+    sendWelcomeToGuild,
+    leaveGuild
   };
 }
 

@@ -50,6 +50,10 @@ const ACCESS_REQUEST_REAPPLY_COOLDOWN_MS_RAW = String(process.env.ACCESS_REQUEST
 const ACCESS_REQUEST_TOKEN_SECRET = String(process.env.ACCESS_REQUEST_TOKEN_SECRET || "").trim() || SESSION_SECRET;
 const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || "").trim();
 const BOT_INVITE_LINK = String(process.env.BOT_INVITE_LINK || "").trim();
+const BOT_ADMIN_API_URL_RAW = String(process.env.BOT_ADMIN_API_URL || "").trim();
+const BOT_ADMIN_API_HOST = String(process.env.BOT_ADMIN_API_HOST || "127.0.0.1").trim() || "127.0.0.1";
+const BOT_ADMIN_API_PORT_RAW = String(process.env.BOT_ADMIN_API_PORT || "").trim();
+const BOT_ADMIN_API_TOKEN = String(process.env.BOT_ADMIN_API_TOKEN || "").trim();
 const ACCESS_REQUEST_MAX_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 
 function parsePositiveInteger(value, fallback) {
@@ -74,10 +78,21 @@ function parseBoolean(value, fallback = false) {
   return fallback;
 }
 
+function sanitizeHttpBaseUrl(raw) {
+  const normalized = String(raw || "").trim().replace(/\/+$/, "");
+  if (!normalized) {
+    return "";
+  }
+  return /^https?:\/\//i.test(normalized) ? normalized : "";
+}
+
 const SESSION_TTL_SECONDS = parsePositiveInteger(process.env.SESSION_TTL_SECONDS, DEFAULT_SESSION_TTL_SECONDS);
 const SMTP_PORT = parsePositiveInteger(SMTP_PORT_RAW, 587);
 const SMTP_SECURE = parseBoolean(SMTP_SECURE_RAW, SMTP_PORT === 465);
 const SMTP_TLS_REJECT_UNAUTHORIZED = parseBoolean(SMTP_TLS_REJECT_UNAUTHORIZED_RAW, true);
+const BOT_ADMIN_API_PORT = parsePositiveInteger(BOT_ADMIN_API_PORT_RAW, 3101);
+const BOT_ADMIN_API_URL = sanitizeHttpBaseUrl(BOT_ADMIN_API_URL_RAW)
+  || (BOT_ADMIN_API_TOKEN ? `http://${BOT_ADMIN_API_HOST}:${BOT_ADMIN_API_PORT}` : "");
 const ACCESS_REQUEST_COOLDOWN_MS = parsePositiveInteger(ACCESS_REQUEST_COOLDOWN_MS_RAW, 15 * 60 * 1000);
 const ACCESS_REQUEST_DECISION_TTL_MS = Math.min(
   parsePositiveInteger(ACCESS_REQUEST_DECISION_TTL_MS_RAW, ACCESS_REQUEST_MAX_WINDOW_MS),
@@ -1240,6 +1255,92 @@ function requireAdmin(req, res, next) {
   }
   req.currentUser = user;
   next();
+}
+
+function botAdminApiConfigured() {
+  return Boolean(BOT_ADMIN_API_URL && BOT_ADMIN_API_TOKEN);
+}
+
+async function requestBotAdminApi(pathname, options = {}) {
+  if (!botAdminApiConfigured()) {
+    const error = new Error("Bot admin service is not configured on the server.");
+    error.status = 503;
+    throw error;
+  }
+
+  const targetUrl = new URL(pathname, `${BOT_ADMIN_API_URL}/`);
+  const method = String(options.method || "GET").trim().toUpperCase() || "GET";
+  const headers = {
+    Authorization: `Bearer ${BOT_ADMIN_API_TOKEN}`,
+    Accept: "application/json",
+    ...(options.headers && typeof options.headers === "object" ? options.headers : {})
+  };
+  const requestOptions = {
+    method,
+    headers,
+    cache: "no-store"
+  };
+
+  if (Object.prototype.hasOwnProperty.call(options, "body")) {
+    requestOptions.body = options.body;
+  }
+
+  let response;
+  try {
+    response = await fetch(targetUrl, requestOptions);
+  } catch (error) {
+    const nextError = new Error("Bot admin service is unreachable.");
+    nextError.status = 502;
+    nextError.cause = error;
+    throw nextError;
+  }
+
+  const text = await response.text();
+  let payload = null;
+  if (text) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (!response.ok) {
+    const error = new Error(payload?.error || payload?.message || `HTTP ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+
+  return payload || {};
+}
+
+function sendBotAdminProxyError(res, error) {
+  const status = Number.isFinite(Number(error?.status)) ? Number(error.status) : 500;
+  res.status(status >= 400 && status < 600 ? status : 500).json({
+    error: String(error?.message || "Bot admin request failed.")
+  });
+}
+
+async function getBotAdminOverview() {
+  return requestBotAdminApi("/admin/bot/overview");
+}
+
+async function syncBotAdminCommands() {
+  return requestBotAdminApi("/admin/bot/commands/sync", {
+    method: "POST"
+  });
+}
+
+async function sendBotAdminWelcome(guildId) {
+  return requestBotAdminApi(`/admin/bot/guilds/${encodeURIComponent(guildId)}/welcome`, {
+    method: "POST"
+  });
+}
+
+async function leaveBotAdminGuild(guildId) {
+  return requestBotAdminApi(`/admin/bot/guilds/${encodeURIComponent(guildId)}/leave`, {
+    method: "POST"
+  });
 }
 
 function oauthConfigured() {
@@ -2857,6 +2958,45 @@ app.post("/api/files/access-requests/:discordId/allow-reapply", requireAdmin, (r
   });
 });
 
+app.get("/api/admin/bot/overview", requireAdmin, async (_req, res) => {
+  try {
+    const payload = await getBotAdminOverview();
+    res.json({
+      ...payload,
+      inviteLink: BOT_INVITE_LINK || payload?.inviteLink || ""
+    });
+  } catch (error) {
+    sendBotAdminProxyError(res, error);
+  }
+});
+
+app.post("/api/admin/bot/commands/sync", requireAdmin, async (_req, res) => {
+  try {
+    const payload = await syncBotAdminCommands();
+    res.json(payload);
+  } catch (error) {
+    sendBotAdminProxyError(res, error);
+  }
+});
+
+app.post("/api/admin/bot/guilds/:guildId/welcome", requireAdmin, async (req, res) => {
+  try {
+    const payload = await sendBotAdminWelcome(req.params.guildId);
+    res.json(payload);
+  } catch (error) {
+    sendBotAdminProxyError(res, error);
+  }
+});
+
+app.post("/api/admin/bot/guilds/:guildId/leave", requireAdmin, async (req, res) => {
+  try {
+    const payload = await leaveBotAdminGuild(req.params.guildId);
+    res.json(payload);
+  } catch (error) {
+    sendBotAdminProxyError(res, error);
+  }
+});
+
 app.post("/auth/discord", (req, res) => {
   if (!oauthConfigured()) {
     res.status(500).json({ error: "Discord OAuth is not configured on the server." });
@@ -3381,6 +3521,11 @@ async function startServer() {
     }
     if (!mailConfigured()) {
       console.warn("[mail] Access request email is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, SMTP_FROM.");
+    }
+    if (botAdminApiConfigured()) {
+      console.log(`[bot-admin] Using external bot admin bridge at ${BOT_ADMIN_API_URL}.`);
+    } else {
+      console.warn("[bot-admin] Bot control has no bot worker bridge. Set BOT_ADMIN_API_URL and BOT_ADMIN_API_TOKEN.");
     }
   });
 

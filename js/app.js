@@ -355,6 +355,57 @@ const STRINGS = {
     files_admin_requests_action_decline_reason_too_long: "Decline reason is too long. Keep it under 1200 characters.",
     files_admin_requests_error_generic: "Unable to process this action right now.",
     files_admin_requests_error_allowlist: "This user is in ALLOWED_DISCORD_IDS and cannot be unauthorized here.",
+    files_bot_admin_modal_title: "BOT CONTROL",
+    files_bot_admin_modal_badge: "DISCORD BOT OPS",
+    files_bot_admin_modal_hint: "Review live relay telemetry, inspect every Discord server the bot is in, and remove it from any server you do not want to support anymore.",
+    files_bot_admin_fab_label: "BOT OPS",
+    files_bot_admin_fab_hint: "MANAGE RELAY",
+    files_bot_admin_refresh_button: "REFRESH DATA",
+    files_bot_admin_refresh_button_busy: "REFRESHING...",
+    files_bot_admin_sync_button: "SYNC COMMANDS",
+    files_bot_admin_sync_button_busy: "SYNCING...",
+    files_bot_admin_invite_button: "OPEN INVITE",
+    files_bot_admin_meta_loading: "Awaiting live bot snapshot...",
+    files_bot_admin_meta_offline: "Bot worker is offline. Waiting for it to come back online...",
+    files_bot_admin_meta_starting: "Bot relay is starting. Snapshot updates will appear once Discord is ready.",
+    files_bot_admin_meta_ready: "{tag} | Snapshot {time}",
+    files_bot_admin_summary_status: "Status",
+    files_bot_admin_summary_servers: "Servers",
+    files_bot_admin_summary_users: "Users",
+    files_bot_admin_summary_channels: "Relay channels",
+    files_bot_admin_status_online: "ONLINE",
+    files_bot_admin_status_starting: "STARTING",
+    files_bot_admin_status_offline: "OFFLINE",
+    files_bot_admin_search_label: "Server search",
+    files_bot_admin_search_placeholder: "Search by server name, id, locale, or owner...",
+    files_bot_admin_loading: "Loading live bot telemetry...",
+    files_bot_admin_worker_offline: "Bot is currently offline. Waiting for the worker to come back online...",
+    files_bot_admin_unavailable: "Bot control is unavailable. Configure the bot admin bridge on the server and try again.",
+    files_bot_admin_empty: "No servers matched this search.",
+    files_bot_admin_server_users: "Users",
+    files_bot_admin_server_joined: "Joined",
+    files_bot_admin_server_owner: "Owner",
+    files_bot_admin_server_language: "Bot language",
+    files_bot_admin_server_locale: "Locale",
+    files_bot_admin_server_subscriptions: "Subscribed channels",
+    files_bot_admin_server_no_subscriptions: "No relay channels are configured for this server yet.",
+    files_bot_admin_server_channels_count: "{n} configured",
+    files_bot_admin_server_back_to_list: "BACK TO LIST",
+    files_bot_admin_server_action_welcome: "SEND WELCOME",
+    files_bot_admin_server_action_leave: "REMOVE BOT",
+    files_bot_admin_server_action_busy: "PROCESSING...",
+    files_bot_admin_feed_both: "Silos + Minerva",
+    files_bot_admin_feed_silos: "Silo Codes",
+    files_bot_admin_feed_minerva: "Minerva",
+    files_bot_admin_sync_success: "Slash commands synced.",
+    files_bot_admin_welcome_success: "Welcome message sent to {server}.",
+    files_bot_admin_leave_success: "Bot removed from {server}.",
+    files_bot_admin_leave_confirm: "Remove the bot from {server}? This makes the bot leave that Discord server immediately.",
+    files_bot_admin_leave_modal_badge: "BOT SAFEGUARD",
+    files_bot_admin_leave_modal_title: "REMOVE BOT",
+    files_bot_admin_leave_modal_cancel: "CANCEL",
+    files_bot_admin_leave_modal_confirm: "REMOVE NOW",
+    files_bot_admin_invite_unavailable: "Set BOT_INVITE_LINK to open the invite from this panel.",
     files_file_index_title: "FILE INDEX",
     files_upload_file_label: "File",
     files_upload_image_label: "Image",
@@ -772,6 +823,57 @@ const STRINGS = {
     files_admin_requests_action_decline_reason_too_long: "El motivo del rechazo es demasiado largo. Debe tener menos de 1200 caracteres.",
     files_admin_requests_error_generic: "No se pudo procesar esta accion ahora mismo.",
     files_admin_requests_error_allowlist: "Este usuario esta en ALLOWED_DISCORD_IDS y no se puede desautorizar aqui.",
+    files_bot_admin_modal_title: "CONTROL DEL BOT",
+    files_bot_admin_modal_badge: "OPERACIONES DEL BOT",
+    files_bot_admin_modal_hint: "Revisa la telemetria en vivo del relay, inspecciona cada servidor de Discord donde esta el bot y quitalo de cualquier servidor que ya no quieras soportar.",
+    files_bot_admin_fab_label: "BOT OPS",
+    files_bot_admin_fab_hint: "GESTIONAR RELAY",
+    files_bot_admin_refresh_button: "ACTUALIZAR DATOS",
+    files_bot_admin_refresh_button_busy: "ACTUALIZANDO...",
+    files_bot_admin_sync_button: "SINCRONIZAR COMANDOS",
+    files_bot_admin_sync_button_busy: "SINCRONIZANDO...",
+    files_bot_admin_invite_button: "ABRIR INVITACION",
+    files_bot_admin_meta_loading: "Esperando el snapshot en vivo del bot...",
+    files_bot_admin_meta_offline: "El worker del bot esta fuera de linea. Esperando a que vuelva a conectarse...",
+    files_bot_admin_meta_starting: "El relay del bot se esta iniciando. El snapshot aparecera cuando Discord termine de conectarse.",
+    files_bot_admin_meta_ready: "{tag} | Snapshot {time}",
+    files_bot_admin_summary_status: "Estado",
+    files_bot_admin_summary_servers: "Servidores",
+    files_bot_admin_summary_users: "Usuarios",
+    files_bot_admin_summary_channels: "Canales relay",
+    files_bot_admin_status_online: "EN LINEA",
+    files_bot_admin_status_starting: "INICIANDO",
+    files_bot_admin_status_offline: "FUERA DE LINEA",
+    files_bot_admin_search_label: "Buscar servidor",
+    files_bot_admin_search_placeholder: "Busca por nombre, id, locale o owner...",
+    files_bot_admin_loading: "Cargando telemetria en vivo del bot...",
+    files_bot_admin_worker_offline: "El bot esta fuera de linea. Esperando a que el worker vuelva a estar en linea...",
+    files_bot_admin_unavailable: "El control del bot no esta disponible. Configura el bridge admin del bot en el servidor e intenta de nuevo.",
+    files_bot_admin_empty: "Ningun servidor coincide con esta busqueda.",
+    files_bot_admin_server_users: "Usuarios",
+    files_bot_admin_server_joined: "Ingreso",
+    files_bot_admin_server_owner: "Owner",
+    files_bot_admin_server_language: "Idioma del bot",
+    files_bot_admin_server_locale: "Locale",
+    files_bot_admin_server_subscriptions: "Canales suscritos",
+    files_bot_admin_server_no_subscriptions: "Todavia no hay canales relay configurados para este servidor.",
+    files_bot_admin_server_channels_count: "{n} configurados",
+    files_bot_admin_server_back_to_list: "VOLVER A LA LISTA",
+    files_bot_admin_server_action_welcome: "ENVIAR BIENVENIDA",
+    files_bot_admin_server_action_leave: "QUITAR BOT",
+    files_bot_admin_server_action_busy: "PROCESANDO...",
+    files_bot_admin_feed_both: "Silos + Minerva",
+    files_bot_admin_feed_silos: "Codigos de silo",
+    files_bot_admin_feed_minerva: "Minerva",
+    files_bot_admin_sync_success: "Los comandos slash fueron sincronizados.",
+    files_bot_admin_welcome_success: "Mensaje de bienvenida enviado a {server}.",
+    files_bot_admin_leave_success: "El bot fue removido de {server}.",
+    files_bot_admin_leave_confirm: "Quitar el bot de {server}? Esto hace que abandone ese servidor de Discord de inmediato.",
+    files_bot_admin_leave_modal_badge: "PROTOCOLO DEL BOT",
+    files_bot_admin_leave_modal_title: "QUITAR BOT",
+    files_bot_admin_leave_modal_cancel: "CANCELAR",
+    files_bot_admin_leave_modal_confirm: "QUITAR AHORA",
+    files_bot_admin_invite_unavailable: "Configura BOT_INVITE_LINK para abrir la invitacion desde este panel.",
     files_file_index_title: "INDICE DE ARCHIVOS",
     files_upload_file_label: "Archivo",
     files_upload_image_label: "Imagen",
@@ -1138,6 +1240,22 @@ const state = {
       fileName: "",
       deleting: false
     },
+    botAdmin: {
+      loading: false,
+      overview: null,
+      query: "",
+      selectedGuildId: "",
+      message: "",
+      messageKind: "",
+      busyActionKey: "",
+      lastLoadedAt: 0,
+      leaveConfirm: {
+        open: false,
+        guildId: "",
+        guildName: "",
+        actionKey: ""
+      }
+    },
     adminModal: {
       active: ""
     },
@@ -1161,6 +1279,9 @@ const state = {
     lastTypeSoundAt: 0
   }
 };
+
+const FILES_BOT_ADMIN_POLL_INTERVAL_MS = 15000;
+let filesBotAdminPollTimer = 0;
 
 const elements = {
   bootOverlay: document.getElementById("bootOverlay"),
@@ -1189,6 +1310,12 @@ const elements = {
   filesDeleteMessage: document.getElementById("filesDeleteMessage"),
   filesDeleteCancelBtn: document.getElementById("filesDeleteCancelBtn"),
   filesDeleteConfirmBtn: document.getElementById("filesDeleteConfirmBtn"),
+  filesBotAdminLeaveOverlay: document.getElementById("filesBotAdminLeaveOverlay"),
+  filesBotAdminLeaveBadge: document.getElementById("filesBotAdminLeaveBadge"),
+  filesBotAdminLeaveTitle: document.getElementById("filesBotAdminLeaveTitle"),
+  filesBotAdminLeaveMessage: document.getElementById("filesBotAdminLeaveMessage"),
+  filesBotAdminLeaveCancelBtn: document.getElementById("filesBotAdminLeaveCancelBtn"),
+  filesBotAdminLeaveConfirmBtn: document.getElementById("filesBotAdminLeaveConfirmBtn"),
   filesDisclaimerOverlay: document.getElementById("filesDisclaimerOverlay"),
   filesDisclaimerTitle: document.getElementById("filesDisclaimerTitle"),
   filesDisclaimerBody1: document.getElementById("filesDisclaimerBody1"),
@@ -1207,6 +1334,8 @@ const elements = {
   filesUploadModalCloseBtn: document.getElementById("filesUploadModalCloseBtn"),
   filesAdminRequestsOverlay: document.getElementById("filesAdminRequestsOverlay"),
   filesAdminRequestsModalCloseBtn: document.getElementById("filesAdminRequestsModalCloseBtn"),
+  filesBotAdminOverlay: document.getElementById("filesBotAdminOverlay"),
+  filesBotAdminModalCloseBtn: document.getElementById("filesBotAdminModalCloseBtn"),
   syncOverlay: document.getElementById("syncOverlay"),
   syncTitle: document.getElementById("syncTitle"),
   classifiedLoadOverlay: document.getElementById("classifiedLoadOverlay"),
@@ -1345,6 +1474,9 @@ const elements = {
   filesSessionStateLabel: document.getElementById("filesSessionStateLabel"),
   filesSessionState: document.getElementById("filesSessionState"),
   filesSessionLogoutBtn: document.getElementById("filesSessionLogoutBtn"),
+  filesBotAdminFloatingBtn: document.getElementById("filesBotAdminFloatingBtn"),
+  filesBotAdminFloatingBtnLabel: document.getElementById("filesBotAdminFloatingBtnLabel"),
+  filesBotAdminFloatingBtnHint: document.getElementById("filesBotAdminFloatingBtnHint"),
   filesAdminToolsPanel: document.getElementById("filesAdminToolsPanel"),
   filesAdminToolsTitle: document.getElementById("filesAdminToolsTitle"),
   filesAdminConsoleModalBtn: document.getElementById("filesAdminConsoleModalBtn"),
@@ -1352,6 +1484,8 @@ const elements = {
   filesAccessControlModalBtn: document.getElementById("filesAccessControlModalBtn"),
   filesAccessControlModalBtnText: document.getElementById("filesAccessControlModalBtnText"),
   filesAccessControlPendingBadge: document.getElementById("filesAccessControlPendingBadge"),
+  filesBotAdminModalBtn: document.getElementById("filesBotAdminModalBtn"),
+  filesBotAdminModalBtnText: document.getElementById("filesBotAdminModalBtnText"),
   filesUploadPanel: document.getElementById("filesUploadPanel"),
   filesUploadTitle: document.getElementById("filesUploadTitle"),
   filesUploadForm: document.getElementById("filesUploadForm"),
@@ -1389,6 +1523,28 @@ const elements = {
   filesAdminRequestsRefreshBtn: document.getElementById("filesAdminRequestsRefreshBtn"),
   filesAdminRequestsFeedback: document.getElementById("filesAdminRequestsFeedback"),
   filesAdminRequestsList: document.getElementById("filesAdminRequestsList"),
+  filesBotAdminPanel: document.getElementById("filesBotAdminPanel"),
+  filesBotAdminBadge: document.getElementById("filesBotAdminBadge"),
+  filesBotAdminTitle: document.getElementById("filesBotAdminTitle"),
+  filesBotAdminHint: document.getElementById("filesBotAdminHint"),
+  filesBotAdminMeta: document.getElementById("filesBotAdminMeta"),
+  filesBotAdminFeedback: document.getElementById("filesBotAdminFeedback"),
+  filesBotAdminRefreshBtn: document.getElementById("filesBotAdminRefreshBtn"),
+  filesBotAdminSyncBtn: document.getElementById("filesBotAdminSyncBtn"),
+  filesBotAdminInviteLink: document.getElementById("filesBotAdminInviteLink"),
+  filesBotAdminStatusLabel: document.getElementById("filesBotAdminStatusLabel"),
+  filesBotAdminStatusValue: document.getElementById("filesBotAdminStatusValue"),
+  filesBotAdminServersLabel: document.getElementById("filesBotAdminServersLabel"),
+  filesBotAdminServersValue: document.getElementById("filesBotAdminServersValue"),
+  filesBotAdminUsersLabel: document.getElementById("filesBotAdminUsersLabel"),
+  filesBotAdminUsersValue: document.getElementById("filesBotAdminUsersValue"),
+  filesBotAdminChannelsLabel: document.getElementById("filesBotAdminChannelsLabel"),
+  filesBotAdminChannelsValue: document.getElementById("filesBotAdminChannelsValue"),
+  filesBotAdminOverview: document.getElementById("filesBotAdminOverview"),
+  filesBotAdminToolbar: document.getElementById("filesBotAdminToolbar"),
+  filesBotAdminSearchLabel: document.getElementById("filesBotAdminSearchLabel"),
+  filesBotAdminSearchInput: document.getElementById("filesBotAdminSearchInput"),
+  filesBotAdminServerList: document.getElementById("filesBotAdminServerList"),
   filesBrowserPanel: document.querySelector("#filesAuthorizedView .files-browser-panel"),
   filesBrowserTitle: document.getElementById("filesBrowserTitle"),
   filesSearchToggleBtn: document.getElementById("filesSearchToggleBtn"),
@@ -1580,11 +1736,15 @@ function syncDiscordBotInviteButton() {
     return;
   }
 
+  const canUseInviteButton = canUseFilesBotAdmin(state.files.me);
   const inviteLink = String(state.publicConfig?.botInviteLink || "").trim();
-  const shouldShow = state.view === "intel" && Boolean(inviteLink);
+  const shouldShow = state.view === "intel" && canUseInviteButton && Boolean(inviteLink);
   elements.discordBotInviteBtn.hidden = !shouldShow;
   elements.discordBotInviteBtn.href = shouldShow ? inviteLink : "#";
   elements.discordBotInviteBtn.setAttribute("aria-hidden", shouldShow ? "false" : "true");
+  if (!shouldShow && state.intelBotInvite.open) {
+    closeIntelBotInviteModal();
+  }
 }
 
 function renderIntelBotInviteModal() {
@@ -1600,6 +1760,9 @@ function renderIntelBotInviteModal() {
 
 function openIntelBotInviteModal() {
   if (!elements.intelBotInviteOverlay) {
+    return;
+  }
+  if (!canUseFilesBotAdmin(state.files.me)) {
     return;
   }
   if (!String(state.publicConfig?.botInviteLink || "").trim()) {
@@ -1658,6 +1821,7 @@ async function loadPublicConfig() {
   }
 
   syncDiscordBotInviteButton();
+  renderFilesBotAdminPanel();
 }
 
 function getActiveSiloResetTargetMs(nowMs = Date.now()) {
@@ -1772,6 +1936,7 @@ function showSiloDossier({ updateHash = true } = {}) {
   elements.siloDossierOverlay.classList.add("is-active");
   elements.siloDossierOverlay.setAttribute("aria-hidden", "false");
   renderSiloDossier();
+  renderFilesBotAdminPanel();
 
   if (updateHash) {
     setHashView("silo");
@@ -1787,6 +1952,7 @@ function hideSiloDossier({ updateHash = true } = {}) {
   document.body.classList.remove("is-silo-dossier-open");
   elements.siloDossierOverlay.classList.remove("is-active");
   elements.siloDossierOverlay.setAttribute("aria-hidden", "true");
+  renderFilesBotAdminPanel();
 
   if (updateHash && isSiloDossierHash()) {
     setHashView("intel");
@@ -1809,6 +1975,7 @@ function hideFilesPage() {
     elements.filesPage.classList.remove("is-entering");
     elements.filesPage.hidden = true;
   }
+  renderFilesBotAdminPanel();
 }
 
 function closeClassifiedPageForNavigation() {
@@ -1827,6 +1994,7 @@ function showIntelPage({ updateHash = true } = {}) {
   state.view = "intel";
   elements.mainTitle.textContent = t("main_title");
   syncTopTabForCurrentView();
+  renderFilesBotAdminPanel();
   if (updateHash) {
     setHashView("intel");
   }
@@ -1852,6 +2020,7 @@ function showFilesPage({ updateHash = true } = {}) {
   state.view = "files";
   elements.mainTitle.textContent = t("files_main_title");
   syncTopTabForCurrentView();
+  renderFilesBotAdminPanel();
   renderFilesAccessView();
   void refreshFilesIdentity();
   if (updateHash) {
@@ -1960,6 +2129,284 @@ function normalizeFilesDisclaimerDecision(decision) {
     return normalized;
   }
   return "none";
+}
+
+function normalizeFilesBotAdminSubscriptionEntry(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const channelId = String(payload.channelId || "").trim();
+  if (!channelId) {
+    return null;
+  }
+
+  const feeds = Array.isArray(payload.feeds)
+    ? payload.feeds.map((feed) => String(feed || "").trim().toLowerCase()).filter(Boolean)
+    : [];
+
+  return {
+    channelId,
+    channelName: String(payload.channelName || "").trim(),
+    feeds: feeds.filter((feed) => feed === "silos" || feed === "minerva")
+  };
+}
+
+function normalizeFilesBotAdminGuildEntry(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const guildId = String(payload.id || "").trim();
+  if (!guildId) {
+    return null;
+  }
+
+  const subscriptions = Array.isArray(payload.subscriptions)
+    ? payload.subscriptions.map((entry) => normalizeFilesBotAdminSubscriptionEntry(entry)).filter(Boolean)
+    : [];
+  const memberCount = Number(payload.memberCount);
+
+  return {
+    id: guildId,
+    name: String(payload.name || "").trim() || t("files_unknown_value"),
+    iconUrl: String(payload.iconUrl || "").trim(),
+    ownerId: String(payload.ownerId || "").trim(),
+    ownerName: String(payload.ownerName || "").trim(),
+    preferredLocale: String(payload.preferredLocale || "").trim(),
+    joinedAt: String(payload.joinedAt || "").trim(),
+    memberCount: Number.isFinite(memberCount) ? memberCount : null,
+    language: String(payload.language || "").trim().toLowerCase() || "",
+    subscriptionCount: Number.isFinite(Number(payload.subscriptionCount))
+      ? Number(payload.subscriptionCount)
+      : subscriptions.length,
+    subscriptions
+  };
+}
+
+function normalizeFilesBotAdminOverview(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const guilds = Array.isArray(payload.guilds)
+    ? payload.guilds.map((entry) => normalizeFilesBotAdminGuildEntry(entry)).filter(Boolean)
+    : [];
+
+  return {
+    enabled: payload.enabled !== false,
+    ready: Boolean(payload.ready),
+    generatedAt: String(payload.generatedAt || "").trim(),
+    inviteLink: String(payload.inviteLink || "").trim(),
+    bot: {
+      applicationId: String(payload.bot?.applicationId || "").trim(),
+      userId: String(payload.bot?.userId || "").trim(),
+      username: String(payload.bot?.username || "").trim(),
+      tag: String(payload.bot?.tag || "").trim(),
+      avatarUrl: String(payload.bot?.avatarUrl || "").trim(),
+      defaultLanguage: String(payload.bot?.defaultLanguage || "").trim().toLowerCase() || "",
+      pollIntervalMs: Number.isFinite(Number(payload.bot?.pollIntervalMs)) ? Number(payload.bot.pollIntervalMs) : 0,
+      postOnStartup: Boolean(payload.bot?.postOnStartup),
+      startedAt: String(payload.bot?.startedAt || "").trim(),
+      readyAt: String(payload.bot?.readyAt || "").trim(),
+      uptimeMs: Number.isFinite(Number(payload.bot?.uptimeMs)) ? Number(payload.bot.uptimeMs) : 0,
+      publicBaseUrl: String(payload.bot?.publicBaseUrl || "").trim()
+    },
+    stats: {
+      guildCount: Number.isFinite(Number(payload.stats?.guildCount)) ? Number(payload.stats.guildCount) : guilds.length,
+      userCount: Number.isFinite(Number(payload.stats?.userCount)) ? Number(payload.stats.userCount) : 0,
+      subscriptionCount: Number.isFinite(Number(payload.stats?.subscriptionCount)) ? Number(payload.stats.subscriptionCount) : 0,
+      orphanSubscriptionCount: Number.isFinite(Number(payload.stats?.orphanSubscriptionCount))
+        ? Number(payload.stats.orphanSubscriptionCount)
+        : 0,
+      latencyMs: Number.isFinite(Number(payload.stats?.latencyMs)) ? Number(payload.stats.latencyMs) : null
+    },
+    state: {
+      updatedAt: String(payload.state?.updatedAt || "").trim()
+    },
+    guilds
+  };
+}
+
+function clearFilesBotAdminState({ preserveQuery = false } = {}) {
+  stopFilesBotAdminLivePolling();
+  state.files.botAdmin.loading = false;
+  state.files.botAdmin.overview = null;
+  if (!preserveQuery) {
+    state.files.botAdmin.query = "";
+  }
+  state.files.botAdmin.selectedGuildId = "";
+  state.files.botAdmin.message = "";
+  state.files.botAdmin.messageKind = "";
+  state.files.botAdmin.busyActionKey = "";
+  state.files.botAdmin.lastLoadedAt = 0;
+}
+
+function setFilesBotAdminFeedback(message = "", kind = "") {
+  state.files.botAdmin.message = String(message || "");
+  state.files.botAdmin.messageKind = kind === "success" || kind === "error" ? kind : "";
+}
+
+function getFilesBotAdminErrorMessage(error) {
+  const status = Number(error?.status);
+  if (status === 502) {
+    return t("files_bot_admin_worker_offline");
+  }
+
+  const message = String(error?.message || "").trim();
+  if (status === 503 && message.toLowerCase().includes("not configured")) {
+    return t("files_bot_admin_unavailable");
+  }
+
+  return message || t("files_bot_admin_unavailable");
+}
+
+function formatFilesBotAdminNumber(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return t("files_unknown_value");
+  }
+
+  try {
+    const locale = state.lang === "es" ? "es-ES" : "en-US";
+    return new Intl.NumberFormat(locale).format(numericValue);
+  } catch {
+    return String(numericValue);
+  }
+}
+
+function getFilesBotAdminStatusLabel(overview = null) {
+  if (!overview?.enabled) {
+    return t("files_bot_admin_status_offline");
+  }
+  if (!overview.ready) {
+    return t("files_bot_admin_status_starting");
+  }
+  return t("files_bot_admin_status_online");
+}
+
+function getFilesBotAdminMetaText(overview = null) {
+  if (!overview) {
+    return state.files.botAdmin.messageKind === "error"
+      ? t("files_bot_admin_meta_offline")
+      : t("files_bot_admin_meta_loading");
+  }
+  if (!overview.enabled || !overview.ready) {
+    return t("files_bot_admin_meta_starting");
+  }
+
+  const tag = overview.bot.tag || overview.bot.username || t("files_unknown_value");
+  const snapshotTime = formatFileDateTime(overview.generatedAt || overview.state.updatedAt || overview.bot.readyAt || "");
+  return t("files_bot_admin_meta_ready", {
+    tag,
+    time: snapshotTime
+  });
+}
+
+function stopFilesBotAdminLivePolling() {
+  if (filesBotAdminPollTimer) {
+    window.clearInterval(filesBotAdminPollTimer);
+    filesBotAdminPollTimer = 0;
+  }
+}
+
+function startFilesBotAdminLivePolling() {
+  stopFilesBotAdminLivePolling();
+
+  const me = normalizeFilesProfile(state.files.me);
+  if (!me.isAuthorized || !me.isAdmin) {
+    return;
+  }
+  if (normalizeFilesAdminModalType(state.files.adminModal.active) !== "bot") {
+    return;
+  }
+
+  filesBotAdminPollTimer = window.setInterval(() => {
+    if (document.hidden) {
+      return;
+    }
+    if (normalizeFilesAdminModalType(state.files.adminModal.active) !== "bot") {
+      stopFilesBotAdminLivePolling();
+      return;
+    }
+    if (state.files.botAdmin.loading || state.files.botAdmin.busyActionKey) {
+      return;
+    }
+    void refreshFilesBotAdminOverview({ silent: true });
+  }, FILES_BOT_ADMIN_POLL_INTERVAL_MS);
+}
+
+function getFilesBotAdminFeedLabel(feeds = []) {
+  const uniqueFeeds = [...new Set(Array.isArray(feeds) ? feeds.filter(Boolean) : [])];
+  if (uniqueFeeds.includes("silos") && uniqueFeeds.includes("minerva")) {
+    return t("files_bot_admin_feed_both");
+  }
+  if (uniqueFeeds.includes("silos")) {
+    return t("files_bot_admin_feed_silos");
+  }
+  if (uniqueFeeds.includes("minerva")) {
+    return t("files_bot_admin_feed_minerva");
+  }
+  return t("files_unknown_value");
+}
+
+function getFilteredFilesBotAdminGuilds() {
+  const overview = normalizeFilesBotAdminOverview(state.files.botAdmin.overview);
+  if (!overview) {
+    return [];
+  }
+
+  const query = normalizeSearchText(state.files.botAdmin.query || "");
+  const tokens = query ? query.split(" ").filter(Boolean) : [];
+  if (!tokens.length) {
+    return overview.guilds;
+  }
+
+  return overview.guilds.filter((guild) => {
+    const subscriptionSearch = guild.subscriptions.map((entry) => {
+      return [entry.channelId, entry.channelName, getFilesBotAdminFeedLabel(entry.feeds)].join(" ");
+    }).join(" ");
+    const haystack = normalizeSearchText([
+      guild.name,
+      guild.id,
+      guild.ownerId,
+      guild.preferredLocale,
+      guild.language,
+      subscriptionSearch
+    ].join(" "));
+    return tokens.every((token) => haystack.includes(token));
+  });
+}
+
+function setFilesBotAdminSelectedGuildId(guildId, { scrollIntoView = false } = {}) {
+  state.files.botAdmin.selectedGuildId = String(guildId || "").trim();
+  renderFilesBotAdminPanel();
+
+  if (!scrollIntoView || !state.files.botAdmin.selectedGuildId) {
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    const selector = `[data-files-bot-guild-card="${getFilesBotAdminGuildSelectorValue(state.files.botAdmin.selectedGuildId)}"]`;
+    const card = elements.filesBotAdminServerList?.querySelector(selector);
+    if (card instanceof HTMLElement) {
+      card.scrollIntoView({
+        block: "nearest",
+        inline: "nearest"
+      });
+    }
+  });
+}
+
+function getFilesBotAdminGuildSelectorValue(guildId) {
+  const value = String(guildId || "").trim();
+  if (!value) {
+    return "";
+  }
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(value);
+  }
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
 function hasPendingFilesDisclaimerReevaluation(profile = null) {
@@ -2725,6 +3172,22 @@ function isDesktopModalViewport() {
   return (Number(window.innerWidth) || 0) >= 1025;
 }
 
+function isFilesBotAdminMobileViewport() {
+  if (typeof window.matchMedia === "function") {
+    return window.matchMedia("(max-width: 860px)").matches;
+  }
+  return (Number(window.innerWidth) || 0) <= 860;
+}
+
+function canUseFilesBotAdmin(profile, { requireDesktop = false } = {}) {
+  const me = normalizeFilesProfile(profile);
+  const canUseBotAdmin = Boolean(me.loggedIn && me.isAuthorized && me.isAdmin);
+  if (!canUseBotAdmin) {
+    return false;
+  }
+  return !requireDesktop || !isFilesBotAdminMobileViewport();
+}
+
 function shouldAvoidTextInputFocusOnOpen() {
   if (typeof window.matchMedia === "function") {
     if (window.matchMedia("(pointer: coarse)").matches || window.matchMedia("(hover: none)").matches) {
@@ -3057,7 +3520,7 @@ function clearFilesAdminRequestsState() {
 
 function normalizeFilesAdminModalType(value) {
   const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "upload" || normalized === "requests") {
+  if (normalized === "upload" || normalized === "requests" || normalized === "bot") {
     return normalized;
   }
   return "";
@@ -3077,14 +3540,19 @@ function getFilesPendingAdminRequestCount() {
 function renderFilesAdminModals() {
   const me = normalizeFilesProfile(state.files.me);
   const canUseAdminTools = Boolean(me.isAuthorized && me.isAdmin);
-  const activeModal = canUseAdminTools
+  const canUseBotAdmin = canUseFilesBotAdmin(me, { requireDesktop: true });
+  let activeModal = canUseAdminTools
     ? normalizeFilesAdminModalType(state.files.adminModal.active)
     : "";
+  if (activeModal === "bot" && !canUseBotAdmin) {
+    activeModal = "";
+  }
   state.files.adminModal.active = activeModal;
 
   const uploadOpen = activeModal === "upload";
   const requestsOpen = activeModal === "requests";
-  const modalOpen = uploadOpen || requestsOpen;
+  const botOpen = canUseBotAdmin && activeModal === "bot";
+  const modalOpen = uploadOpen || requestsOpen || botOpen;
   const pendingCount = getFilesPendingAdminRequestCount();
   const pendingBadgeText = pendingCount > 99 ? "99+" : String(pendingCount);
 
@@ -3116,6 +3584,14 @@ function renderFilesAdminModals() {
     elements.filesAccessControlPendingBadge.setAttribute("aria-label", badgeLabel);
     elements.filesAccessControlPendingBadge.title = badgeLabel;
   }
+  if (elements.filesBotAdminModalBtn) {
+    elements.filesBotAdminModalBtn.classList.toggle("is-active", botOpen);
+    elements.filesBotAdminModalBtn.setAttribute("aria-expanded", botOpen ? "true" : "false");
+  }
+  if (elements.filesBotAdminFloatingBtn) {
+    elements.filesBotAdminFloatingBtn.classList.toggle("is-active", botOpen);
+    elements.filesBotAdminFloatingBtn.setAttribute("aria-expanded", botOpen ? "true" : "false");
+  }
   if (elements.filesUploadOverlay) {
     elements.filesUploadOverlay.classList.toggle("is-active", uploadOpen);
     elements.filesUploadOverlay.setAttribute("aria-hidden", uploadOpen ? "false" : "true");
@@ -3124,19 +3600,32 @@ function renderFilesAdminModals() {
     elements.filesAdminRequestsOverlay.classList.toggle("is-active", requestsOpen);
     elements.filesAdminRequestsOverlay.setAttribute("aria-hidden", requestsOpen ? "false" : "true");
   }
+  if (elements.filesBotAdminOverlay) {
+    elements.filesBotAdminOverlay.classList.toggle("is-active", botOpen);
+    elements.filesBotAdminOverlay.setAttribute("aria-hidden", botOpen ? "false" : "true");
+  }
   if (!requestsOpen) {
     setFilesAdminRequestsFilterMenuOpen(false);
   }
   if (!uploadOpen) {
     closeAllFilesGroupSuggestMenus();
   }
+  renderFilesBotAdminPanel();
 }
 
 function setFilesAdminModalOpen(nextModal, { focus = true } = {}) {
   const me = normalizeFilesProfile(state.files.me);
   const canUseAdminTools = Boolean(me.isAuthorized && me.isAdmin);
-  const normalizedModal = canUseAdminTools ? normalizeFilesAdminModalType(nextModal) : "";
+  let normalizedModal = canUseAdminTools ? normalizeFilesAdminModalType(nextModal) : "";
+  if (normalizedModal === "bot" && !canUseFilesBotAdmin(me, { requireDesktop: true })) {
+    normalizedModal = "";
+  }
   state.files.adminModal.active = normalizedModal;
+  if (normalizedModal === "bot") {
+    startFilesBotAdminLivePolling();
+  } else {
+    stopFilesBotAdminLivePolling();
+  }
   renderFilesAdminModals();
 
   if (!normalizedModal || !focus) {
@@ -3162,10 +3651,26 @@ function setFilesAdminModalOpen(nextModal, { focus = true } = {}) {
         selectText: true
       });
     }
+    return;
+  }
+
+  if (normalizedModal === "bot") {
+    const shouldRefresh = !state.files.botAdmin.overview
+      || (Date.now() - Number(state.files.botAdmin.lastLoadedAt || 0)) > 60 * 1000;
+    if (!state.files.botAdmin.loading && shouldRefresh) {
+      void refreshFilesBotAdminOverview({ silent: true });
+    }
+    if (elements.filesBotAdminSearchInput instanceof HTMLInputElement) {
+      focusFilesOpenTarget(elements.filesBotAdminSearchInput, {
+        fallback: elements.filesBotAdminModalCloseBtn,
+        selectText: true
+      });
+    }
   }
 }
 
 function closeFilesAdminModal() {
+  closeFilesBotAdminLeaveModal({ force: true });
   setFilesAdminModalOpen("", { focus: false });
 }
 
@@ -3481,6 +3986,431 @@ function renderFilesAdminRequestsPanel() {
   elements.filesAdminRequestsList.appendChild(fragment);
 }
 
+function renderFilesBotAdminPanel() {
+  if (!elements.filesBotAdminPanel) {
+    return;
+  }
+
+  const me = normalizeFilesProfile(state.files.me);
+  const canUseBotAdmin = canUseFilesBotAdmin(me, { requireDesktop: true });
+  const showIndexButton = canUseBotAdmin
+    && state.view === "intel"
+    && !document.body.classList.contains("is-files")
+    && !document.body.classList.contains("is-classified")
+    && !state.siloDossier.open;
+  elements.filesBotAdminPanel.hidden = !canUseBotAdmin;
+
+  const activeModal = normalizeFilesAdminModalType(state.files.adminModal.active);
+  const modalOpen = canUseBotAdmin && activeModal === "bot";
+  const loading = Boolean(state.files.botAdmin.loading);
+  const busyActionKey = String(state.files.botAdmin.busyActionKey || "").trim();
+  const overview = normalizeFilesBotAdminOverview(state.files.botAdmin.overview);
+  const inviteLink = overview?.inviteLink || state.publicConfig.botInviteLink || "";
+
+  if (elements.filesBotAdminFloatingBtn) {
+    elements.filesBotAdminFloatingBtn.hidden = !showIndexButton;
+    elements.filesBotAdminFloatingBtn.classList.toggle("is-active", modalOpen);
+    elements.filesBotAdminFloatingBtn.setAttribute("aria-expanded", modalOpen ? "true" : "false");
+  }
+  if (elements.filesBotAdminModalBtn) {
+    elements.filesBotAdminModalBtn.classList.toggle("is-active", modalOpen);
+    elements.filesBotAdminModalBtn.setAttribute("aria-expanded", modalOpen ? "true" : "false");
+  }
+
+  if (!canUseBotAdmin) {
+    return;
+  }
+
+  if (elements.filesBotAdminRefreshBtn) {
+    elements.filesBotAdminRefreshBtn.disabled = loading || Boolean(busyActionKey);
+    elements.filesBotAdminRefreshBtn.textContent = loading
+      ? t("files_bot_admin_refresh_button_busy")
+      : t("files_bot_admin_refresh_button");
+  }
+  if (elements.filesBotAdminSyncBtn) {
+    const syncBusy = busyActionKey === "sync";
+    const canSyncBot = Boolean(overview?.enabled && overview.ready);
+    elements.filesBotAdminSyncBtn.disabled = loading || Boolean(busyActionKey) || !canSyncBot;
+    elements.filesBotAdminSyncBtn.textContent = syncBusy
+      ? t("files_bot_admin_sync_button_busy")
+      : t("files_bot_admin_sync_button");
+  }
+  if (elements.filesBotAdminInviteLink) {
+    const hasInviteLink = Boolean(inviteLink);
+    elements.filesBotAdminInviteLink.textContent = t("files_bot_admin_invite_button");
+    elements.filesBotAdminInviteLink.href = hasInviteLink ? inviteLink : "#";
+    elements.filesBotAdminInviteLink.classList.toggle("is-disabled", !hasInviteLink);
+    elements.filesBotAdminInviteLink.setAttribute("aria-disabled", hasInviteLink ? "false" : "true");
+    elements.filesBotAdminInviteLink.tabIndex = hasInviteLink ? 0 : -1;
+    elements.filesBotAdminInviteLink.title = hasInviteLink ? t("files_bot_admin_invite_button") : t("files_bot_admin_invite_unavailable");
+  }
+
+  if (elements.filesBotAdminMeta) {
+    elements.filesBotAdminMeta.textContent = getFilesBotAdminMetaText(overview);
+  }
+  if (elements.filesBotAdminFeedback) {
+    const message = String(state.files.botAdmin.message || "");
+    const hasMessage = Boolean(message);
+    elements.filesBotAdminFeedback.hidden = !hasMessage;
+    elements.filesBotAdminFeedback.textContent = message;
+    elements.filesBotAdminFeedback.classList.toggle("is-success", state.files.botAdmin.messageKind === "success");
+    elements.filesBotAdminFeedback.classList.toggle("is-error", state.files.botAdmin.messageKind === "error");
+  }
+  if (elements.filesBotAdminStatusValue) {
+    elements.filesBotAdminStatusValue.textContent = getFilesBotAdminStatusLabel(overview);
+  }
+  if (elements.filesBotAdminServersValue) {
+    elements.filesBotAdminServersValue.textContent = overview
+      ? formatFilesBotAdminNumber(overview.stats.guildCount)
+      : "--";
+  }
+  if (elements.filesBotAdminUsersValue) {
+    elements.filesBotAdminUsersValue.textContent = overview
+      ? formatFilesBotAdminNumber(overview.stats.userCount)
+      : "--";
+  }
+  if (elements.filesBotAdminChannelsValue) {
+    elements.filesBotAdminChannelsValue.textContent = overview
+      ? formatFilesBotAdminNumber(overview.stats.subscriptionCount)
+      : "--";
+  }
+  if (elements.filesBotAdminSearchInput) {
+    const nextQuery = String(state.files.botAdmin.query || "");
+    if (elements.filesBotAdminSearchInput.value !== nextQuery) {
+      elements.filesBotAdminSearchInput.value = nextQuery;
+    }
+  }
+  elements.filesBotAdminPanel.classList.remove("is-focus-mode");
+  if (elements.filesBotAdminToolbar) {
+    elements.filesBotAdminToolbar.hidden = false;
+  }
+  if (elements.filesBotAdminOverview) {
+    elements.filesBotAdminOverview.hidden = false;
+  }
+
+  if (!elements.filesBotAdminServerList) {
+    return;
+  }
+
+  const emptyState = document.createElement("p");
+  emptyState.className = "files-bot-admin-empty";
+
+  if (loading && !overview) {
+    emptyState.textContent = t("files_bot_admin_loading");
+    elements.filesBotAdminServerList.replaceChildren(emptyState);
+    return;
+  }
+
+  if (!overview || !overview.enabled) {
+    emptyState.textContent = state.files.botAdmin.message || t("files_bot_admin_unavailable");
+    elements.filesBotAdminServerList.replaceChildren(emptyState);
+    return;
+  }
+  if (!overview.ready && !overview.guilds.length) {
+    emptyState.textContent = t("files_bot_admin_loading");
+    elements.filesBotAdminServerList.replaceChildren(emptyState);
+    return;
+  }
+
+  const guilds = getFilteredFilesBotAdminGuilds();
+  if (!guilds.length) {
+    state.files.botAdmin.selectedGuildId = "";
+    emptyState.textContent = t("files_bot_admin_empty");
+    elements.filesBotAdminServerList.replaceChildren(emptyState);
+    return;
+  }
+
+  const selectedGuildId = String(state.files.botAdmin.selectedGuildId || "").trim();
+  if (selectedGuildId && !guilds.some((guild) => guild.id === selectedGuildId)) {
+    state.files.botAdmin.selectedGuildId = "";
+  }
+
+  const selectedGuild = state.files.botAdmin.selectedGuildId
+    ? guilds.find((guild) => guild.id === state.files.botAdmin.selectedGuildId) || null
+    : null;
+  const focusMode = Boolean(selectedGuild);
+  elements.filesBotAdminPanel.classList.toggle("is-focus-mode", focusMode);
+  if (elements.filesBotAdminToolbar) {
+    elements.filesBotAdminToolbar.hidden = focusMode;
+  }
+  if (elements.filesBotAdminOverview) {
+    elements.filesBotAdminOverview.hidden = focusMode;
+  }
+  const fragment = document.createDocumentFragment();
+
+  if (selectedGuild) {
+    const guild = selectedGuild;
+    const guildName = guild.name || t("files_unknown_value");
+    const welcomeActionKey = `welcome:${guild.id}`;
+    const leaveActionKey = `leave:${guild.id}`;
+    const welcomeBusy = busyActionKey === welcomeActionKey;
+    const leaveBusy = busyActionKey === leaveActionKey;
+
+    const focus = document.createElement("section");
+    focus.className = "files-bot-admin-focus";
+    focus.dataset.filesBotGuildCard = guild.id;
+
+    const focusTop = document.createElement("div");
+    focusTop.className = "files-bot-admin-focus-top";
+
+    const backBtn = document.createElement("button");
+    backBtn.type = "button";
+    backBtn.className = "files-card-action files-bot-admin-focus-back";
+    backBtn.textContent = t("files_bot_admin_server_back_to_list");
+    backBtn.dataset.filesBotSelect = "true";
+    backBtn.dataset.guildId = guild.id;
+    backBtn.disabled = loading || Boolean(busyActionKey);
+
+    const focusStatus = document.createElement("span");
+    focusStatus.className = "files-bot-admin-focus-status";
+    focusStatus.textContent = getFilesBotAdminStatusLabel(overview);
+
+    focusTop.appendChild(backBtn);
+    focusTop.appendChild(focusStatus);
+
+    const card = document.createElement("article");
+    card.className = "files-bot-admin-focus-card";
+
+    const hero = document.createElement("div");
+    hero.className = "files-bot-admin-focus-hero";
+
+    const identity = document.createElement("div");
+    identity.className = "files-bot-admin-focus-identity";
+
+    const avatar = document.createElement("div");
+    avatar.className = "files-bot-admin-server-avatar";
+    if (guild.iconUrl) {
+      const image = document.createElement("img");
+      image.src = guild.iconUrl;
+      image.alt = `${guildName} icon`;
+      image.loading = "lazy";
+      avatar.appendChild(image);
+    } else {
+      avatar.textContent = guildName.slice(0, 2).toUpperCase();
+    }
+
+    const heroCopy = document.createElement("div");
+    heroCopy.className = "files-bot-admin-focus-hero-copy";
+    const heading = document.createElement("div");
+    heading.className = "files-bot-admin-focus-hero-heading";
+    const name = document.createElement("h3");
+    name.className = "files-bot-admin-server-name";
+    name.textContent = guildName;
+    const id = document.createElement("span");
+    id.className = "files-bot-admin-server-id";
+    id.textContent = guild.id;
+    heading.appendChild(name);
+    heading.appendChild(id);
+    heroCopy.appendChild(heading);
+
+    const heroMeta = document.createElement("div");
+    heroMeta.className = "files-bot-admin-focus-hero-meta";
+    const heroMetaValues = [
+      `${t("files_bot_admin_server_locale")} ${String(
+        guild.preferredLocale || guild.language || overview.bot.defaultLanguage || t("files_unknown_value")
+      ).toUpperCase()}`,
+      `${t("files_bot_admin_server_users")} ${formatFilesBotAdminNumber(guild.memberCount)}`
+    ];
+    for (const value of heroMetaValues) {
+      const metaChip = document.createElement("span");
+      metaChip.className = "files-bot-admin-focus-hero-chip";
+      metaChip.textContent = value;
+      heroMeta.appendChild(metaChip);
+    }
+    heroCopy.appendChild(heroMeta);
+
+    identity.appendChild(avatar);
+    identity.appendChild(heroCopy);
+
+    const heroBadges = document.createElement("div");
+    heroBadges.className = "files-bot-admin-focus-hero-badges";
+
+    const liveBadge = document.createElement("span");
+    liveBadge.className = "files-bot-admin-server-badge is-live";
+    liveBadge.textContent = getFilesBotAdminStatusLabel(overview);
+    const subscriptionBadge = document.createElement("span");
+    subscriptionBadge.className = "files-bot-admin-server-badge";
+    subscriptionBadge.textContent = t("files_bot_admin_server_channels_count", {
+      n: formatFilesBotAdminNumber(guild.subscriptionCount)
+    });
+
+    heroBadges.appendChild(liveBadge);
+    heroBadges.appendChild(subscriptionBadge);
+
+    hero.appendChild(identity);
+    hero.appendChild(heroBadges);
+
+    const metrics = document.createElement("div");
+    metrics.className = "files-bot-admin-focus-grid";
+    const ownerDisplay = guild.ownerName
+      ? `${guild.ownerName} | ${guild.ownerId || t("files_unknown_value")}`
+      : guild.ownerId || t("files_unknown_value");
+    const metricEntries = [
+      [t("files_bot_admin_server_joined"), formatFileDateTime(guild.joinedAt)],
+      [t("files_bot_admin_server_owner"), ownerDisplay],
+      [t("files_bot_admin_server_language"), (guild.language || overview.bot.defaultLanguage || t("files_unknown_value")).toUpperCase()],
+      [t("files_bot_admin_summary_channels"), formatFilesBotAdminNumber(guild.subscriptionCount)]
+    ];
+    for (const [label, value] of metricEntries) {
+      const item = document.createElement("div");
+      item.className = "files-bot-admin-focus-metric";
+      const itemLabel = document.createElement("span");
+      itemLabel.textContent = label;
+      const itemValue = document.createElement("strong");
+      itemValue.textContent = value;
+      item.appendChild(itemLabel);
+      item.appendChild(itemValue);
+      metrics.appendChild(item);
+    }
+
+    const subscriptions = document.createElement("section");
+    subscriptions.className = "files-bot-admin-focus-subscriptions";
+    const subscriptionsHead = document.createElement("div");
+    subscriptionsHead.className = "files-bot-admin-focus-subscriptions-head";
+    const subscriptionsTitle = document.createElement("strong");
+    subscriptionsTitle.className = "files-bot-admin-focus-subscriptions-title";
+    subscriptionsTitle.textContent = t("files_bot_admin_server_subscriptions");
+    const subscriptionsCount = document.createElement("span");
+    subscriptionsCount.className = "files-bot-admin-focus-subscriptions-count";
+    subscriptionsCount.textContent = t("files_bot_admin_server_channels_count", {
+      n: formatFilesBotAdminNumber(guild.subscriptionCount)
+    });
+    subscriptionsHead.appendChild(subscriptionsTitle);
+    subscriptionsHead.appendChild(subscriptionsCount);
+    subscriptions.appendChild(subscriptionsHead);
+
+    if (guild.subscriptions.length) {
+      const subscriptionList = document.createElement("div");
+      subscriptionList.className = "files-bot-admin-focus-subscription-list";
+      for (const entry of guild.subscriptions) {
+        const chip = document.createElement("span");
+        chip.className = "files-bot-admin-focus-subscription";
+        chip.append(document.createTextNode(entry.channelName ? `#${entry.channelName}` : entry.channelId));
+        const feed = document.createElement("span");
+        feed.textContent = getFilesBotAdminFeedLabel(entry.feeds);
+        chip.appendChild(feed);
+        subscriptionList.appendChild(chip);
+      }
+      subscriptions.appendChild(subscriptionList);
+    } else {
+      const noSubscriptions = document.createElement("p");
+      noSubscriptions.className = "files-bot-admin-empty";
+      noSubscriptions.textContent = t("files_bot_admin_server_no_subscriptions");
+      subscriptions.appendChild(noSubscriptions);
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "files-bot-admin-focus-actions";
+
+    const welcomeBtn = document.createElement("button");
+    welcomeBtn.type = "button";
+    welcomeBtn.className = "files-card-action files-bot-admin-focus-action";
+    welcomeBtn.textContent = welcomeBusy ? t("files_bot_admin_server_action_busy") : t("files_bot_admin_server_action_welcome");
+    welcomeBtn.dataset.filesBotAction = "welcome";
+    welcomeBtn.dataset.guildId = guild.id;
+    welcomeBtn.dataset.guildName = guildName;
+    welcomeBtn.dataset.actionKey = welcomeActionKey;
+    welcomeBtn.disabled = loading || Boolean(busyActionKey);
+
+    const leaveBtn = document.createElement("button");
+    leaveBtn.type = "button";
+    leaveBtn.className = "files-card-action files-bot-admin-focus-action is-delete";
+    leaveBtn.textContent = leaveBusy ? t("files_bot_admin_server_action_busy") : t("files_bot_admin_server_action_leave");
+    leaveBtn.dataset.filesBotAction = "leave";
+    leaveBtn.dataset.guildId = guild.id;
+    leaveBtn.dataset.guildName = guildName;
+    leaveBtn.dataset.actionKey = leaveActionKey;
+    leaveBtn.disabled = loading || Boolean(busyActionKey);
+
+    actions.appendChild(welcomeBtn);
+    actions.appendChild(leaveBtn);
+
+    card.appendChild(hero);
+    card.appendChild(metrics);
+    card.appendChild(subscriptions);
+    card.appendChild(actions);
+
+    focus.appendChild(focusTop);
+    focus.appendChild(card);
+    fragment.appendChild(focus);
+    elements.filesBotAdminServerList.replaceChildren(fragment);
+    return;
+  }
+
+  const listShell = document.createElement("section");
+  listShell.className = "files-bot-admin-list-shell";
+
+  const listHead = document.createElement("div");
+  listHead.className = "files-bot-admin-list-head";
+
+  const listTitle = document.createElement("strong");
+  listTitle.className = "files-bot-admin-list-title";
+  listTitle.textContent = t("files_bot_admin_summary_servers");
+
+  const listCount = document.createElement("span");
+  listCount.className = "files-bot-admin-list-count";
+  listCount.textContent = formatFilesBotAdminNumber(guilds.length);
+
+  listHead.appendChild(listTitle);
+  listHead.appendChild(listCount);
+
+  const listScroll = document.createElement("div");
+  listScroll.className = "files-bot-admin-list-scroll";
+
+  for (const guild of guilds) {
+    const guildName = guild.name || t("files_unknown_value");
+
+    const row = document.createElement("article");
+    row.className = "files-bot-admin-server-row";
+    row.dataset.filesBotGuildCard = guild.id;
+
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "files-bot-admin-server-row-trigger";
+    trigger.dataset.filesBotSelect = "true";
+    trigger.dataset.guildId = guild.id;
+    trigger.setAttribute("aria-expanded", "false");
+
+    const main = document.createElement("div");
+    main.className = "files-bot-admin-server-row-main";
+
+    const identity = document.createElement("div");
+    identity.className = "files-bot-admin-server-row-identity";
+
+    const avatar = document.createElement("div");
+    avatar.className = "files-bot-admin-server-avatar";
+    if (guild.iconUrl) {
+      const image = document.createElement("img");
+      image.src = guild.iconUrl;
+      image.alt = `${guildName} icon`;
+      image.loading = "lazy";
+      avatar.appendChild(image);
+    } else {
+      avatar.textContent = guildName.slice(0, 2).toUpperCase();
+    }
+
+    const nameBlock = document.createElement("div");
+    nameBlock.className = "files-bot-admin-server-name-block";
+    const name = document.createElement("h3");
+    name.className = "files-bot-admin-server-name";
+    name.textContent = guildName;
+    nameBlock.appendChild(name);
+
+    identity.appendChild(avatar);
+    identity.appendChild(nameBlock);
+
+    main.appendChild(identity);
+    trigger.appendChild(main);
+    row.appendChild(trigger);
+    listScroll.appendChild(row);
+  }
+
+  listShell.appendChild(listHead);
+  listShell.appendChild(listScroll);
+  fragment.appendChild(listShell);
+  elements.filesBotAdminServerList.replaceChildren(fragment);
+}
+
 function setFilesUploadInputInvalid(isInvalid, { isMissingFileError = false } = {}) {
   state.files.uploadFieldInvalid = Boolean(isInvalid);
   state.files.uploadMissingFileError = Boolean(isMissingFileError) && state.files.uploadFieldInvalid;
@@ -3521,6 +4451,72 @@ function closeFilesDeleteModal({ force = false } = {}) {
   state.files.deleteModal.fileName = "";
   state.files.deleteModal.deleting = false;
   renderFilesDeleteModal();
+}
+
+function renderFilesBotAdminLeaveModal() {
+  const modalState = state.files.botAdmin.leaveConfirm;
+  const me = normalizeFilesProfile(state.files.me);
+  const isOpen = Boolean(me.isAuthorized && me.isAdmin && modalState.open);
+  const guildName = modalState.guildName || t("files_unknown_value");
+  const busy = Boolean(state.files.botAdmin.busyActionKey);
+
+  if (elements.filesBotAdminLeaveBadge) {
+    elements.filesBotAdminLeaveBadge.textContent = t("files_bot_admin_leave_modal_badge");
+  }
+  if (elements.filesBotAdminLeaveTitle) {
+    elements.filesBotAdminLeaveTitle.textContent = t("files_bot_admin_leave_modal_title");
+  }
+  if (elements.filesBotAdminLeaveMessage) {
+    elements.filesBotAdminLeaveMessage.textContent = t("files_bot_admin_leave_confirm", { server: guildName });
+  }
+  if (elements.filesBotAdminLeaveCancelBtn) {
+    elements.filesBotAdminLeaveCancelBtn.textContent = t("files_bot_admin_leave_modal_cancel");
+    elements.filesBotAdminLeaveCancelBtn.disabled = busy;
+  }
+  if (elements.filesBotAdminLeaveConfirmBtn) {
+    elements.filesBotAdminLeaveConfirmBtn.textContent = busy
+      ? t("files_bot_admin_server_action_busy")
+      : t("files_bot_admin_leave_modal_confirm");
+    elements.filesBotAdminLeaveConfirmBtn.disabled = busy;
+  }
+  if (elements.filesBotAdminLeaveOverlay) {
+    elements.filesBotAdminLeaveOverlay.classList.toggle("is-active", isOpen);
+    elements.filesBotAdminLeaveOverlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  }
+}
+
+function closeFilesBotAdminLeaveModal({ force = false } = {}) {
+  if (state.files.botAdmin.busyActionKey && !force) {
+    return;
+  }
+
+  state.files.botAdmin.leaveConfirm.open = false;
+  state.files.botAdmin.leaveConfirm.guildId = "";
+  state.files.botAdmin.leaveConfirm.guildName = "";
+  state.files.botAdmin.leaveConfirm.actionKey = "";
+  renderFilesBotAdminLeaveModal();
+}
+
+function openFilesBotAdminLeaveModal({ guildId = "", guildName = "", actionKey = "" } = {}) {
+  state.files.botAdmin.leaveConfirm.open = true;
+  state.files.botAdmin.leaveConfirm.guildId = String(guildId || "").trim();
+  state.files.botAdmin.leaveConfirm.guildName = String(guildName || "").trim();
+  state.files.botAdmin.leaveConfirm.actionKey = String(actionKey || "").trim();
+  renderFilesBotAdminLeaveModal();
+}
+
+async function confirmFilesBotAdminLeaveModal() {
+  const modalState = state.files.botAdmin.leaveConfirm;
+  if (!modalState.open || !modalState.guildId || state.files.botAdmin.busyActionKey) {
+    return;
+  }
+
+  await executeFilesBotAdminAction({
+    action: "leave",
+    guildId: modalState.guildId,
+    guildName: modalState.guildName || t("files_unknown_value"),
+    actionKey: modalState.actionKey || `leave:${modalState.guildId}`
+  });
 }
 
 function setFilesSearchCount(text = "") {
@@ -5500,6 +6496,9 @@ function renderFilesAccessView() {
     if (elements.filesAdminRequestsPanel) {
       elements.filesAdminRequestsPanel.hidden = true;
     }
+    if (elements.filesBotAdminPanel) {
+      elements.filesBotAdminPanel.hidden = true;
+    }
     if (elements.filesRestrictedView) {
       elements.filesRestrictedView.hidden = true;
     }
@@ -5509,6 +6508,8 @@ function renderFilesAccessView() {
     if (elements.filesDisclaimerGateView) {
       elements.filesDisclaimerGateView.hidden = true;
     }
+    renderFilesBotAdminPanel();
+    renderFilesBotAdminLeaveModal();
     renderFilesAdminModals();
     renderFilesGroupRenameModal();
     renderFilesDisclaimerModal();
@@ -5665,6 +6666,8 @@ function renderFilesAccessView() {
   }
 
   renderFilesAdminRequestsPanel();
+  renderFilesBotAdminPanel();
+  renderFilesBotAdminLeaveModal();
   renderFilesAdminModals();
   renderFilesGroupRenameModal();
   renderFilesDisclaimerModal();
@@ -5895,6 +6898,7 @@ async function pollFilesIdentityLive({ force = false } = {}) {
 
     state.files.me = nextProfile;
     syncFilesDecisionNoticeFromProfile(nextProfile);
+    syncDiscordBotInviteButton();
 
     if (nextProfile.isAuthorized) {
       const identityChanged = previousProfile.discordId !== nextProfile.discordId;
@@ -6048,6 +7052,46 @@ async function refreshFilesAdminRequests({ silent = false } = {}) {
   renderFilesAccessView();
 }
 
+async function refreshFilesBotAdminOverview({ silent = false } = {}) {
+  const me = normalizeFilesProfile(state.files.me);
+  if (!me.isAuthorized || !me.isAdmin) {
+    clearFilesBotAdminState();
+    renderFilesAccessView();
+    return;
+  }
+  if (state.files.botAdmin.loading) {
+    return;
+  }
+
+  state.files.botAdmin.loading = true;
+  if (!silent) {
+    renderFilesAccessView();
+  }
+
+  try {
+    const payload = await requestJson("/api/admin/bot/overview");
+    state.files.botAdmin.overview = normalizeFilesBotAdminOverview(payload);
+    state.files.botAdmin.lastLoadedAt = Date.now();
+    if (state.files.botAdmin.messageKind === "error") {
+      setFilesBotAdminFeedback("", "");
+    }
+  } catch (error) {
+    if (error?.status === 401 || error?.status === 403) {
+      stopFilesBotAdminLivePolling();
+      await refreshFilesIdentity({ loadFiles: false });
+      return;
+    }
+    state.files.botAdmin.overview = null;
+    state.files.botAdmin.selectedGuildId = "";
+    state.files.botAdmin.lastLoadedAt = 0;
+    setFilesBotAdminFeedback(getFilesBotAdminErrorMessage(error), "error");
+  } finally {
+    state.files.botAdmin.loading = false;
+  }
+
+  renderFilesAccessView();
+}
+
 async function refreshFilesIdentity({ loadFiles = true } = {}) {
   state.files.loadingMe = true;
   state.files.meError = "";
@@ -6065,12 +7109,15 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
     state.files.loadingMe = false;
   }
 
+  syncDiscordBotInviteButton();
+
   if (state.files.me.isAuthorized && loadFiles) {
     await refreshFilesList();
     if (state.files.me.isAdmin) {
       await refreshFilesAdminRequests({ silent: true });
     } else {
       clearFilesAdminRequestsState();
+      clearFilesBotAdminState({ preserveQuery: true });
     }
     return;
   }
@@ -6089,9 +7136,11 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
     state.files.detailOrigin = "";
     state.files.transition = "";
     clearFilesAdminRequestsState();
+    clearFilesBotAdminState({ preserveQuery: true });
   }
   if (state.files.me.isAuthorized && !state.files.me.isAdmin) {
     clearFilesAdminRequestsState();
+    clearFilesBotAdminState({ preserveQuery: true });
   }
   if (!state.files.me.loggedIn || state.files.me.isAuthorized) {
     state.files.accessRequestBusy = false;
@@ -6111,6 +7160,8 @@ async function refreshFilesIdentityBadgeOnly() {
 
   syncFilesDecisionNoticeFromProfile(state.files.me);
   renderFilesDecisionTabBadge();
+  syncDiscordBotInviteButton();
+  renderFilesBotAdminPanel();
 }
 
 async function handleFilesLogout() {
@@ -6137,11 +7188,13 @@ async function handleFilesLogout() {
   state.files.accessRequestBusy = false;
   setFilesRestrictedRequestFeedback("", "");
   stopFilesDisclaimerAcceptTransition({ immediate: true });
+  syncDiscordBotInviteButton();
   state.files.disclaimerGate.busy = false;
   state.files.disclaimerGate.pendingDecision = "";
   resetFilesDisclaimerGateContactState({ clearText: true });
   setFilesDisclaimerGateFeedback("", "");
   clearFilesAdminRequestsState();
+  clearFilesBotAdminState();
   state.files.adminRequests.query = "";
   state.files.adminRequests.filter = "pending";
   setFilesUploadInputInvalid(false, { isMissingFileError: false });
@@ -6525,6 +7578,114 @@ function handleFilesAdminRequestsListInput(event) {
     return;
   }
   state.files.adminRequests.declineComposerValue = String(target.value || "");
+}
+
+async function executeFilesBotAdminAction({ action = "", guildId = "", guildName = "", actionKey = "" } = {}) {
+  let requestUrl = "";
+  let successMessage = "";
+  if (action === "sync") {
+    requestUrl = "/api/admin/bot/commands/sync";
+    successMessage = t("files_bot_admin_sync_success");
+  } else if (action === "welcome") {
+    requestUrl = `/api/admin/bot/guilds/${encodeURIComponent(guildId)}/welcome`;
+    successMessage = t("files_bot_admin_welcome_success", { server: guildName });
+  } else if (action === "leave") {
+    requestUrl = `/api/admin/bot/guilds/${encodeURIComponent(guildId)}/leave`;
+    successMessage = t("files_bot_admin_leave_success", { server: guildName });
+  } else {
+    return;
+  }
+
+  state.files.botAdmin.busyActionKey = actionKey;
+  if (action === "leave") {
+    closeFilesBotAdminLeaveModal({ force: true });
+  }
+  setFilesBotAdminFeedback("", "");
+  renderFilesAccessView();
+  renderFilesBotAdminLeaveModal();
+
+  try {
+    await requestJson(requestUrl, {
+      method: "POST"
+    });
+    setFilesBotAdminFeedback(successMessage, "success");
+    await refreshFilesBotAdminOverview({ silent: true });
+  } catch (error) {
+    if (error?.status === 401 || error?.status === 403) {
+      stopFilesBotAdminLivePolling();
+      await refreshFilesIdentity({ loadFiles: false });
+      return;
+    }
+    setFilesBotAdminFeedback(getFilesBotAdminErrorMessage(error), "error");
+  } finally {
+    state.files.botAdmin.busyActionKey = "";
+    renderFilesAccessView();
+    renderFilesBotAdminLeaveModal();
+  }
+}
+
+async function handleFilesBotAdminAction(actionElement) {
+  const me = normalizeFilesProfile(state.files.me);
+  if (!me.isAuthorized || !me.isAdmin) {
+    return;
+  }
+  if (!(actionElement instanceof HTMLElement)) {
+    return;
+  }
+  if (state.files.botAdmin.loading || state.files.botAdmin.busyActionKey) {
+    return;
+  }
+
+  const action = String(actionElement.dataset.filesBotAction || "").trim().toLowerCase();
+  const guildId = String(actionElement.dataset.guildId || "").trim();
+  const guildName = String(actionElement.dataset.guildName || "").trim() || t("files_unknown_value");
+  const actionKey = String(actionElement.dataset.actionKey || action).trim();
+
+  if (!actionKey) {
+    return;
+  }
+  if ((action === "welcome" || action === "leave") && !guildId) {
+    return;
+  }
+  if (action === "leave") {
+    openFilesBotAdminLeaveModal({
+      guildId,
+      guildName,
+      actionKey
+    });
+    return;
+  }
+
+  await executeFilesBotAdminAction({
+    action,
+    guildId,
+    guildName,
+    actionKey
+  });
+}
+
+function handleFilesBotAdminServerListClick(event) {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return;
+  }
+  const actionTarget = target.closest("[data-files-bot-action]");
+  if (actionTarget instanceof HTMLElement) {
+    void handleFilesBotAdminAction(actionTarget);
+    return;
+  }
+  const selectTarget = target.closest("[data-files-bot-select]");
+  if (!(selectTarget instanceof HTMLElement)) {
+    return;
+  }
+  const guildId = String(selectTarget.dataset.guildId || "").trim();
+  if (!guildId) {
+    return;
+  }
+  const nextGuildId = state.files.botAdmin.selectedGuildId === guildId ? "" : guildId;
+  setFilesBotAdminSelectedGuildId(nextGuildId, {
+    scrollIntoView: Boolean(nextGuildId)
+  });
 }
 
 async function handleFilesDelete(fileId) {
@@ -9341,6 +10502,7 @@ function showClassifiedPage({ updateHash = true } = {}) {
   document.body.classList.add("is-classified");
   elements.mainTitle.textContent = t("classified_main_title");
   syncTopTabForCurrentView();
+  renderFilesBotAdminPanel();
   if (updateHash) {
     setHashView("classified");
   }
@@ -10908,7 +12070,7 @@ function applyLanguage(lang, persist = true) {
     elements.discordBotInviteHint.textContent = t("discord_bot_invite_hint");
   }
   if (elements.discordBotInviteBtn) {
-    elements.discordBotInviteBtn.title = t("discord_bot_invite_title");
+    elements.discordBotInviteBtn.removeAttribute("title");
     elements.discordBotInviteBtn.setAttribute("aria-label", t("discord_bot_invite_title"));
   }
   if (elements.intelBotInviteBadge) {
@@ -11148,15 +12310,58 @@ function applyLanguage(lang, persist = true) {
   if (elements.filesAccessControlModalBtnText) {
     elements.filesAccessControlModalBtnText.textContent = t("files_admin_requests_title");
   }
+  if (elements.filesBotAdminModalBtnText) {
+    elements.filesBotAdminModalBtnText.textContent = t("files_bot_admin_modal_title");
+  }
+  if (elements.filesBotAdminFloatingBtnLabel) {
+    elements.filesBotAdminFloatingBtnLabel.textContent = t("files_bot_admin_fab_label");
+  }
+  if (elements.filesBotAdminFloatingBtnHint) {
+    elements.filesBotAdminFloatingBtnHint.textContent = t("files_bot_admin_fab_hint");
+  }
+  if (elements.filesBotAdminFloatingBtn) {
+    elements.filesBotAdminFloatingBtn.removeAttribute("title");
+    elements.filesBotAdminFloatingBtn.setAttribute("aria-label", t("files_bot_admin_modal_title"));
+  }
   if (elements.filesUploadModalCloseBtn) {
     elements.filesUploadModalCloseBtn.textContent = t("files_admin_modal_close");
   }
   if (elements.filesAdminRequestsModalCloseBtn) {
     elements.filesAdminRequestsModalCloseBtn.textContent = t("files_admin_modal_close");
   }
+  if (elements.filesBotAdminModalCloseBtn) {
+    elements.filesBotAdminModalCloseBtn.textContent = t("files_admin_modal_close");
+  }
   elements.filesUploadTitle.textContent = t("files_admin_console_title");
   elements.filesAdminRequestsTitle.textContent = t("files_admin_requests_title");
   elements.filesAdminRequestsHint.textContent = t("files_admin_requests_hint");
+  if (elements.filesBotAdminBadge) {
+    elements.filesBotAdminBadge.textContent = t("files_bot_admin_modal_badge");
+  }
+  if (elements.filesBotAdminTitle) {
+    elements.filesBotAdminTitle.textContent = t("files_bot_admin_modal_title");
+  }
+  if (elements.filesBotAdminHint) {
+    elements.filesBotAdminHint.textContent = t("files_bot_admin_modal_hint");
+  }
+  if (elements.filesBotAdminStatusLabel) {
+    elements.filesBotAdminStatusLabel.textContent = t("files_bot_admin_summary_status");
+  }
+  if (elements.filesBotAdminServersLabel) {
+    elements.filesBotAdminServersLabel.textContent = t("files_bot_admin_summary_servers");
+  }
+  if (elements.filesBotAdminUsersLabel) {
+    elements.filesBotAdminUsersLabel.textContent = t("files_bot_admin_summary_users");
+  }
+  if (elements.filesBotAdminChannelsLabel) {
+    elements.filesBotAdminChannelsLabel.textContent = t("files_bot_admin_summary_channels");
+  }
+  if (elements.filesBotAdminSearchLabel) {
+    elements.filesBotAdminSearchLabel.textContent = t("files_bot_admin_search_label");
+  }
+  if (elements.filesBotAdminSearchInput) {
+    elements.filesBotAdminSearchInput.placeholder = t("files_bot_admin_search_placeholder");
+  }
   elements.filesAdminRequestsSearchLabel.textContent = t("files_admin_requests_search_label");
   elements.filesAdminRequestsSearchInput.placeholder = t("files_admin_requests_search_placeholder");
   elements.filesAdminRequestsFilterLabel.textContent = t("files_admin_requests_filter_label");
@@ -11174,6 +12379,7 @@ function applyLanguage(lang, persist = true) {
   }
   syncFilesAdminRequestsFilterMenu();
   elements.filesAdminRequestsRefreshBtn.textContent = t("files_admin_requests_refresh_button");
+  renderFilesBotAdminPanel();
   elements.filesBrowserTitle.textContent = t("files_file_index_title");
   elements.filesSearchLabel.textContent = t("files_search_label");
   elements.filesSearchInput.placeholder = t("files_search_placeholder");
@@ -11397,10 +12603,12 @@ async function startBootSequence() {
 function wireEvents() {
   const hackInteractiveRoot = elements.hackOverlay?.querySelector(".hack-core") || null;
   const intelBotInviteRoot = elements.intelBotInviteCore || null;
+  const filesBotAdminLeaveModalRoot = elements.filesBotAdminLeaveOverlay?.querySelector(".files-bot-admin-leave-core") || null;
   const filesGroupRenameModalRoot = elements.filesGroupRenameOverlay?.querySelector(".files-group-rename-core") || null;
   const filesDisclaimerModalRoot = elements.filesDisclaimerOverlay?.querySelector(".files-disclaimer-core") || null;
   const filesUploadModalRoot = elements.filesUploadOverlay?.querySelector(".files-admin-modal-core") || null;
   const filesAdminRequestsModalRoot = elements.filesAdminRequestsOverlay?.querySelector(".files-admin-modal-core") || null;
+  const filesBotAdminModalRoot = elements.filesBotAdminOverlay?.querySelector(".files-admin-modal-core") || null;
   const shouldBlockBackgroundForActiveOverlay = (target) => {
     if (document.body.classList.contains("is-syncing") && elements.syncOverlay?.classList.contains("is-active")) {
       return true;
@@ -11413,6 +12621,12 @@ function wireEvents() {
         return true;
       }
       return !intelBotInviteRoot.contains(target);
+    }
+    if (elements.filesBotAdminLeaveOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node) || !(filesBotAdminLeaveModalRoot instanceof Node)) {
+        return true;
+      }
+      return !filesBotAdminLeaveModalRoot.contains(target);
     }
     if (elements.filesGroupRenameOverlay?.classList.contains("is-active")) {
       if (!(target instanceof Node) || !(filesGroupRenameModalRoot instanceof Node)) {
@@ -11437,6 +12651,12 @@ function wireEvents() {
         return true;
       }
       return !filesAdminRequestsModalRoot.contains(target);
+    }
+    if (elements.filesBotAdminOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node) || !(filesBotAdminModalRoot instanceof Node)) {
+        return true;
+      }
+      return !filesBotAdminModalRoot.contains(target);
     }
     if (elements.siloDossierOverlay?.classList.contains("is-active")) {
       if (!(target instanceof Node)) {
@@ -11633,10 +12853,21 @@ function wireEvents() {
     const isOpen = normalizeFilesAdminModalType(state.files.adminModal.active) === "requests";
     setFilesAdminModalOpen(isOpen ? "" : "requests");
   });
+  elements.filesBotAdminModalBtn?.addEventListener("click", () => {
+    const isOpen = normalizeFilesAdminModalType(state.files.adminModal.active) === "bot";
+    setFilesAdminModalOpen(isOpen ? "" : "bot");
+  });
+  elements.filesBotAdminFloatingBtn?.addEventListener("click", () => {
+    const isOpen = normalizeFilesAdminModalType(state.files.adminModal.active) === "bot";
+    setFilesAdminModalOpen(isOpen ? "" : "bot");
+  });
   elements.filesUploadModalCloseBtn?.addEventListener("click", () => {
     closeFilesAdminModal();
   });
   elements.filesAdminRequestsModalCloseBtn?.addEventListener("click", () => {
+    closeFilesAdminModal();
+  });
+  elements.filesBotAdminModalCloseBtn?.addEventListener("click", () => {
     closeFilesAdminModal();
   });
   elements.filesDisclaimerBtn?.addEventListener("click", () => {
@@ -11673,9 +12904,21 @@ function wireEvents() {
       closeFilesAdminModal();
     }
   });
+  elements.filesBotAdminOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.filesBotAdminOverlay) {
+      if (isDesktopModalViewport()) {
+        return;
+      }
+      closeFilesAdminModal();
+    }
+  });
   elements.filesAdminRequestsSearchInput?.addEventListener("input", () => {
     state.files.adminRequests.query = String(elements.filesAdminRequestsSearchInput.value || "");
     renderFilesAdminRequestsPanel();
+  });
+  elements.filesBotAdminSearchInput?.addEventListener("input", () => {
+    state.files.botAdmin.query = String(elements.filesBotAdminSearchInput.value || "");
+    renderFilesBotAdminPanel();
   });
   elements.filesAdminRequestsFilterBtn?.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -11694,6 +12937,30 @@ function wireEvents() {
   elements.filesAdminRequestsRefreshBtn?.addEventListener("click", () => {
     void refreshFilesAdminRequests();
   });
+  elements.filesBotAdminRefreshBtn?.addEventListener("click", () => {
+    void refreshFilesBotAdminOverview();
+  });
+  elements.filesBotAdminSyncBtn?.addEventListener("click", () => {
+    const trigger = elements.filesBotAdminSyncBtn;
+    if (trigger instanceof HTMLElement) {
+      trigger.dataset.filesBotAction = "sync";
+      trigger.dataset.actionKey = "sync";
+      void handleFilesBotAdminAction(trigger);
+      trigger.removeAttribute("data-files-bot-action");
+      trigger.removeAttribute("data-action-key");
+    }
+  });
+  elements.filesBotAdminInviteLink?.addEventListener("click", (event) => {
+    const inviteLink = normalizeFilesBotAdminOverview(state.files.botAdmin.overview)?.inviteLink
+      || state.publicConfig.botInviteLink
+      || "";
+    if (!inviteLink) {
+      event.preventDefault();
+      setFilesBotAdminFeedback(t("files_bot_admin_invite_unavailable"), "error");
+      renderFilesBotAdminPanel();
+    }
+  });
+  elements.filesBotAdminServerList?.addEventListener("click", handleFilesBotAdminServerListClick);
   elements.filesSearchToggleBtn?.addEventListener("click", () => {
     const nextOpen = !state.files.search.open;
     setFilesSearchOpen(nextOpen, { focusInput: nextOpen, clearQuery: !nextOpen });
@@ -11759,6 +13026,17 @@ function wireEvents() {
   elements.filesDeleteOverlay?.addEventListener("click", (event) => {
     if (event.target === elements.filesDeleteOverlay) {
       closeFilesDeleteModal();
+    }
+  });
+  elements.filesBotAdminLeaveCancelBtn?.addEventListener("click", () => {
+    closeFilesBotAdminLeaveModal();
+  });
+  elements.filesBotAdminLeaveConfirmBtn?.addEventListener("click", () => {
+    void confirmFilesBotAdminLeaveModal();
+  });
+  elements.filesBotAdminLeaveOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.filesBotAdminLeaveOverlay) {
+      closeFilesBotAdminLeaveModal();
     }
   });
   elements.hackAbortBtn.addEventListener("click", hideHackOverlay);
@@ -11885,6 +13163,11 @@ function wireEvents() {
       return;
     }
 
+    if (elements.filesBotAdminLeaveOverlay?.classList.contains("is-active")) {
+      closeFilesBotAdminLeaveModal();
+      return;
+    }
+
     if (elements.filesAdminRequestsFilterDropdown?.classList.contains("is-open")) {
       setFilesAdminRequestsFilterMenuOpen(false);
       return;
@@ -11926,6 +13209,7 @@ function wireEvents() {
     if (
       elements.filesUploadOverlay?.classList.contains("is-active")
       || elements.filesAdminRequestsOverlay?.classList.contains("is-active")
+      || elements.filesBotAdminOverlay?.classList.contains("is-active")
     ) {
       if (!isDesktopModalViewport()) {
         closeFilesAdminModal();
@@ -11953,6 +13237,7 @@ function wireEvents() {
     }
   });
   window.addEventListener("resize", () => {
+    renderFilesAdminModals();
     if (state.classifiedSearch.open) {
       unlockClassifiedArchiveCardSize();
       refreshClassifiedArchiveCardBaseSize(true);
