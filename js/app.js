@@ -514,9 +514,8 @@ function syncDiscordBotInviteButton() {
     return;
   }
 
-  const canUseInviteButton = canUseFilesBotAdmin(state.files.me);
   const inviteLink = String(state.publicConfig?.botInviteLink || "").trim();
-  const shouldShow = state.view === "intel" && canUseInviteButton && Boolean(inviteLink);
+  const shouldShow = state.view === "intel" && Boolean(inviteLink);
   elements.discordBotInviteBtn.hidden = !shouldShow;
   elements.discordBotInviteBtn.href = shouldShow ? inviteLink : "#";
   elements.discordBotInviteBtn.setAttribute("aria-hidden", shouldShow ? "false" : "true");
@@ -538,9 +537,6 @@ function renderIntelBotInviteModal() {
 
 function openIntelBotInviteModal() {
   if (!elements.intelBotInviteOverlay) {
-    return;
-  }
-  if (!canUseFilesBotAdmin(state.files.me)) {
     return;
   }
   if (!String(state.publicConfig?.botInviteLink || "").trim()) {
