@@ -20,6 +20,9 @@ const FALLBACK_MINERVA_ANCHOR_DATE_UTC = Date.UTC(2026, 1, 16);
 const MS_DAY = 24 * 60 * 60 * 1000;
 const MS_WEEK = 7 * MS_DAY;
 const CYCLE_WEEKS = 24;
+const MINERVA_FALLBACK_EVENT_START_GAP_DAYS = [7, 7, 10, 11];
+const MINERVA_FALLBACK_EVENT_ACTIVE_DAYS = [2, 2, 2, 4];
+const MINERVA_FALLBACK_EVENT_SEARCH_LIMIT = CYCLE_WEEKS * 32;
 const WIKI_BASE = "https://fallout.fandom.com";
 const WIKI_API_BY_LANG = {
   en: `${WIKI_BASE}/api.php`,
@@ -154,6 +157,98 @@ const DISCORD_AUTH_POPUP_WIDTH = 540;
 const DISCORD_AUTH_POPUP_HEIGHT = 760;
 const DISCORD_AUTH_POPUP_POLL_INTERVAL_MS = 450;
 const DISCORD_AUTH_POST_MESSAGE_TYPE = "fallout-codex:discord-auth";
+const FILES_DESCRIPTION_FORMATS = [
+  {
+    key: "alert",
+    open: "[alert]",
+    close: "[/alert]",
+    tagName: "span",
+    className: "files-rich-inline is-alert"
+  },
+  {
+    key: "glow",
+    open: "[glow]",
+    close: "[/glow]",
+    tagName: "span",
+    className: "files-rich-inline is-glow"
+  },
+  {
+    key: "inverse",
+    open: "[inv]",
+    close: "[/inv]",
+    tagName: "span",
+    className: "files-rich-inline is-inverse"
+  },
+  {
+    key: "scan",
+    open: "[scan]",
+    close: "[/scan]",
+    tagName: "span",
+    className: "files-rich-inline is-scan"
+  },
+  {
+    key: "signal",
+    open: "[sig]",
+    close: "[/sig]",
+    tagName: "span",
+    className: "files-rich-inline is-signal"
+  },
+  {
+    key: "tag",
+    open: "[tag]",
+    close: "[/tag]",
+    tagName: "span",
+    className: "files-rich-inline is-tag"
+  },
+  {
+    key: "bi",
+    open: "[bi]",
+    close: "[/bi]",
+    tagName: "span",
+    className: "files-rich-inline is-bold-italic"
+  },
+  {
+    key: "hl",
+    open: "[hl]",
+    close: "[/hl]",
+    tagName: "mark",
+    className: "files-rich-inline is-highlight"
+  },
+  {
+    key: "b",
+    open: "[b]",
+    close: "[/b]",
+    tagName: "strong",
+    className: "files-rich-inline is-bold"
+  },
+  {
+    key: "i",
+    open: "[i]",
+    close: "[/i]",
+    tagName: "em",
+    className: "files-rich-inline is-italic"
+  },
+  {
+    key: "u",
+    open: "[u]",
+    close: "[/u]",
+    tagName: "span",
+    className: "files-rich-inline is-underline"
+  }
+];
+const FILES_DESCRIPTION_EDITOR_BUTTONS = [
+  { format: "b", label: "B", titleKey: "files_description_format_bold" },
+  { format: "i", label: "I", titleKey: "files_description_format_italic" },
+  { format: "bi", label: "BI", titleKey: "files_description_format_bold_italic" },
+  { format: "hl", label: "HL", titleKey: "files_description_format_highlight" },
+  { format: "glow", label: "GL", titleKey: "files_description_format_glow" },
+  { format: "alert", label: "AL", titleKey: "files_description_format_alert" },
+  { format: "inverse", label: "INV", titleKey: "files_description_format_inverse" },
+  { format: "scan", label: "SCN", titleKey: "files_description_format_scan" },
+  { format: "signal", label: "SIG", titleKey: "files_description_format_signal" },
+  { format: "tag", label: "TAG", titleKey: "files_description_format_tag" },
+  { format: "u", label: "U", titleKey: "files_description_format_underline" }
+];
 
 let filesLiveIdentityPollTimer = null;
 let filesLiveIdentityPollInFlight = false;
@@ -162,6 +257,7 @@ let filesUploadFeedbackTimer = null;
 let filesDisclaimerAcceptTransitionTimer = null;
 let discordAuthPopupWindow = null;
 let discordAuthPopupPollTimer = null;
+let filesDescriptionEditors = [];
 
 const STRINGS = globalThis.FALLOUT_CODEX_STRINGS || { en: {}, es: {} };
 
@@ -521,6 +617,23 @@ function formatSiloCountdownValue(totalSeconds) {
   return `${d}d ${h}h ${m}m ${s}s`;
 }
 
+function formatSiloResetMoment(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "--";
+  }
+
+  const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+
+  return formatReadableDateTime(date, {
+    includeSeconds: false,
+    timeZone: localTimeZone,
+    includeWeekday: true,
+    includeYear: false,
+    zoneLabel: getLocalZoneLabel(date),
+    hour12: true
+  });
+}
+
 function renderSiloDossier() {
   if (!elements.siloDossierOverlay || !elements.siloDossierCodes) {
     return;
@@ -574,13 +687,7 @@ function renderSiloDossier() {
   const nowMs = Date.now();
   const targetUtc = getActiveSiloResetTargetMs(nowMs);
   const totalSeconds = Math.max(0, Math.floor((targetUtc - nowMs) / 1000));
-  elements.siloDossierResetValue.textContent = formatReadableDateTime(new Date(targetUtc), {
-    includeSeconds: false,
-    timeZone: "UTC",
-    includeWeekday: true,
-    includeYear: false,
-    zoneLabel: "UTC"
-  });
+  elements.siloDossierResetValue.textContent = formatSiloResetMoment(new Date(targetUtc));
   elements.siloDossierCountdownValue.textContent = formatSiloCountdownValue(totalSeconds);
 
   if (!hasCodes && !state.silo.error) {
@@ -1955,6 +2062,306 @@ function closeFilesDisclaimerModal() {
   renderFilesDisclaimerModal();
 }
 
+function pruneFilesDescriptionEditors() {
+  filesDescriptionEditors = filesDescriptionEditors.filter((editor) => {
+    return editor
+      && editor.textarea instanceof HTMLTextAreaElement
+      && editor.textarea.isConnected;
+  });
+}
+
+function getFilesDescriptionFormatConfig(formatKey) {
+  const normalizedKey = String(formatKey || "").trim().toLowerCase();
+  return FILES_DESCRIPTION_FORMATS.find((entry) => entry.key === normalizedKey) || null;
+}
+
+function escapeFilesDescriptionRegex(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function appendFilesDescriptionPlainText(parent, value) {
+  if (!(parent instanceof Node)) {
+    return;
+  }
+
+  const text = String(value || "");
+  if (!text) {
+    return;
+  }
+
+  const lines = text.split("\n");
+  lines.forEach((line, index) => {
+    if (index > 0) {
+      parent.appendChild(document.createElement("br"));
+    }
+    if (line) {
+      parent.appendChild(document.createTextNode(line));
+    }
+  });
+}
+
+function appendFilesDescriptionFormattedNodes(parent, value) {
+  if (!(parent instanceof Node)) {
+    return;
+  }
+
+  const source = String(value || "");
+  if (!source) {
+    return;
+  }
+
+  let cursor = 0;
+  while (cursor < source.length) {
+    let matchedFormat = null;
+
+    for (const format of FILES_DESCRIPTION_FORMATS) {
+      const openIndex = source.indexOf(format.open, cursor);
+      if (openIndex === -1) {
+        continue;
+      }
+      const closeIndex = source.indexOf(format.close, openIndex + format.open.length);
+      if (closeIndex === -1) {
+        continue;
+      }
+
+      if (!matchedFormat || openIndex < matchedFormat.openIndex) {
+        matchedFormat = { format, openIndex, closeIndex };
+        continue;
+      }
+
+      if (openIndex === matchedFormat.openIndex && format.open.length > matchedFormat.format.open.length) {
+        matchedFormat = { format, openIndex, closeIndex };
+      }
+    }
+
+    if (!matchedFormat) {
+      appendFilesDescriptionPlainText(parent, source.slice(cursor));
+      break;
+    }
+
+    appendFilesDescriptionPlainText(parent, source.slice(cursor, matchedFormat.openIndex));
+    const content = source.slice(
+      matchedFormat.openIndex + matchedFormat.format.open.length,
+      matchedFormat.closeIndex
+    );
+
+    if (!content) {
+      appendFilesDescriptionPlainText(parent, `${matchedFormat.format.open}${matchedFormat.format.close}`);
+    } else {
+      const node = document.createElement(matchedFormat.format.tagName);
+      node.className = matchedFormat.format.className;
+      appendFilesDescriptionFormattedNodes(node, content);
+      parent.appendChild(node);
+    }
+
+    cursor = matchedFormat.closeIndex + matchedFormat.format.close.length;
+  }
+}
+
+function buildFilesDescriptionContentFragment(value, { emptyText = "" } = {}) {
+  const fragment = document.createDocumentFragment();
+  const normalizedValue = String(value || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .trim();
+
+  if (!normalizedValue) {
+    if (emptyText) {
+      const empty = document.createElement("span");
+      empty.className = "files-rich-empty";
+      empty.textContent = emptyText;
+      fragment.appendChild(empty);
+    }
+    return fragment;
+  }
+
+  const paragraphs = normalizedValue.split(/\n{2,}/).filter((entry) => entry.trim());
+  paragraphs.forEach((paragraph) => {
+    const paragraphEl = document.createElement("p");
+    paragraphEl.className = "files-rich-paragraph";
+    appendFilesDescriptionFormattedNodes(paragraphEl, paragraph);
+    fragment.appendChild(paragraphEl);
+  });
+
+  return fragment;
+}
+
+function renderFilesDescriptionContent(container, value, { emptyText = "" } = {}) {
+  if (!(container instanceof HTMLElement)) {
+    return;
+  }
+
+  const hasValue = Boolean(String(value || "").trim());
+  container.textContent = "";
+  container.classList.toggle("is-empty", !hasValue);
+  container.appendChild(buildFilesDescriptionContentFragment(value, { emptyText }));
+}
+
+function extractFilesDescriptionPlainText(value) {
+  let plainText = String(value || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+
+  FILES_DESCRIPTION_FORMATS.forEach((format) => {
+    const openPattern = new RegExp(escapeFilesDescriptionRegex(format.open), "g");
+    const closePattern = new RegExp(escapeFilesDescriptionRegex(format.close), "g");
+    plainText = plainText.replace(openPattern, "").replace(closePattern, "");
+  });
+
+  return plainText
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function updateFilesDescriptionEditorPreview(editor) {
+  if (!editor || !(editor.preview instanceof HTMLElement)) {
+    return;
+  }
+
+  renderFilesDescriptionContent(editor.preview, editor.textarea?.value || "", {
+    emptyText: t("files_description_preview_empty")
+  });
+}
+
+function refreshFilesDescriptionEditors() {
+  pruneFilesDescriptionEditors();
+  filesDescriptionEditors.forEach((editor) => {
+    if (!(editor?.toolbar instanceof HTMLElement)) {
+      return;
+    }
+
+    editor.toolbar.setAttribute("aria-label", t("files_description_toolbar_label"));
+    if (editor.hint instanceof HTMLElement) {
+      editor.hint.textContent = t("files_description_format_hint");
+    }
+    if (editor.previewLabel instanceof HTMLElement) {
+      editor.previewLabel.textContent = t("files_description_preview_label");
+    }
+
+    editor.buttons.forEach((entry) => {
+      if (!(entry?.button instanceof HTMLButtonElement)) {
+        return;
+      }
+      const title = t(entry.titleKey);
+      entry.button.title = title;
+      entry.button.setAttribute("aria-label", title);
+    });
+
+    updateFilesDescriptionEditorPreview(editor);
+  });
+}
+
+function applyFilesDescriptionFormat(textarea, formatKey) {
+  if (!(textarea instanceof HTMLTextAreaElement) || textarea.disabled || textarea.readOnly) {
+    return;
+  }
+
+  const format = getFilesDescriptionFormatConfig(formatKey);
+  if (!format) {
+    return;
+  }
+
+  const value = String(textarea.value || "");
+  const selectionStart = Number.isInteger(textarea.selectionStart) ? textarea.selectionStart : value.length;
+  const selectionEnd = Number.isInteger(textarea.selectionEnd) ? textarea.selectionEnd : selectionStart;
+  const before = value.slice(0, selectionStart);
+  const selected = value.slice(selectionStart, selectionEnd);
+  const after = value.slice(selectionEnd);
+  const nextValue = `${before}${format.open}${selected}${format.close}${after}`;
+  const maxLength = Number(textarea.maxLength) || 0;
+
+  if (maxLength > 0 && nextValue.length > maxLength) {
+    return;
+  }
+
+  textarea.value = nextValue;
+  textarea.focus();
+
+  const cursorStart = selectionStart + format.open.length;
+  const cursorEnd = cursorStart + selected.length;
+  textarea.setSelectionRange(cursorStart, cursorEnd);
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function mountFilesDescriptionEditor(textarea) {
+  if (!(textarea instanceof HTMLTextAreaElement)) {
+    return null;
+  }
+
+  pruneFilesDescriptionEditors();
+  const existing = filesDescriptionEditors.find((entry) => entry.textarea === textarea);
+  if (existing) {
+    return existing;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "files-description-editor";
+
+  const toolbar = document.createElement("div");
+  toolbar.className = "files-description-toolbar";
+  toolbar.setAttribute("role", "toolbar");
+  wrapper.appendChild(toolbar);
+
+  const buttons = FILES_DESCRIPTION_EDITOR_BUTTONS.map((entry) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "files-description-toolbar-btn";
+    button.textContent = entry.label;
+    button.setAttribute("data-files-description-format", entry.format);
+    button.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+    });
+    button.addEventListener("click", () => {
+      applyFilesDescriptionFormat(textarea, entry.format);
+    });
+    toolbar.appendChild(button);
+    return {
+      button,
+      titleKey: entry.titleKey
+    };
+  });
+
+  const hint = document.createElement("p");
+  hint.className = "files-description-toolbar-hint";
+  wrapper.appendChild(hint);
+
+  const currentParent = textarea.parentNode;
+  if (currentParent) {
+    currentParent.insertBefore(wrapper, textarea);
+  }
+  wrapper.appendChild(textarea);
+
+  const previewWrap = document.createElement("div");
+  previewWrap.className = "files-description-preview";
+
+  const previewLabel = document.createElement("p");
+  previewLabel.className = "files-description-preview-label";
+  previewWrap.appendChild(previewLabel);
+
+  const preview = document.createElement("div");
+  preview.className = "files-description-preview-body files-description-value";
+  previewWrap.appendChild(preview);
+
+  wrapper.appendChild(previewWrap);
+
+  const editor = {
+    textarea,
+    toolbar,
+    hint,
+    previewLabel,
+    preview,
+    buttons
+  };
+
+  textarea.addEventListener("input", () => {
+    updateFilesDescriptionEditorPreview(editor);
+  });
+
+  filesDescriptionEditors.push(editor);
+  refreshFilesDescriptionEditors();
+  return editor;
+}
+
 function normalizeFilesEntry(payload) {
   if (!payload || typeof payload !== "object") {
     return null;
@@ -1974,6 +2381,7 @@ function normalizeFilesEntry(payload) {
     uploadedAt: String(payload.uploadedAt || payload.uploaded_at || "").trim(),
     updatedAt: String(payload.updatedAt || payload.updated_at || payload.uploadedAt || "").trim(),
     description: String(payload.description || ""),
+    descriptionPlain: extractFilesDescriptionPlainText(payload.description || ""),
     group: normalizeFilesGroup(payload.group),
     uploader: String(payload.uploader || payload.uploaderDiscordId || "").trim(),
     imageUrl: String(payload.imageUrl || "").trim(),
@@ -3460,7 +3868,7 @@ function getFilteredFilesList(files = []) {
     const realName = normalizeSearchText(file.name || file.originalName || "");
     const type = normalizeSearchText(file.mimeType || file.type || resolveFileTypeLabel(file));
     const group = normalizeSearchText(file.group || "");
-    const description = normalizeSearchText(file.description || "");
+    const description = normalizeSearchText(file.descriptionPlain || file.description || "");
     const uploader = normalizeSearchText(file.uploader || file.uploaderDiscordId || "");
     const haystack = `${displayName} ${realName} ${type} ${group} ${description} ${uploader}`;
     return queryTokens.every((token) => haystack.includes(token));
@@ -3541,9 +3949,11 @@ function createFilesDescriptionBlock({ description = "", imageUrl = "", imageNam
   labelEl.className = "files-meta-label";
   labelEl.textContent = t("files_description_label");
 
-  const valueEl = document.createElement("p");
+  const valueEl = document.createElement("div");
   valueEl.className = "files-description-value";
-  valueEl.textContent = description || t("files_unknown_value");
+  renderFilesDescriptionContent(valueEl, description, {
+    emptyText: t("files_unknown_value")
+  });
 
   wrap.appendChild(labelEl);
   wrap.appendChild(valueEl);
@@ -3620,7 +4030,7 @@ function createFilesAdminEditForm(file) {
   descriptionInput.className = "files-upload-description files-edit-description";
   descriptionInput.name = "description";
   descriptionInput.rows = 4;
-  descriptionInput.maxLength = 500;
+  descriptionInput.maxLength = 900;
   descriptionInput.value = String(file.description || "").trim();
   descriptionInput.placeholder = t("files_upload_description_placeholder");
   form.appendChild(descriptionInput);
@@ -3776,6 +4186,10 @@ function renderFilesDetailCard(file) {
   detailCard.appendChild(detailTop);
   detailCard.appendChild(detailBody);
   elements.filesList.appendChild(detailCard);
+  const editDescriptionInput = detailCard.querySelector("[data-files-edit-form] textarea[name=\"description\"]");
+  if (editDescriptionInput instanceof HTMLTextAreaElement) {
+    mountFilesDescriptionEditor(editDescriptionInput);
+  }
   elements.filesList.dataset.detailRenderKey = buildFilesDetailRenderKey(file, {
     isAdmin: Boolean(state.files.me?.isAdmin)
   });
@@ -6119,6 +6533,7 @@ async function handleFilesUpload(event) {
       body: formData
     });
     elements.filesUploadForm?.reset();
+    refreshFilesDescriptionEditors();
     state.files.uploadBusy = false;
     setFilesUploadFeedback(t("files_upload_success"), "success");
     setFilesUploadInputInvalid(false, { isMissingFileError: false });
@@ -7240,6 +7655,22 @@ function buildEasternDate(year, month, day, hour, minute) {
   return new Date(utcMs);
 }
 
+function shiftEasternDateByDays(date, dayOffset = 0) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const parts = extractTimeZoneParts(date, "America/New_York");
+  const shiftedDate = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + Number(dayOffset || 0), 0, 0, 0));
+  return buildEasternDate(
+    shiftedDate.getUTCFullYear(),
+    shiftedDate.getUTCMonth() + 1,
+    shiftedDate.getUTCDate(),
+    parts.hour,
+    parts.minute
+  );
+}
+
 function parseBethesdaRawDateTime(raw) {
   const match = String(raw || "").match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})\s*([AP]M)$/i);
   if (!match) {
@@ -7716,14 +8147,9 @@ function updateClock() {
   const h = Math.floor((totalSeconds % 86400) / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
   const s = totalSeconds % 60;
-  const ts = formatReadableDateTime(new Date(targetUtc), {
-    includeSeconds: false,
-    timeZone: "UTC",
-    includeWeekday: true,
-    includeYear: false,
-    zoneLabel: "UTC"
-  });
+  const ts = formatSiloResetMoment(new Date(targetUtc));
 
+  elements.siloHint.textContent = t("silo_hint", { schedule: ts });
   elements.siloExpiry.textContent = t("reset_in", { d, h, m, s, ts });
   if (state.siloDossier.open) {
     renderSiloDossier();
@@ -8552,6 +8978,80 @@ function scoreClassifiedSearchEntry(entry, queryNorm, queryRaw) {
   return score;
 }
 
+function buildFallbackMinervaEventByIndex(eventIndex, eventStart) {
+  const normalizedIndex = Math.max(0, Number(eventIndex) || 0);
+  const phase = mod(normalizedIndex, 4);
+  const safeStart = eventStart instanceof Date && !Number.isNaN(eventStart.getTime())
+    ? eventStart
+    : buildFallbackCycleDate(0);
+  const eventEnd = shiftEasternDateByDays(safeStart, MINERVA_FALLBACK_EVENT_ACTIVE_DAYS[phase]);
+
+  return {
+    eventIndex: normalizedIndex,
+    listNumber: mod(normalizedIndex, CYCLE_WEEKS) + 1,
+    location: CYCLE_LOCATIONS[phase],
+    eventStart: safeStart,
+    eventEnd,
+    phase
+  };
+}
+
+function nextFallbackMinervaEventStart(eventStart, eventIndex) {
+  const safeStart = eventStart instanceof Date && !Number.isNaN(eventStart.getTime())
+    ? eventStart
+    : buildFallbackCycleDate(0);
+  const phase = mod(Number(eventIndex) || 0, 4);
+  return shiftEasternDateByDays(safeStart, MINERVA_FALLBACK_EVENT_START_GAP_DAYS[phase]);
+}
+
+function resolveFallbackMinervaEventWindow(now = new Date()) {
+  let eventIndex = 0;
+  let eventStart = buildFallbackCycleDate(0);
+
+  for (let guard = 0; guard < MINERVA_FALLBACK_EVENT_SEARCH_LIMIT; guard += 1) {
+    const currentEvent = buildFallbackMinervaEventByIndex(eventIndex, eventStart);
+    const nextStart = nextFallbackMinervaEventStart(eventStart, eventIndex);
+
+    if (!(nextStart instanceof Date) || Number.isNaN(nextStart.getTime())) {
+      return {
+        ...currentEvent,
+        active: now >= currentEvent.eventStart && now < currentEvent.eventEnd
+      };
+    }
+
+    if (now < currentEvent.eventStart) {
+      return {
+        ...currentEvent,
+        active: false
+      };
+    }
+
+    if (now < currentEvent.eventEnd) {
+      return {
+        ...currentEvent,
+        active: true
+      };
+    }
+
+    if (now < nextStart) {
+      const nextEvent = buildFallbackMinervaEventByIndex(eventIndex + 1, nextStart);
+      return {
+        ...nextEvent,
+        active: false
+      };
+    }
+
+    eventIndex += 1;
+    eventStart = nextStart;
+  }
+
+  const fallbackEvent = buildFallbackMinervaEventByIndex(eventIndex, eventStart);
+  return {
+    ...fallbackEvent,
+    active: now >= fallbackEvent.eventStart && now < fallbackEvent.eventEnd
+  };
+}
+
 function nextAvailabilityForList(listNumber, now = new Date()) {
   const listValue = Number(listNumber);
   if (!Number.isFinite(listValue) || listValue < 1) {
@@ -8559,28 +9059,32 @@ function nextAvailabilityForList(listNumber, now = new Date()) {
   }
 
   const targetCycleIndex = mod(listValue - 1, CYCLE_WEEKS);
-  const currentWeek = resolveFallbackWeekNumber(now);
-  const currentCycleIndex = mod(currentWeek, CYCLE_WEEKS);
+  const currentWindow = resolveFallbackMinervaEventWindow(now);
+  let eventIndex = Number(currentWindow?.eventIndex) || 0;
+  let eventStart = currentWindow?.eventStart instanceof Date && !Number.isNaN(currentWindow.eventStart.getTime())
+    ? currentWindow.eventStart
+    : buildFallbackCycleDate(0);
 
-  let weekCandidate = currentWeek + mod(targetCycleIndex - currentCycleIndex, CYCLE_WEEKS);
-  let cycle = cycleForWeek(weekCandidate);
+  for (let guard = 0; guard < CYCLE_WEEKS + 1; guard += 1) {
+    const candidate = buildFallbackMinervaEventByIndex(eventIndex, eventStart);
+    if (mod(candidate.listNumber - 1, CYCLE_WEEKS) === targetCycleIndex) {
+      const isActive = now >= candidate.eventStart && now < candidate.eventEnd;
+      const msUntil = candidate.eventStart.getTime() - now.getTime();
+      const daysUntil = Math.max(0, Math.ceil(msUntil / MS_DAY));
 
-  if (now >= cycle.eventEnd) {
-    weekCandidate += CYCLE_WEEKS;
-    cycle = cycleForWeek(weekCandidate);
+      return {
+        ...candidate,
+        isActive,
+        daysUntil,
+        saleKey: candidate.phase === 3 ? "classified_sale_big" : "classified_sale_standard"
+      };
+    }
+
+    eventStart = nextFallbackMinervaEventStart(eventStart, eventIndex);
+    eventIndex += 1;
   }
 
-  const isActive = now >= cycle.eventStart && now < cycle.eventEnd;
-  const msUntil = cycle.eventStart.getTime() - now.getTime();
-  const daysUntil = Math.max(0, Math.ceil(msUntil / MS_DAY));
-  const phase = mod(listValue - 1, 4);
-
-  return {
-    ...cycle,
-    isActive,
-    daysUntil,
-    saleKey: phase === 3 ? "classified_sale_big" : "classified_sale_standard"
-  };
+  return null;
 }
 
 function setClassifiedSearchCount(text = "") {
@@ -10340,16 +10844,20 @@ function parseMinervaInfoApi(payload, lists = []) {
   }
 
   const firstItem = itemsRaw[0];
-  const location = normalizeLocation(firstItem?.location_name || "");
-  const eventStart = parseMinervaInfoApiDateAt18(firstItem?.date_start);
-  const eventEnd = parseMinervaInfoApiDateAt18(firstItem?.date_end);
+  let location = normalizeLocation(firstItem?.location_name || "");
+  let eventStart = parseMinervaInfoApiDateAt18(firstItem?.date_start);
+  let eventEnd = parseMinervaInfoApiDateAt18(firstItem?.date_end);
+  const saleType = Number(firstItem?.Type_list);
+  if (saleType === 1 && eventEnd instanceof Date && !Number.isNaN(eventEnd.getTime())) {
+    eventEnd = shiftEasternDateByDays(eventEnd, -1);
+  }
   const now = new Date();
-  const active = Boolean(eventStart && eventEnd && now >= eventStart && now <= eventEnd);
-  const locationMapImage = normalizeMinervaInfoImagePath(firstItem?.location_img)
+  let active = Boolean(eventStart && eventEnd && now >= eventStart && now < eventEnd);
+  let locationMapImage = normalizeMinervaInfoImagePath(firstItem?.location_img)
     || MINERVA_LOCATION_MAP_BY_LOCATION[location]
     || "";
 
-  const items = itemsRaw.map((item) => {
+  let items = itemsRaw.map((item) => {
     const price = Number(item?.gold);
     return {
       name: String(item?.item || "").trim() || "--",
@@ -10361,6 +10869,24 @@ function parseMinervaInfoApi(payload, lists = []) {
   let listNumber = Number(firstItem?.id_list);
   if (!Number.isFinite(listNumber) || listNumber < 1) {
     listNumber = inferListNumber(items, lists);
+  }
+
+  if (!active && eventEnd instanceof Date && !Number.isNaN(eventEnd.getTime()) && now >= eventEnd) {
+    const nextEvent = resolveFallbackMinervaEventWindow(now);
+    if (nextEvent && !nextEvent.active) {
+      location = nextEvent.location;
+      eventStart = nextEvent.eventStart;
+      eventEnd = nextEvent.eventEnd;
+      listNumber = nextEvent.listNumber;
+      locationMapImage = MINERVA_LOCATION_MAP_BY_LOCATION[location] || "";
+      const nextListData = lists.find((entry) => Number(entry?.ListNumber) === listNumber);
+      const nextInventory = Array.isArray(nextListData?.Inventory) ? nextListData.Inventory : [];
+      items = nextInventory.map((item) => ({
+        name: String(item?.Name || "").trim() || "--",
+        price: Number.isFinite(Number(item?.Price)) ? Number(item.Price) : null,
+        url: normalizeWikiUrl(item?.WikiUrl || "")
+      })).filter((item) => item.name && item.name !== "--");
+    }
   }
 
   return {
@@ -10428,6 +10954,57 @@ async function fetchMinervaInfoData(lists = []) {
   }
 
   return null;
+}
+
+function normalizeMinervaIntelApiPayload(payload, lists = []) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const eventStartMs = Date.parse(String(payload.eventStart || ""));
+  const eventEndMs = Date.parse(String(payload.eventEnd || ""));
+  const items = Array.isArray(payload.items)
+    ? payload.items.map((item) => {
+      const price = Number(item?.price);
+      return {
+        name: String(item?.name || "").trim() || "--",
+        price: Number.isFinite(price) ? price : null,
+        url: normalizeWikiUrl(item?.url || "")
+      };
+    }).filter((item) => item.name && item.name !== "--")
+    : [];
+
+  let listNumber = Number(payload.listNumber);
+  if (!Number.isFinite(listNumber) || listNumber < 1) {
+    listNumber = inferListNumber(items, lists);
+  }
+
+  const location = normalizeLocation(payload.location || inferLocationFromMapImage(payload.locationMapImage || ""));
+  const source = String(payload.source || "").trim().toLowerCase();
+
+  return {
+    location,
+    listNumber,
+    active: Boolean(payload.active),
+    nextChange: String(payload.nextChange || "").trim() || null,
+    eventStart: Number.isFinite(eventStartMs) ? new Date(eventStartMs) : null,
+    eventEnd: Number.isFinite(eventEndMs) ? new Date(eventEndMs) : null,
+    items,
+    mode: source.includes("minerva-info") ? "live_info" : source.includes("whereisminerva") ? "live" : "fallback",
+    locationMapImage: String(payload.locationMapImage || "").trim()
+      || MINERVA_LOCATION_MAP_BY_LOCATION[location]
+      || "",
+    source
+  };
+}
+
+async function fetchMinervaIntelFromServer(lists = []) {
+  try {
+    const payload = await requestJson("/api/intel/minerva");
+    return normalizeMinervaIntelApiPayload(payload, lists);
+  } catch {
+    return null;
+  }
 }
 
 function parseMinervaLive(text, lists) {
@@ -10530,16 +11107,7 @@ function cycleForWeek(weekNumber) {
 }
 
 function buildFallbackMinerva(lists) {
-  const now = new Date();
-  const currentWeek = resolveFallbackWeekNumber(now);
-
-  let cycle = cycleForWeek(currentWeek);
-  const isActive = now >= cycle.eventStart && now < cycle.eventEnd;
-
-  if (!isActive && now >= cycle.eventEnd) {
-    cycle = cycleForWeek(currentWeek + 1);
-  }
-
+  const cycle = resolveFallbackMinervaEventWindow(new Date());
   const listData = lists.find((entry) => Number(entry.ListNumber) === cycle.listNumber);
   const inventory = Array.isArray(listData?.Inventory) ? listData.Inventory : [];
 
@@ -10552,7 +11120,7 @@ function buildFallbackMinerva(lists) {
   return {
     location: cycle.location,
     listNumber: cycle.listNumber,
-    active: isActive,
+    active: Boolean(cycle.active),
     nextChange: null,
     eventStart: cycle.eventStart,
     eventEnd: cycle.eventEnd,
@@ -10688,6 +11256,19 @@ function renderMinervaFromState() {
 async function refreshMinervaPanel() {
   const lists = await loadMinervaLists();
 
+  const serverIntel = await fetchMinervaIntelFromServer(lists);
+  if (serverIntel) {
+    state.minerva = {
+      error: false,
+      data: serverIntel
+    };
+    renderMinervaFromState();
+    return {
+      ok: true,
+      source: serverIntel.mode === "fallback" ? "fallback" : "live"
+    };
+  }
+
   const liveInfoData = await fetchMinervaInfoData(lists);
   if (liveInfoData) {
     state.minerva = {
@@ -10780,7 +11361,9 @@ function applyLanguage(lang, persist = true) {
   elements.refreshBtn.textContent = t("refresh_button");
 
   elements.siloTitle.textContent = t("silo_title");
-  elements.siloHint.textContent = t("silo_hint");
+  elements.siloHint.textContent = t("silo_hint", {
+    schedule: formatSiloResetMoment(new Date(getActiveSiloResetTargetMs()))
+  });
   elements.siloSourcePrefix.textContent = t("silo_source_prefix");
   elements.siloSourceSuffix.textContent = t("silo_source_suffix");
   if (elements.siloDossierOverlay) {
@@ -11086,6 +11669,7 @@ function applyLanguage(lang, persist = true) {
   }
   syncFilesGroupSuggestions();
   elements.filesDescriptionInput.placeholder = t("files_upload_description_placeholder");
+  refreshFilesDescriptionEditors();
   elements.filesEmptyState.textContent = t("files_empty_state");
   elements.filesDeleteTitle.textContent = t("files_delete_modal_title");
   elements.filesDeleteMessage.textContent = t("files_delete_modal_body", { name: t("files_unknown_value") });
@@ -11940,6 +12524,7 @@ async function init() {
 
   const initialLang = detectInitialLanguage();
   applyLanguage(initialLang, false);
+  mountFilesDescriptionEditor(elements.filesDescriptionInput);
   void loadPublicConfig();
   state.files.me = buildGuestFilesProfile();
   if (!getHashView()) {
@@ -11962,4 +12547,3 @@ async function init() {
 }
 
 init();
-

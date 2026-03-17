@@ -26,6 +26,9 @@ const FALLBACK_MINERVA_ANCHOR_DATE_UTC = Date.UTC(2026, 1, 16);
 const MS_DAY = 24 * 60 * 60 * 1000;
 const MS_WEEK = 7 * MS_DAY;
 const CYCLE_WEEKS = 24;
+const MINERVA_FALLBACK_EVENT_START_GAP_DAYS = [7, 7, 10, 11];
+const MINERVA_FALLBACK_EVENT_ACTIVE_DAYS = [2, 2, 2, 4];
+const MINERVA_FALLBACK_EVENT_SEARCH_LIMIT = CYCLE_WEEKS * 32;
 const WIKI_BASE = "https://fallout.fandom.com";
 const MINERVA_INFO_REMOTE_IMAGE_BASE = "https://whereisminerva.info/assets/images";
 const MINERVA_LOCATION_MAP_BY_LOCATION = {
@@ -171,6 +174,22 @@ function buildEasternDate(year, month, day, hour, minute) {
   return new Date(utcMs);
 }
 
+function shiftEasternDateByDays(date, dayOffset = 0) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const parts = extractTimeZoneParts(date, "America/New_York");
+  const shiftedDate = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + Number(dayOffset || 0), 0, 0, 0));
+  return buildEasternDate(
+    shiftedDate.getUTCFullYear(),
+    shiftedDate.getUTCMonth() + 1,
+    shiftedDate.getUTCDate(),
+    parts.hour,
+    parts.minute
+  );
+}
+
 function parseBethesdaRawDateTime(raw) {
   const value = String(raw || "").trim();
   if (!value) {
@@ -215,17 +234,21 @@ function parseMinervaInfoApi(payload, lists = []) {
   }
 
   const firstItem = itemsRaw[0];
-  const location = normalizeLocation(firstItem?.location_name || "");
-  const eventStart = parseMinervaInfoApiDateAt18(firstItem?.date_start);
-  const eventEnd = parseMinervaInfoApiDateAt18(firstItem?.date_end);
+  let location = normalizeLocation(firstItem?.location_name || "");
+  let eventStart = parseMinervaInfoApiDateAt18(firstItem?.date_start);
+  let eventEnd = parseMinervaInfoApiDateAt18(firstItem?.date_end);
+  const saleType = Number(firstItem?.Type_list);
+  if (saleType === 1 && eventEnd instanceof Date && !Number.isNaN(eventEnd.getTime())) {
+    eventEnd = shiftEasternDateByDays(eventEnd, -1);
+  }
   const now = new Date();
-  const active = Boolean(eventStart && eventEnd && now >= eventStart && now <= eventEnd);
+  let active = Boolean(eventStart && eventEnd && now >= eventStart && now < eventEnd);
   const remoteImageName = String(firstItem?.location_img || "").trim();
-  const locationMapImage = remoteImageName
+  let locationMapImage = remoteImageName
     ? `${MINERVA_INFO_REMOTE_IMAGE_BASE}/${remoteImageName}`
     : (MINERVA_LOCATION_MAP_BY_LOCATION[location] || "");
 
-  const items = itemsRaw
+  let items = itemsRaw
     .map((item) => {
       const price = Number(item?.gold);
       return {
@@ -239,6 +262,24 @@ function parseMinervaInfoApi(payload, lists = []) {
   let listNumber = Number(firstItem?.id_list);
   if (!Number.isFinite(listNumber) || listNumber < 1) {
     listNumber = inferListNumber(items, lists);
+  }
+
+  if (!active && eventEnd instanceof Date && !Number.isNaN(eventEnd.getTime()) && now >= eventEnd) {
+    const nextEvent = resolveFallbackMinervaEventWindow(now);
+    if (nextEvent && !nextEvent.active) {
+      location = nextEvent.location;
+      eventStart = nextEvent.eventStart;
+      eventEnd = nextEvent.eventEnd;
+      listNumber = nextEvent.listNumber;
+      locationMapImage = MINERVA_LOCATION_MAP_BY_LOCATION[location] || "";
+      const nextListData = lists.find((entry) => Number(entry?.ListNumber) === listNumber);
+      const nextInventory = Array.isArray(nextListData?.Inventory) ? nextListData.Inventory : [];
+      items = nextInventory.map((item) => ({
+        name: String(item?.Name || "").trim() || "--",
+        price: Number.isFinite(Number(item?.Price)) ? Number(item.Price) : null,
+        url: normalizeWikiUrl(item?.WikiUrl || "")
+      }));
+    }
   }
 
   return {
@@ -311,6 +352,80 @@ function buildFallbackCycleDate(weekNumber, dayOffset = 0) {
   );
 }
 
+function buildFallbackMinervaEventByIndex(eventIndex, eventStart) {
+  const normalizedIndex = Math.max(0, Number(eventIndex) || 0);
+  const phase = mod(normalizedIndex, 4);
+  const safeStart = eventStart instanceof Date && !Number.isNaN(eventStart.getTime())
+    ? eventStart
+    : buildFallbackCycleDate(0);
+  const eventEnd = shiftEasternDateByDays(safeStart, MINERVA_FALLBACK_EVENT_ACTIVE_DAYS[phase]);
+
+  return {
+    eventIndex: normalizedIndex,
+    listNumber: mod(normalizedIndex, CYCLE_WEEKS) + 1,
+    location: CYCLE_LOCATIONS[phase],
+    eventStart: safeStart,
+    eventEnd,
+    phase
+  };
+}
+
+function nextFallbackMinervaEventStart(eventStart, eventIndex) {
+  const safeStart = eventStart instanceof Date && !Number.isNaN(eventStart.getTime())
+    ? eventStart
+    : buildFallbackCycleDate(0);
+  const phase = mod(Number(eventIndex) || 0, 4);
+  return shiftEasternDateByDays(safeStart, MINERVA_FALLBACK_EVENT_START_GAP_DAYS[phase]);
+}
+
+function resolveFallbackMinervaEventWindow(now = new Date()) {
+  let eventIndex = 0;
+  let eventStart = buildFallbackCycleDate(0);
+
+  for (let guard = 0; guard < MINERVA_FALLBACK_EVENT_SEARCH_LIMIT; guard += 1) {
+    const currentEvent = buildFallbackMinervaEventByIndex(eventIndex, eventStart);
+    const nextStart = nextFallbackMinervaEventStart(eventStart, eventIndex);
+
+    if (!(nextStart instanceof Date) || Number.isNaN(nextStart.getTime())) {
+      return {
+        ...currentEvent,
+        active: now >= currentEvent.eventStart && now < currentEvent.eventEnd
+      };
+    }
+
+    if (now < currentEvent.eventStart) {
+      return {
+        ...currentEvent,
+        active: false
+      };
+    }
+
+    if (now < currentEvent.eventEnd) {
+      return {
+        ...currentEvent,
+        active: true
+      };
+    }
+
+    if (now < nextStart) {
+      const nextEvent = buildFallbackMinervaEventByIndex(eventIndex + 1, nextStart);
+      return {
+        ...nextEvent,
+        active: false
+      };
+    }
+
+    eventIndex += 1;
+    eventStart = nextStart;
+  }
+
+  const fallbackEvent = buildFallbackMinervaEventByIndex(eventIndex, eventStart);
+  return {
+    ...fallbackEvent,
+    active: now >= fallbackEvent.eventStart && now < fallbackEvent.eventEnd
+  };
+}
+
 function resolveFallbackWeekNumber(now = new Date()) {
   const anchorStart = buildFallbackCycleDate(0);
   let weekNumber = Math.floor((now.getTime() - anchorStart.getTime()) / MS_WEEK);
@@ -351,14 +466,7 @@ function cycleForWeek(weekNumber) {
 }
 
 function buildFallbackMinerva(lists = []) {
-  const now = new Date();
-  const currentWeek = resolveFallbackWeekNumber(now);
-  let cycle = cycleForWeek(currentWeek);
-  const active = now >= cycle.eventStart && now < cycle.eventEnd;
-
-  if (!active && now >= cycle.eventEnd) {
-    cycle = cycleForWeek(currentWeek + 1);
-  }
+  const cycle = resolveFallbackMinervaEventWindow(new Date());
 
   const listData = lists.find((entry) => Number(entry?.ListNumber) === cycle.listNumber);
   const inventory = Array.isArray(listData?.Inventory) ? listData.Inventory : [];
@@ -371,7 +479,7 @@ function buildFallbackMinerva(lists = []) {
   return {
     location: cycle.location,
     listNumber: cycle.listNumber,
-    active,
+    active: Boolean(cycle.active),
     nextChange: null,
     eventStart: cycle.eventStart,
     eventEnd: cycle.eventEnd,
