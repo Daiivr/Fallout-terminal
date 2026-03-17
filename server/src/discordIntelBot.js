@@ -1407,6 +1407,57 @@ function createDiscordIntelBot(options = {}) {
     };
   }
 
+  async function sendCurrentIntelToGuild(guildId) {
+    assertAdminBotReady();
+    const normalizedGuildId = String(guildId || "").trim();
+    if (!/^\d{6,32}$/.test(normalizedGuildId)) {
+      throw createStatusError("Invalid guild id.", 400);
+    }
+
+    const guild = client.guilds.cache.get(normalizedGuildId) || null;
+    if (!guild) {
+      throw createStatusError("Guild not found.", 404);
+    }
+
+    const relaySubscriptions = getGuildSubscriptions(normalizedGuildId)
+      .map((entry) => ({
+        ...entry,
+        feeds: Array.isArray(entry.feeds) ? entry.feeds.filter((feed) => feed === "silos" || feed === "minerva") : []
+      }))
+      .filter((entry) => entry.feeds.length > 0);
+    if (!relaySubscriptions.length) {
+      throw createStatusError("No relay channels are configured for this guild yet.", 409);
+    }
+
+    const snapshot = await fetchCurrentIntel({ siteRoot });
+    const lang = getGuildLanguage(normalizedGuildId, defaultLanguage);
+    let postedChannelCount = 0;
+
+    for (const subscription of relaySubscriptions) {
+      const payload = buildMessagePayload(snapshot, subscription.feeds, lang, {
+        minervaEventType: resolveCurrentMinervaEmbedType(snapshot?.minerva)
+      });
+      if (!payload.embeds.length) {
+        continue;
+      }
+      if (await postEmbedsToSubscription(subscription, payload)) {
+        postedChannelCount += 1;
+      }
+    }
+
+    if (!postedChannelCount) {
+      throw createStatusError("Unable to send a test post to this guild right now.", 502);
+    }
+
+    return {
+      ok: true,
+      guildId: normalizedGuildId,
+      guildName: String(guild.name || "").trim(),
+      channelCount: relaySubscriptions.length,
+      postedChannelCount
+    };
+  }
+
   async function leaveGuild(guildId) {
     assertAdminBotReady();
     const normalizedGuildId = String(guildId || "").trim();
@@ -2598,6 +2649,7 @@ function createDiscordIntelBot(options = {}) {
     getAdminSnapshot,
     syncCommands,
     sendWelcomeToGuild,
+    sendCurrentIntelToGuild,
     leaveGuild
   };
 }

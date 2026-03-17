@@ -91,6 +91,15 @@ function startBotAdminApi() {
     }
   });
 
+  app.post("/admin/bot/guilds/:guildId/test-post", async (req, res) => {
+    try {
+      const payload = await bot.sendCurrentIntelToGuild(req.params.guildId);
+      res.json(payload);
+    } catch (error) {
+      sendBotAdminApiError(res, error);
+    }
+  });
+
   app.post("/admin/bot/guilds/:guildId/leave", async (req, res) => {
     try {
       const payload = await bot.leaveGuild(req.params.guildId);

@@ -174,6 +174,46 @@
         </div>
       </div>
     </div>
+    <div id="filesBotAdminDiagnosticsOverlay" class="files-delete-overlay files-bot-admin-diagnostics-overlay" aria-hidden="true">
+      <div
+        class="files-delete-core files-bot-admin-diagnostics-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesBotAdminDiagnosticsModalTitle"
+        aria-describedby="filesBotAdminDiagnosticsModalHint"
+      >
+        <p id="filesBotAdminDiagnosticsModalBadge" class="files-bot-admin-badge">RELAY DIAGNOSTICS</p>
+        <p id="filesBotAdminDiagnosticsModalTitle" class="files-delete-title">RELAY DIAGNOSTICS</p>
+        <p id="filesBotAdminDiagnosticsModalHint" class="files-bot-admin-hint">
+          Inspect live runtime telemetry for the Discord relay without crowding the server workspace.
+        </p>
+        <p id="filesBotAdminDiagnosticsModalMeta" class="files-bot-admin-meta">Awaiting live bot snapshot...</p>
+        <div id="filesBotAdminDiagnosticsModalBody" class="files-bot-admin-diagnostics"></div>
+        <div class="files-delete-actions files-bot-admin-diagnostics-actions">
+          <button id="filesBotAdminDiagnosticsModalCloseBtn" class="files-btn" type="button">CLOSE</button>
+        </div>
+      </div>
+    </div>
+    <div id="filesBotAdminServerOverlay" class="files-delete-overlay files-bot-admin-server-overlay" aria-hidden="true">
+      <div
+        class="files-delete-core files-bot-admin-server-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesBotAdminServerModalTitle"
+        aria-describedby="filesBotAdminServerModalHint"
+      >
+        <p id="filesBotAdminServerModalBadge" class="files-bot-admin-badge">SERVER DOSSIER</p>
+        <p id="filesBotAdminServerModalTitle" class="files-delete-title">SERVER DOSSIER</p>
+        <p id="filesBotAdminServerModalHint" class="files-bot-admin-hint">
+          Inspect this Discord server without collapsing the main list workspace.
+        </p>
+        <p id="filesBotAdminServerModalMeta" class="files-bot-admin-meta">Awaiting live bot snapshot...</p>
+        <div id="filesBotAdminServerModalBody" class="files-bot-admin-server-modal-body"></div>
+        <div class="files-delete-actions files-bot-admin-server-actions">
+          <button id="filesBotAdminServerModalCloseBtn" class="files-btn" type="button">CLOSE</button>
+        </div>
+      </div>
+    </div>
     <div id="filesGroupRenameOverlay" class="files-delete-overlay files-group-rename-overlay" aria-hidden="true">
       <div
         class="files-delete-core files-group-rename-core"
@@ -391,6 +431,7 @@
               <div class="files-bot-admin-utilities">
                 <button id="filesBotAdminRefreshBtn" class="files-btn files-bot-admin-utility-btn" type="button">REFRESH DATA</button>
                 <button id="filesBotAdminSyncBtn" class="files-btn files-bot-admin-utility-btn" type="button">SYNC COMMANDS</button>
+                <button id="filesBotAdminDiagnosticsBtn" class="files-btn files-bot-admin-utility-btn" type="button">RELAY DIAGNOSTICS</button>
                 <a
                   id="filesBotAdminInviteLink"
                   class="files-btn files-bot-admin-utility-btn"
@@ -423,6 +464,10 @@
                 <span id="filesBotAdminChannelsLabel" class="files-bot-admin-summary-label">Relay channels</span>
                 <strong id="filesBotAdminChannelsValue" class="files-bot-admin-summary-value">--</strong>
               </article>
+              <article class="files-bot-admin-summary-card">
+                <span id="filesBotAdminOrphansLabel" class="files-bot-admin-summary-label">Orphan relays</span>
+                <strong id="filesBotAdminOrphansValue" class="files-bot-admin-summary-value">--</strong>
+              </article>
             </div>
           </section>
           <section class="files-bot-admin-workspace" aria-label="Server workspace">
@@ -438,6 +483,73 @@
                   spellcheck="false"
                   placeholder="Search by server name, id, locale, or owner..."
                 />
+              </div>
+              <div class="files-bot-admin-sort-wrap">
+                <label id="filesBotAdminSortLabel" for="filesBotAdminSortBtn">Sort by</label>
+                <div id="filesBotAdminSortDropdown" class="files-admin-requests-filter-dropdown files-bot-admin-sort-dropdown">
+                  <button
+                    id="filesBotAdminSortBtn"
+                    class="files-admin-requests-filter-trigger files-bot-admin-sort-trigger"
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                  >
+                    <span class="files-bot-admin-sort-trigger-icon" aria-hidden="true">
+                      <svg class="files-bot-admin-sort-trigger-icon-svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                        <path d="M4 7h10" />
+                        <circle cx="17" cy="7" r="2" />
+                        <path d="M10 12h10" />
+                        <circle cx="7" cy="12" r="2" />
+                        <path d="M4 17h7" />
+                        <circle cx="14" cy="17" r="2" />
+                      </svg>
+                    </span>
+                    <span id="filesBotAdminSortCurrent" class="files-bot-admin-sort-current">Largest first</span>
+                    <span class="files-admin-requests-filter-caret files-bot-admin-sort-caret" aria-hidden="true">▾</span>
+                  </button>
+                  <ul
+                    id="filesBotAdminSortMenu"
+                    class="files-admin-requests-filter-menu files-bot-admin-sort-menu"
+                    role="listbox"
+                    aria-labelledby="filesBotAdminSortLabel"
+                    hidden
+                  >
+                    <li><button id="filesBotAdminSortMembers" class="files-bot-admin-sort-option" type="button" role="option" data-files-bot-sort="members">Largest first</button></li>
+                    <li><button id="filesBotAdminSortSubscriptions" class="files-bot-admin-sort-option" type="button" role="option" data-files-bot-sort="subscriptions">Most relays</button></li>
+                    <li><button id="filesBotAdminSortName" class="files-bot-admin-sort-option" type="button" role="option" data-files-bot-sort="name">Name A-Z</button></li>
+                  </ul>
+                  <select id="filesBotAdminSortSelect" class="files-bot-admin-sort-select" aria-label="Bot admin sort" hidden>
+                    <option value="members">Largest first</option>
+                    <option value="subscriptions">Most relays</option>
+                    <option value="name">Name A-Z</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div id="filesBotAdminFilterWrap" class="files-bot-admin-filter-wrap" aria-label="Server filters">
+              <span id="filesBotAdminFilterLabel" class="files-bot-admin-filter-label">Server filter</span>
+              <div class="files-bot-admin-filter-chips" role="toolbar" aria-label="Server filter options">
+                <button
+                  id="filesBotAdminFilterAll"
+                  class="files-bot-admin-filter-chip is-active"
+                  type="button"
+                  data-files-bot-filter="all"
+                  aria-pressed="true"
+                >All servers</button>
+                <button
+                  id="filesBotAdminFilterSubscribed"
+                  class="files-bot-admin-filter-chip"
+                  type="button"
+                  data-files-bot-filter="subscribed"
+                  aria-pressed="false"
+                >Active relays</button>
+                <button
+                  id="filesBotAdminFilterEmpty"
+                  class="files-bot-admin-filter-chip"
+                  type="button"
+                  data-files-bot-filter="empty"
+                  aria-pressed="false"
+                >No relays</button>
               </div>
             </div>
             <div id="filesBotAdminServerList" class="files-bot-admin-stage"></div>
@@ -1124,6 +1236,21 @@
       </div>
     </section>
 
+  <aside
+    id="visitCounterMobileBadge"
+    class="visit-counter-mobile-pill"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+    hidden
+  >
+    <span class="visit-counter-mobile-copy">
+      <span id="visitCounterMobileLabel" class="visit-counter-mobile-label">VISITS</span>
+      <span id="visitCounterMobileValue" class="visit-counter-mobile-value">----</span>
+      <span id="visitCounterMobileHint" class="visit-counter-mobile-hint">TERMINAL ENTRIES</span>
+    </span>
+  </aside>
+
   <footer id="footerText" class="footer-note">
       Community data only. Not affiliated with Bethesda.
     </footer>
@@ -1156,6 +1283,28 @@
       <span id="filesBotAdminFloatingBtnHint" class="files-bot-admin-pill-hint">MANAGE RELAY</span>
     </span>
   </button>
+
+  <aside
+    id="visitCounterBadge"
+    class="visit-counter-badge"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+    hidden
+  >
+    <span class="visit-counter-beacon" aria-hidden="true">
+      <svg class="visit-counter-beacon-svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+        <path d="M12 4.5a7.5 7.5 0 1 0 7.5 7.5" />
+        <path d="M12 7.5a4.5 4.5 0 1 0 4.5 4.5" />
+        <path d="M12 10.5a1.5 1.5 0 1 0 1.5 1.5" />
+      </svg>
+    </span>
+    <span class="visit-counter-copy">
+      <span id="visitCounterLabel" class="visit-counter-label">VISITS</span>
+      <span id="visitCounterValue" class="visit-counter-value">----</span>
+      <span id="visitCounterHint" class="visit-counter-hint">TERMINAL ENTRIES</span>
+    </span>
+  </aside>
 
   <script src="data/minerva-lists.js"></script>
   <script src="data/minerva-detail-fallback.js"></script>

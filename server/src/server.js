@@ -23,6 +23,7 @@ const STORAGE_DIR = configuredStorageDir
 const UPLOAD_DIR = path.join(STORAGE_DIR, "uploads");
 const METADATA_PATH = path.join(STORAGE_DIR, "files-metadata.json");
 const ACCESS_REQUESTS_PATH = path.join(STORAGE_DIR, "access-requests.json");
+const VISIT_COUNTER_PATH = path.join(STORAGE_DIR, "visit-counter.json");
 const PORT = Number(process.env.PORT || 3000);
 const NODE_ENV = String(process.env.NODE_ENV || "development").trim() || "development";
 const SESSION_SECRET = String(process.env.SESSION_SECRET || "").trim() || "replace-me-in-production";
@@ -147,6 +148,9 @@ if (!fs.existsSync(METADATA_PATH)) {
 if (!fs.existsSync(ACCESS_REQUESTS_PATH)) {
   fs.writeFileSync(ACCESS_REQUESTS_PATH, "[]\n", "utf8");
 }
+if (!fs.existsSync(VISIT_COUNTER_PATH)) {
+  fs.writeFileSync(VISIT_COUNTER_PATH, '{\n  "totalVisits": 0,\n  "updatedAt": ""\n}\n', "utf8");
+}
 
 function readMetadataStore() {
   try {
@@ -175,6 +179,62 @@ function writeMetadataStore(entries) {
   const payload = JSON.stringify(entries, null, 2);
   fs.writeFileSync(tempPath, `${payload}\n`, "utf8");
   fs.renameSync(tempPath, METADATA_PATH);
+}
+
+function normalizeVisitCounterStore(entry) {
+  const totalVisits = Number.parseInt(String(entry?.totalVisits ?? 0), 10);
+  const updatedAt = String(entry?.updatedAt || "").trim();
+
+  return {
+    totalVisits: Number.isFinite(totalVisits) && totalVisits > 0 ? totalVisits : 0,
+    updatedAt
+  };
+}
+
+function readVisitCounterStore() {
+  try {
+    const raw = fs.readFileSync(VISIT_COUNTER_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    return normalizeVisitCounterStore(parsed);
+  } catch (error) {
+    console.error("[visits] read error:", error);
+    return {
+      totalVisits: 0,
+      updatedAt: ""
+    };
+  }
+}
+
+function writeVisitCounterStore(entry) {
+  const normalized = normalizeVisitCounterStore(entry);
+  const tempPath = `${VISIT_COUNTER_PATH}.tmp`;
+  const payload = JSON.stringify(normalized, null, 2);
+  fs.writeFileSync(tempPath, `${payload}\n`, "utf8");
+  fs.renameSync(tempPath, VISIT_COUNTER_PATH);
+  return normalized;
+}
+
+function registerSiteVisit(req) {
+  const currentCounter = readVisitCounterStore();
+  if (!req.session || req.session.siteVisitRegistered === true) {
+    return {
+      totalVisits: currentCounter.totalVisits,
+      counted: false,
+      updatedAt: currentCounter.updatedAt
+    };
+  }
+
+  const nextCounter = writeVisitCounterStore({
+    totalVisits: currentCounter.totalVisits + 1,
+    updatedAt: new Date().toISOString()
+  });
+  req.session.siteVisitRegistered = true;
+
+  return {
+    totalVisits: nextCounter.totalVisits,
+    counted: true,
+    updatedAt: nextCounter.updatedAt
+  };
 }
 
 function normalizeAccessRequestStatus(value) {
@@ -1333,6 +1393,12 @@ async function syncBotAdminCommands() {
 
 async function sendBotAdminWelcome(guildId) {
   return requestBotAdminApi(`/admin/bot/guilds/${encodeURIComponent(guildId)}/welcome`, {
+    method: "POST"
+  });
+}
+
+async function sendBotAdminTestPost(guildId) {
+  return requestBotAdminApi(`/admin/bot/guilds/${encodeURIComponent(guildId)}/test-post`, {
     method: "POST"
   });
 }
@@ -2988,6 +3054,15 @@ app.post("/api/admin/bot/guilds/:guildId/welcome", requireAdmin, async (req, res
   }
 });
 
+app.post("/api/admin/bot/guilds/:guildId/test-post", requireAdmin, async (req, res) => {
+  try {
+    const payload = await sendBotAdminTestPost(req.params.guildId);
+    res.json(payload);
+  } catch (error) {
+    sendBotAdminProxyError(res, error);
+  }
+});
+
 app.post("/api/admin/bot/guilds/:guildId/leave", requireAdmin, async (req, res) => {
   try {
     const payload = await leaveBotAdminGuild(req.params.guildId);
@@ -3475,6 +3550,12 @@ app.get("/api/public-config", (_req, res) => {
   res.json({
     botInviteLink: BOT_INVITE_LINK || ""
   });
+});
+
+app.post("/api/visits", (req, res) => {
+  const visitCounter = registerSiteVisit(req);
+  res.setHeader("Cache-Control", "no-store");
+  res.json(visitCounter);
 });
 
 app.use(express.static(SITE_ROOT));
