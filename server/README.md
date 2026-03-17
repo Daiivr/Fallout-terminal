@@ -55,6 +55,7 @@ If your bot and site OAuth use the same Discord application, `DISCORD_BOT_CLIENT
   - Defaults to `60s`; accepts values like `30s`, `5m`, `1h`, or raw milliseconds
 - `DISCORD_INTEL_POST_ON_STARTUP`
   - Defaults to `false`
+  - When `true`, startup only posts catch-up intel if the stored fingerprint differs from the current snapshot
 - `DISCORD_BOT_DEFAULT_LANG`
   - Defaults to `en`
 - `DISCORD_BOT_GOLD_BULLION_EMOJI`

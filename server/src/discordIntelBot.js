@@ -2162,14 +2162,23 @@ function createDiscordIntelBot(options = {}) {
       siloFingerprint: snapshot.siloFingerprint,
       minervaFingerprint: snapshot.minervaFingerprint
     };
+    const siloChanged = Boolean(
+      previousState.siloFingerprint && previousState.siloFingerprint !== snapshot.siloFingerprint
+    );
+    const minervaChanged = Boolean(
+      previousState.minervaFingerprint && previousState.minervaFingerprint !== snapshot.minervaFingerprint
+    );
+    const minervaEventType = minervaChanged
+      ? resolveMinervaBroadcastType(previousMinerva, snapshot.minerva)
+      : null;
 
     if (postOnStartup && hydrateOnly) {
-      if (snapshot.siloFingerprint) {
+      if (siloChanged) {
         await broadcastIntelUpdate("silos", snapshot);
       }
-      if (snapshot.minervaFingerprint) {
+      if (minervaEventType) {
         await broadcastIntelUpdate("minerva", snapshot, {
-          minervaEventType: resolveCurrentMinervaEmbedType(snapshot?.minerva)
+          minervaEventType
         });
       }
       writeState(nextState);
@@ -2181,15 +2190,12 @@ function createDiscordIntelBot(options = {}) {
       return;
     }
 
-    if (previousState.siloFingerprint && previousState.siloFingerprint !== snapshot.siloFingerprint) {
+    if (siloChanged) {
       await broadcastIntelUpdate("silos", snapshot);
     }
 
-    if (previousState.minervaFingerprint && previousState.minervaFingerprint !== snapshot.minervaFingerprint) {
-      const minervaEventType = resolveMinervaBroadcastType(previousMinerva, snapshot.minerva);
-      if (minervaEventType) {
-        await broadcastIntelUpdate("minerva", snapshot, { minervaEventType });
-      }
+    if (minervaEventType) {
+      await broadcastIntelUpdate("minerva", snapshot, { minervaEventType });
     }
 
     if (!previousState.siloFingerprint && !previousState.minervaFingerprint) {
