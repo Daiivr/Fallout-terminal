@@ -7,6 +7,7 @@
     name="description"
     content="Fallout Codex is a Fallout 76 Pip-Boy style terminal with silo codes, Minerva intel, classified archives, and a hacking minigame."
   />
+  <base href="/" />
   <meta property="og:title" content="Fallout Codex | Pip-Boy Terminal" />
   <meta
     property="og:description"
@@ -37,7 +38,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="preload" as="image" href="assets/images/minerva-plan-fallback.png" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="css/styles.css?v=20260310-bot-hidden-attr-fix" />
+  <link rel="stylesheet" href="css/styles.css?v=20260318-visit-card-eye-size-tweak" />
 </head>
 <body class="is-booting">
   <div id="bootOverlay" class="boot-overlay">
@@ -839,6 +840,7 @@
         </p>
         <div class="files-access-actions">
           <form id="filesLoginForm" class="files-auth-form" method="post" action="/auth/discord">
+            <input id="filesLoginReturnTo" type="hidden" name="returnTo" value="/#files" />
             <button id="filesLoginBtn" class="files-btn" type="submit">LOGIN WITH DISCORD</button>
           </form>
           <button id="filesLogoutBtn" class="files-btn" type="button" hidden>LOGOUT</button>
@@ -1244,9 +1246,17 @@
     aria-atomic="true"
     hidden
   >
+    <span class="visit-counter-mobile-icon" aria-hidden="true">
+      <svg class="visit-counter-mobile-icon-svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+        <path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z" />
+        <circle cx="12" cy="12" r="2.75" />
+      </svg>
+    </span>
     <span class="visit-counter-mobile-copy">
-      <span id="visitCounterMobileLabel" class="visit-counter-mobile-label">VISITS</span>
-      <span id="visitCounterMobileValue" class="visit-counter-mobile-value">----</span>
+      <span class="visit-counter-mobile-topline">
+        <span id="visitCounterMobileValue" class="visit-counter-mobile-value">----</span>
+        <span id="visitCounterMobileLabel" class="visit-counter-mobile-label">VISITS</span>
+      </span>
       <span id="visitCounterMobileHint" class="visit-counter-mobile-hint">TERMINAL ENTRIES</span>
     </span>
   </aside>
@@ -1292,26 +1302,27 @@
     aria-atomic="true"
     hidden
   >
-    <span class="visit-counter-beacon" aria-hidden="true">
-      <svg class="visit-counter-beacon-svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-        <path d="M12 4.5a7.5 7.5 0 1 0 7.5 7.5" />
-        <path d="M12 7.5a4.5 4.5 0 1 0 4.5 4.5" />
-        <path d="M12 10.5a1.5 1.5 0 1 0 1.5 1.5" />
+    <span class="visit-counter-icon" aria-hidden="true">
+      <svg class="visit-counter-icon-svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+        <path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z" />
+        <circle cx="12" cy="12" r="2.75" />
       </svg>
     </span>
     <span class="visit-counter-copy">
-      <span id="visitCounterLabel" class="visit-counter-label">VISITS</span>
-      <span id="visitCounterValue" class="visit-counter-value">----</span>
+      <span class="visit-counter-topline">
+        <span id="visitCounterValue" class="visit-counter-value">----</span>
+        <span id="visitCounterLabel" class="visit-counter-label">VISITS</span>
+      </span>
       <span id="visitCounterHint" class="visit-counter-hint">TERMINAL ENTRIES</span>
     </span>
   </aside>
 
   <script src="data/minerva-lists.js"></script>
   <script src="data/minerva-detail-fallback.js"></script>
-  <script src="js/i18n/en.js?v=20260311-structure-refactor"></script>
-  <script src="js/i18n/es.js?v=20260311-structure-refactor"></script>
-  <script src="js/i18n/index.js?v=20260311-structure-refactor"></script>
-  <script src="js/dom/elements.js?v=20260311-structure-refactor"></script>
-  <script src="js/app.js?v=20260311-structure-refactor"></script>
+  <script src="js/i18n/en.js?v=20260317-visit-card-simplified"></script>
+  <script src="js/i18n/es.js?v=20260317-visit-card-simplified"></script>
+  <script src="js/i18n/index.js?v=20260317-visit-card-simplified"></script>
+  <script src="js/dom/elements.js?v=20260318-visit-card-eye-tracking"></script>
+  <script src="js/app.js?v=20260318-visit-card-eye-tracking"></script>
 </body>
 </html>

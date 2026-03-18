@@ -56,6 +56,7 @@ const BOT_ADMIN_API_HOST = String(process.env.BOT_ADMIN_API_HOST || "127.0.0.1")
 const BOT_ADMIN_API_PORT_RAW = String(process.env.BOT_ADMIN_API_PORT || "").trim();
 const BOT_ADMIN_API_TOKEN = String(process.env.BOT_ADMIN_API_TOKEN || "").trim();
 const ACCESS_REQUEST_MAX_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
+const DEFAULT_AUTH_RETURN_TO = "/#files";
 
 function parsePositiveInteger(value, fallback) {
   const parsed = Number.parseInt(String(value || "").trim(), 10);
@@ -85,6 +86,29 @@ function sanitizeHttpBaseUrl(raw) {
     return "";
   }
   return /^https?:\/\//i.test(normalized) ? normalized : "";
+}
+
+function sanitizeAuthReturnTo(raw, fallback = DEFAULT_AUTH_RETURN_TO) {
+  const value = String(raw || "").trim();
+  if (!value) {
+    return fallback;
+  }
+
+  try {
+    const parsed = new URL(value, "http://fallout-codex.local");
+    if (parsed.origin !== "http://fallout-codex.local") {
+      return fallback;
+    }
+
+    const pathname = String(parsed.pathname || "").trim();
+    if (!pathname || !pathname.startsWith("/") || pathname.startsWith("//")) {
+      return fallback;
+    }
+
+    return `${pathname}${parsed.search}${parsed.hash}` || fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 const SESSION_TTL_SECONDS = parsePositiveInteger(process.env.SESSION_TTL_SECONDS, DEFAULT_SESSION_TTL_SECONDS);
@@ -3080,8 +3104,10 @@ app.post("/auth/discord", (req, res) => {
 
   const oauthState = crypto.randomBytes(24).toString("hex");
   const popupMode = parseBooleanQueryFlag(req.query?.popup) || parseBooleanQueryFlag(req.body?.popup);
+  const returnTo = sanitizeAuthReturnTo(req.body?.returnTo || req.query?.returnTo);
   req.session.oauthState = oauthState;
   req.session.oauthPopupMode = popupMode ? "1" : "";
+  req.session.oauthReturnTo = returnTo;
   const redirectUrl = buildDiscordAuthorizeUrl(oauthState);
 
   req.session.save((error) => {
@@ -3095,7 +3121,7 @@ app.post("/auth/discord", (req, res) => {
 
 app.get("/auth/discord/callback", async (req, res) => {
   if (!oauthConfigured()) {
-    res.redirect("/#files");
+    res.redirect(DEFAULT_AUTH_RETURN_TO);
     return;
   }
 
@@ -3103,15 +3129,17 @@ app.get("/auth/discord/callback", async (req, res) => {
   const returnedState = String(req.query.state || "").trim();
   const expectedState = String(req.session.oauthState || "").trim();
   const popupMode = String(req.session.oauthPopupMode || "").trim() === "1";
+  const returnTo = sanitizeAuthReturnTo(req.session.oauthReturnTo);
   delete req.session.oauthState;
   delete req.session.oauthPopupMode;
+  delete req.session.oauthReturnTo;
 
   if (!code || !returnedState || returnedState !== expectedState) {
     if (popupMode) {
       sendDiscordPopupCallbackResponse(res, false);
       return;
     }
-    res.redirect("/#files");
+    res.redirect(returnTo);
     return;
   }
 
@@ -3167,14 +3195,14 @@ app.get("/auth/discord/callback", async (req, res) => {
           sendDiscordPopupCallbackResponse(res, false);
           return;
         }
-        res.redirect("/#files");
+        res.redirect(returnTo);
         return;
       }
       if (popupMode) {
         sendDiscordPopupCallbackResponse(res, true);
         return;
       }
-      res.redirect("/#files");
+      res.redirect(returnTo);
     });
   } catch (error) {
     console.error("[oauth] callback error:", error);
@@ -3182,7 +3210,7 @@ app.get("/auth/discord/callback", async (req, res) => {
       sendDiscordPopupCallbackResponse(res, false);
       return;
     }
-    res.redirect("/#files");
+    res.redirect(returnTo);
   }
 });
 
@@ -3561,6 +3589,10 @@ app.post("/api/visits", (req, res) => {
 app.use(express.static(SITE_ROOT));
 
 app.get("/", (_req, res) => {
+  res.sendFile(path.join(SITE_ROOT, "index.html"));
+});
+
+app.get("/share/:shareSlug", (_req, res) => {
   res.sendFile(path.join(SITE_ROOT, "index.html"));
 });
 

@@ -157,6 +157,11 @@ const DISCORD_AUTH_POPUP_WIDTH = 540;
 const DISCORD_AUTH_POPUP_HEIGHT = 760;
 const DISCORD_AUTH_POPUP_POLL_INTERVAL_MS = 450;
 const DISCORD_AUTH_POST_MESSAGE_TYPE = "fallout-codex:discord-auth";
+const FILES_SHARED_URL_PARAM = "sharedFile";
+const FILES_SHARE_ROUTE_PREFIX = "/share/";
+const FILES_SHARED_ID_PATTERN = /^[a-f0-9-]{36}$/i;
+const FILES_SHARED_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const FILES_SHARE_BUTTON_RESET_MS = 1800;
 const FILES_DESCRIPTION_FORMATS = [
   {
     key: "alert",
@@ -250,6 +255,10 @@ const FILES_DESCRIPTION_EDITOR_BUTTONS = [
   { format: "u", label: "U", titleKey: "files_description_format_underline" }
 ];
 const FILES_DESCRIPTION_LINK_PATTERN = /(?:https?:\/\/|www\.)[^\s<]+/gi;
+const VISIT_COUNTER_EYE_POINTER_MAX_OFFSET_PX = 1.65;
+const VISIT_COUNTER_EYE_POINTER_MAX_OFFSET_MOBILE_PX = 1.2;
+const VISIT_COUNTER_EYE_POINTER_EASING = 0.2;
+const VISIT_COUNTER_EYE_POINTER_SETTLE_PX = 0.02;
 
 let filesLiveIdentityPollTimer = null;
 let filesLiveIdentityPollInFlight = false;
@@ -259,6 +268,8 @@ let filesDisclaimerAcceptTransitionTimer = null;
 let discordAuthPopupWindow = null;
 let discordAuthPopupPollTimer = null;
 let filesDescriptionEditors = [];
+let visitCounterEyeMotionFrame = 0;
+let visitCounterEyes = [];
 
 const STRINGS = globalThis.FALLOUT_CODEX_STRINGS || { en: {}, es: {} };
 
@@ -468,7 +479,11 @@ function isSiloDossierHash(hashValue = window.location.hash) {
 
 function getHashView() {
   const hash = String(window.location.hash || "").trim().toLowerCase();
+  const sharedTargetActive = hasFilesSharedTargetInLocation();
   if (hash === VIEW_HASHES.files) {
+    return "files";
+  }
+  if (!hash && sharedTargetActive) {
     return "files";
   }
   if (hash === VIEW_HASHES.classified || hash === "#classified" || hash === "#data") {
@@ -498,6 +513,255 @@ function setHashView(view, { replace = false } = {}) {
   }
 
   window.location.hash = targetHash;
+}
+
+function isValidFilesSharedId(value) {
+  return FILES_SHARED_ID_PATTERN.test(String(value || "").trim());
+}
+
+function normalizeFilesSharedSlugValue(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 96);
+}
+
+function isValidFilesSharedSlug(value) {
+  return FILES_SHARED_SLUG_PATTERN.test(String(value || "").trim());
+}
+
+function getFilesSharedFileIdFromLocation(locationLike = window.location) {
+  const search = String(locationLike?.search || "").trim();
+  if (!search) {
+    return "";
+  }
+
+  try {
+    const params = new URLSearchParams(search);
+    const fileId = String(params.get(FILES_SHARED_URL_PARAM) || "").trim().toLowerCase();
+    return isValidFilesSharedId(fileId) ? fileId : "";
+  } catch {
+    return "";
+  }
+}
+
+function getFilesSharedSlugFromLocation(locationLike = window.location) {
+  const pathname = String(locationLike?.pathname || "").trim();
+  if (!pathname || !pathname.startsWith(FILES_SHARE_ROUTE_PREFIX)) {
+    return "";
+  }
+
+  const rawSegment = pathname.slice(FILES_SHARE_ROUTE_PREFIX.length).split("/")[0] || "";
+  let decodedSegment = rawSegment;
+  try {
+    decodedSegment = decodeURIComponent(rawSegment);
+  } catch {
+    decodedSegment = rawSegment;
+  }
+  const normalizedSlug = normalizeFilesSharedSlugValue(decodedSegment);
+  return isValidFilesSharedSlug(normalizedSlug) ? normalizedSlug : "";
+}
+
+function hasFilesSharedTargetInLocation(locationLike = window.location) {
+  return Boolean(getFilesSharedSlugFromLocation(locationLike) || getFilesSharedFileIdFromLocation(locationLike));
+}
+
+function stripFilesShareExtension(name) {
+  const value = String(name || "").trim();
+  if (!value) {
+    return "";
+  }
+  const dotIndex = value.lastIndexOf(".");
+  if (dotIndex <= 0) {
+    return value;
+  }
+  return value.slice(0, dotIndex);
+}
+
+function buildFilesShareSlug(file) {
+  const fileId = String(file?.id || "").trim().toLowerCase();
+  if (!isValidFilesSharedId(fileId)) {
+    return "";
+  }
+
+  const stableName = stripFilesShareExtension(String(file?.name || "").trim()) || getFilesDisplayName(file);
+  const slugBase = normalizeFilesSharedSlugValue(stableName) || "shared-file";
+  const shortId = fileId.replace(/-/g, "").slice(0, 8);
+  return `${slugBase}-${shortId}`;
+}
+
+function humanizeFilesSharedSlug(slugValue = "") {
+  const normalizedSlug = normalizeFilesSharedSlugValue(slugValue);
+  if (!normalizedSlug) {
+    return "";
+  }
+
+  const parts = normalizedSlug.split("-").filter(Boolean);
+  if (!parts.length) {
+    return "";
+  }
+
+  const tail = parts[parts.length - 1];
+  const nameParts = /^[a-f0-9]{8}$/i.test(tail) ? parts.slice(0, -1) : parts;
+  if (!nameParts.length) {
+    return "";
+  }
+
+  return nameParts
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function resolveFilesSharedEntryFromLocation(files = state.files.list, locationLike = window.location) {
+  const sourceFiles = Array.isArray(files) ? files : [];
+  const sharedSlug = getFilesSharedSlugFromLocation(locationLike);
+  if (sharedSlug) {
+    return sourceFiles.find((entry) => buildFilesShareSlug(entry) === sharedSlug) || null;
+  }
+
+  const sharedFileId = getFilesSharedFileIdFromLocation(locationLike);
+  if (!sharedFileId) {
+    return null;
+  }
+  return sourceFiles.find((entry) => String(entry?.id || "").trim().toLowerCase() === sharedFileId) || null;
+}
+
+function getFilesSharedNameHintFromLocation(locationLike = window.location) {
+  const sharedSlug = getFilesSharedSlugFromLocation(locationLike);
+  if (!sharedSlug) {
+    return "";
+  }
+  return humanizeFilesSharedSlug(sharedSlug);
+}
+
+function getFilesSharedUnauthorizedMessage() {
+  const sharedNameHint = getFilesSharedNameHintFromLocation();
+  if (sharedNameHint) {
+    return t("files_share_unauthorized_message_named", { name: sharedNameHint });
+  }
+  return t("files_share_unauthorized_message");
+}
+
+function resolveFilesSharedSlugValue(fileOrValue = "") {
+  if (fileOrValue && typeof fileOrValue === "object") {
+    return buildFilesShareSlug(fileOrValue);
+  }
+
+  const rawValue = String(fileOrValue || "").trim();
+  if (!rawValue) {
+    return "";
+  }
+
+  if (isValidFilesSharedId(rawValue)) {
+    const matchedFile = resolveFilesSharedEntryFromLocation(state.files.list, {
+      pathname: "",
+      search: `?${FILES_SHARED_URL_PARAM}=${encodeURIComponent(rawValue)}`
+    });
+    return matchedFile ? buildFilesShareSlug(matchedFile) : "";
+  }
+
+  const normalizedSlug = normalizeFilesSharedSlugValue(rawValue);
+  if (isValidFilesSharedSlug(normalizedSlug)) {
+    return normalizedSlug;
+  }
+
+  return "";
+}
+
+function buildFilesLocationUrl(fileOrValue = "", { absolute = false } = {}) {
+  const baseUrl = new URL(window.location.href);
+  const sharedSlug = resolveFilesSharedSlugValue(fileOrValue);
+  if (sharedSlug) {
+    baseUrl.pathname = `${FILES_SHARE_ROUTE_PREFIX}${encodeURIComponent(sharedSlug)}`;
+  } else {
+    baseUrl.pathname = "/";
+  }
+  baseUrl.searchParams.delete(FILES_SHARED_URL_PARAM);
+  baseUrl.hash = VIEW_HASHES.files;
+
+  if (absolute) {
+    return baseUrl.toString();
+  }
+  return `${baseUrl.pathname}${baseUrl.search}${baseUrl.hash}`;
+}
+
+function syncFilesLoginReturnToField(fileOrValue = getFilesSharedSlugFromLocation() || getFilesSharedFileIdFromLocation()) {
+  if (!(elements.filesLoginReturnTo instanceof HTMLInputElement)) {
+    return;
+  }
+  elements.filesLoginReturnTo.value = buildFilesLocationUrl(fileOrValue);
+}
+
+function setFilesLocationSharedFile(fileOrValue = "") {
+  const nextUrl = buildFilesLocationUrl(fileOrValue);
+  const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (window.history?.replaceState && currentUrl !== nextUrl) {
+    window.history.replaceState(null, "", nextUrl);
+  }
+  syncFilesLoginReturnToField(fileOrValue);
+}
+
+function setFilesShareButtonText(button, text) {
+  if (!(button instanceof HTMLButtonElement)) {
+    return;
+  }
+  button.textContent = String(text || "");
+}
+
+function flashFilesShareButtonState(button, text) {
+  if (!(button instanceof HTMLButtonElement)) {
+    return;
+  }
+
+  const previousTimerId = Number.parseInt(button.dataset.shareResetTimer || "", 10);
+  if (Number.isFinite(previousTimerId) && previousTimerId > 0) {
+    clearTimeout(previousTimerId);
+  }
+
+  setFilesShareButtonText(button, text);
+  const timerId = window.setTimeout(() => {
+    if (button.isConnected) {
+      setFilesShareButtonText(button, t("files_share_button"));
+    }
+    delete button.dataset.shareResetTimer;
+  }, FILES_SHARE_BUTTON_RESET_MS);
+  button.dataset.shareResetTimer = String(timerId);
+}
+
+async function copyTextToClipboard(text) {
+  const value = String(text || "");
+  if (!value) {
+    throw new Error("Missing clipboard text");
+  }
+
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const helper = document.createElement("textarea");
+  helper.value = value;
+  helper.setAttribute("readonly", "true");
+  helper.style.position = "fixed";
+  helper.style.top = "-9999px";
+  helper.style.left = "-9999px";
+  helper.style.opacity = "0";
+  document.body.appendChild(helper);
+  helper.focus();
+  helper.select();
+
+  try {
+    const copied = document.execCommand("copy");
+    if (!copied) {
+      throw new Error("Copy command failed");
+    }
+  } finally {
+    helper.remove();
+  }
 }
 
 function setTopTabActive(view) {
@@ -679,6 +943,137 @@ async function loadVisitCounter() {
     state.visitCounter.loading = false;
     renderVisitCounter();
   }
+}
+
+function syncVisitCounterEyeOffset(eye) {
+  if (!eye?.host) {
+    return;
+  }
+  eye.host.style.setProperty("--visit-eye-pupil-x", `${eye.currentX.toFixed(2)}px`);
+  eye.host.style.setProperty("--visit-eye-pupil-y", `${eye.currentY.toFixed(2)}px`);
+}
+
+function queueVisitCounterEyeMotion() {
+  if (visitCounterEyeMotionFrame || !visitCounterEyes.length) {
+    return;
+  }
+
+  visitCounterEyeMotionFrame = window.requestAnimationFrame(() => {
+    visitCounterEyeMotionFrame = 0;
+    let shouldContinue = false;
+
+    for (const eye of visitCounterEyes) {
+      const deltaX = eye.targetX - eye.currentX;
+      const deltaY = eye.targetY - eye.currentY;
+
+      if (
+        Math.abs(deltaX) <= VISIT_COUNTER_EYE_POINTER_SETTLE_PX
+        && Math.abs(deltaY) <= VISIT_COUNTER_EYE_POINTER_SETTLE_PX
+      ) {
+        eye.currentX = eye.targetX;
+        eye.currentY = eye.targetY;
+      } else {
+        eye.currentX += deltaX * VISIT_COUNTER_EYE_POINTER_EASING;
+        eye.currentY += deltaY * VISIT_COUNTER_EYE_POINTER_EASING;
+        shouldContinue = true;
+      }
+
+      syncVisitCounterEyeOffset(eye);
+    }
+
+    if (shouldContinue) {
+      queueVisitCounterEyeMotion();
+    }
+  });
+}
+
+function resetVisitCounterEyeTargets() {
+  for (const eye of visitCounterEyes) {
+    eye.targetX = 0;
+    eye.targetY = 0;
+  }
+  queueVisitCounterEyeMotion();
+}
+
+function updateVisitCounterEyeTargets(clientX, clientY) {
+  if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) {
+    resetVisitCounterEyeTargets();
+    return;
+  }
+
+  for (const eye of visitCounterEyes) {
+    const rect = eye.host?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) {
+      eye.targetX = 0;
+      eye.targetY = 0;
+      continue;
+    }
+
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const deltaX = clientX - centerX;
+    const deltaY = clientY - centerY;
+    const distance = Math.hypot(deltaX, deltaY);
+
+    if (distance <= 0.001) {
+      eye.targetX = 0;
+      eye.targetY = 0;
+      continue;
+    }
+
+    const rangeX = Math.max(rect.width * 0.55, 1);
+    const rangeY = Math.max(rect.height * 0.55, 1);
+    const influence = Math.min(Math.hypot(deltaX / rangeX, deltaY / rangeY), 1);
+    const offsetScale = eye.maxOffset * influence / distance;
+
+    eye.targetX = deltaX * offsetScale;
+    eye.targetY = deltaY * offsetScale;
+  }
+
+  queueVisitCounterEyeMotion();
+}
+
+function setupVisitCounterEyeTracking() {
+  visitCounterEyes = [
+    {
+      host: elements.visitCounterIcon,
+      maxOffset: VISIT_COUNTER_EYE_POINTER_MAX_OFFSET_PX,
+      currentX: 0,
+      currentY: 0,
+      targetX: 0,
+      targetY: 0
+    },
+    {
+      host: elements.visitCounterMobileIcon,
+      maxOffset: VISIT_COUNTER_EYE_POINTER_MAX_OFFSET_MOBILE_PX,
+      currentX: 0,
+      currentY: 0,
+      targetX: 0,
+      targetY: 0
+    }
+  ].filter((eye) => eye.host);
+
+  if (!visitCounterEyes.length) {
+    return;
+  }
+
+  for (const eye of visitCounterEyes) {
+    syncVisitCounterEyeOffset(eye);
+  }
+
+  window.addEventListener("pointermove", (event) => {
+    if (event.pointerType === "touch") {
+      return;
+    }
+    updateVisitCounterEyeTargets(event.clientX, event.clientY);
+  }, { passive: true });
+  document.documentElement.addEventListener("mouseleave", resetVisitCounterEyeTargets);
+  window.addEventListener("blur", resetVisitCounterEyeTargets);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      resetVisitCounterEyeTargets();
+    }
+  });
 }
 
 function getActiveSiloResetTargetMs(nowMs = Date.now()) {
@@ -874,6 +1269,7 @@ function showFilesPage({ updateHash = true } = {}) {
   closeClassifiedPageForNavigation();
   markFilesDecisionNoticeSeen();
   startFilesLiveIdentityPolling();
+  syncFilesLoginReturnToField();
   document.body.classList.add("is-files");
   if (elements.filesPage) {
     elements.filesPage.hidden = false;
@@ -4734,6 +5130,14 @@ function renderFilesDetailCard(file) {
   const actions = document.createElement("div");
   actions.className = "files-card-actions files-detail-actions";
 
+  const shareButton = document.createElement("button");
+  shareButton.type = "button";
+  shareButton.className = "files-card-action";
+  shareButton.textContent = t("files_share_button");
+  shareButton.setAttribute("data-files-action", "share");
+  shareButton.setAttribute("data-file-id", fileId);
+  actions.appendChild(shareButton);
+
   const downloadButton = document.createElement("button");
   downloadButton.type = "button";
   downloadButton.className = "files-card-action";
@@ -5985,8 +6389,8 @@ function renderFilesList() {
         card.appendChild(openButton);
 
         if (state.files.me?.isAdmin) {
-          const renameWrap = document.createElement("div");
-          renameWrap.className = "files-file-rename-wrap";
+          const actionWrap = document.createElement("div");
+          actionWrap.className = "files-file-rename-wrap";
 
           if (hasFocusedGroup && state.files.groupManager.open) {
             const selectLabel = document.createElement("label");
@@ -6005,7 +6409,7 @@ function renderFilesList() {
 
             selectLabel.appendChild(selectInput);
             selectLabel.appendChild(selectText);
-            renameWrap.appendChild(selectLabel);
+            actionWrap.appendChild(selectLabel);
           }
 
           if (isRenaming) {
@@ -6046,7 +6450,7 @@ function renderFilesList() {
 
             renameForm.appendChild(renameInput);
             renameForm.appendChild(renameActions);
-            renameWrap.appendChild(renameForm);
+            actionWrap.appendChild(renameForm);
           } else {
             const renameButton = document.createElement("button");
             renameButton.type = "button";
@@ -6054,9 +6458,10 @@ function renderFilesList() {
             renameButton.textContent = t("files_rename_button");
             renameButton.setAttribute("data-files-action", "start-rename");
             renameButton.setAttribute("data-file-id", fileId);
-            renameWrap.appendChild(renameButton);
+            actionWrap.appendChild(renameButton);
           }
-          card.appendChild(renameWrap);
+
+          card.appendChild(actionWrap);
         }
 
         groupList.appendChild(card);
@@ -6077,6 +6482,7 @@ function renderFilesAccessView() {
   const loggedIn = me.loggedIn;
   const authorized = me.isAuthorized;
   const isAdmin = me.isAdmin;
+  const sharedGuestLanding = hasFilesSharedTargetInLocation() && !loggedIn;
   const showDisclaimerGate = shouldShowFilesDisclaimerGate(me);
   const showRestrictedLayout = loggedIn && !authorized;
   const showAuthorizedLayout = authorized || showRestrictedLayout;
@@ -6111,6 +6517,22 @@ function renderFilesAccessView() {
 
   document.body.classList.toggle("is-files-unauthorized", !authorized);
   document.body.classList.toggle("is-files-guest", !loggedIn && !authorized);
+
+  if (elements.filesUnauthorizedTitle) {
+    elements.filesUnauthorizedTitle.textContent = sharedGuestLanding
+      ? t("files_share_unauthorized_title")
+      : t("files_unauthorized_title");
+  }
+  if (elements.filesUnauthorizedSubtitle) {
+    elements.filesUnauthorizedSubtitle.textContent = sharedGuestLanding
+      ? t("files_share_unauthorized_subtitle")
+      : t("files_unauthorized_subtitle");
+  }
+  if (elements.filesUnauthorizedKicker) {
+    elements.filesUnauthorizedKicker.textContent = sharedGuestLanding
+      ? t("files_share_unauthorized_kicker")
+      : t("files_unauthorized_kicker");
+  }
 
   if (elements.filesBrowserTitle) {
     if (showDisclaimerGate) {
@@ -6227,7 +6649,10 @@ function renderFilesAccessView() {
     elements.filesAuthorizedView.hidden = !showAuthorizedLayout;
   }
   if (elements.filesNotAuthorizedMessage) {
-    elements.filesNotAuthorizedMessage.hidden = true;
+    elements.filesNotAuthorizedMessage.hidden = !sharedGuestLanding;
+    elements.filesNotAuthorizedMessage.textContent = sharedGuestLanding
+      ? getFilesSharedUnauthorizedMessage()
+      : t("files_not_authorized_message");
   }
   if (elements.filesLoginForm) {
     elements.filesLoginForm.hidden = loggedIn || showAuthorizedLayout;
@@ -6428,6 +6853,8 @@ function openDiscordLoginPopup() {
     return false;
   }
 
+  syncFilesLoginReturnToField();
+
   if (discordAuthPopupWindow && !discordAuthPopupWindow.closed) {
     try {
       discordAuthPopupWindow.focus();
@@ -6622,6 +7049,30 @@ async function pollFilesIdentityLive({ force = false } = {}) {
   }
 }
 
+function applyFilesSharedSelectionFromLocation() {
+  if (!hasFilesSharedTargetInLocation()) {
+    return false;
+  }
+
+  const matchedFile = resolveFilesSharedEntryFromLocation(state.files.list);
+  if (!matchedFile) {
+    if (String(state.files.selectedId || "").trim()) {
+      state.files.selectedId = "";
+      state.files.detailOrigin = "";
+      state.files.transition = "";
+    }
+    setFilesLocationSharedFile("");
+    return false;
+  }
+
+  state.files.selectedId = String(matchedFile.id || "").trim();
+  state.files.detailOrigin = "share";
+  state.files.activeGroupKey = getFilesGroupKey(matchedFile.group || "");
+  state.files.transition = "";
+  setFilesLocationSharedFile(matchedFile);
+  return true;
+}
+
 async function refreshFilesList() {
   if (!state.files.me?.isAuthorized) {
     state.files.list = [];
@@ -6652,6 +7103,7 @@ async function refreshFilesList() {
     state.files.list = rawFiles
       .map((entry) => normalizeFilesEntry(entry))
       .filter(Boolean);
+    applyFilesSharedSelectionFromLocation();
     if (
       state.files.activeGroupKey
       && !state.files.list.some((entry) => getFilesGroupKey(entry.group) === state.files.activeGroupKey)
@@ -7376,6 +7828,37 @@ async function handleFilesDelete(fileId) {
   openFilesDeleteModal(fileId);
 }
 
+async function handleFilesShare(fileId, button = null) {
+  const normalizedFileId = String(fileId || "").trim().toLowerCase();
+  if (!isValidFilesSharedId(normalizedFileId)) {
+    if (button instanceof HTMLButtonElement) {
+      flashFilesShareButtonState(button, t("files_share_button_copy_error"));
+    }
+    return;
+  }
+
+  const matchedFile = state.files.list.find((entry) => String(entry?.id || "").trim().toLowerCase() === normalizedFileId) || null;
+  if (!matchedFile) {
+    if (button instanceof HTMLButtonElement) {
+      flashFilesShareButtonState(button, t("files_share_button_copy_error"));
+    }
+    return;
+  }
+
+  const shareUrl = buildFilesLocationUrl(matchedFile, { absolute: true });
+
+  try {
+    await copyTextToClipboard(shareUrl);
+    if (button instanceof HTMLButtonElement) {
+      flashFilesShareButtonState(button, t("files_share_button_copied"));
+    }
+  } catch {
+    if (button instanceof HTMLButtonElement) {
+      flashFilesShareButtonState(button, t("files_share_button_copy_error"));
+    }
+  }
+}
+
 function startFilesRename(fileId) {
   if (!state.files.me?.isAdmin) {
     return;
@@ -7826,6 +8309,7 @@ function handleFilesListClick(event) {
     const returnToSearch = state.files.detailOrigin === "search" && String(state.files.search.query || "").trim();
     state.files.selectedId = "";
     state.files.detailOrigin = "";
+    setFilesLocationSharedFile("");
     if (returnToSearch) {
       state.files.transition = "";
       setFilesSearchOpen(true, { clearQuery: false });
@@ -7872,6 +8356,11 @@ function handleFilesListClick(event) {
     state.files.transition = "to-detail";
     renderFilesList();
     elements.filesList?.scrollTo({ top: 0 });
+    return;
+  }
+
+  if (action === "share") {
+    void handleFilesShare(fileId, actionTarget instanceof HTMLButtonElement ? actionTarget : null);
     return;
   }
 
@@ -13224,6 +13713,7 @@ function wireEvents() {
     refreshClassifiedArchiveCardBaseSize();
   });
   window.addEventListener("hashchange", () => {
+    syncFilesLoginReturnToField();
     applyViewFromHash();
   });
   window.addEventListener("message", handleDiscordAuthPopupMessage);
@@ -13232,6 +13722,7 @@ function wireEvents() {
 async function init() {
   setupBackgroundParallax();
   wireEvents();
+  setupVisitCounterEyeTracking();
 
   const initialLang = detectInitialLanguage();
   applyLanguage(initialLang, false);
