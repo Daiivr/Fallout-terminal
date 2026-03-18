@@ -11995,6 +11995,58 @@ body.is-classified .classified-layout {
     flex: 1 1 auto;
   }
 
+  body.is-files .files-group-section:not(.is-open) {
+    padding: 10px 12px;
+    gap: 0;
+  }
+
+  body.is-files .files-group-section:not(.is-open) .files-group-head {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding-right: 40px;
+  }
+
+  body.is-files .files-group-section:not(.is-open) .files-group-toggle {
+    width: 100%;
+    min-height: 0;
+    padding: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+  }
+
+  body.is-files .files-group-section:not(.is-open) .files-group-main {
+    gap: 6px;
+  }
+
+  body.is-files .files-group-section:not(.is-open) .files-group-title {
+    font-size: 12px;
+    line-height: 1.22;
+  }
+
+  body.is-files .files-group-section:not(.is-open) .files-group-stats {
+    gap: 5px;
+  }
+
+  body.is-files .files-group-section:not(.is-open) .files-group-meta {
+    width: auto;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    gap: 0;
+  }
+
+  body.is-files .files-group-section:not(.is-open) .files-group-open-hint {
+    display: none;
+  }
+
+  body.is-files .files-group-section:not(.is-open) .files-group-caret-wrap {
+    margin-left: 0;
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
   body.is-files .files-group-manager-actions {
     grid-template-columns: 1fr;
   }
