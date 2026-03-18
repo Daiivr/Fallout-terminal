@@ -5251,6 +5251,7 @@ function renderFilesRestrictedView({
 
   const resolvedLoggedIn = Boolean(loggedIn);
   const resolvedAuthorized = Boolean(authorized) && resolvedLoggedIn;
+  const sharedRestrictedLanding = hasFilesSharedTargetInLocation() && resolvedLoggedIn && !resolvedAuthorized;
   const cooldownActive = isFilesDeclinedCooldownActive({
     accessRequestStatus,
     accessRequestDecidedAt,
@@ -5295,11 +5296,25 @@ function renderFilesRestrictedView({
   if (elements.filesRestrictedIncident) {
     elements.filesRestrictedIncident.textContent = t("files_restricted_incident", { code: incidentCode });
   }
+  if (elements.filesRestrictedBadge) {
+    elements.filesRestrictedBadge.textContent = sharedRestrictedLanding
+      ? t("files_share_restricted_badge")
+      : t("files_restricted_badge");
+  }
+  if (elements.filesRestrictedTitle) {
+    elements.filesRestrictedTitle.textContent = sharedRestrictedLanding
+      ? t("files_share_restricted_title")
+      : t("files_restricted_title");
+  }
   if (elements.filesRestrictedSubtitle) {
     const showDeclinedReason = resolvedRequestStatus === "declined" && Boolean(declineReason);
     elements.filesRestrictedSubtitle.textContent = showDeclinedReason
-      ? t("files_restricted_subtitle_declined_reason", { reason: declineReason })
-      : t("files_restricted_subtitle");
+      ? sharedRestrictedLanding
+        ? t("files_share_restricted_subtitle_declined_reason", { reason: declineReason })
+        : t("files_restricted_subtitle_declined_reason", { reason: declineReason })
+      : sharedRestrictedLanding
+        ? t("files_share_restricted_subtitle")
+        : t("files_restricted_subtitle");
   }
   if (elements.filesRestrictedIdentityValue) {
     elements.filesRestrictedIdentityValue.textContent = resolvedUsername;
@@ -5325,6 +5340,26 @@ function renderFilesRestrictedView({
       minute: "2-digit",
       second: "2-digit"
     });
+  }
+  if (elements.filesRestrictedDirectiveTitle) {
+    elements.filesRestrictedDirectiveTitle.textContent = sharedRestrictedLanding
+      ? t("files_share_restricted_directive_title")
+      : t("files_restricted_directive_title");
+  }
+  if (elements.filesRestrictedDirectiveLine1) {
+    elements.filesRestrictedDirectiveLine1.textContent = sharedRestrictedLanding
+      ? t("files_share_restricted_directive_line_1")
+      : t("files_restricted_directive_line_1");
+  }
+  if (elements.filesRestrictedDirectiveLine2) {
+    elements.filesRestrictedDirectiveLine2.textContent = sharedRestrictedLanding
+      ? t("files_share_restricted_directive_line_2")
+      : t("files_restricted_directive_line_2");
+  }
+  if (elements.filesRestrictedDirectiveLine3) {
+    elements.filesRestrictedDirectiveLine3.textContent = sharedRestrictedLanding
+      ? t("files_share_restricted_directive_line_3")
+      : t("files_restricted_directive_line_3");
   }
   if (elements.filesRestrictedRequestFeedback) {
     const hasMessage = Boolean(state.files.accessRequestMessage);
@@ -6502,7 +6537,9 @@ function renderFilesAccessView() {
   const loggedIn = me.loggedIn;
   const authorized = me.isAuthorized;
   const isAdmin = me.isAdmin;
-  const sharedGuestLanding = hasFilesSharedTargetInLocation() && !loggedIn;
+  const sharedTargetActive = hasFilesSharedTargetInLocation();
+  const sharedGuestLanding = sharedTargetActive && !loggedIn;
+  const sharedRestrictedLanding = sharedTargetActive && loggedIn && !authorized;
   const showDisclaimerGate = shouldShowFilesDisclaimerGate(me);
   const showRestrictedLayout = loggedIn && !authorized;
   const showAuthorizedLayout = authorized || showRestrictedLayout;
@@ -6537,6 +6574,15 @@ function renderFilesAccessView() {
 
   document.body.classList.toggle("is-files-unauthorized", !authorized);
   document.body.classList.toggle("is-files-guest", !loggedIn && !authorized);
+  document.body.classList.toggle("is-files-shared-landing", sharedGuestLanding);
+  document.body.classList.toggle("is-files-shared-restricted", sharedRestrictedLanding);
+  document.body.classList.toggle("is-files-shared-blocked", sharedGuestLanding || sharedRestrictedLanding);
+
+  if (elements.filesUnauthorizedBadge) {
+    elements.filesUnauthorizedBadge.textContent = sharedGuestLanding
+      ? t("files_share_unauthorized_badge")
+      : t("files_unauthorized_badge");
+  }
 
   if (elements.filesUnauthorizedTitle) {
     elements.filesUnauthorizedTitle.textContent = sharedGuestLanding
@@ -6553,13 +6599,35 @@ function renderFilesAccessView() {
       ? t("files_share_unauthorized_kicker")
       : t("files_unauthorized_kicker");
   }
+  if (elements.filesUnauthorizedDirectiveTitle) {
+    elements.filesUnauthorizedDirectiveTitle.textContent = sharedGuestLanding
+      ? t("files_share_unauthorized_directive_title")
+      : t("files_unauthorized_directive_title");
+  }
+  if (elements.filesUnauthorizedDirectiveLine1) {
+    elements.filesUnauthorizedDirectiveLine1.textContent = sharedGuestLanding
+      ? t("files_share_unauthorized_directive_line_1")
+      : t("files_unauthorized_directive_line_1");
+  }
+  if (elements.filesUnauthorizedDirectiveLine2) {
+    elements.filesUnauthorizedDirectiveLine2.textContent = sharedGuestLanding
+      ? t("files_share_unauthorized_directive_line_2")
+      : t("files_unauthorized_directive_line_2");
+  }
+  if (elements.filesUnauthorizedDirectiveLine3) {
+    elements.filesUnauthorizedDirectiveLine3.textContent = sharedGuestLanding
+      ? t("files_share_unauthorized_directive_line_3")
+      : t("files_unauthorized_directive_line_3");
+  }
 
   if (elements.filesBrowserTitle) {
     if (showDisclaimerGate) {
       elements.filesBrowserTitle.textContent = t("files_disclaimer_gate_browser_title");
     } else {
       elements.filesBrowserTitle.textContent = showRestrictedLayout
-        ? t("files_restricted_browser_title")
+        ? sharedRestrictedLanding
+          ? t("files_share_restricted_browser_title")
+          : t("files_restricted_browser_title")
         : t("files_file_index_title");
     }
   }
@@ -9045,7 +9113,7 @@ function resolveMinervaLocationSlides(data) {
   const locationByMapImage = inferLocationFromMapImage(data.locationMapImage || "");
   const mapLocation = location !== "--" ? location : locationByMapImage;
   const localizedMapLocation = localizeLocation(mapLocation);
-  const mapImageSrc = String(data.locationMapImage || "").trim();
+  const mapImageSrc = resolveMinervaLocationMapImage(data.locationMapImage || "", mapLocation);
   const primarySrc = mapImageSrc || defaultMapImage;
   const slides = [{
     key: mapImageSrc ? "route-known" : "route-default",
@@ -11930,6 +11998,37 @@ function normalizeMinervaInfoImagePath(fileName) {
   return `${MINERVA_INFO_LOCAL_IMAGE_BASE}/${cleaned}`;
 }
 
+function resolveMinervaLocationMapImage(imagePath, location = "") {
+  const normalizedLocation = normalizeLocation(location);
+  const localByLocation = normalizedLocation !== "--"
+    ? String(MINERVA_LOCATION_MAP_BY_LOCATION[normalizedLocation] || "").trim()
+    : "";
+  if (localByLocation) {
+    return localByLocation;
+  }
+
+  const cleaned = String(imagePath || "").trim();
+  if (!cleaned) {
+    return "";
+  }
+
+  const pathWithoutQuery = cleaned.split("#")[0].split("?")[0];
+  const fileName = pathWithoutQuery.split("/").pop() || "";
+  const localByFileName = /^minerva_(foundation|crater|atlas|whitespring)\.(png|jpg|jpeg)$/i.test(fileName)
+    ? normalizeMinervaInfoImagePath(fileName)
+    : "";
+  if (localByFileName) {
+    return localByFileName;
+  }
+
+  const inferredLocation = inferLocationFromMapImage(cleaned);
+  if (inferredLocation !== "--") {
+    return String(MINERVA_LOCATION_MAP_BY_LOCATION[inferredLocation] || "").trim();
+  }
+
+  return cleaned;
+}
+
 function parseMinervaInfoApi(payload, lists = []) {
   const itemsRaw = Array.isArray(payload?.data?.items) ? payload.data.items : [];
   if (!itemsRaw.length) {
@@ -11946,7 +12045,7 @@ function parseMinervaInfoApi(payload, lists = []) {
   }
   const now = new Date();
   let active = Boolean(eventStart && eventEnd && now >= eventStart && now < eventEnd);
-  let locationMapImage = normalizeMinervaInfoImagePath(firstItem?.location_img)
+  let locationMapImage = resolveMinervaLocationMapImage(firstItem?.location_img, location)
     || MINERVA_LOCATION_MAP_BY_LOCATION[location]
     || "";
 
@@ -12084,7 +12183,7 @@ function normalizeMinervaIntelApiPayload(payload, lists = []) {
     eventEnd: Number.isFinite(eventEndMs) ? new Date(eventEndMs) : null,
     items,
     mode: source.includes("minerva-info") ? "live_info" : source.includes("whereisminerva") ? "live" : "fallback",
-    locationMapImage: String(payload.locationMapImage || "").trim()
+    locationMapImage: resolveMinervaLocationMapImage(payload.locationMapImage || "", location)
       || MINERVA_LOCATION_MAP_BY_LOCATION[location]
       || "",
     source

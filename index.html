@@ -38,7 +38,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="preload" as="image" href="assets/images/minerva-plan-fallback.png" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="css/styles.css?v=20260318-group-list-redesign" />
+  <link rel="stylesheet" href="css/styles.css?v=20260318-share-stop-alert" />
 </head>
 <body class="is-booting">
   <div id="bootOverlay" class="boot-overlay">
@@ -808,6 +808,15 @@
             <span></span>
           </div>
         </div>
+        <div class="files-share-stop-hero is-unauthorized" aria-hidden="true">
+          <img
+            src="assets/images/StopVaultBoy.png"
+            alt=""
+            class="files-share-stop-image"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
         <h2 id="filesUnauthorizedTitle">UNAUTHORIZED ACCESS TO FILE SYSTEM</h2>
         <p id="filesUnauthorizedSubtitle" class="files-access-subtitle">IDENTITY VERIFICATION REQUIRED</p>
         <p id="filesUnauthorizedKicker" class="files-unauth-kicker">
@@ -935,6 +944,15 @@
             <div class="files-restricted-top">
               <p id="filesRestrictedBadge" class="files-restricted-badge">RESTRICTED ACCOUNT</p>
               <p id="filesRestrictedIncident" class="files-restricted-incident">INCIDENT FR-000000</p>
+            </div>
+            <div class="files-share-stop-hero is-restricted" aria-hidden="true">
+              <img
+                src="assets/images/StopVaultBoy.png"
+                alt=""
+                class="files-share-stop-image"
+                loading="lazy"
+                decoding="async"
+              />
             </div>
             <h3 id="filesRestrictedTitle" class="files-restricted-title">ARCHIVE ACCESS IS CURRENTLY BLOCKED</h3>
             <p id="filesRestrictedSubtitle" class="files-restricted-subtitle">
@@ -1319,10 +1337,10 @@
 
   <script src="data/minerva-lists.js"></script>
   <script src="data/minerva-detail-fallback.js"></script>
-  <script src="js/i18n/en.js?v=20260317-visit-card-simplified"></script>
-  <script src="js/i18n/es.js?v=20260317-visit-card-simplified"></script>
-  <script src="js/i18n/index.js?v=20260317-visit-card-simplified"></script>
+  <script src="js/i18n/en.js?v=20260318-share-stop-alert-copy"></script>
+  <script src="js/i18n/es.js?v=20260318-share-stop-alert-copy"></script>
+  <script src="js/i18n/index.js?v=20260318-share-stop-alert-copy"></script>
   <script src="js/dom/elements.js?v=20260318-visit-card-eye-tracking"></script>
-  <script src="js/app.js?v=20260318-group-list-overflow-fix"></script>
+  <script src="js/app.js?v=20260318-share-stop-alert"></script>
 </body>
 </html>
