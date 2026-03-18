@@ -8345,6 +8345,11 @@ body.is-files .files-group-list {
   gap: 10px;
 }
 
+body.is-files .files-group-section.is-open .files-group-list {
+  margin-top: 2px;
+  padding-top: 18px;
+}
+
 body.is-files .files-list.is-group-focus-mode {
   max-height: none;
 }
@@ -8357,6 +8362,29 @@ body.is-files .files-group-manager-list {
 
 body.is-files .files-group-list::before {
   display: none;
+}
+
+body.is-files .files-group-section.is-open .files-group-list::before {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 4px;
+  right: 4px;
+  height: 1px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(139, 255, 139, 0) 0%,
+    rgba(139, 255, 139, 0.18) 12%,
+    rgba(255, 225, 122, 0.46) 50%,
+    rgba(139, 255, 139, 0.18) 88%,
+    rgba(139, 255, 139, 0) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.18),
+    0 0 12px rgba(139, 255, 139, 0.08),
+    0 0 18px rgba(255, 225, 122, 0.06);
 }
 
 body.is-files .files-group-open-hint {
@@ -12045,6 +12073,53 @@ body.is-classified .classified-layout {
     width: 30px;
     height: 30px;
     flex-basis: 30px;
+  }
+
+  body.is-files .files-group-section.is-open {
+    padding: 10px 12px 12px;
+    gap: 8px;
+  }
+
+  body.is-files .files-group-section.is-open .files-group-head {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding-right: 40px;
+  }
+
+  body.is-files .files-group-section.is-open .files-group-toggle {
+    width: 100%;
+    min-height: 0;
+    padding: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+  }
+
+  body.is-files .files-group-section.is-open .files-group-main {
+    gap: 6px;
+  }
+
+  body.is-files .files-group-section.is-open .files-group-meta {
+    width: auto;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0;
+  }
+
+  body.is-files .files-group-section.is-open .files-group-caret-wrap {
+    margin-left: 0;
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
+  body.is-files .files-group-section.is-open .files-group-rename-btn {
+    width: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    flex: 0 0 40px;
   }
 
   body.is-files .files-group-manager-actions {
