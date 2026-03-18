@@ -5901,6 +5901,7 @@ function renderFilesList() {
   delete elements.filesList.dataset.detailRenderKey;
   elements.filesList.classList.remove(
     "is-detail-mode",
+    "is-group-focus-mode",
     "is-transition-to-detail",
     "is-transition-to-list",
     "is-transition-group-open",
@@ -6048,6 +6049,7 @@ function renderFilesList() {
     state.files.activeGroupKey = "";
   }
   const hasFocusedGroup = Boolean(activeGroup && state.files.activeGroupKey);
+  elements.filesList.classList.toggle("is-group-focus-mode", hasFocusedGroup);
   if (!hasFocusedGroup && state.files.rename.fileId) {
     state.files.rename.fileId = "";
     state.files.rename.value = "";
@@ -6253,19 +6255,33 @@ function renderFilesList() {
     groupToggle.setAttribute("aria-expanded", hasFocusedGroup ? "true" : "false");
     groupToggle.disabled = hasFocusedGroup;
 
+    const groupMain = document.createElement("span");
+    groupMain.className = "files-group-main";
+
     const groupTitle = document.createElement("span");
     groupTitle.className = "files-group-title";
     groupTitle.textContent = groupEntry.label;
 
+    const groupStats = document.createElement("span");
+    groupStats.className = "files-group-stats";
+
     const groupMeta = document.createElement("span");
     groupMeta.className = "files-group-meta";
 
-    const groupCount = document.createElement("span");
-    groupCount.className = "files-group-count";
     const groupTotalBytes = groupEntry.files.reduce((acc, item) => acc + (Number(item?.size) || 0), 0);
-    groupCount.textContent = `${formatFilesGroupCount(groupEntry.files.length)} · ${formatFileSize(groupTotalBytes)}`;
+    const groupCount = document.createElement("span");
+    groupCount.className = "files-group-count files-group-stat is-count";
+    groupCount.textContent = formatFilesGroupCount(groupEntry.files.length);
 
-    groupMeta.appendChild(groupCount);
+    const groupSize = document.createElement("span");
+    groupSize.className = "files-group-size files-group-stat is-size";
+    groupSize.textContent = formatFileSize(groupTotalBytes);
+
+    groupStats.appendChild(groupCount);
+    groupStats.appendChild(groupSize);
+    groupMain.appendChild(groupTitle);
+    groupMain.appendChild(groupStats);
+
     if (!hasFocusedGroup) {
       const openHint = document.createElement("span");
       openHint.className = "files-group-open-hint";
@@ -6273,13 +6289,17 @@ function renderFilesList() {
       groupMeta.appendChild(openHint);
     }
 
+    const groupCaretWrap = document.createElement("span");
+    groupCaretWrap.className = "files-group-caret-wrap";
+
     const groupCaret = document.createElement("span");
     groupCaret.className = "files-group-caret";
     groupCaret.setAttribute("aria-hidden", "true");
     groupCaret.textContent = ">";
-    groupMeta.appendChild(groupCaret);
+    groupCaretWrap.appendChild(groupCaret);
+    groupMeta.appendChild(groupCaretWrap);
 
-    groupToggle.appendChild(groupTitle);
+    groupToggle.appendChild(groupMain);
     groupToggle.appendChild(groupMeta);
     groupHead.appendChild(groupToggle);
 
