@@ -2510,13 +2510,13 @@ function formatFileFooterDate(value) {
 
 function hasFilesUpdatedTimestamp(file) {
   const uploadedAt = String(file?.uploadedAt || file?.uploaded_at || "").trim();
-  const updatedAt = String(file?.updatedAt || file?.updated_at || "").trim();
-  if (!uploadedAt || !updatedAt || uploadedAt === updatedAt) {
+  const contentUpdatedAt = String(file?.contentUpdatedAt || file?.content_updated_at || "").trim();
+  if (!uploadedAt || !contentUpdatedAt || uploadedAt === contentUpdatedAt) {
     return false;
   }
 
   const uploadedMs = Date.parse(uploadedAt);
-  const updatedMs = Date.parse(updatedAt);
+  const updatedMs = Date.parse(contentUpdatedAt);
   if (Number.isFinite(uploadedMs) && Number.isFinite(updatedMs)) {
     return updatedMs > uploadedMs;
   }
@@ -2526,7 +2526,7 @@ function hasFilesUpdatedTimestamp(file) {
 
 function resolveFilesTimestampMeta(file) {
   const uploadedRaw = String(file?.uploadedAt || file?.uploaded_at || "").trim();
-  const updatedRaw = String(file?.updatedAt || file?.updated_at || uploadedRaw || "").trim();
+  const updatedRaw = String(file?.contentUpdatedAt || file?.content_updated_at || uploadedRaw || "").trim();
   const uploadedDate = formatFileDateTime(uploadedRaw);
   const updatedDate = formatFileDateTime(updatedRaw);
   const uploadedFooterDate = formatFileFooterDate(uploadedRaw);
@@ -3599,6 +3599,9 @@ function normalizeFilesEntry(payload) {
     size: Math.max(0, Number(payload.size) || 0),
     uploadedAt: String(payload.uploadedAt || payload.uploaded_at || "").trim(),
     updatedAt: String(payload.updatedAt || payload.updated_at || payload.uploadedAt || "").trim(),
+    contentUpdatedAt: String(
+      payload.contentUpdatedAt || payload.content_updated_at || payload.uploadedAt || payload.uploaded_at || ""
+    ).trim(),
     description: String(payload.description || ""),
     descriptionPlain: extractFilesDescriptionPlainText(payload.description || ""),
     group: normalizeFilesGroup(payload.group),

@@ -1143,6 +1143,7 @@ function normalizeMetadataFileEntry(entry) {
   const size = Number(entry.size);
   const uploadedAt = String(entry.uploadedAt || "").trim();
   const updatedAt = String(entry.updatedAt || "").trim();
+  const contentUpdatedAt = String(entry.contentUpdatedAt || "").trim();
   const imageStoredName = String(entry.imageStoredName || "").trim();
   const imageMimeType = String(entry.imageMimeType || "").trim();
   const hasImage = Boolean(imageStoredName);
@@ -1160,6 +1161,7 @@ function normalizeMetadataFileEntry(entry) {
     group: sanitizeFileGroup(entry.group),
     uploadedAt: uploadedAt || new Date(0).toISOString(),
     updatedAt: updatedAt || uploadedAt || "",
+    contentUpdatedAt: contentUpdatedAt || uploadedAt || "",
     uploaderDiscordId: String(entry.uploaderDiscordId || "").trim(),
     uploader: String(entry.uploader || "").trim(),
     imageStoredName: hasImage ? imageStoredName : "",
@@ -1208,6 +1210,7 @@ function buildFileListEntry(entry) {
     size: normalized.size,
     uploadedAt: normalized.uploadedAt,
     updatedAt: normalized.updatedAt || normalized.uploadedAt,
+    contentUpdatedAt: normalized.contentUpdatedAt || normalized.uploadedAt,
     description: normalized.description,
     group: normalized.group,
     uploader: normalized.uploader || normalized.uploaderDiscordId || "",
@@ -3331,6 +3334,7 @@ app.post("/api/files/upload", requireAdmin, uploadFileWithOptionalImage, (req, r
     group,
     uploadedAt: now,
     updatedAt: now,
+    contentUpdatedAt: now,
     uploaderDiscordId: user.discordId,
     uploader: user.username,
     imageStoredName: hasImageUpload ? uploadedImage.filename : "",
@@ -3426,7 +3430,8 @@ app.post("/api/files/:id/replace", requireAdmin, uploadFileOnly, (req, res) => {
       name: safeOriginalName,
       mimeType: String(uploadedFile.mimetype || "application/octet-stream").trim() || "application/octet-stream",
       size: Math.max(0, Number(uploadedFile.size) || 0),
-      updatedAt: now
+      updatedAt: now,
+      contentUpdatedAt: now
     };
 
     const normalizedEntry = normalizeMetadataFileEntry(nextEntry);
