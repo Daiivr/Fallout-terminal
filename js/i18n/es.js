@@ -339,6 +339,8 @@ globalThis.FALLOUT_CODEX_LOCALES.es = {
     files_type_label: "Tipo",
     files_size_label: "Tamano",
     files_uploaded_label: "Subido",
+    files_updated_label: "Actualizado",
+    files_updated_short_label: "ACT",
     files_group_label: "Grupo",
     files_group_default: "SIN GRUPO",
     files_group_count: "{n} archivo(s)",

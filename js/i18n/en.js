@@ -339,6 +339,8 @@ globalThis.FALLOUT_CODEX_LOCALES.en = {
     files_type_label: "Type",
     files_size_label: "Size",
     files_uploaded_label: "Uploaded",
+    files_updated_label: "Updated",
+    files_updated_short_label: "Upd",
     files_group_label: "Group",
     files_group_default: "UNGROUPED",
     files_group_count: "{n} file(s)",

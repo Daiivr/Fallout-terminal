@@ -712,7 +712,23 @@ function setFilesShareButtonText(button, text) {
   if (!(button instanceof HTMLButtonElement)) {
     return;
   }
-  button.textContent = String(text || "");
+
+  const nextText = String(text || "");
+  if (button.classList.contains("is-icon")) {
+    const copiedLabel = t("files_share_button_copied");
+    const errorLabel = t("files_share_button_copy_error");
+    const iconKind = nextText === copiedLabel
+      ? "copied"
+      : nextText === errorLabel
+        ? "error"
+        : "share";
+    button.classList.toggle("is-flash-success", iconKind === "copied");
+    button.classList.toggle("is-flash-error", iconKind === "error");
+    decorateFilesActionIconButton(button, nextText, iconKind);
+    return;
+  }
+
+  button.textContent = nextText;
 }
 
 function flashFilesShareButtonState(button, text) {
@@ -2466,6 +2482,68 @@ function formatFileDateTime(value) {
   } catch {
     return date.toISOString();
   }
+}
+
+function formatFileFooterDate(value) {
+  if (!value) {
+    return t("files_unknown_value");
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return t("files_unknown_value");
+  }
+
+  try {
+    const locale = state.lang === "es" ? "es-ES" : "en-US";
+    return new Intl.DateTimeFormat(locale, {
+      day: "2-digit",
+      month: "short"
+    }).format(date)
+      .replace(/\./g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  } catch {
+    return date.toISOString().slice(5, 10);
+  }
+}
+
+function hasFilesUpdatedTimestamp(file) {
+  const uploadedAt = String(file?.uploadedAt || file?.uploaded_at || "").trim();
+  const updatedAt = String(file?.updatedAt || file?.updated_at || "").trim();
+  if (!uploadedAt || !updatedAt || uploadedAt === updatedAt) {
+    return false;
+  }
+
+  const uploadedMs = Date.parse(uploadedAt);
+  const updatedMs = Date.parse(updatedAt);
+  if (Number.isFinite(uploadedMs) && Number.isFinite(updatedMs)) {
+    return updatedMs > uploadedMs;
+  }
+
+  return true;
+}
+
+function resolveFilesTimestampMeta(file) {
+  const uploadedRaw = String(file?.uploadedAt || file?.uploaded_at || "").trim();
+  const updatedRaw = String(file?.updatedAt || file?.updated_at || uploadedRaw || "").trim();
+  const uploadedDate = formatFileDateTime(uploadedRaw);
+  const updatedDate = formatFileDateTime(updatedRaw);
+  const uploadedFooterDate = formatFileFooterDate(uploadedRaw);
+  const updatedFooterDate = formatFileFooterDate(updatedRaw);
+  const hasUpdatedDate = hasFilesUpdatedTimestamp(file);
+
+  return {
+    uploadedDate,
+    updatedDate,
+    uploadedFooterDate,
+    updatedFooterDate,
+    hasUpdatedDate,
+    primaryLabel: hasUpdatedDate ? t("files_updated_label") : t("files_uploaded_label"),
+    primaryDate: hasUpdatedDate ? updatedDate : uploadedDate,
+    previewLabel: hasUpdatedDate ? t("files_updated_short_label") : t("files_uploaded_label"),
+    previewDate: hasUpdatedDate ? updatedFooterDate : uploadedFooterDate
+  };
 }
 
 function resolveFileTypeLabel(file) {
@@ -5014,6 +5092,18 @@ function createFilesActionIcon(kind) {
     return svg;
   }
 
+  if (kind === "copied") {
+    appendShape("path", { d: "M20 6 9 17l-5-5" });
+    return svg;
+  }
+
+  if (kind === "error") {
+    appendShape("circle", { cx: "12", cy: "12", r: "8" });
+    appendShape("path", { d: "M12 8v4.5" });
+    appendShape("path", { d: "M12 16h.01" });
+    return svg;
+  }
+
   appendShape("path", { d: "M4 7h16" });
   appendShape("path", { d: "M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" });
   appendShape("path", { d: "M7.5 7 8.4 18.5A1.5 1.5 0 0 0 9.9 20h4.2a1.5 1.5 0 0 0 1.5-1.5L16.5 7" });
@@ -5143,7 +5233,7 @@ function renderFilesDetailCard(file) {
   const fileName = getFilesDisplayName(file);
   const fileType = resolveFileTypeLabel(file);
   const fileSize = formatFileSize(file.size);
-  const uploadDate = formatFileDateTime(file.uploadedAt || file.uploaded_at);
+  const timestampMeta = resolveFilesTimestampMeta(file);
   const description = String(file.description || "").trim();
   const group = getFilesGroupDisplayLabel(file);
   const uploader = String(file.uploader || file.uploaderDiscordId || t("files_unknown_value"));
@@ -5177,7 +5267,10 @@ function renderFilesDetailCard(file) {
   metadata.appendChild(createFilesMetaItem(t("files_name_label"), fileName));
   metadata.appendChild(createFilesMetaItem(t("files_type_label"), fileType));
   metadata.appendChild(createFilesMetaItem(t("files_size_label"), fileSize));
-  metadata.appendChild(createFilesMetaItem(t("files_uploaded_label"), uploadDate));
+  metadata.appendChild(createFilesMetaItem(t("files_uploaded_label"), timestampMeta.uploadedDate));
+  if (timestampMeta.hasUpdatedDate) {
+    metadata.appendChild(createFilesMetaItem(t("files_updated_label"), timestampMeta.updatedDate));
+  }
   metadata.appendChild(createFilesMetaItem(t("files_group_label"), group));
   metadata.appendChild(createFilesMetaItem(t("files_uploader_label"), uploader));
 
@@ -5914,7 +6007,7 @@ function renderFilesSearchResults() {
     const fileName = getFilesDisplayName(file);
     const fileType = resolveFileTypeLabel(file);
     const fileSize = formatFileSize(file.size);
-    const uploadDate = formatFileDateTime(file.uploadedAt || file.uploaded_at);
+    const timestampMeta = resolveFilesTimestampMeta(file);
 
     const row = document.createElement("article");
     row.className = "files-search-row";
@@ -5947,10 +6040,10 @@ function renderFilesSearchResults() {
 
     const uploadedField = document.createElement("div");
     uploadedField.className = "files-search-cell";
-    uploadedField.innerHTML = `<span class="files-search-k">${t("files_uploaded_label")}</span>`;
+    uploadedField.innerHTML = `<span class="files-search-k">${timestampMeta.primaryLabel}</span>`;
     const uploadedValue = document.createElement("span");
     uploadedValue.className = "files-search-v";
-    uploadedValue.textContent = uploadDate;
+    uploadedValue.textContent = timestampMeta.primaryDate;
     uploadedField.appendChild(uploadedValue);
 
     const actionField = document.createElement("div");
@@ -6225,7 +6318,7 @@ function renderFilesList() {
       const fileTypeBadgeLabel = getFilesTypeBadgeLabel(file);
       const fileTypeSummaryLabel = fileTypeBadgeLabel || fileType;
       const fileSize = formatFileSize(file.size);
-      const uploadDate = formatFileDateTime(file.uploadedAt || file.uploaded_at);
+      const timestampMeta = resolveFilesTimestampMeta(file);
       const uploader = String(file.uploader || t("files_unknown_value"));
       const selectedForGrouping = state.files.groupManager.selectedIds.includes(fileId);
       const groupStatus = resolveFilesGroupManagerFileStatus(file, targetGroup);
@@ -6285,7 +6378,7 @@ function renderFilesList() {
 
       const dateSummary = document.createElement("span");
       dateSummary.className = "files-file-footer-item";
-      dateSummary.textContent = `${t("files_uploaded_label")}: ${uploadDate}`;
+      dateSummary.textContent = `${timestampMeta.previewLabel}: ${timestampMeta.previewDate}`;
 
       const uploaderSummary = document.createElement("span");
       uploaderSummary.className = "files-file-footer-item";
@@ -6450,7 +6543,7 @@ function renderFilesList() {
         const fileTypeBadgeLabel = getFilesTypeBadgeLabel(file);
         const fileTypeSummaryLabel = fileTypeBadgeLabel || fileType;
         const fileSize = formatFileSize(file.size);
-        const uploadDate = formatFileDateTime(file.uploadedAt || file.uploaded_at);
+        const timestampMeta = resolveFilesTimestampMeta(file);
         const uploader = String(file.uploader || t("files_unknown_value"));
         const isRenaming = Boolean(state.files.rename.fileId) && state.files.rename.fileId === fileId;
         const renameBusy = isRenaming && Boolean(state.files.rename.busy);
@@ -6514,7 +6607,7 @@ function renderFilesList() {
 
         const dateSummary = document.createElement("span");
         dateSummary.className = "files-file-footer-item";
-        dateSummary.textContent = `${t("files_uploaded_label")}: ${uploadDate}`;
+        dateSummary.textContent = `${timestampMeta.previewLabel}: ${timestampMeta.previewDate}`;
 
         const uploaderSummary = document.createElement("span");
         uploaderSummary.className = "files-file-footer-item";
