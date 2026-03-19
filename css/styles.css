@@ -8808,9 +8808,172 @@ body.is-files .files-file-rename-cancel {
   min-width: 128px;
 }
 
+.files-card-action.is-icon {
+  min-width: 0;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  flex: 0 0 auto;
+}
+
+.files-card-action.is-icon::before,
+.files-card-action.is-icon::after {
+  position: absolute;
+  left: 50%;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+  z-index: 8;
+}
+
+.files-card-action.is-icon::after {
+  content: attr(data-tooltip);
+  bottom: calc(100% + 12px);
+  transform: translate(-50%, 6px);
+  padding: 6px 9px 5px;
+  border: 1px solid rgba(139, 255, 139, 0.42);
+  border-radius: 9px;
+  background:
+    linear-gradient(to bottom, rgba(139, 255, 139, 0.08), rgba(0, 0, 0, 0.18) 58%),
+    rgba(5, 16, 7, 0.96);
+  box-shadow:
+    0 0 0 1px rgba(139, 255, 139, 0.12) inset,
+    0 10px 26px rgba(0, 0, 0, 0.42),
+    0 0 16px rgba(139, 255, 139, 0.12);
+  color: var(--fg-bright);
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 0 0 10px rgba(139, 255, 139, 0.16);
+}
+
+.files-card-action.is-icon::before {
+  content: "";
+  bottom: calc(100% + 7px);
+  width: 8px;
+  height: 8px;
+  border-right: 1px solid rgba(139, 255, 139, 0.42);
+  border-bottom: 1px solid rgba(139, 255, 139, 0.42);
+  background: rgba(5, 16, 7, 0.96);
+  transform: translate(-50%, 6px) rotate(45deg);
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.18);
+}
+
+.files-card-action.is-icon.is-delete::after {
+  border-color: rgba(255, 225, 122, 0.42);
+  background:
+    linear-gradient(to bottom, rgba(255, 225, 122, 0.08), rgba(0, 0, 0, 0.18) 58%),
+    rgba(18, 14, 4, 0.96);
+  color: var(--warn);
+  box-shadow:
+    0 0 0 1px rgba(255, 225, 122, 0.12) inset,
+    0 10px 26px rgba(0, 0, 0, 0.42),
+    0 0 16px rgba(255, 225, 122, 0.12);
+  text-shadow: 0 0 10px rgba(255, 225, 122, 0.18);
+}
+
+.files-card-action.is-icon.is-delete::before {
+  border-right-color: rgba(255, 225, 122, 0.42);
+  border-bottom-color: rgba(255, 225, 122, 0.42);
+  background: rgba(18, 14, 4, 0.96);
+}
+
+.files-card-action.is-icon:hover::after,
+.files-card-action.is-icon:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.files-card-action.is-icon:hover::before,
+.files-card-action.is-icon:focus-visible::before {
+  opacity: 1;
+  transform: translate(-50%, 0) rotate(45deg);
+}
+
+body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action="share"]::after {
+  left: 0;
+  transform: translate(0, 6px);
+}
+
+body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action="share"]::before {
+  left: 18px;
+  transform: translate(0, 6px) rotate(45deg);
+}
+
+body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action="share"]:hover::after,
+body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action="share"]:focus-visible::after {
+  transform: translate(0, 0);
+}
+
+body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action="share"]:hover::before,
+body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action="share"]:focus-visible::before {
+  transform: translate(0, 0) rotate(45deg);
+}
+
+body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action="delete"]::after {
+  left: auto;
+  right: 0;
+  transform: translate(0, 6px);
+}
+
+body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action="delete"]::before {
+  left: auto;
+  right: 18px;
+  transform: translate(0, 6px) rotate(45deg);
+}
+
+body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action="delete"]:hover::after,
+body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action="delete"]:focus-visible::after {
+  transform: translate(0, 0);
+}
+
+body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action="delete"]:hover::before,
+body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action="delete"]:focus-visible::before {
+  transform: translate(0, 0) rotate(45deg);
+}
+
+.files-card-action.is-icon:disabled::before,
+.files-card-action.is-icon:disabled::after {
+  opacity: 0;
+}
+
+.files-card-action-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.85;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.files-card-action.is-icon.is-busy .files-card-action-icon {
+  animation: filesCardActionSpin 860ms linear infinite;
+}
+
 .files-card-action.is-delete {
   border-color: rgba(255, 225, 122, 0.38);
   color: var(--warn);
+}
+
+@keyframes filesCardActionSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Files Interface Refresh */
@@ -9557,6 +9720,7 @@ body.is-files .files-detail-body {
 
 body.is-files .files-detail-actions {
   margin-top: 2px;
+  align-items: center;
 }
 
 body.is-files .files-card-actions {
@@ -11633,6 +11797,12 @@ body.is-classified .classified-layout {
     width: 100%;
     min-width: 0;
     max-width: 100%;
+  }
+
+  body.is-files .files-detail-actions .files-card-action.is-icon {
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
   }
 
   #filesSessionLogoutBtn {

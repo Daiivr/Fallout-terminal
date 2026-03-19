@@ -385,6 +385,9 @@ const state = {
     },
     uploadFieldInvalid: false,
     uploadMissingFileError: false,
+    replace: {
+      fileId: ""
+    },
     activeGroupKey: "",
     rename: {
       fileId: "",
@@ -4974,6 +4977,63 @@ function buildFilesDetailRenderKey(file, { isAdmin = false } = {}) {
   ].join("|");
 }
 
+function createFilesActionIcon(kind) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.classList.add("files-card-action-icon");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("focusable", "false");
+  svg.setAttribute("aria-hidden", "true");
+
+  const appendShape = (tagName, attrs) => {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", tagName);
+    Object.entries(attrs).forEach(([name, value]) => {
+      node.setAttribute(name, value);
+    });
+    svg.appendChild(node);
+  };
+
+  if (kind === "share") {
+    appendShape("path", { d: "M14 5h5v5" });
+    appendShape("path", { d: "M10 14 19 5" });
+    appendShape("path", { d: "M19 13v4a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4" });
+    return svg;
+  }
+
+  if (kind === "download") {
+    appendShape("path", { d: "M12 4v10" });
+    appendShape("path", { d: "m7.5 10.5 4.5 4.5 4.5-4.5" });
+    appendShape("path", { d: "M5 19h14" });
+    return svg;
+  }
+
+  if (kind === "replace") {
+    appendShape("path", { d: "M20 7v5h-5" });
+    appendShape("path", { d: "M20 12a8 8 0 0 0-13.8-4.8L4 9.5" });
+    appendShape("path", { d: "M4 17v-5h5" });
+    appendShape("path", { d: "M4 12a8 8 0 0 0 13.8 4.8L20 14.5" });
+    return svg;
+  }
+
+  appendShape("path", { d: "M4 7h16" });
+  appendShape("path", { d: "M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" });
+  appendShape("path", { d: "M7.5 7 8.4 18.5A1.5 1.5 0 0 0 9.9 20h4.2a1.5 1.5 0 0 0 1.5-1.5L16.5 7" });
+  appendShape("path", { d: "M10 10.25v6.5" });
+  appendShape("path", { d: "M14 10.25v6.5" });
+  return svg;
+}
+
+function decorateFilesActionIconButton(button, label, kind, { busy = false } = {}) {
+  if (!(button instanceof HTMLButtonElement)) {
+    return;
+  }
+  button.classList.add("is-icon");
+  button.classList.toggle("is-busy", Boolean(busy));
+  button.setAttribute("aria-label", label);
+  button.setAttribute("data-tooltip", label);
+  button.removeAttribute("title");
+  button.replaceChildren(createFilesActionIcon(kind));
+}
+
 function createFilesAdminEditForm(file) {
   if (!state.files.me?.isAdmin) {
     return null;
@@ -5089,6 +5149,7 @@ function renderFilesDetailCard(file) {
   const uploader = String(file.uploader || file.uploaderDiscordId || t("files_unknown_value"));
   const imageUrl = String(file.imageUrl || "").trim();
   const imageName = String(file.imageName || "").trim();
+  const isReplacing = String(state.files.replace.fileId || "") === fileId;
 
   const detailCard = document.createElement("article");
   detailCard.className = "panel files-detail-card";
@@ -5133,26 +5194,50 @@ function renderFilesDetailCard(file) {
   const shareButton = document.createElement("button");
   shareButton.type = "button";
   shareButton.className = "files-card-action";
-  shareButton.textContent = t("files_share_button");
   shareButton.setAttribute("data-files-action", "share");
   shareButton.setAttribute("data-file-id", fileId);
+  decorateFilesActionIconButton(shareButton, t("files_share_button"), "share");
   actions.appendChild(shareButton);
 
   const downloadButton = document.createElement("button");
   downloadButton.type = "button";
   downloadButton.className = "files-card-action";
-  downloadButton.textContent = t("files_download_button");
   downloadButton.setAttribute("data-files-action", "download");
   downloadButton.setAttribute("data-file-id", fileId);
+  decorateFilesActionIconButton(downloadButton, t("files_download_button"), "download");
   actions.appendChild(downloadButton);
 
   if (state.files.me?.isAdmin) {
+    const replaceInputId = `filesReplaceInput-${fileId}`;
+    const replaceInput = document.createElement("input");
+    replaceInput.id = replaceInputId;
+    replaceInput.type = "file";
+    replaceInput.hidden = true;
+    replaceInput.setAttribute("data-files-replace-input", "true");
+    replaceInput.setAttribute("data-file-id", fileId);
+
+    const replaceButton = document.createElement("button");
+    replaceButton.type = "button";
+    replaceButton.className = "files-card-action";
+    replaceButton.setAttribute("data-files-action", "replace");
+    replaceButton.setAttribute("data-file-id", fileId);
+    replaceButton.setAttribute("data-files-replace-input-id", replaceInputId);
+    replaceButton.disabled = isReplacing;
+    decorateFilesActionIconButton(
+      replaceButton,
+      isReplacing ? t("files_replace_button_busy") : t("files_replace_button"),
+      "replace",
+      { busy: isReplacing }
+    );
+    actions.appendChild(replaceButton);
+    actions.appendChild(replaceInput);
+
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
     deleteButton.className = "files-card-action is-delete";
-    deleteButton.textContent = t("files_delete_button");
     deleteButton.setAttribute("data-files-action", "delete");
     deleteButton.setAttribute("data-file-id", fileId);
+    decorateFilesActionIconButton(deleteButton, t("files_delete_button"), "delete");
     actions.appendChild(deleteButton);
   }
 
@@ -7400,6 +7485,7 @@ async function handleFilesLogout() {
   state.files.detailOrigin = "";
   state.files.transition = "";
   state.files.uploadBusy = false;
+  state.files.replace.fileId = "";
   setFilesUploadFeedback("", "");
   state.files.accessRequestBusy = false;
   setFilesRestrictedRequestFeedback("", "");
@@ -7550,6 +7636,30 @@ function setFilesEditFormBusy(formElement, busy) {
   }
 }
 
+function setFilesReplaceControlBusy(fileId, busy) {
+  const normalizedFileId = String(fileId || "").trim();
+  if (!normalizedFileId || !elements.filesList) {
+    return;
+  }
+
+  const replaceButtons = Array.from(elements.filesList.querySelectorAll("[data-files-action=\"replace\"]"));
+  for (const button of replaceButtons) {
+    if (!(button instanceof HTMLButtonElement)) {
+      continue;
+    }
+    if (String(button.getAttribute("data-file-id") || "").trim() !== normalizedFileId) {
+      continue;
+    }
+    button.disabled = Boolean(busy);
+    decorateFilesActionIconButton(
+      button,
+      busy ? t("files_replace_button_busy") : t("files_replace_button"),
+      "replace",
+      { busy }
+    );
+  }
+}
+
 async function handleFilesMetadataEdit(formElement) {
   if (!state.files.me?.isAdmin) {
     return;
@@ -7662,6 +7772,60 @@ async function handleFilesUpload(event) {
     state.files.uploadBusy = false;
     setFilesUploadFeedback(String(error?.message || t("files_upload_error")), "error");
     setFilesUploadInputInvalid(false, { isMissingFileError: false });
+    renderFilesAccessView();
+  }
+}
+
+async function handleFilesReplace(fileId, inputElement) {
+  const normalizedFileId = String(fileId || "").trim();
+  if (!state.files.me?.isAdmin || !normalizedFileId || !(inputElement instanceof HTMLInputElement)) {
+    if (inputElement instanceof HTMLInputElement) {
+      inputElement.value = "";
+    }
+    return;
+  }
+
+  const replacementFile = inputElement.files?.length ? inputElement.files[0] : null;
+  if (!replacementFile) {
+    inputElement.value = "";
+    return;
+  }
+
+  if (state.files.replace.fileId && state.files.replace.fileId !== normalizedFileId) {
+    inputElement.value = "";
+    return;
+  }
+
+  state.files.replace.fileId = normalizedFileId;
+  setFilesUploadFeedback("", "");
+  const formData = new FormData();
+  formData.append("file", replacementFile);
+  setFilesReplaceControlBusy(normalizedFileId, true);
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    controller.abort();
+  }, 30000);
+
+  try {
+    await requestJson(`/api/files/${encodeURIComponent(normalizedFileId)}/replace`, {
+      method: "POST",
+      body: formData,
+      signal: controller.signal
+    });
+    setFilesUploadFeedback(t("files_replace_success"), "success");
+    await refreshFilesList();
+  } catch (error) {
+    const message = error?.name === "AbortError"
+      ? t("files_replace_error_timeout")
+      : String(error?.message || t("files_upload_error"));
+    setFilesUploadFeedback(message, "error");
+    renderFilesAccessView();
+  } finally {
+    clearTimeout(timeoutId);
+    state.files.replace.fileId = "";
+    inputElement.value = "";
+    setFilesReplaceControlBusy(normalizedFileId, false);
     renderFilesAccessView();
   }
 }
@@ -8265,6 +8429,16 @@ function handleFilesListChange(event) {
     return;
   }
 
+  if (target instanceof HTMLInputElement && target.matches("[data-files-replace-input]")) {
+    const fileId = String(target.getAttribute("data-file-id") || "").trim();
+    if (fileId) {
+      void handleFilesReplace(fileId, target);
+    } else {
+      target.value = "";
+    }
+    return;
+  }
+
   if (!(target instanceof HTMLInputElement) || !target.matches("[data-files-group-select]")) {
     return;
   }
@@ -8453,7 +8627,20 @@ function handleFilesListClick(event) {
   }
 
   if (action === "download") {
-    window.location.href = `/api/files/${encodeURIComponent(fileId)}/download`;
+    window.location.href = `/api/files/${encodeURIComponent(fileId)}/download?ts=${Date.now()}`;
+    return;
+  }
+
+  if (action === "replace") {
+    if (state.files.replace.fileId) {
+      return;
+    }
+    const replaceInputId = String(actionTarget.dataset.filesReplaceInputId || "").trim();
+    const replaceInput = replaceInputId ? document.getElementById(replaceInputId) : null;
+    if (replaceInput instanceof HTMLInputElement) {
+      replaceInput.value = "";
+      replaceInput.click();
+    }
     return;
   }
 

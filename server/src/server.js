@@ -205,6 +205,25 @@ function writeMetadataStore(entries) {
   fs.renameSync(tempPath, METADATA_PATH);
 }
 
+const activeFileMutationIds = new Set();
+
+function tryLockFileMutation(fileId) {
+  const normalizedFileId = String(fileId || "").trim().toLowerCase();
+  if (!normalizedFileId || activeFileMutationIds.has(normalizedFileId)) {
+    return false;
+  }
+  activeFileMutationIds.add(normalizedFileId);
+  return true;
+}
+
+function unlockFileMutation(fileId) {
+  const normalizedFileId = String(fileId || "").trim().toLowerCase();
+  if (!normalizedFileId) {
+    return;
+  }
+  activeFileMutationIds.delete(normalizedFileId);
+}
+
 function normalizeVisitCounterStore(entry) {
   const totalVisits = Number.parseInt(String(entry?.totalVisits ?? 0), 10);
   const updatedAt = String(entry?.updatedAt || "").trim();
@@ -2430,6 +2449,15 @@ function uploadFileWithOptionalImage(req, res, next) {
   });
 }
 
+function uploadFileOnly(req, res, next) {
+  upload.single("file")(req, res, (error) => {
+    if (handleUploadError(error, res)) {
+      return;
+    }
+    next();
+  });
+}
+
 function uploadFileMetadataUpdate(req, res, next) {
   upload.fields([
     { name: "image", maxCount: 1 }
@@ -3336,6 +3364,102 @@ app.post("/api/files/upload", requireAdmin, uploadFileWithOptionalImage, (req, r
   });
 });
 
+app.post("/api/files/:id/replace", requireAdmin, uploadFileOnly, (req, res) => {
+  const fileId = String(req.params.id || "").trim().toLowerCase();
+  const uploadedFile = req.file || null;
+  const cleanupUploadedFile = () => {
+    if (uploadedFile?.filename) {
+      deleteStoredUpload(uploadedFile.filename);
+    } else if (uploadedFile?.path) {
+      fs.unlink(uploadedFile.path, () => {});
+    }
+  };
+
+  if (!FILE_ID_PATTERN.test(fileId)) {
+    cleanupUploadedFile();
+    res.status(400).json({ error: "Invalid file id" });
+    return;
+  }
+
+  if (!uploadedFile) {
+    cleanupUploadedFile();
+    res.status(400).json({ error: "No file uploaded" });
+    return;
+  }
+
+  const originalName = String(uploadedFile.originalname || "");
+  const safeOriginalName = sanitizeDisplayFilename(originalName);
+
+  if (!Number.isFinite(uploadedFile.size) || uploadedFile.size <= 0) {
+    cleanupUploadedFile();
+    res.status(400).json({ error: "Empty uploads are not allowed" });
+    return;
+  }
+
+  if (!isValidOriginalFilename(originalName) || !safeOriginalName) {
+    cleanupUploadedFile();
+    res.status(400).json({ error: "Invalid filename" });
+    return;
+  }
+
+  if (!tryLockFileMutation(fileId)) {
+    cleanupUploadedFile();
+    res.status(409).json({ error: "File update already in progress" });
+    return;
+  }
+
+  try {
+    const entries = readMetadataStore();
+    const index = entries.findIndex((entry) => String(entry.id || "").toLowerCase() === fileId);
+    if (index < 0) {
+      cleanupUploadedFile();
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
+
+    const currentEntry = entries[index];
+    const currentStoredName = String(currentEntry.storedName || "").trim();
+    const now = new Date().toISOString();
+    const nextEntry = {
+      ...currentEntry,
+      storedName: uploadedFile.filename,
+      name: safeOriginalName,
+      mimeType: String(uploadedFile.mimetype || "application/octet-stream").trim() || "application/octet-stream",
+      size: Math.max(0, Number(uploadedFile.size) || 0),
+      updatedAt: now
+    };
+
+    const normalizedEntry = normalizeMetadataFileEntry(nextEntry);
+    if (!normalizedEntry) {
+      cleanupUploadedFile();
+      res.status(400).json({ error: "Invalid file replacement" });
+      return;
+    }
+
+    try {
+      entries[index] = normalizedEntry;
+      writeMetadataStore(entries);
+    } catch (error) {
+      cleanupUploadedFile();
+      console.error("[files] file replace error:", error);
+      res.status(500).json({ error: "Unable to replace file" });
+      return;
+    }
+
+    if (currentStoredName && currentStoredName !== normalizedEntry.storedName) {
+      deleteStoredUpload(currentStoredName);
+    }
+
+    const responseFile = buildFileListEntry(normalizedEntry);
+    res.json({
+      ok: true,
+      file: responseFile
+    });
+  } finally {
+    unlockFileMutation(fileId);
+  }
+});
+
 app.patch("/api/files/:id", requireAdmin, uploadFileMetadataUpdate, (req, res) => {
   const fileId = String(req.params.id || "").trim().toLowerCase();
   const uploadedImage = Array.isArray(req.files?.image) ? req.files.image[0] : null;
@@ -3367,72 +3491,82 @@ app.patch("/api/files/:id", requireAdmin, uploadFileMetadataUpdate, (req, res) =
     return;
   }
 
-  const entries = readMetadataStore();
-  const index = entries.findIndex((entry) => String(entry.id || "").toLowerCase() === fileId);
-  if (index < 0) {
+  if (!tryLockFileMutation(fileId)) {
     cleanupUploadedImage();
-    res.status(404).json({ error: "File not found" });
-    return;
-  }
-
-  const currentEntry = entries[index];
-  const currentImageStoredName = String(currentEntry.imageStoredName || "").trim();
-  const now = new Date().toISOString();
-  const nextEntry = {
-    ...currentEntry,
-    updatedAt: now
-  };
-
-  if (hasDescription) {
-    nextEntry.description = sanitizeFileDescription(req.body.description);
-  }
-  if (hasGroup) {
-    nextEntry.group = sanitizeFileGroup(req.body.group);
-  }
-  if (hasDisplayName) {
-    nextEntry.displayName = sanitizeFileDisplayName(req.body.displayName);
-  }
-
-  if (uploadedImage) {
-    nextEntry.imageStoredName = uploadedImage.filename;
-    nextEntry.imageMimeType = imageMimeType || "application/octet-stream";
-    nextEntry.imageName = sanitizeDisplayFilename(uploadedImage.originalname || "image") || "image";
-    nextEntry.imageSize = Math.max(0, Number(uploadedImage.size) || 0);
-  } else if (removeImage) {
-    nextEntry.imageStoredName = "";
-    nextEntry.imageMimeType = "";
-    nextEntry.imageName = "";
-    nextEntry.imageSize = 0;
-  }
-
-  const normalizedEntry = normalizeMetadataFileEntry(nextEntry);
-  if (!normalizedEntry) {
-    cleanupUploadedImage();
-    res.status(400).json({ error: "Invalid file metadata update" });
+    res.status(409).json({ error: "File update already in progress" });
     return;
   }
 
   try {
-    entries[index] = normalizedEntry;
-    writeMetadataStore(entries);
-  } catch (error) {
-    cleanupUploadedImage();
-    console.error("[files] metadata update error:", error);
-    res.status(500).json({ error: "Unable to update file metadata" });
-    return;
-  }
+    const entries = readMetadataStore();
+    const index = entries.findIndex((entry) => String(entry.id || "").toLowerCase() === fileId);
+    if (index < 0) {
+      cleanupUploadedImage();
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
 
-  if (uploadedImage && currentImageStoredName && currentImageStoredName !== normalizedEntry.imageStoredName) {
-    deleteStoredUpload(currentImageStoredName);
-  } else if (!uploadedImage && removeImage && currentImageStoredName) {
-    deleteStoredUpload(currentImageStoredName);
-  }
+    const currentEntry = entries[index];
+    const currentImageStoredName = String(currentEntry.imageStoredName || "").trim();
+    const now = new Date().toISOString();
+    const nextEntry = {
+      ...currentEntry,
+      updatedAt: now
+    };
 
-  const responseFile = buildFileListEntry(normalizedEntry);
-  res.json({
-    ok: true,
-    file: responseFile
-  });
+    if (hasDescription) {
+      nextEntry.description = sanitizeFileDescription(req.body.description);
+    }
+    if (hasGroup) {
+      nextEntry.group = sanitizeFileGroup(req.body.group);
+    }
+    if (hasDisplayName) {
+      nextEntry.displayName = sanitizeFileDisplayName(req.body.displayName);
+    }
+
+    if (uploadedImage) {
+      nextEntry.imageStoredName = uploadedImage.filename;
+      nextEntry.imageMimeType = imageMimeType || "application/octet-stream";
+      nextEntry.imageName = sanitizeDisplayFilename(uploadedImage.originalname || "image") || "image";
+      nextEntry.imageSize = Math.max(0, Number(uploadedImage.size) || 0);
+    } else if (removeImage) {
+      nextEntry.imageStoredName = "";
+      nextEntry.imageMimeType = "";
+      nextEntry.imageName = "";
+      nextEntry.imageSize = 0;
+    }
+
+    const normalizedEntry = normalizeMetadataFileEntry(nextEntry);
+    if (!normalizedEntry) {
+      cleanupUploadedImage();
+      res.status(400).json({ error: "Invalid file metadata update" });
+      return;
+    }
+
+    try {
+      entries[index] = normalizedEntry;
+      writeMetadataStore(entries);
+    } catch (error) {
+      cleanupUploadedImage();
+      console.error("[files] metadata update error:", error);
+      res.status(500).json({ error: "Unable to update file metadata" });
+      return;
+    }
+
+    if (uploadedImage && currentImageStoredName && currentImageStoredName !== normalizedEntry.imageStoredName) {
+      deleteStoredUpload(currentImageStoredName);
+    } else if (!uploadedImage && removeImage && currentImageStoredName) {
+      deleteStoredUpload(currentImageStoredName);
+    }
+
+    const responseFile = buildFileListEntry(normalizedEntry);
+    res.json({
+      ok: true,
+      file: responseFile
+    });
+  } finally {
+    unlockFileMutation(fileId);
+  }
 });
 
 app.delete("/api/files/:id", requireAdmin, (req, res) => {
@@ -3442,20 +3576,29 @@ app.delete("/api/files/:id", requireAdmin, (req, res) => {
     return;
   }
 
-  const entries = readMetadataStore();
-  const index = entries.findIndex((entry) => String(entry.id || "").toLowerCase() === fileId);
-  if (index < 0) {
-    res.status(404).json({ error: "File not found" });
+  if (!tryLockFileMutation(fileId)) {
+    res.status(409).json({ error: "File update already in progress" });
     return;
   }
 
-  const [entry] = entries.splice(index, 1);
-  writeMetadataStore(entries);
+  try {
+    const entries = readMetadataStore();
+    const index = entries.findIndex((entry) => String(entry.id || "").toLowerCase() === fileId);
+    if (index < 0) {
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
 
-  deleteStoredUpload(entry.storedName);
-  deleteStoredUpload(entry.imageStoredName);
+    const [entry] = entries.splice(index, 1);
+    writeMetadataStore(entries);
 
-  res.json({ ok: true });
+    deleteStoredUpload(entry.storedName);
+    deleteStoredUpload(entry.imageStoredName);
+
+    res.json({ ok: true });
+  } finally {
+    unlockFileMutation(fileId);
+  }
 });
 
 app.get("/api/files/:id/image", requireAuthorized, (req, res) => {
