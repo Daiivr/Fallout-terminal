@@ -264,6 +264,7 @@ let filesLiveIdentityPollTimer = null;
 let filesLiveIdentityPollInFlight = false;
 let filesAdminRequestsFeedbackTimer = null;
 let filesUploadFeedbackTimer = null;
+let filesDownloadRefreshTimer = null;
 let filesDisclaimerAcceptTransitionTimer = null;
 let discordAuthPopupWindow = null;
 let discordAuthPopupPollTimer = null;
@@ -3597,6 +3598,7 @@ function normalizeFilesEntry(payload) {
     displayName: String(payload.displayName || "").trim(),
     mimeType: String(payload.mimeType || payload.type || "").trim(),
     size: Math.max(0, Number(payload.size) || 0),
+    downloadCount: Math.max(0, Number(payload.downloadCount || payload.download_count) || 0),
     uploadedAt: String(payload.uploadedAt || payload.uploaded_at || "").trim(),
     updatedAt: String(payload.updatedAt || payload.updated_at || payload.uploadedAt || "").trim(),
     contentUpdatedAt: String(
@@ -5001,7 +5003,23 @@ function createFilesMetaItem(label, value) {
   return wrap;
 }
 
-function createFilesDescriptionBlock({ description = "", imageUrl = "", imageName = "", fileName = "" } = {}) {
+function formatFilesDownloadCount(downloadCount) {
+  const safeCount = Math.max(0, Number(downloadCount) || 0);
+  if (safeCount === 1) {
+    return t("files_download_count_value_one");
+  }
+  if (safeCount === 0) {
+    return t("files_download_count_value_zero");
+  }
+  return t("files_download_count_value_many", { n: String(safeCount) });
+}
+
+function createFilesDescriptionBlock({
+  description = "",
+  imageUrl = "",
+  imageName = "",
+  fileName = ""
+} = {}) {
   const wrap = document.createElement("div");
   wrap.className = "files-description-block";
 
@@ -5049,6 +5067,7 @@ function buildFilesDetailRenderKey(file, { isAdmin = false } = {}) {
     String(Math.max(0, Number(safeFile.size) || 0)),
     String(safeFile.uploadedAt || safeFile.uploaded_at || ""),
     String(safeFile.updatedAt || safeFile.updated_at || ""),
+    String(Math.max(0, Number(safeFile.downloadCount) || 0)),
     normalizeFilesGroup(safeFile.group),
     String(safeFile.description || ""),
     String(safeFile.uploader || safeFile.uploaderDiscordId || ""),
@@ -5238,6 +5257,7 @@ function renderFilesDetailCard(file) {
   const fileSize = formatFileSize(file.size);
   const timestampMeta = resolveFilesTimestampMeta(file);
   const description = String(file.description || "").trim();
+  const downloadCount = Math.max(0, Number(file.downloadCount) || 0);
   const group = getFilesGroupDisplayLabel(file);
   const uploader = String(file.uploader || file.uploaderDiscordId || t("files_unknown_value"));
   const imageUrl = String(file.imageUrl || "").trim();
@@ -5276,6 +5296,7 @@ function renderFilesDetailCard(file) {
   }
   metadata.appendChild(createFilesMetaItem(t("files_group_label"), group));
   metadata.appendChild(createFilesMetaItem(t("files_uploader_label"), uploader));
+  metadata.appendChild(createFilesMetaItem(t("files_downloads_label"), formatFilesDownloadCount(downloadCount)));
 
   const descriptionBlock = createFilesDescriptionBlock({
     description,
@@ -8207,6 +8228,54 @@ async function handleFilesShare(fileId, button = null) {
   }
 }
 
+function scheduleFilesDownloadRefresh() {
+  if (filesDownloadRefreshTimer) {
+    clearTimeout(filesDownloadRefreshTimer);
+  }
+
+  filesDownloadRefreshTimer = setTimeout(() => {
+    filesDownloadRefreshTimer = null;
+    if (state.files.me?.isAuthorized) {
+      void refreshFilesList();
+    }
+  }, 1400);
+}
+
+function handleFilesDownload(fileId) {
+  const normalizedFileId = String(fileId || "").trim().toLowerCase();
+  if (!normalizedFileId) {
+    return;
+  }
+
+  const matchedFile = state.files.list.find((entry) => String(entry?.id || "").trim().toLowerCase() === normalizedFileId) || null;
+  if (!matchedFile) {
+    return;
+  }
+
+  const frame = document.createElement("iframe");
+  frame.hidden = true;
+  frame.setAttribute("aria-hidden", "true");
+  frame.setAttribute("tabindex", "-1");
+  frame.src = `/api/files/${encodeURIComponent(normalizedFileId)}/download?ts=${Date.now()}`;
+  document.body.appendChild(frame);
+  window.setTimeout(() => {
+    frame.remove();
+  }, 45000);
+
+  state.files.list = (Array.isArray(state.files.list) ? state.files.list : []).map((file) => {
+    if (String(file?.id || "").trim().toLowerCase() !== normalizedFileId) {
+      return file;
+    }
+    return {
+      ...file,
+      downloadCount: Math.max(0, Number(file.downloadCount) || 0) + 1
+    };
+  });
+
+  scheduleFilesDownloadRefresh();
+  renderFilesList();
+}
+
 function startFilesRename(fileId) {
   if (!state.files.me?.isAdmin) {
     return;
@@ -8723,7 +8792,7 @@ function handleFilesListClick(event) {
   }
 
   if (action === "download") {
-    window.location.href = `/api/files/${encodeURIComponent(fileId)}/download?ts=${Date.now()}`;
+    handleFilesDownload(fileId);
     return;
   }
 

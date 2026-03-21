@@ -1141,6 +1141,7 @@ function normalizeMetadataFileEntry(entry) {
 
   const mimeType = String(entry.mimeType || "application/octet-stream").trim() || "application/octet-stream";
   const size = Number(entry.size);
+  const downloadCount = Number(entry.downloadCount);
   const uploadedAt = String(entry.uploadedAt || "").trim();
   const updatedAt = String(entry.updatedAt || "").trim();
   const contentUpdatedAt = String(entry.contentUpdatedAt || "").trim();
@@ -1157,6 +1158,7 @@ function normalizeMetadataFileEntry(entry) {
     displayName: sanitizeFileDisplayName(entry.displayName),
     mimeType,
     size: Number.isFinite(size) && size >= 0 ? size : 0,
+    downloadCount: Number.isFinite(downloadCount) && downloadCount > 0 ? Math.floor(downloadCount) : 0,
     description: sanitizeFileDescription(entry.description),
     group: sanitizeFileGroup(entry.group),
     uploadedAt: uploadedAt || new Date(0).toISOString(),
@@ -1208,6 +1210,7 @@ function buildFileListEntry(entry) {
     displayName: normalized.displayName || normalized.name,
     mimeType: normalized.mimeType,
     size: normalized.size,
+    downloadCount: normalized.downloadCount,
     uploadedAt: normalized.uploadedAt,
     updatedAt: normalized.updatedAt || normalized.uploadedAt,
     contentUpdatedAt: normalized.contentUpdatedAt || normalized.uploadedAt,
@@ -3330,6 +3333,7 @@ app.post("/api/files/upload", requireAdmin, uploadFileWithOptionalImage, (req, r
     displayName,
     mimeType: String(uploadedFile.mimetype || "application/octet-stream"),
     size: uploadedFile.size,
+    downloadCount: 0,
     description,
     group,
     uploadedAt: now,
@@ -3650,11 +3654,13 @@ app.get("/api/files/:id/download", requireAuthorized, (req, res) => {
     return;
   }
 
-  const entry = readMetadataStore().find((item) => String(item.id || "").toLowerCase() === fileId);
-  if (!entry) {
+  const entries = readMetadataStore();
+  const index = entries.findIndex((item) => String(item.id || "").toLowerCase() === fileId);
+  if (index < 0) {
     res.status(404).json({ error: "File not found" });
     return;
   }
+  const entry = entries[index];
 
   const storedPath = resolveUploadStoredPath(entry.storedName);
   if (!storedPath) {
@@ -3665,6 +3671,19 @@ app.get("/api/files/:id/download", requireAuthorized, (req, res) => {
   if (!fs.existsSync(storedPath)) {
     res.status(404).json({ error: "File blob not found" });
     return;
+  }
+
+  try {
+    const normalizedEntry = normalizeMetadataFileEntry({
+      ...entry,
+      downloadCount: Math.max(0, Number(entry.downloadCount) || 0) + 1
+    });
+    if (normalizedEntry) {
+      entries[index] = normalizedEntry;
+      writeMetadataStore(entries);
+    }
+  } catch (error) {
+    console.error("[files] download count update error:", error);
   }
 
   res.setHeader("Cache-Control", "no-store");
