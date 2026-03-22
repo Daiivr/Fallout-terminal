@@ -11871,6 +11871,18 @@ body.is-classified .classified-layout {
     border-radius: 12px;
   }
 
+  body.is-classified .pipboy-terminal {
+    gap: 8px;
+  }
+
+  body.is-classified .visit-counter-mobile-pill {
+    margin-top: 4px;
+  }
+
+  body.is-classified .footer-note {
+    margin-top: 4px;
+  }
+
   .visit-counter-mobile-copy {
     gap: 2px;
   }
@@ -13930,14 +13942,14 @@ body.is-files-admin-modal-open .files-bot-admin-pill {
   right: calc(env(safe-area-inset-right, 0px) + 22px);
   bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
   z-index: 68;
-  min-width: 176px;
-  max-width: min(238px, calc(100vw - 18px));
+  min-width: 188px;
+  max-width: min(258px, calc(100vw - 18px));
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 9px;
   border: 1px solid rgba(255, 225, 122, 0.3);
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
   isolation: isolate;
   pointer-events: none;
@@ -13976,13 +13988,7 @@ body.is-ready .visit-counter-badge {
 }
 
 .visit-counter-badge::after {
-  content: "";
-  position: absolute;
-  inset: 8px;
-  border: 1px solid rgba(139, 255, 139, 0.1);
-  border-radius: 12px;
-  opacity: 0.7;
-  pointer-events: none;
+  display: none;
 }
 
 .visit-counter-badge.is-loading {
@@ -14006,13 +14012,16 @@ body.is-ready .visit-counter-badge {
   --visit-eye-pupil-y: 0px;
   position: relative;
   z-index: 1;
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
+  align-self: stretch;
+  width: auto;
+  height: auto;
+  min-width: 56px;
+  flex: 0 0 auto;
+  aspect-ratio: 1 / 1;
   display: grid;
   place-items: center;
   border: 1px solid rgba(255, 225, 122, 0.22);
-  border-radius: 12px;
+  border-radius: 14px;
   background:
     linear-gradient(180deg, rgba(255, 225, 122, 0.12), rgba(0, 0, 0, 0.22)),
     rgba(0, 0, 0, 0.22);
@@ -14025,8 +14034,8 @@ body.is-ready .visit-counter-badge {
 }
 
 .visit-counter-icon-svg {
-  width: 24px;
-  height: 24px;
+  width: 34px;
+  height: 34px;
   display: block;
   stroke: #ffefaf;
   stroke-width: 1.6;
@@ -14057,15 +14066,26 @@ body.is-ready .visit-counter-badge {
 .visit-counter-copy {
   position: relative;
   z-index: 1;
+  flex: 1 1 auto;
   min-width: 0;
   display: grid;
-  gap: 3px;
+  gap: 4px;
+  align-content: center;
+  padding: 5px 8px 6px;
+  border: 1px solid rgba(139, 255, 139, 0.2);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(139, 255, 139, 0.06), rgba(0, 0, 0, 0.18)),
+    rgba(0, 0, 0, 0.18);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.44) inset,
+    0 0 10px rgba(139, 255, 139, 0.04);
 }
 
 .visit-counter-topline {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -14109,12 +14129,15 @@ body.is-ready .visit-counter-badge {
 .visit-counter-mobile-pill {
   display: none;
   margin-top: 10px;
+  position: relative;
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 10px 12px;
+  border-radius: 12px;
+  padding: 8px 9px;
   color: var(--fg-faint);
-  align-items: center;
-  gap: 10px;
+  align-items: stretch;
+  gap: 8px;
+  overflow: hidden;
+  isolation: isolate;
   background:
     linear-gradient(180deg, rgba(255, 225, 122, 0.08), rgba(0, 0, 0, 0.16)),
     rgba(0, 0, 0, 0.22);
@@ -14126,13 +14149,17 @@ body.is-ready .visit-counter-badge {
 .visit-counter-mobile-icon {
   --visit-eye-pupil-x: 0px;
   --visit-eye-pupil-y: 0px;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
+  position: relative;
+  align-self: stretch;
+  width: auto;
+  height: auto;
+  min-width: 45px;
+  flex: 0 0 auto;
+  aspect-ratio: 1 / 1;
   display: grid;
   place-items: center;
   border: 1px solid rgba(255, 225, 122, 0.2);
-  border-radius: 10px;
+  border-radius: 12px;
   background:
     linear-gradient(180deg, rgba(255, 225, 122, 0.12), rgba(0, 0, 0, 0.2)),
     rgba(0, 0, 0, 0.18);
@@ -14142,9 +14169,105 @@ body.is-ready .visit-counter-badge {
   animation: visitCounterEyeIdle 9.6s ease-in-out infinite;
 }
 
+.visit-counter-icon.is-classified-lockdown,
+.visit-counter-mobile-icon.is-classified-lockdown {
+  border-color: rgba(255, 209, 128, 0.34);
+  background:
+    radial-gradient(110% 80% at 50% 50%, rgba(255, 209, 128, 0.07), rgba(255, 209, 128, 0) 42%),
+    linear-gradient(180deg, rgba(255, 209, 128, 0.08), rgba(0, 0, 0, 0.24)),
+    rgba(0, 0, 0, 0.24);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.44) inset,
+    0 0 12px rgba(255, 172, 94, 0.08);
+  animation: visitCounterEyeClassifiedShell 5.8s ease-in-out infinite;
+}
+
+.visit-counter-icon.is-classified-lockdown.is-classified-lockdown-entering,
+.visit-counter-mobile-icon.is-classified-lockdown.is-classified-lockdown-entering {
+  animation: visitCounterEyeClassifiedEntryShell 1.8s ease forwards;
+}
+
+.visit-counter-icon.is-classified-lockdown::before,
+.visit-counter-mobile-icon.is-classified-lockdown::before,
+.visit-counter-icon.is-classified-lockdown::after,
+.visit-counter-mobile-icon.is-classified-lockdown::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.visit-counter-icon.is-classified-lockdown::before,
+.visit-counter-mobile-icon.is-classified-lockdown::before {
+  width: 22px;
+  height: 22px;
+  left: 50%;
+  top: 50%;
+  background:
+    center / contain no-repeat
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffdca4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='6.5' y='11' width='11' height='8.5' rx='2'/%3E%3Cpath d='M9 11V8.9a3 3 0 0 1 6 0V11'/%3E%3Ccircle cx='12' cy='15' r='1' fill='%23ffdca4' stroke='none'/%3E%3C/svg%3E");
+  filter: drop-shadow(0 0 7px rgba(255, 172, 94, 0.24));
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.55);
+  animation: visitCounterEyeClassifiedLock 5.8s cubic-bezier(0.22, 0.74, 0.24, 1) infinite;
+}
+
+.visit-counter-icon.is-classified-lockdown.is-classified-lockdown-entering::before,
+.visit-counter-mobile-icon.is-classified-lockdown.is-classified-lockdown-entering::before {
+  animation: visitCounterEyeClassifiedEntryLock 1.8s cubic-bezier(0.22, 0.74, 0.24, 1) forwards;
+}
+
+.visit-counter-icon.is-classified-lockdown::after,
+.visit-counter-mobile-icon.is-classified-lockdown::after {
+  left: 5px;
+  right: 5px;
+  top: 50%;
+  height: 2px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(255, 172, 94, 0) 0%, rgba(255, 225, 170, 0.16) 22%, rgba(255, 199, 108, 0.92) 50%, rgba(255, 225, 170, 0.16) 78%, rgba(255, 172, 94, 0) 100%);
+  box-shadow:
+    0 0 8px rgba(255, 172, 94, 0.2),
+    0 0 2px rgba(255, 225, 170, 0.56);
+  opacity: 0.18;
+  transform: translateY(-50%) scaleX(0.18);
+  animation: visitCounterEyeClassifiedSeal 5.8s ease-in-out infinite;
+}
+
+.visit-counter-icon.is-classified-lockdown.is-classified-lockdown-entering::after,
+.visit-counter-mobile-icon.is-classified-lockdown.is-classified-lockdown-entering::after {
+  animation: visitCounterEyeClassifiedEntrySeal 1.8s ease forwards;
+}
+
+.visit-counter-icon.is-classified-lockdown .visit-counter-icon-svg,
+.visit-counter-mobile-icon.is-classified-lockdown .visit-counter-mobile-icon-svg {
+  stroke: #ffdca4;
+  filter: drop-shadow(0 0 6px rgba(255, 172, 94, 0.18));
+  animation: visitCounterEyeClassifiedLid 5.8s cubic-bezier(0.36, 0.08, 0.22, 1) infinite;
+}
+
+.visit-counter-icon.is-classified-lockdown.is-classified-lockdown-entering .visit-counter-icon-svg,
+.visit-counter-mobile-icon.is-classified-lockdown.is-classified-lockdown-entering .visit-counter-mobile-icon-svg {
+  animation: visitCounterEyeClassifiedEntryLid 1.8s cubic-bezier(0.34, 0.08, 0.22, 1) forwards;
+}
+
+.visit-counter-icon.is-classified-lockdown .visit-counter-icon-svg > circle,
+.visit-counter-mobile-icon.is-classified-lockdown .visit-counter-mobile-icon-svg > circle {
+  fill: rgba(255, 225, 170, 0.28);
+  stroke: rgba(255, 225, 170, 0.88);
+  stroke-width: 1.25;
+  transform: translate(0, 0) scaleX(0.08) scaleY(0.08);
+  opacity: 0.16;
+  animation: visitCounterEyeClassifiedPupil 5.8s ease-in-out infinite;
+}
+
+.visit-counter-icon.is-classified-lockdown.is-classified-lockdown-entering .visit-counter-icon-svg > circle,
+.visit-counter-mobile-icon.is-classified-lockdown.is-classified-lockdown-entering .visit-counter-mobile-icon-svg > circle {
+  animation: visitCounterEyeClassifiedEntryPupil 1.8s ease forwards;
+}
+
 .visit-counter-mobile-icon-svg {
-  width: 19px;
-  height: 19px;
+  width: 27px;
+  height: 27px;
   display: block;
   stroke: #ffefaf;
   stroke-width: 1.7;
@@ -14156,15 +14279,24 @@ body.is-ready .visit-counter-badge {
 }
 
 .visit-counter-mobile-copy {
+  flex: 1 1 auto;
   min-width: 0;
   display: grid;
-  gap: 2px;
+  gap: 3px;
+  align-content: center;
+  padding: 4px 7px 5px;
+  border: 1px solid rgba(139, 255, 139, 0.18);
+  border-radius: 9px;
+  background:
+    linear-gradient(180deg, rgba(139, 255, 139, 0.05), rgba(0, 0, 0, 0.16)),
+    rgba(0, 0, 0, 0.18);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.38) inset;
 }
 
 .visit-counter-mobile-topline {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -14270,12 +14402,323 @@ body.is-ready .visit-counter-badge {
   }
 }
 
+@keyframes visitCounterEyeClassifiedShell {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  18% {
+    transform: translateY(-0.14px) scale(1.012);
+  }
+
+  52% {
+    transform: translateY(0.12px) scale(0.994);
+  }
+
+  76% {
+    transform: translateY(-0.08px) scale(1.008);
+  }
+}
+
+@keyframes visitCounterEyeClassifiedEntryShell {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+
+  58% {
+    transform: translateY(-0.04px) scale(1.012);
+  }
+
+  100% {
+    transform: translateY(0) scale(1.004);
+  }
+}
+
+@keyframes visitCounterEyeClassifiedLock {
+  0%,
+  32%,
+  60%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6) rotate(0deg);
+  }
+
+  40% {
+    opacity: 1;
+    transform: translate(-50%, -56%) scale(1.34) rotate(-9deg);
+  }
+
+  43% {
+    opacity: 1;
+    transform: translate(-50%, -45%) scale(1.08) rotate(7deg);
+  }
+
+  48% {
+    opacity: 0.92;
+    transform: translate(-50%, -50%) scale(1.04) rotate(0deg);
+  }
+
+  54% {
+    opacity: 0;
+    transform: translate(-50%, -51%) scale(0.78) rotate(0deg);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translate(-50%, -56%) scale(1.3) rotate(-8deg);
+  }
+
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -45%) scale(1.06) rotate(6deg);
+  }
+
+  80% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.02) rotate(0deg);
+  }
+
+  86% {
+    opacity: 0;
+    transform: translate(-50%, -51%) scale(0.76) rotate(0deg);
+  }
+}
+
+@keyframes visitCounterEyeClassifiedEntryLock {
+  0%,
+  64%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6) rotate(0deg);
+  }
+
+  78% {
+    opacity: 1;
+    transform: translate(-50%, -56%) scale(1.34) rotate(-8deg);
+  }
+
+  84% {
+    opacity: 1;
+    transform: translate(-50%, -45%) scale(1.08) rotate(6deg);
+  }
+
+  92% {
+    opacity: 0.84;
+    transform: translate(-50%, -50%) scale(1.02) rotate(0deg);
+  }
+}
+
+@keyframes visitCounterEyeClassifiedSeal {
+  0%,
+  18%,
+  100% {
+    opacity: 0.86;
+    transform: translateY(-50%) scaleX(0.96);
+  }
+
+  28% {
+    opacity: 0.36;
+    transform: translateY(-50%) scaleX(0.32);
+  }
+
+  34% {
+    opacity: 0.2;
+    transform: translateY(-50%) scaleX(0.14);
+  }
+
+  40%,
+  54% {
+    opacity: 0.96;
+    transform: translateY(-50%) scaleX(1);
+  }
+
+  64% {
+    opacity: 0.4;
+    transform: translateY(-50%) scaleX(0.36);
+  }
+
+  70% {
+    opacity: 0.22;
+    transform: translateY(-50%) scaleX(0.16);
+  }
+
+  74%,
+  86% {
+    opacity: 0.98;
+    transform: translateY(-50%) scaleX(1);
+  }
+}
+
+@keyframes visitCounterEyeClassifiedEntrySeal {
+  0% {
+    opacity: 0.1;
+    transform: translateY(-50%) scaleX(0.12);
+  }
+
+  52% {
+    opacity: 0.28;
+    transform: translateY(-50%) scaleX(0.28);
+  }
+
+  74% {
+    opacity: 0.78;
+    transform: translateY(-50%) scaleX(0.86);
+  }
+
+  100% {
+    opacity: 0.88;
+    transform: translateY(-50%) scaleX(0.98);
+  }
+}
+
+@keyframes visitCounterEyeClassifiedLid {
+  0%,
+  18%,
+  100% {
+    transform: translateY(0.08px) scaleX(1.04) scaleY(0.08);
+    opacity: 0.98;
+  }
+
+  28% {
+    transform: translateY(0.02px) scaleX(1.01) scaleY(0.2);
+  }
+
+  32% {
+    transform: translateY(0) scaleX(1) scaleY(0.38);
+    opacity: 1;
+  }
+
+  36% {
+    transform: translateY(0) scaleX(1) scaleY(0.5);
+    opacity: 0.98;
+  }
+
+  40%,
+  54% {
+    transform: translateY(0.08px) scaleX(1.04) scaleY(0.06);
+    opacity: 0.98;
+  }
+
+  64% {
+    transform: translateY(0.02px) scaleX(1.01) scaleY(0.22);
+    opacity: 0.96;
+  }
+
+  68% {
+    transform: translateY(0) scaleX(1) scaleY(0.34);
+    opacity: 1;
+  }
+
+  70% {
+    transform: translateY(0) scaleX(1) scaleY(0.44);
+    opacity: 0.94;
+  }
+
+  74%,
+  86% {
+    transform: translateY(0.08px) scaleX(1.04) scaleY(0.08);
+  }
+}
+
+@keyframes visitCounterEyeClassifiedEntryLid {
+  0% {
+    transform: translateY(0) scaleX(1) scaleY(1);
+    opacity: 1;
+  }
+
+  48% {
+    transform: translateY(0.02px) scaleX(1.01) scaleY(0.58);
+    opacity: 1;
+  }
+
+  72% {
+    transform: translateY(0.04px) scaleX(1.03) scaleY(0.22);
+    opacity: 0.98;
+  }
+
+  100% {
+    transform: translateY(0.08px) scaleX(1.04) scaleY(0.08);
+    opacity: 0.98;
+  }
+}
+
+@keyframes visitCounterEyeClassifiedPupil {
+  0%,
+  24%,
+  40%,
+  60%,
+  74%,
+  100% {
+    transform: translate(0, 0) scaleX(0.04) scaleY(0.04);
+    opacity: 0;
+  }
+
+  32% {
+    transform: translate(0, 0) scaleX(0.16) scaleY(0.16);
+    opacity: 0.62;
+  }
+
+  36% {
+    transform: translate(0, 0) scaleX(0.28) scaleY(0.28);
+    opacity: 0.96;
+  }
+
+  46% {
+    transform: translate(0, 0) scaleX(0.06) scaleY(0.06);
+    opacity: 0;
+  }
+
+  68% {
+    transform: translate(0, 0) scaleX(0.14) scaleY(0.14);
+    opacity: 0.54;
+  }
+
+  70% {
+    transform: translate(0, 0) scaleX(0.24) scaleY(0.24);
+    opacity: 0.86;
+  }
+
+  80% {
+    transform: translate(0, 0) scaleX(0.05) scaleY(0.05);
+    opacity: 0;
+  }
+}
+
+@keyframes visitCounterEyeClassifiedEntryPupil {
+  0% {
+    transform: translate(0, 0) scaleX(0.28) scaleY(0.28);
+    opacity: 0.86;
+  }
+
+  54% {
+    transform: translate(0, 0) scaleX(0.16) scaleY(0.16);
+    opacity: 0.28;
+  }
+
+  78%,
+  100% {
+    transform: translate(0, 0) scaleX(0.04) scaleY(0.04);
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .visit-counter-badge,
+  .visit-counter-badge.is-classified-lockdown,
+  .visit-counter-mobile-pill.is-classified-lockdown,
   .visit-counter-badge.is-loading .visit-counter-value,
   .visit-counter-mobile-pill.is-loading .visit-counter-mobile-value,
+  .visit-counter-badge.is-classified-lockdown::before,
+  .visit-counter-mobile-pill.is-classified-lockdown::before,
+  .visit-counter-badge.is-classified-lockdown::after,
+  .visit-counter-mobile-pill.is-classified-lockdown::after,
   .visit-counter-icon,
   .visit-counter-mobile-icon,
+  .visit-counter-icon.is-classified-lockdown::before,
+  .visit-counter-mobile-icon.is-classified-lockdown::before,
+  .visit-counter-icon.is-classified-lockdown::after,
+  .visit-counter-mobile-icon.is-classified-lockdown::after,
   .visit-counter-icon-svg,
   .visit-counter-mobile-icon-svg,
   .visit-counter-icon-svg > circle,

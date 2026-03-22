@@ -270,6 +270,7 @@ let discordAuthPopupWindow = null;
 let discordAuthPopupPollTimer = null;
 let filesDescriptionEditors = [];
 let visitCounterEyeMotionFrame = 0;
+let visitCounterEyeEntryTimer = null;
 let visitCounterEyes = [];
 
 const STRINGS = globalThis.FALLOUT_CODEX_STRINGS || { en: {}, es: {} };
@@ -965,6 +966,49 @@ async function loadVisitCounter() {
   }
 }
 
+function isVisitCounterEyeLockdownActive() {
+  return state.view === "classified" || document.body.classList.contains("is-classified");
+}
+
+function syncVisitCounterEyeMode() {
+  const isLockdown = isVisitCounterEyeLockdownActive();
+  const hosts = [
+    elements.visitCounterIcon,
+    elements.visitCounterMobileIcon
+  ].filter(Boolean);
+  const wasLockdown = hosts.some((host) => host.classList.contains("is-classified-lockdown"));
+
+  hosts.forEach((host) => {
+    host.classList.toggle("is-classified-lockdown", isLockdown);
+  });
+
+  if (isLockdown) {
+    if (!wasLockdown) {
+      if (visitCounterEyeEntryTimer) {
+        clearTimeout(visitCounterEyeEntryTimer);
+      }
+      hosts.forEach((host) => {
+        host.classList.add("is-classified-lockdown-entering");
+      });
+      visitCounterEyeEntryTimer = window.setTimeout(() => {
+        visitCounterEyeEntryTimer = null;
+        hosts.forEach((host) => {
+          host.classList.remove("is-classified-lockdown-entering");
+        });
+      }, 1850);
+    }
+    resetVisitCounterEyeTargets();
+  } else {
+    if (visitCounterEyeEntryTimer) {
+      clearTimeout(visitCounterEyeEntryTimer);
+      visitCounterEyeEntryTimer = null;
+    }
+    hosts.forEach((host) => {
+      host.classList.remove("is-classified-lockdown-entering");
+    });
+  }
+}
+
 function syncVisitCounterEyeOffset(eye) {
   if (!eye?.host) {
     return;
@@ -1080,9 +1124,10 @@ function setupVisitCounterEyeTracking() {
   for (const eye of visitCounterEyes) {
     syncVisitCounterEyeOffset(eye);
   }
+  syncVisitCounterEyeMode();
 
   window.addEventListener("pointermove", (event) => {
-    if (event.pointerType === "touch") {
+    if (event.pointerType === "touch" || isVisitCounterEyeLockdownActive()) {
       return;
     }
     updateVisitCounterEyeTargets(event.clientX, event.clientY);
@@ -1275,6 +1320,7 @@ function showIntelPage({ updateHash = true } = {}) {
   closeClassifiedPageForNavigation();
   hideFilesPage();
   state.view = "intel";
+  syncVisitCounterEyeMode();
   elements.mainTitle.textContent = t("main_title");
   syncTopTabForCurrentView();
   renderFilesBotAdminPanel();
@@ -1302,6 +1348,7 @@ function showFilesPage({ updateHash = true } = {}) {
   }
 
   state.view = "files";
+  syncVisitCounterEyeMode();
   elements.mainTitle.textContent = t("files_main_title");
   syncTopTabForCurrentView();
   renderFilesBotAdminPanel();
@@ -11199,6 +11246,7 @@ function showClassifiedPage({ updateHash = true } = {}) {
 
   state.view = "classified";
   document.body.classList.add("is-classified");
+  syncVisitCounterEyeMode();
   elements.mainTitle.textContent = t("classified_main_title");
   syncTopTabForCurrentView();
   renderFilesBotAdminPanel();
