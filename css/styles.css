@@ -1238,10 +1238,32 @@ a:hover {
 
 .minerva-detail-figure {
   margin: 0;
+  position: relative;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.32);
   padding: 10px;
+}
+
+.minerva-detail-figure.is-loading::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 8px;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(139, 255, 139, 0.06) 0%,
+      rgba(255, 225, 122, 0.18) 50%,
+      rgba(139, 255, 139, 0.06) 100%
+    );
+  background-size: 200% 100%;
+  animation: minerva-detail-image-scan 1.15s linear infinite;
 }
 
 .minerva-detail-image {
@@ -1250,6 +1272,16 @@ a:hover {
   height: auto;
   object-fit: contain;
   border-radius: 8px;
+}
+
+@keyframes minerva-detail-image-scan {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
 }
 
 .minerva-detail-sections {

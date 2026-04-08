@@ -9153,6 +9153,118 @@ function prewarmMinervaDetailImages(byKey = state.minervaDetail.fallbackByKey) {
   });
 }
 
+function getMinervaDetailFigureElement(imageElement) {
+  return imageElement instanceof HTMLElement
+    ? imageElement.closest(".minerva-detail-figure")
+    : null;
+}
+
+function setMinervaDetailImageLoadingState(imageElement, isLoading) {
+  const figureElement = getMinervaDetailFigureElement(imageElement);
+  figureElement?.classList.toggle("is-loading", Boolean(isLoading));
+}
+
+function clearMinervaDetailImage(imageElement) {
+  if (!(imageElement instanceof HTMLImageElement)) {
+    return;
+  }
+
+  imageElement.hidden = true;
+  imageElement.alt = "";
+  imageElement.removeAttribute("src");
+  imageElement.removeAttribute("data-fallback-src");
+  imageElement.removeAttribute("data-expected-src");
+  imageElement.removeAttribute("data-loaded-src");
+  setMinervaDetailImageLoadingState(imageElement, false);
+}
+
+function finalizeMinervaDetailImageLoad(imageElement) {
+  if (!(imageElement instanceof HTMLImageElement)) {
+    return;
+  }
+
+  const expectedSrc = String(imageElement.dataset.expectedSrc || "").trim();
+  const currentSrc = String(imageElement.getAttribute("src") || "").trim();
+  if (!expectedSrc || currentSrc !== expectedSrc) {
+    return;
+  }
+
+  imageElement.dataset.loadedSrc = expectedSrc;
+  imageElement.hidden = false;
+  setMinervaDetailImageLoadingState(imageElement, false);
+}
+
+function applyMinervaDetailImage(imageElement, imageUrl, { alt = "", fallbackSrc = "" } = {}) {
+  if (!(imageElement instanceof HTMLImageElement)) {
+    return;
+  }
+
+  const resolvedImageUrl = String(imageUrl || "").trim();
+  if (!resolvedImageUrl) {
+    clearMinervaDetailImage(imageElement);
+    return;
+  }
+
+  const currentSrc = String(imageElement.getAttribute("src") || "").trim();
+  const loadedSrc = String(imageElement.dataset.loadedSrc || "").trim();
+  imageElement.dataset.fallbackSrc = String(fallbackSrc || resolvedImageUrl).trim() || resolvedImageUrl;
+  imageElement.alt = alt;
+
+  if (currentSrc === resolvedImageUrl && loadedSrc === resolvedImageUrl) {
+    imageElement.hidden = false;
+    setMinervaDetailImageLoadingState(imageElement, false);
+    return;
+  }
+
+  imageElement.hidden = true;
+  imageElement.dataset.expectedSrc = resolvedImageUrl;
+  imageElement.removeAttribute("data-loaded-src");
+  setMinervaDetailImageLoadingState(imageElement, true);
+
+  if (currentSrc !== resolvedImageUrl) {
+    imageElement.removeAttribute("src");
+    imageElement.src = resolvedImageUrl;
+  }
+
+  if (imageElement.complete && imageElement.naturalWidth > 0) {
+    finalizeMinervaDetailImageLoad(imageElement);
+  }
+}
+
+function handleMinervaDetailImageError(imageElement, fallbackSrc) {
+  if (!(imageElement instanceof HTMLImageElement)) {
+    return;
+  }
+
+  const resolvedFallbackSrc = String(
+    fallbackSrc
+    || imageElement.dataset.fallbackSrc
+    || state.minervaDetail.fallbackImageUrl
+    || MINERVA_DETAIL_FALLBACK_IMAGE
+  ).trim();
+
+  if (!resolvedFallbackSrc) {
+    clearMinervaDetailImage(imageElement);
+    return;
+  }
+
+  const currentSrc = String(imageElement.getAttribute("src") || "").trim();
+  if (currentSrc === resolvedFallbackSrc) {
+    clearMinervaDetailImage(imageElement);
+    return;
+  }
+
+  imageElement.hidden = true;
+  imageElement.dataset.expectedSrc = resolvedFallbackSrc;
+  imageElement.removeAttribute("data-loaded-src");
+  setMinervaDetailImageLoadingState(imageElement, true);
+  imageElement.src = resolvedFallbackSrc;
+
+  if (imageElement.complete && imageElement.naturalWidth > 0) {
+    finalizeMinervaDetailImageLoad(imageElement);
+  }
+}
+
 function proxied(url) {
   return `${PROXY_BASE}${encodeURIComponent(url)}`;
 }
@@ -11168,6 +11280,7 @@ function renderClassifiedInlineDetail() {
   }
 
   if (state.classifiedDetail.loading) {
+    clearMinervaDetailImage(elements.classifiedInlineImage);
     elements.classifiedInlineStatus.hidden = false;
     elements.classifiedInlineStatus.textContent = t("minerva_detail_loading");
     elements.classifiedInlineContent.classList.remove("is-revealing");
@@ -11176,6 +11289,7 @@ function renderClassifiedInlineDetail() {
   }
 
   if (state.classifiedDetail.error || !detail) {
+    clearMinervaDetailImage(elements.classifiedInlineImage);
     elements.classifiedInlineStatus.hidden = false;
     elements.classifiedInlineStatus.textContent = state.classifiedDetail.error || t("minerva_detail_error");
     elements.classifiedInlineContent.classList.remove("is-revealing");
@@ -11192,15 +11306,12 @@ function renderClassifiedInlineDetail() {
 
   if (detailImageUrl) {
     void queueImagePreload(detailImageUrl, { highPriority: true });
-    elements.classifiedInlineImage.hidden = false;
-    elements.classifiedInlineImage.dataset.fallbackSrc = fallbackImageUrl || detailImageUrl;
-    elements.classifiedInlineImage.src = detailImageUrl;
-    elements.classifiedInlineImage.alt = `${itemName} image`;
+    applyMinervaDetailImage(elements.classifiedInlineImage, detailImageUrl, {
+      alt: `${itemName} image`,
+      fallbackSrc: fallbackImageUrl || detailImageUrl
+    });
   } else {
-    elements.classifiedInlineImage.hidden = true;
-    elements.classifiedInlineImage.removeAttribute("data-fallback-src");
-    elements.classifiedInlineImage.removeAttribute("src");
-    elements.classifiedInlineImage.alt = "";
+    clearMinervaDetailImage(elements.classifiedInlineImage);
   }
 
   const whereElse = Array.isArray(detail.whereElse) && detail.whereElse.length
@@ -11229,6 +11340,7 @@ function closeClassifiedInlineDetail() {
   state.classifiedDetail.item = null;
   state.classifiedDetail.data = null;
   state.classifiedDetail.open = false;
+  clearMinervaDetailImage(elements.classifiedInlineImage);
   renderClassifiedInlineDetail();
   syncClassifiedArchiveVisibility();
   if (state.classifiedSearch.open) {
@@ -12353,6 +12465,7 @@ function renderMinervaDetailView() {
   elements.minervaDetailWikiLink.hidden = !wikiUrl;
 
   if (state.minervaDetail.loading) {
+    clearMinervaDetailImage(elements.minervaDetailImage);
     const shouldAnimateStatus = elements.minervaDetailStatus.hidden;
     elements.minervaDetailStatus.hidden = false;
     elements.minervaDetailStatus.textContent = t("minerva_detail_loading");
@@ -12365,6 +12478,7 @@ function renderMinervaDetailView() {
   }
 
   if (state.minervaDetail.error || !detail) {
+    clearMinervaDetailImage(elements.minervaDetailImage);
     const shouldAnimateStatus = elements.minervaDetailStatus.hidden;
     elements.minervaDetailStatus.hidden = false;
     elements.minervaDetailStatus.textContent = state.minervaDetail.error || t("minerva_detail_error");
@@ -12386,15 +12500,12 @@ function renderMinervaDetailView() {
 
   if (detailImageUrl) {
     void queueImagePreload(detailImageUrl, { highPriority: true });
-    elements.minervaDetailImage.hidden = false;
-    elements.minervaDetailImage.dataset.fallbackSrc = fallbackImageUrl || detailImageUrl;
-    elements.minervaDetailImage.src = detailImageUrl;
-    elements.minervaDetailImage.alt = `${item.name || item.Name} image`;
+    applyMinervaDetailImage(elements.minervaDetailImage, detailImageUrl, {
+      alt: `${item.name || item.Name} image`,
+      fallbackSrc: fallbackImageUrl || detailImageUrl
+    });
   } else {
-    elements.minervaDetailImage.hidden = true;
-    elements.minervaDetailImage.removeAttribute("data-fallback-src");
-    elements.minervaDetailImage.removeAttribute("src");
-    elements.minervaDetailImage.alt = "";
+    clearMinervaDetailImage(elements.minervaDetailImage);
   }
 
   const whereElse = Array.isArray(detail.whereElse) && detail.whereElse.length
@@ -12421,6 +12532,7 @@ function closeMinervaDetail() {
   state.minervaDetail.error = "";
   state.minervaDetail.item = null;
   state.minervaDetail.data = null;
+  clearMinervaDetailImage(elements.minervaDetailImage);
   setMinervaDetailOpen(false);
 }
 
@@ -14256,20 +14368,14 @@ function wireEvents() {
   elements.hackOpenClassifiedBtn.addEventListener("click", showClassifiedPage);
   elements.classifiedBackBtn.addEventListener("click", hideClassifiedPage);
   elements.minervaDetailBackBtn?.addEventListener("click", closeMinervaDetail);
+  elements.minervaDetailImage?.addEventListener("load", () => {
+    finalizeMinervaDetailImageLoad(elements.minervaDetailImage);
+  });
   elements.minervaDetailImage?.addEventListener("error", () => {
-    const fallbackSrc = elements.minervaDetailImage?.dataset?.fallbackSrc
-      || state.minervaDetail.fallbackImageUrl
-      || MINERVA_DETAIL_FALLBACK_IMAGE;
-    if (!fallbackSrc) {
-      return;
-    }
-
-    const currentSrc = elements.minervaDetailImage.getAttribute("src") || "";
-    if (currentSrc === fallbackSrc) {
-      return;
-    }
-
-    elements.minervaDetailImage.src = fallbackSrc;
+    handleMinervaDetailImageError(
+      elements.minervaDetailImage,
+      elements.minervaDetailImage?.dataset?.fallbackSrc
+    );
   });
   elements.minervaLocationMapImage?.addEventListener("error", () => {
     elements.minervaLocationMapImage.src = "assets/images/minerva-route-map.svg";
@@ -14295,20 +14401,14 @@ function wireEvents() {
   elements.classifiedInlineCloseBtn?.addEventListener("click", () => {
     closeClassifiedInlineDetail();
   });
+  elements.classifiedInlineImage?.addEventListener("load", () => {
+    finalizeMinervaDetailImageLoad(elements.classifiedInlineImage);
+  });
   elements.classifiedInlineImage?.addEventListener("error", () => {
-    const fallbackSrc = elements.classifiedInlineImage?.dataset?.fallbackSrc
-      || state.minervaDetail.fallbackImageUrl
-      || MINERVA_DETAIL_FALLBACK_IMAGE;
-    if (!fallbackSrc) {
-      return;
-    }
-
-    const currentSrc = elements.classifiedInlineImage.getAttribute("src") || "";
-    if (currentSrc === fallbackSrc) {
-      return;
-    }
-
-    elements.classifiedInlineImage.src = fallbackSrc;
+    handleMinervaDetailImageError(
+      elements.classifiedInlineImage,
+      elements.classifiedInlineImage?.dataset?.fallbackSrc
+    );
   });
   document.addEventListener("beforeinput", (event) => {
     if (!isTypingTarget(event.target)) {
