@@ -94,6 +94,18 @@ function normalizeLocation(value) {
   return String(value || "").trim() || "--";
 }
 
+function parseOptionalPrice(value) {
+  if (value == null) {
+    return null;
+  }
+  if (typeof value === "string" && !value.trim()) {
+    return null;
+  }
+
+  const price = Number(value);
+  return Number.isFinite(price) ? price : null;
+}
+
 function inferListNumber(items, lists) {
   if (!Array.isArray(items) || !items.length || !Array.isArray(lists) || !lists.length) {
     return null;
@@ -250,7 +262,7 @@ function parseMinervaInfoApi(payload, lists = []) {
 
   let items = itemsRaw
     .map((item) => {
-      const price = Number(item?.gold);
+      const price = parseOptionalPrice(item?.gold);
       return {
         name: String(item?.item || "").trim() || "--",
         price: Number.isFinite(price) ? price : null,
@@ -276,7 +288,7 @@ function parseMinervaInfoApi(payload, lists = []) {
       const nextInventory = Array.isArray(nextListData?.Inventory) ? nextListData.Inventory : [];
       items = nextInventory.map((item) => ({
         name: String(item?.Name || "").trim() || "--",
-        price: Number.isFinite(Number(item?.Price)) ? Number(item.Price) : null,
+        price: parseOptionalPrice(item?.Price),
         url: normalizeWikiUrl(item?.WikiUrl || "")
       }));
     }
@@ -472,7 +484,7 @@ function buildFallbackMinerva(lists = []) {
   const inventory = Array.isArray(listData?.Inventory) ? listData.Inventory : [];
   const items = inventory.map((item) => ({
     name: String(item?.Name || "").trim() || "--",
-    price: Number(item?.Price),
+    price: parseOptionalPrice(item?.Price),
     url: normalizeWikiUrl(item?.WikiUrl || "")
   }));
 
@@ -654,6 +666,42 @@ function loadMinervaLists(siteRoot) {
   return cachedMinervaLists;
 }
 
+function mapArchiveMinervaItem(entry) {
+  return {
+    name: String(entry?.Name || "").trim() || "--",
+    price: parseOptionalPrice(entry?.Price),
+    url: normalizeWikiUrl(entry?.WikiUrl || "")
+  };
+}
+
+function mergeMinervaArchiveItems(data, lists = []) {
+  const liveData = data && typeof data === "object" ? data : {};
+  if (!Array.isArray(lists) || !lists.length) {
+    return liveData;
+  }
+
+  let listNumber = Number(liveData?.listNumber);
+  if (!Number.isFinite(listNumber) || listNumber < 1) {
+    listNumber = inferListNumber(liveData?.items || [], lists);
+  }
+
+  const listData = lists.find((entry) => Number(entry?.ListNumber) === listNumber);
+  const inventory = Array.isArray(listData?.Inventory) ? listData.Inventory : [];
+  if (!inventory.length) {
+    return {
+      ...liveData,
+      listNumber
+    };
+  }
+
+  return {
+    ...liveData,
+    listNumber,
+    items: inventory.map((entry) => mapArchiveMinervaItem(entry)),
+    archiveSource: "local_lists"
+  };
+}
+
 async function fetchSiloIntel() {
   try {
     const text = await fetchTextWithTimeout(NUKACRYPT_GRAPHQL_URL, {
@@ -718,17 +766,17 @@ async function fetchMinervaIntel(siteRoot) {
   const lists = loadMinervaLists(siteRoot);
   const liveInfo = await fetchMinervaInfoData(lists);
   if (liveInfo) {
-    return liveInfo;
+    return mergeMinervaArchiveItems(liveInfo, lists);
   }
 
   try {
     const { text, source } = await fetchTextFromCandidates(SOURCE_URLS.minerva, 25000);
     const liveParsed = parseMinervaLive(text, lists);
     if (Array.isArray(liveParsed.items) && liveParsed.items.length) {
-      return {
+      return mergeMinervaArchiveItems({
         ...liveParsed,
         source
-      };
+      }, lists);
     }
   } catch (error) {
     // Fall through to deterministic list rotation fallback.
@@ -756,7 +804,7 @@ function serializeMinervaFingerprint(data) {
     items: Array.isArray(data?.items)
       ? data.items.map((item) => ({
         name: item?.name || "",
-        price: Number.isFinite(Number(item?.price)) ? Number(item.price) : null,
+        price: parseOptionalPrice(item?.price),
         url: item?.url || ""
       }))
       : []

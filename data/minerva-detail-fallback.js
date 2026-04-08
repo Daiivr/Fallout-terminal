@@ -1,6 +1,6 @@
 window.MINERVA_DETAIL_FALLBACK = {
-  "generatedAtUtc": "2026-02-26T19:09:26.423Z",
-  "source": "fallout.fandom.com + translate.googleapis.com",
+  "generatedAtUtc": "2026-04-08T21:34:46.112Z",
+  "source": "fallout.fandom.com + translate.googleapis.com + local hi-res detail images",
   "defaultImageUrl": "assets/images/minerva-plan-fallback.png",
   "itemCount": 146,
   "byKey": {
@@ -8,7 +8,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Arctic marine armor helmet",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Arctic_marine_armor_helmet",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Arctic_marine_armor_helmet",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op .",
@@ -28,7 +28,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Arctic marine left arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Arctic_marine_left_arm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Arctic_marine_left_arm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op . Once learned, the plan will no longer drop from Daily Ops, thereby increasing the drop chances of other rare Daily Ops plans."
@@ -46,7 +46,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Arctic marine left leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Arctic_marine_left_leg",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Arctic_marine_left_leg",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op .",
@@ -66,7 +66,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Arctic marine right arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Arctic_marine_right_arm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Arctic_marine_right_arm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op .",
@@ -86,7 +86,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Arctic marine right leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Arctic_marine_right_leg",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Arctic_marine_right_leg",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op .",
@@ -106,7 +106,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Arctic marine torso",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Arctic_marine_torso",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Arctic_marine_torso",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op . Once learned, the plan will no longer drop from Daily Ops, thereby increasing the drop chances of other rare Daily Ops plans."
@@ -124,7 +124,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Asylum light",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Asylum_light",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Asylum_light",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_camp.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -142,7 +142,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: BoS medallion",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_BoS_medallion",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_BoS_medallion",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_camp.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op . Learning the plan will not prevent it being awarded again."
@@ -160,7 +160,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Brotherhood of Steel minigun paint",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_of_Steel_minigun_paint",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_of_Steel_minigun_paint",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [],
         "unlocks": "The plan unlocks crafting of the Brotherhood of Steel paint mod for the minigun at a weapons workbench."
@@ -174,7 +174,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Brotherhood recon chest piece",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_chest_piece",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_chest_piece",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op."
@@ -192,7 +192,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Brotherhood recon helmet",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_helmet",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_helmet",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op."
@@ -210,7 +210,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Brotherhood recon jet pack",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_jet_pack",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_jet_pack",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 2000 gold bullion."
@@ -228,7 +228,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Brotherhood recon left arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_left_arm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_left_arm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op."
@@ -246,7 +246,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Brotherhood recon left leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_left_leg",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_left_leg",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op."
@@ -264,7 +264,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Brotherhood recon pocketed armor limb",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_pocketed_armor_limb",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_pocketed_armor_limb",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 250 gold bullion."
@@ -282,7 +282,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Brotherhood recon pocketed armor torso",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_pocketed_armor_torso",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_pocketed_armor_torso",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 250 gold bullion."
@@ -300,7 +300,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Brotherhood recon right arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_right_arm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_right_arm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op."
@@ -318,7 +318,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Brotherhood recon right leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_right_leg",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Brotherhood_recon_right_leg",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op."
@@ -336,7 +336,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Cattle prod",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Cattle_prod",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Cattle_prod",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/f76wl_cattleprod.webp",
       "en": {
         "whereElse": [
           "After completing the main Wastelanders questline, the plan can be purchased from Samuel for 250 gold bullion with a Settlers reputation of at least Cautious."
@@ -354,7 +354,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Chemist's backpack mod",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Chemist's_backpack_mod",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Chemist's_backpack_mod",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "May be purchased from Mortimer for 350 gold bullion with a Raiders reputation of at least Friendly."
@@ -372,7 +372,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Chinese stealth armor",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Chinese_stealth_armor",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Chinese_stealth_armor",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Guaranteed reward upon completion of Invisible Ties",
@@ -392,7 +392,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Chinese stealth helmet",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Chinese_stealth_helmet",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Chinese_stealth_helmet",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Guaranteed reward upon completion of Invisible Ties",
@@ -412,7 +412,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Covert scout armor chest piece",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Covert_scout_armor_chest_piece",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Covert_scout_armor_chest_piece",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -430,7 +430,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Covert scout armor left arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Covert_scout_armor_left_arm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Covert_scout_armor_left_arm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -448,7 +448,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Covert scout armor left leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Covert_scout_armor_left_leg",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Covert_scout_armor_left_leg",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -466,7 +466,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Covert scout armor mask",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Covert_scout_armor_mask",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Covert_scout_armor_mask",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op .",
@@ -486,7 +486,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Covert scout armor right arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Covert_scout_armor_right_arm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Covert_scout_armor_right_arm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -504,7 +504,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Covert scout armor right leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Covert_scout_armor_right_leg",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Covert_scout_armor_right_leg",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -522,7 +522,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Crusader pistol",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Crusader_pistol",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Crusader_pistol",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_chimera_pistol_standard.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op .",
@@ -542,7 +542,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Crusader pistol cryo receiver",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Crusader_pistol_cryo_receiver",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Crusader_pistol_cryo_receiver",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -560,7 +560,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Crusader pistol fusion receiver",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Crusader_pistol_fusion_receiver",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Crusader_pistol_fusion_receiver",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -578,7 +578,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Crusader pistol pyro receiver",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Crusader_pistol_pyro_receiver",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Crusader_pistol_pyro_receiver",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -596,7 +596,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Dynamite",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Dynamite",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Dynamite",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/f76wl_dynamite.webp",
       "en": {
         "whereElse": [
           "After completing the main Wastelanders questline, the plan can be purchased from Mortimer for 100 gold bullion with a raiders reputation of at least Cautious."
@@ -614,7 +614,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Dynamite bundle",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Dynamite_bundle",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Dynamite_bundle",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/f76wl_dynamite_bundle.webp",
       "en": {
         "whereElse": [
           "After completing the main Wastelanders questline, the plan can be purchased from Mortimer for 200 gold bullion with a raiders reputation of at least Cautious."
@@ -632,7 +632,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Emmett Mountain Disposal signs",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Emmett_Mountain_Disposal_signs",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Emmett_Mountain_Disposal_signs",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_camp.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -650,7 +650,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Enclave medallion",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Enclave_medallion",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Enclave_medallion",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_camp.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op . Learning the plan will not prevent it being awarded again."
@@ -668,7 +668,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Farmable dirt tiles",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Farmable_dirt_tiles",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Farmable_dirt_tiles",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_workshop_dirttile_foundationwood01.webp",
       "en": {
         "whereElse": [
           "Can be bought from Samuel in Foundation for 500 gold bullion with a Settlers reputation of at least Friendly."
@@ -679,14 +679,14 @@ window.MINERVA_DETAIL_FALLBACK = {
         "whereElse": [
           "Se puede comprar a Samuel en la Fundación por 500 lingotes de oro con una reputación de colono de al menos Amistoso."
         ],
-        "unlocks": "El plan desbloquea la elaboración de cinco tipos de mosaicos de tierra cultivables en un C.A.M.P. o taller de la siguiente manera: {| class=\"va-table va-table-center\" ! Imagen ! Categoría taller! Nombre en el menú! ¡Identificación del formulario! ID del editor |- | 50px|x50px | rango de filas = \"5\" | Pisos | Fundación - Jardín | | Taller_DirtTile_FoundationWood01 |- |- | 50px|x50px | Fundación - Jardín | | Taller_DirtTile_WrhsFloorFoundation01 |- |- | 50px|x50px | Planta Alta - Jardín | | Taller_DirtTile_WrhsFloorWood01 |- |- | 50px|x50px | Planta Alta - Jardín | | Taller_DirtTile_WrhsFloorWoodHalf01 |- |- | 25px|25px | Planta Alta - Jardín | | Taller_DirtTile_WrhsFloorWoodSmSq01 |- |}"
+        "unlocks": "El plan desbloquea la elaboración de cinco tipos de mosaicos de tierra cultivables en un C.A.M.P. o taller de la siguiente manera: {| class=\"va-table va-table-center\" ! Imagen ! Categoría taller! Nombre en el menú! ¡Identificación del formulario! ID del editor |- | 50px|x50px | rango de filas = \"5\" | Pisos | Fundación - Jardín | | Taller_DirtTile_FoundationWood01 |- |- | 50px|x50px | Fundación - Jardín | | Workshop_DirtTile_WrhsFloorFoundation01 |- |- | 50px|x50px | Planta Alta - Jardín | | Taller_DirtTile_WrhsFloorWood01 |- |- | 50px|x50px | Planta Alta - Jardín | | Taller_DirtTile_WrhsFloorWoodHalf01 |- |- | 25px|25px | Planta Alta - Jardín | | Taller_DirtTile_WrhsFloorWoodSmSq01 |- |}"
       }
     },
     "https://fallout.fandom.com/wiki/plan:_flare": {
       "name": "Plan: Flare",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Flare",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Flare",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/f76wl_flare.webp",
       "en": {
         "whereElse": [
           "After completing the main Wastelanders questline, the plan can be purchased from Samuel for 50 gold bullion with a settlers reputation of at least Cautious."
@@ -704,7 +704,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Floater flamer grenade",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Floater_flamer_grenade",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Floater_flamer_grenade",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/f76wl_floater_flame_grenade.webp",
       "en": {
         "whereElse": [
           "Sold by Mortimer at The Crater for 150 gold bullion, with a Raiders reputation of at least Friendly."
@@ -722,7 +722,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Floater freezer grenade",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Floater_freezer_grenade",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Floater_freezer_grenade",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_cryogenic_grenade.webp",
       "en": {
         "whereElse": [
           "Sold by Mortimer at The Crater for 150 gold bullion, with a Raiders reputation of at least Friendly."
@@ -740,7 +740,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Floater gnasher grenade",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Floater_gnasher_grenade",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Floater_gnasher_grenade",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/hallucigen_gas_grenade.webp",
       "en": {
         "whereElse": [
           "Sold by Mortimer at The Crater for 150 gold bullion, with a Raiders reputation of at least Friendly."
@@ -758,7 +758,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauntlet",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauntlet",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauntlet",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76wl_gauntlet.webp",
       "en": {
         "whereElse": [
           "After completing the main Wastelanders questline, the plan can be purchased from Samuel for 250 gold bullion with a Settlers reputation of at least Friendly."
@@ -776,7 +776,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss minigun",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_minigun",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_minigun",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/f76wl_gauss_minigun.webp",
       "en": {
         "whereElse": [
           "After completing the main Wastelanders questline, the plan can be purchased from Mortimer for 750 gold bullion with the maximum Raiders reputation of Ally."
@@ -794,7 +794,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss minigun gunner sights",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_minigun_gunner_sights",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_minigun_gunner_sights",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Mortimer in The Crater Core for 50 gold bullion with the maximum Raiders reputation of Ally."
@@ -812,7 +812,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss minigun Tesla capacitor",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_minigun_Tesla_capacitor",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_minigun_Tesla_capacitor",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Mortimer in The Crater Core for 100 gold bullion with the maximum Raiders reputation of Ally."
@@ -830,7 +830,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss minigun Tesla dynamo",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_minigun_Tesla_dynamo",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_minigun_Tesla_dynamo",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Mortimer in The Crater Core for 100 gold bullion with the maximum Raiders reputation of Ally."
@@ -848,7 +848,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss minigun triple barrel",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_minigun_triple_barrel",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_minigun_triple_barrel",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Mortimer in The Crater Core for 150 gold bullion with the maximum Raiders reputation of Ally."
@@ -866,7 +866,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss pistol",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_pistol",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_pistol",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/f76wl_gauss_pistol.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 250 gold bullion after completing the main Wastelanders questline for the Settlers or Raiders."
@@ -884,7 +884,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss pistol aligned short barrel",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_pistol_aligned_short_barrel",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_pistol_aligned_short_barrel",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 150 gold bullion."
@@ -902,7 +902,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss pistol drum magazine",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_pistol_drum_magazine",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_pistol_drum_magazine",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 100 gold bullion."
@@ -920,7 +920,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss pistol hardened receiver",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_pistol_hardened_receiver",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_pistol_hardened_receiver",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -938,7 +938,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss pistol refined receiver",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_pistol_refined_receiver",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_pistol_refined_receiver",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -956,7 +956,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss pistol suppressed barrel",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_pistol_suppressed_barrel",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_pistol_suppressed_barrel",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 150 gold bullion."
@@ -974,7 +974,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss pistol vicious receiver",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_pistol_vicious_receiver",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_pistol_vicious_receiver",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -992,7 +992,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss shotgun",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_shotgun",
       "wikiUrlEs": "https://fallout.fandom.com/es/wiki/Plano%3A_escopeta_Gauss",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/f76wl_gauss_shotgun.webp",
       "en": {
         "whereElse": [
           "After completing the main Wastelanders questline, the plan can be purchased from Samuel for 500 gold bullion with the maximum Settlers reputation of Ally."
@@ -1010,7 +1010,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss shotgun extended barrel",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_shotgun_extended_barrel",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_shotgun_extended_barrel",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Samuel in Foundation for 150 gold bullion with the maximum Settlers reputation of Ally."
@@ -1028,7 +1028,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss shotgun extended magazine",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_shotgun_extended_magazine",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_shotgun_extended_magazine",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Samuel in Foundation for 100 gold bullion with the maximum Settlers reputation of Ally."
@@ -1046,7 +1046,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss shotgun hardened receiver",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_shotgun_hardened_receiver",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_shotgun_hardened_receiver",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Samuel in Foundation for 200 gold bullion with the maximum Settlers reputation of Ally."
@@ -1064,7 +1064,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss shotgun precise stock",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_shotgun_precise_stock",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_shotgun_precise_stock",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Samuel in Foundation for 100 gold bullion with the maximum Settlers reputation of Ally."
@@ -1082,7 +1082,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss shotgun refined receiver",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_shotgun_refined_receiver",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_shotgun_refined_receiver",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Samuel in Foundation for 200 gold bullion with the maximum Settlers reputation of Ally."
@@ -1100,7 +1100,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Gauss shotgun vicious receiver",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_shotgun_vicious_receiver",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Gauss_shotgun_vicious_receiver",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Samuel in Foundation for 200 gold bullion with the maximum Settlers reputation of Ally."
@@ -1118,7 +1118,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Grocer's backpack mod",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Grocer's_backpack_mod",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Grocer's_backpack_mod",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "May be purchased from Samuel for 350 gold bullion with a Settlers reputation of at least Friendly."
@@ -1136,7 +1136,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Hellfire prototype power armor paint",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Hellfire_prototype_power_armor_paint",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Hellfire_prototype_power_armor_paint",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [],
         "unlocks": "The plan unlocks crafting of the Hellfire prototype power armor paint at a power armor station."
@@ -1150,7 +1150,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Hello neon sign",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Hello_neon_sign",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Hello_neon_sign",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_camp.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -1168,7 +1168,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Hellstorm missile launcher",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Hellstorm_missile_launcher",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Hellstorm_missile_launcher",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_bos_launcher_alt.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op . Once learned, the plan will no longer drop from Daily Ops, thereby increasing the drop chances of other rare Daily Ops plans."
@@ -1186,7 +1186,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Hellstorm missile launcher cryo payload",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Hellstorm_missile_launcher_cryo_payload",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Hellstorm_missile_launcher_cryo_payload",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -1204,7 +1204,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Hellstorm missile launcher napalm payload",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Hellstorm_missile_launcher_napalm_payload",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Hellstorm_missile_launcher_napalm_payload",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -1222,7 +1222,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Hellstorm missile launcher plasma payload",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Hellstorm_missile_launcher_plasma_payload",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Hellstorm_missile_launcher_plasma_payload",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -1240,7 +1240,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Lighter build Secret Service armor limbs",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Lighter_build_Secret_Service_armor_limbs",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Lighter_build_Secret_Service_armor_limbs",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 250 gold bullion."
@@ -1258,7 +1258,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Meat bag stash box",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Meat_bag_stash_box",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Meat_bag_stash_box",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_camp.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op .",
@@ -1278,7 +1278,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Mechanic's Best Friend",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Mechanic's_Best_Friend",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Mechanic's_Best_Friend",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_weapon_mechanicsbestfriend02.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op . Learning the plan will not prevent it being awarded again."
@@ -1296,7 +1296,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Medical Malpractice",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Medical_Malpractice",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Medical_Malpractice",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76l_l_weapon_medmalpractice.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -1314,7 +1314,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Medium supply crate",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Medium_supply_crate",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Medium_supply_crate",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_camp.webp",
       "en": {
         "whereElse": [],
         "unlocks": "The plan unlocks crafting of the medium supply crate Nuclear Winter-themed stash box at a C.A.M.P. or workshop."
@@ -1328,7 +1328,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Mirelurk king tube",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Mirelurk_king_tube",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Mirelurk_king_tube",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_camp.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op . Learning the plan will not prevent it being awarded again."
@@ -1346,7 +1346,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Open neon sign",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Open_neon_sign",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Open_neon_sign",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_camp.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -1364,7 +1364,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Plasma caster",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_caster",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_caster",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/f76wl_plasma_caster_left.webp",
       "en": {
         "whereElse": [
           "The plan can be purchased from Regs for 750 gold bullion after completing the main Wastelanders questline for the Settlers or Raiders."
@@ -1382,7 +1382,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Plasma caster aligned sniper barrel",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_caster_aligned_sniper_barrel",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_caster_aligned_sniper_barrel",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 150 gold bullion."
@@ -1400,7 +1400,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Plasma caster calibrated capacitor",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_caster_calibrated_capacitor",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_caster_calibrated_capacitor",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -1418,7 +1418,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Plasma caster pulse capacitor",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_caster_pulse_capacitor",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_caster_pulse_capacitor",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -1436,7 +1436,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Plasma caster true capacitor",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_caster_true_capacitor",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_caster_true_capacitor",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -1454,7 +1454,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Plasma caster true long barrel",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_caster_true_long_barrel",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_caster_true_long_barrel",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 150 gold bullion."
@@ -1472,7 +1472,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Plasma cutter",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_cutter",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_cutter",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plasma_sword.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op . Once learned, the plan will no longer drop from Daily Ops, thereby increasing the drop chances of other rare Daily Ops plans."
@@ -1490,7 +1490,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Plasma cutter cryo blade",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_cutter_cryo_blade",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_cutter_cryo_blade",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -1508,7 +1508,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Plasma cutter flaming blade",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_cutter_flaming_blade",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_cutter_flaming_blade",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -1526,7 +1526,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Plasma cutter shock blade",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_cutter_shock_blade",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Plasma_cutter_shock_blade",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -1544,7 +1544,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Protective lining Secret Service underarmor",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Protective_lining_Secret_Service_underarmor",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Protective_lining_Secret_Service_underarmor",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 150 gold bullion."
@@ -1562,7 +1562,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Resistant lining Secret Service underarmor",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Resistant_lining_Secret_Service_underarmor",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Resistant_lining_Secret_Service_underarmor",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 100 gold bullion."
@@ -1580,7 +1580,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Scavenged solar panel",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Scavenged_solar_panel",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Scavenged_solar_panel",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_camp.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -1598,7 +1598,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Science chalkboards",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Science_chalkboards",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Science_chalkboards",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_camp.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op . Learning the plan will not prevent it being awarded again."
@@ -1616,7 +1616,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Secret Service chest piece",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Secret_Service_chest_piece",
       "wikiUrlEs": "https://fallout.fandom.com/es/wiki/Plano%3A_coraza_del_servicio_secreto",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1250 gold bullion."
@@ -1634,7 +1634,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Secret Service helmet",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Secret_Service_helmet",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Secret_Service_helmet",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1650 gold bullion."
@@ -1652,7 +1652,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Secret Service jet pack armor",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Secret_Service_jet_pack_armor",
       "wikiUrlEs": "https://fallout.fandom.com/es/wiki/Plano%3A_blindaje_del_servicio_secreto_con_propulsores",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 2000 gold bullion."
@@ -1670,7 +1670,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Secret Service left arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Secret_Service_left_arm",
       "wikiUrlEs": "https://fallout.fandom.com/es/wiki/Plano%3A_brazo_izquierdo_del_servicio_secreto",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -1688,7 +1688,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Secret Service left leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Secret_Service_left_leg",
       "wikiUrlEs": "https://fallout.fandom.com/es/wiki/Plano%3A_pierna_izquierda_del_servicio_secreto",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -1706,7 +1706,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Secret Service pocketed armor limb",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Secret_Service_pocketed_armor_limb",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Secret_Service_pocketed_armor_limb",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 250 gold bullion."
@@ -1724,7 +1724,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Secret Service pocketed armor torso",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Secret_Service_pocketed_armor_torso",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Secret_Service_pocketed_armor_torso",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 250 gold bullion."
@@ -1742,7 +1742,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Secret Service right arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Secret_Service_right_arm",
       "wikiUrlEs": "https://fallout.fandom.com/es/wiki/Plano%3A_brazo_derecho_del_servicio_secreto",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -1760,7 +1760,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Secret Service right leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Secret_Service_right_leg",
       "wikiUrlEs": "https://fallout.fandom.com/es/wiki/Plano%3A_pierna_derecha_del_servicio_secreto",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -1778,7 +1778,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Secret Service underarmor",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Secret_Service_underarmor",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Secret_Service_underarmor",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76wl_secret_service_underarmor.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 250 gold bullion."
@@ -1796,7 +1796,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Shielded lining Secret Service underarmor",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Shielded_lining_Secret_Service_underarmor",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Shielded_lining_Secret_Service_underarmor",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -1814,7 +1814,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Slocum Joe's power armor paint",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Slocum_Joe's_power_armor_paint",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Slocum_Joe's_power_armor_paint",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [],
         "unlocks": "The plan unlocks crafting of the power armor Slocum's Joe paint at a power armor station."
@@ -1828,7 +1828,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Solar armor chest piece",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Solar_armor_chest_piece",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Solar_armor_chest_piece",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1000 gold bullion."
@@ -1846,7 +1846,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Solar armor left arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Solar_armor_left_arm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Solar_armor_left_arm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -1864,7 +1864,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Solar armor left leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Solar_armor_left_leg",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Solar_armor_left_leg",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -1882,7 +1882,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Solar armor right arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Solar_armor_right_arm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Solar_armor_right_arm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -1900,7 +1900,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Solar armor right leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Solar_armor_right_leg",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Solar_armor_right_leg",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -1918,7 +1918,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Sole Survivor",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Sole_Survivor",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Sole_Survivor",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_weapon_solesurvivor02.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op . Learning the plan will not prevent it being awarded again."
@@ -1936,7 +1936,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Strangler heart chest piece",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Strangler_heart_chest_piece",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Strangler_heart_chest_piece",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1250 gold bullion after having completed Secrets Revealed."
@@ -1954,7 +1954,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Strangler heart helmet",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Strangler_heart_helmet",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Strangler_heart_helmet",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1650 gold bullion after having completed Secrets Revealed."
@@ -1972,7 +1972,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Strangler heart left arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Strangler_heart_left_arm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Strangler_heart_left_arm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1000 gold bullion after having completed Secrets Revealed."
@@ -1990,7 +1990,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Strangler heart left leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Strangler_heart_left_leg",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Strangler_heart_left_leg",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1000 gold bullion after having completed Secrets Revealed."
@@ -2008,7 +2008,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Strangler heart right arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Strangler_heart_right_arm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Strangler_heart_right_arm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1000 gold bullion after having completed Secrets Revealed."
@@ -2026,7 +2026,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Strangler heart right leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Strangler_heart_right_leg",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Strangler_heart_right_leg",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1000 gold bullion after having completed Secrets Revealed."
@@ -2044,7 +2044,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Super mutant tube",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Super_mutant_tube",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Super_mutant_tube",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_camp.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -2062,7 +2062,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Super reactor",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Super_reactor",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Super_reactor",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo4vw_vault_tec_super_reactor.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -2073,14 +2073,14 @@ window.MINERVA_DETAIL_FALLBACK = {
         "whereElse": [
           "Lo pueden obtener personajes jugadores de nivel 50+ como recompensa por completar con éxito una operación diaria."
         ],
-        "unlocks": "Este plan desbloquea la elaboración del superrreactor en un C.A.M.P. o taller."
+        "unlocks": "Este plan desbloquea la elaboración del superreactor en un C.A.M.P. o taller."
       }
     },
     "https://fallout.fandom.com/wiki/plan:_sympto-matic": {
       "name": "Plan: Sympto-Matic",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Sympto-Matic",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Sympto-Matic",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/f76_sympto_matic.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -2098,7 +2098,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: T-65 calibrated shocks",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_T-65_calibrated_shocks",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_T-65_calibrated_shocks",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -2116,7 +2116,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: T-65 helm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_T-65_helm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_T-65_helm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1650 gold bullion after having completed Secrets Revealed."
@@ -2134,7 +2134,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: T-65 jet pack",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_T-65_jet_pack",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_T-65_jet_pack",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 2000 gold bullion."
@@ -2152,7 +2152,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: T-65 left arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_T-65_left_arm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_T-65_left_arm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1000 gold bullion after having completed Secrets Revealed."
@@ -2170,7 +2170,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: T-65 left leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_T-65_left_leg",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_T-65_left_leg",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1000 gold bullion after having completed Secrets Revealed."
@@ -2188,7 +2188,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: T-65 medic pump",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_T-65_medic_pump",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_T-65_medic_pump",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 250 gold bullion."
@@ -2206,7 +2206,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: T-65 overdrive servos",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_T-65_overdrive_servos",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_T-65_overdrive_servos",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -2224,7 +2224,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: T-65 right arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_T-65_right_arm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_T-65_right_arm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1000 gold bullion after having completed Secrets Revealed."
@@ -2242,7 +2242,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: T-65 right leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_T-65_right_leg",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_T-65_right_leg",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1000 gold bullion after having completed Secrets Revealed."
@@ -2260,7 +2260,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: T-65 rusty knuckles",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_T-65_rusty_knuckles",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_T-65_rusty_knuckles",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 250 gold bullion."
@@ -2278,7 +2278,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: T-65 Stealth Boy",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_T-65_Stealth_Boy",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_T-65_Stealth_Boy",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -2296,7 +2296,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: T-65 torso",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_T-65_torso",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_T-65_torso",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1250 gold bullion after having completed Secrets Revealed."
@@ -2314,7 +2314,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: The Gutter",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_The_Gutter",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_The_Gutter",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_the_gutter_ops.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."
@@ -2332,7 +2332,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Thorn armor chest piece",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Thorn_armor_chest_piece",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Thorn_armor_chest_piece",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 1000 gold bullion."
@@ -2350,7 +2350,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Thorn armor left arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Thorn_armor_left_arm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Thorn_armor_left_arm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -2368,7 +2368,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Thorn armor left leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Thorn_armor_left_leg",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Thorn_armor_left_leg",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -2386,7 +2386,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Thorn armor right arm",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Thorn_armor_right_arm",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Thorn_armor_right_arm",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -2404,7 +2404,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Thorn armor right leg",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Thorn_armor_right_leg",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Thorn_armor_right_leg",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_equipment.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 750 gold bullion."
@@ -2422,7 +2422,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Treated lining Secret Service underarmor",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Treated_lining_Secret_Service_underarmor",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Treated_lining_Secret_Service_underarmor",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 50 gold bullion."
@@ -2440,7 +2440,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Turbo-Fert fertilizer",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Turbo-Fert_fertilizer",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Turbo-Fert_fertilizer",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76wl_turbo_fert_fertilizer_collector.webp",
       "en": {
         "whereElse": [
           "Can be bought from Samuel in Foundation for 750 gold bullion with the maximum Settlers reputation of Ally."
@@ -2458,7 +2458,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Ultra-light build Secret Service armor limbs",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Ultra-light_build_Secret_Service_armor_limbs",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Ultra-light_build_Secret_Service_armor_limbs",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 500 gold bullion."
@@ -2476,7 +2476,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Unstoppable Monster",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Unstoppable_Monster",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Unstoppable_Monster",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/unstoppable_monster_dailyops.webp",
       "en": {
         "whereElse": [
           "The plan can be obtained by level 50+ player characters as a possible reward for successfully completing a Daily Op."
@@ -2494,7 +2494,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: War glaive",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_War_glaive",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_War_glaive",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76ow_war_glaive.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op . Once learned, the plan will no longer drop from Daily Ops, thereby increasing the drop chances of other rare Daily Ops plans."
@@ -2512,7 +2512,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: War glaive cryo blade",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_War_glaive_cryo_blade",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_War_glaive_cryo_blade",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -2530,7 +2530,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: War glaive flaming blade",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_War_glaive_flaming_blade",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_War_glaive_flaming_blade",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -2548,7 +2548,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: War glaive plasma blade",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_War_glaive_plasma_blade",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_War_glaive_plasma_blade",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -2566,7 +2566,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: War glaive shock blade",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_War_glaive_shock_blade",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_War_glaive_shock_blade",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_item_mod.webp",
       "en": {
         "whereElse": [
           "Can be bought from Regs in Vault 79 for 200 gold bullion."
@@ -2584,7 +2584,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Water well",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Water_well",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Water_well",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_camp.webp",
       "en": {
         "whereElse": [
           "Can be bought from Samuel in Foundation for 750 gold bullion with a Settlers reputation of at least Neighborly."
@@ -2602,7 +2602,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Wendigo tube",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Wendigo_tube",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Wendigo_tube",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_plan_camp.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op . Learning the plan will not prevent it being awarded again."
@@ -2620,7 +2620,7 @@ window.MINERVA_DETAIL_FALLBACK = {
       "name": "Plan: Whistle in the Dark",
       "wikiUrlEn": "https://fallout.fandom.com/wiki/Plan%3A_Whistle_in_the_Dark",
       "wikiUrlEs": "https://fallout.fandom.com/wiki/Plan%3A_Whistle_in_the_Dark",
-      "imageUrl": "assets/images/minerva-plan-fallback.png",
+      "imageUrl": "assets/images/minerva-detail/fo76_whistle_in_the_dark_ops.webp",
       "en": {
         "whereElse": [
           "It can be obtained by level 50+ player characters as a reward for successfully completing a Daily Op ."

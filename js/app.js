@@ -255,6 +255,7 @@ const FILES_DESCRIPTION_EDITOR_BUTTONS = [
   { format: "u", label: "U", titleKey: "files_description_format_underline" }
 ];
 const FILES_DESCRIPTION_LINK_PATTERN = /(?:https?:\/\/|www\.)[^\s<]+/gi;
+const FILES_AUTHORIZED_VISIT_COUNTER_MOBILE_MEDIA = "(hover: none) and (pointer: coarse), (max-width: 1020px)";
 const VISIT_COUNTER_EYE_POINTER_MAX_OFFSET_PX = 1.65;
 const VISIT_COUNTER_EYE_POINTER_MAX_OFFSET_MOBILE_PX = 1.2;
 const VISIT_COUNTER_EYE_POINTER_EASING = 0.2;
@@ -900,6 +901,153 @@ function normalizeVisitCounterTotal(value) {
   return numericValue;
 }
 
+function setInlineStyleMap(element, styleMap) {
+  if (!(element instanceof HTMLElement) && !(element instanceof SVGElement)) {
+    return;
+  }
+
+  for (const [property, value] of Object.entries(styleMap)) {
+    element.style.setProperty(property, value);
+  }
+}
+
+function clearInlineStyleMap(element, styleMap) {
+  if (!(element instanceof HTMLElement) && !(element instanceof SVGElement)) {
+    return;
+  }
+
+  for (const property of Object.keys(styleMap)) {
+    element.style.removeProperty(property);
+  }
+}
+
+function syncFilesAuthorizedVisitCounterMobileCard() {
+  const badge = elements.visitCounterMobileBadge;
+  if (!(badge instanceof HTMLElement)) {
+    return;
+  }
+
+  const icon = badge.querySelector(".visit-counter-mobile-icon");
+  const iconSvg = badge.querySelector(".visit-counter-mobile-icon-svg");
+  const copy = badge.querySelector(".visit-counter-mobile-copy");
+  const topline = badge.querySelector(".visit-counter-mobile-topline");
+  const label = elements.visitCounterMobileLabel;
+  const value = elements.visitCounterMobileValue;
+  const hint = elements.visitCounterMobileHint;
+  const mediaMatches = window.matchMedia(FILES_AUTHORIZED_VISIT_COUNTER_MOBILE_MEDIA).matches;
+  const active = mediaMatches
+    && state.view === "files"
+    && document.body.classList.contains("is-files")
+    && !document.body.classList.contains("is-files-guest")
+    && !document.body.classList.contains("is-files-unauthorized");
+
+  const badgeStyles = {
+    display: "flex",
+    width: "100%",
+    "justify-self": "stretch",
+    "align-self": "stretch",
+    "margin-top": "10px",
+    position: "relative",
+    border: "1px solid var(--line)",
+    "border-radius": "12px",
+    padding: "8px 9px",
+    color: "var(--fg-faint)",
+    "align-items": "stretch",
+    gap: "8px",
+    overflow: "hidden",
+    isolation: "isolate",
+    background:
+      "linear-gradient(180deg, rgba(255, 225, 122, 0.08), rgba(0, 0, 0, 0.16)), rgba(0, 0, 0, 0.22)",
+    "box-shadow":
+      "0 0 0 1px rgba(0, 0, 0, 0.44) inset, 0 10px 18px rgba(0, 0, 0, 0.14)"
+  };
+  const iconStyles = {
+    position: "relative",
+    "z-index": "1",
+    "align-self": "stretch",
+    width: "auto",
+    height: "auto",
+    "min-width": "45px",
+    flex: "0 0 auto",
+    "aspect-ratio": "1 / 1",
+    display: "grid",
+    "place-items": "center",
+    border: "1px solid rgba(255, 225, 122, 0.2)",
+    "border-radius": "12px",
+    background:
+      "linear-gradient(180deg, rgba(255, 225, 122, 0.12), rgba(0, 0, 0, 0.2)), rgba(0, 0, 0, 0.18)",
+    "box-shadow": "0 0 0 1px rgba(0, 0, 0, 0.4) inset",
+    overflow: "hidden"
+  };
+  const iconSvgStyles = {
+    width: "27px",
+    height: "27px",
+    display: "block"
+  };
+  const copyStyles = {
+    position: "relative",
+    "z-index": "1",
+    flex: "1 1 auto",
+    "min-width": "0",
+    display: "grid",
+    gap: "3px",
+    "align-content": "center",
+    padding: "4px 7px 5px",
+    border: "1px solid rgba(139, 255, 139, 0.18)",
+    "border-radius": "9px",
+    background:
+      "linear-gradient(180deg, rgba(139, 255, 139, 0.05), rgba(0, 0, 0, 0.16)), rgba(0, 0, 0, 0.18)",
+    "box-shadow": "0 0 0 1px rgba(0, 0, 0, 0.38) inset"
+  };
+  const toplineStyles = {
+    display: "flex",
+    "align-items": "baseline",
+    gap: "10px",
+    "min-width": "0"
+  };
+  const labelStyles = {
+    color: "rgba(255, 239, 175, 0.82)",
+    "font-size": "10px",
+    "letter-spacing": "0.12em",
+    "white-space": "nowrap"
+  };
+  const valueStyles = {
+    color: "#fff1aa",
+    "font-size": "clamp(1.14rem, 5.4vw, 1.42rem)",
+    "line-height": "1",
+    "font-variant-numeric": "tabular-nums",
+    "text-shadow": "0 0 10px rgba(255, 225, 122, 0.12), 0 0 1px rgba(255, 239, 175, 0.82)"
+  };
+  const hintStyles = {
+    display: "block",
+    color: "rgba(139, 255, 139, 0.68)",
+    "font-size": "10px",
+    "letter-spacing": "0.08em",
+    "text-transform": "uppercase"
+  };
+
+  const targets = [
+    [badge, badgeStyles],
+    [icon, iconStyles],
+    [iconSvg, iconSvgStyles],
+    [copy, copyStyles],
+    [topline, toplineStyles],
+    [label, labelStyles],
+    [value, valueStyles],
+    [hint, hintStyles]
+  ];
+
+  badge.classList.toggle("is-files-authorized-card", active);
+
+  for (const [element, styleMap] of targets) {
+    if (active) {
+      setInlineStyleMap(element, styleMap);
+    } else {
+      clearInlineStyleMap(element, styleMap);
+    }
+  }
+}
+
 function renderVisitCounter() {
   const hasValue = Number.isFinite(state.visitCounter.total);
   const formattedValue = hasValue
@@ -917,6 +1065,12 @@ function renderVisitCounter() {
       label: elements.visitCounterMobileLabel,
       value: elements.visitCounterMobileValue,
       hint: elements.visitCounterMobileHint
+    },
+    {
+      badge: elements.filesVisitCounterMobileCard,
+      label: elements.filesVisitCounterMobileLabel,
+      value: elements.filesVisitCounterMobileValue,
+      hint: elements.filesVisitCounterMobileHint
     }
   ];
 
@@ -943,6 +1097,8 @@ function renderVisitCounter() {
         : t("visit_counter_loading")
     );
   }
+
+  syncFilesAuthorizedVisitCounterMobileCard();
 }
 
 async function loadVisitCounter() {
@@ -972,10 +1128,15 @@ function isVisitCounterEyeLockdownActive() {
 
 function syncVisitCounterEyeMode() {
   const isLockdown = isVisitCounterEyeLockdownActive();
-  const hosts = [
+  const iconHosts = [
     elements.visitCounterIcon,
     elements.visitCounterMobileIcon
   ].filter(Boolean);
+  const badgeHosts = [
+    elements.visitCounterBadge,
+    elements.visitCounterMobileBadge
+  ].filter(Boolean);
+  const hosts = [...badgeHosts, ...iconHosts];
   const wasLockdown = hosts.some((host) => host.classList.contains("is-classified-lockdown"));
 
   hosts.forEach((host) => {
@@ -995,7 +1156,7 @@ function syncVisitCounterEyeMode() {
         hosts.forEach((host) => {
           host.classList.remove("is-classified-lockdown-entering");
         });
-      }, 1850);
+      }, 2200);
     }
     resetVisitCounterEyeTargets();
   } else {
@@ -6826,6 +6987,7 @@ function renderFilesAccessView() {
   document.body.classList.toggle("is-files-shared-landing", sharedGuestLanding);
   document.body.classList.toggle("is-files-shared-restricted", sharedRestrictedLanding);
   document.body.classList.toggle("is-files-shared-blocked", sharedGuestLanding || sharedRestrictedLanding);
+  syncFilesAuthorizedVisitCounterMobileCard();
 
   if (elements.filesUnauthorizedBadge) {
     elements.filesUnauthorizedBadge.textContent = sharedGuestLanding
@@ -9333,37 +9495,37 @@ function formatEtDisplay(date, { includeWeekday = true, includeYear = true } = {
   return `${datePart} | ${timePart} ET`;
 }
 
+function formatCompactWeekdayToken(rawWeekday) {
+  const cleaned = String(rawWeekday || "").replace(/\./g, "").trim();
+  if (!cleaned) {
+    return "";
+  }
+
+  if (state.lang === "es") {
+    const normalized = cleaned
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    const key = normalized.slice(0, 3);
+    const esMap = {
+      lun: "LUN",
+      mar: "MAR",
+      mie: "MIER",
+      jue: "JUE",
+      vie: "VIE",
+      sab: "SAB",
+      dom: "DOM"
+    };
+    return esMap[key] || cleaned.toUpperCase();
+  }
+
+  return cleaned.toUpperCase();
+}
+
 function formatEtCompact(date) {
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
     return "--";
   }
-
-  const formatWeekdayToken = (rawWeekday) => {
-    const cleaned = String(rawWeekday || "").replace(/\./g, "").trim();
-    if (!cleaned) {
-      return "";
-    }
-
-    if (state.lang === "es") {
-      const normalized = cleaned
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-      const key = normalized.slice(0, 3);
-      const esMap = {
-        lun: "LUN",
-        mar: "MAR",
-        mie: "MIER",
-        jue: "JUE",
-        vie: "VIE",
-        sab: "SAB",
-        dom: "DOM"
-      };
-      return esMap[key] || cleaned.toUpperCase();
-    }
-
-    return cleaned.toUpperCase();
-  };
 
   const locale = state.lang === "es" ? "es-ES" : "en-US";
   const dateParts = new Intl.DateTimeFormat(locale, {
@@ -9375,7 +9537,7 @@ function formatEtCompact(date) {
     .find((part) => part.type === "weekday")
     ?.value
     ?.trim() || "";
-  const weekdayPart = formatWeekdayToken(weekdayRaw);
+  const weekdayPart = formatCompactWeekdayToken(weekdayRaw);
   const dayPart = dateParts.find((part) => part.type === "day")?.value || "";
   let timePart = new Intl.DateTimeFormat(locale, {
     hour: "numeric",
@@ -9386,6 +9548,36 @@ function formatEtCompact(date) {
   timePart = normalizeMeridiemText(timePart);
 
   return `${weekdayPart} ${dayPart} ${timePart}`.trim();
+}
+
+function formatMinervaLocalCompact(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "--";
+  }
+
+  const locale = state.lang === "es" ? "es-ES" : "en-US";
+  const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const dateParts = new Intl.DateTimeFormat(locale, {
+    weekday: "short",
+    day: "2-digit",
+    timeZone: localTimeZone
+  }).formatToParts(date);
+  const weekdayRaw = dateParts
+    .find((part) => part.type === "weekday")
+    ?.value
+    ?.trim() || "";
+  const weekdayPart = formatCompactWeekdayToken(weekdayRaw);
+  const dayPart = dateParts.find((part) => part.type === "day")?.value || "";
+  let timePart = new Intl.DateTimeFormat(locale, {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: localTimeZone
+  }).format(date).replace(/\s+/g, " ").trim();
+  timePart = normalizeMeridiemText(timePart);
+
+  const zoneLabel = getLocalZoneLabel(date);
+  return `${weekdayPart} ${dayPart} ${timePart}${zoneLabel ? ` ${zoneLabel}` : ""}`.trim();
 }
 
 function formatMinervaWindowStatus(data) {
@@ -9399,13 +9591,13 @@ function formatMinervaWindowStatus(data) {
 
   if (data.nextChange) {
     const parsed = parseBethesdaRawDateTime(data.nextChange);
-    const timeValue = parsed ? formatEtCompact(parsed) : String(data.nextChange || "--");
+    const timeValue = parsed ? formatMinervaLocalCompact(parsed) : String(data.nextChange || "--");
     return toCardLine(timeValue);
   }
 
   const targetDate = isActive ? data.eventEnd : data.eventStart;
   if (targetDate instanceof Date && !Number.isNaN(targetDate.getTime())) {
-    return toCardLine(formatEtCompact(targetDate));
+    return toCardLine(formatMinervaLocalCompact(targetDate));
   }
 
   return t("window_unknown");
@@ -9428,12 +9620,17 @@ function formatMinervaLocationDate(date, mode = "") {
     return "--";
   }
 
-  const locale = state.lang === "es" ? "es-ES" : "en-GB";
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric"
-  }).format(date);
+  void mode;
+
+  const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  return formatReadableDateTime(date, {
+    includeSeconds: false,
+    timeZone: localTimeZone,
+    includeWeekday: true,
+    includeYear: false,
+    zoneLabel: getLocalZoneLabel(date),
+    hour12: true
+  });
 }
 
 function asValidDate(value) {
@@ -11526,6 +11723,26 @@ function normalizePlanName(name) {
     .toLowerCase();
 }
 
+function parseOptionalPrice(value) {
+  if (value == null) {
+    return null;
+  }
+  if (typeof value === "string" && !value.trim()) {
+    return null;
+  }
+
+  const price = Number(value);
+  return Number.isFinite(price) ? price : null;
+}
+
+function mapArchiveMinervaItem(entry) {
+  return {
+    name: String(entry?.Name || "").trim() || "--",
+    price: parseOptionalPrice(entry?.Price),
+    url: normalizeWikiUrl(entry?.WikiUrl || "")
+  };
+}
+
 function isPlanOrPlanoItem(name) {
   return /\bplan(?:o)?\b/i.test(String(name || ""));
 }
@@ -12380,6 +12597,34 @@ function inferListNumber(items, lists) {
   return bestScore >= threshold ? bestListNumber : null;
 }
 
+function mergeMinervaArchiveItems(data, lists = []) {
+  const liveData = data && typeof data === "object" ? data : {};
+  if (!Array.isArray(lists) || !lists.length) {
+    return liveData;
+  }
+
+  let listNumber = Number(liveData?.listNumber);
+  if (!Number.isFinite(listNumber) || listNumber < 1) {
+    listNumber = inferListNumber(liveData?.items || [], lists);
+  }
+
+  const listData = lists.find((entry) => Number(entry?.ListNumber) === listNumber);
+  const inventory = Array.isArray(listData?.Inventory) ? listData.Inventory : [];
+  if (!inventory.length) {
+    return {
+      ...liveData,
+      listNumber
+    };
+  }
+
+  return {
+    ...liveData,
+    listNumber,
+    items: inventory.map((entry) => mapArchiveMinervaItem(entry)),
+    archiveSource: "local_lists"
+  };
+}
+
 function parseMinervaInfoApiDateAt18(dateValue) {
   const normalized = String(dateValue || "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
@@ -12450,7 +12695,7 @@ function parseMinervaInfoApi(payload, lists = []) {
     || "";
 
   let items = itemsRaw.map((item) => {
-    const price = Number(item?.gold);
+    const price = parseOptionalPrice(item?.gold);
     return {
       name: String(item?.item || "").trim() || "--",
       price: Number.isFinite(price) ? price : null,
@@ -12473,15 +12718,13 @@ function parseMinervaInfoApi(payload, lists = []) {
       locationMapImage = MINERVA_LOCATION_MAP_BY_LOCATION[location] || "";
       const nextListData = lists.find((entry) => Number(entry?.ListNumber) === listNumber);
       const nextInventory = Array.isArray(nextListData?.Inventory) ? nextListData.Inventory : [];
-      items = nextInventory.map((item) => ({
-        name: String(item?.Name || "").trim() || "--",
-        price: Number.isFinite(Number(item?.Price)) ? Number(item.Price) : null,
-        url: normalizeWikiUrl(item?.WikiUrl || "")
-      })).filter((item) => item.name && item.name !== "--");
+      items = nextInventory
+        .map((item) => mapArchiveMinervaItem(item))
+        .filter((item) => item.name && item.name !== "--");
     }
   }
 
-  return {
+  return mergeMinervaArchiveItems({
     location,
     listNumber,
     active,
@@ -12491,7 +12734,7 @@ function parseMinervaInfoApi(payload, lists = []) {
     items,
     mode: "live_info",
     locationMapImage
-  };
+  }, lists);
 }
 
 async function fetchMinervaInfoData(lists = []) {
@@ -12557,7 +12800,7 @@ function normalizeMinervaIntelApiPayload(payload, lists = []) {
   const eventEndMs = Date.parse(String(payload.eventEnd || ""));
   const items = Array.isArray(payload.items)
     ? payload.items.map((item) => {
-      const price = Number(item?.price);
+      const price = parseOptionalPrice(item?.price);
       return {
         name: String(item?.name || "").trim() || "--",
         price: Number.isFinite(price) ? price : null,
@@ -12574,7 +12817,7 @@ function normalizeMinervaIntelApiPayload(payload, lists = []) {
   const location = normalizeLocation(payload.location || inferLocationFromMapImage(payload.locationMapImage || ""));
   const source = String(payload.source || "").trim().toLowerCase();
 
-  return {
+  return mergeMinervaArchiveItems({
     location,
     listNumber,
     active: Boolean(payload.active),
@@ -12587,7 +12830,7 @@ function normalizeMinervaIntelApiPayload(payload, lists = []) {
       || MINERVA_LOCATION_MAP_BY_LOCATION[location]
       || "",
     source
-  };
+  }, lists);
 }
 
 async function fetchMinervaIntelFromServer(lists = []) {
@@ -12705,7 +12948,7 @@ function buildFallbackMinerva(lists) {
 
   const items = inventory.map((item) => ({
     name: item.Name,
-    price: Number(item.Price),
+    price: parseOptionalPrice(item?.Price),
     url: item.WikiUrl ? `${WIKI_BASE}${item.WikiUrl}` : null
   }));
 
@@ -12822,7 +13065,7 @@ function renderMinervaFromState() {
     }
 
     const priceCell = document.createElement("td");
-    const priceValue = Number(item.price);
+    const priceValue = parseOptionalPrice(item?.price ?? item?.Price);
     const priceText = Number.isFinite(priceValue) ? priceValue.toLocaleString() : "--";
     priceCell.appendChild(createIconTag(GOLD_BULLION_GLYPH));
     priceCell.append(priceText);
@@ -14223,6 +14466,7 @@ function wireEvents() {
   });
   window.addEventListener("resize", () => {
     renderFilesAdminModals();
+    syncFilesAuthorizedVisitCounterMobileCard();
     if (state.classifiedSearch.open) {
       unlockClassifiedArchiveCardSize();
       refreshClassifiedArchiveCardBaseSize(true);

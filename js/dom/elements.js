@@ -422,5 +422,10 @@ globalThis.FALLOUT_CODEX_ELEMENTS = {
   visitCounterMobileLabel: document.getElementById("visitCounterMobileLabel"),
   visitCounterMobileValue: document.getElementById("visitCounterMobileValue"),
   visitCounterMobileHint: document.getElementById("visitCounterMobileHint"),
+  filesVisitCounterMobileCard: document.getElementById("filesVisitCounterMobileCard"),
+  filesVisitCounterMobileIcon: document.getElementById("filesVisitCounterMobileIcon"),
+  filesVisitCounterMobileLabel: document.getElementById("filesVisitCounterMobileLabel"),
+  filesVisitCounterMobileValue: document.getElementById("filesVisitCounterMobileValue"),
+  filesVisitCounterMobileHint: document.getElementById("filesVisitCounterMobileHint"),
   footerText: document.getElementById("footerText")
 };

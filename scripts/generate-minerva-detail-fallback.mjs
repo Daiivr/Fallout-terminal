@@ -1,16 +1,19 @@
-import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { constants as fsConstants } from "node:fs";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { extname, resolve } from "node:path";
 
 const ROOT = process.cwd();
 const LISTS_PATH = resolve(ROOT, "data", "minerva-lists.json");
 const OUTPUT_PATH = resolve(ROOT, "data", "minerva-detail-fallback.json");
 const OUTPUT_JS_PATH = resolve(ROOT, "data", "minerva-detail-fallback.js");
+const DETAIL_IMAGE_DIR = resolve(ROOT, "assets", "images", "minerva-detail");
 
 const WIKI_BASE = "https://fallout.fandom.com";
 const WIKI_API_EN = `${WIKI_BASE}/api.php`;
 const WIKI_API_ES = `${WIKI_BASE}/es/api.php`;
 const GOOGLE_TRANSLATE_BASE = "https://translate.googleapis.com/translate_a/single";
 const DEFAULT_LOCAL_IMAGE = "assets/images/minerva-plan-fallback.png";
+const LOCAL_DETAIL_IMAGE_BASE = "assets/images/minerva-detail";
 const REQUEST_TIMEOUT_MS = 28000;
 const CONCURRENCY = 4;
 
@@ -24,6 +27,298 @@ const SECTION_TITLES = {
     unlocks: ["Desbloquea", "Desbloqueos", "Desbloqueo", "Unlocks", "Unlock"]
   }
 };
+
+const IMAGE_FIELD_CANDIDATES = ["image", "icon"];
+const TITLE_TOKEN_STOP_WORDS = new Set([
+  "the",
+  "fallout",
+  "plan",
+  "item",
+  "for",
+  "and",
+  "with"
+]);
+
+const WHERE_IS_MINERVA_GENERIC_PLAN_IMAGE_NAMES = new Set([
+  "plan_general",
+  "plan_general_mod",
+  "plan_general_workshop"
+]);
+
+const CANONICAL_GENERIC_PLAN_FILES = {
+  plan_general: "FO76 Plan equipment.png",
+  plan_general_mod: "FO76 Item mod.png",
+  plan_general_workshop: "FO76 Plan CAMP.png"
+};
+
+const IRRELEVANT_UNLOCK_LINK_PATTERNS = [
+  /^(?:CAMP|C\.A\.M\.P\.)$/i,
+  /^Workshop \(Fallout 76\)$/i,
+  /workbench/i,
+  /^Form ID$/i,
+  /^Editor ID$/i,
+  /^Purveyor Murmrgh$/i,
+  /^Fallout 76 legendary effects$/i,
+  /^Fallout 76 events$/i,
+  /^Fallout 76 weapon mods$/i,
+  /^Weapons?$/i,
+  /^Armor$/i,
+  /^Mod$/i
+];
+
+const GENERIC_IMAGE_FILE_PATTERNS = [
+  /(?:^|[_\s-])icon(?:$|[_\s-])/i,
+  /(?:^|[_\s-])caps(?:$|[_\s-])/i,
+  /gold/i,
+  /weight/i,
+  /notrade/i,
+  /ratio/i,
+  /overlay/i,
+  /(?:^|[_\s-])ui(?:$|[_\s-])/i,
+  /iconwheel/i,
+  /vault[_\s-]*boy/i,
+  /item[_\s-]*mod/i,
+  /mbox/i,
+  /gametitle/i,
+  /stub/i,
+  /unused/i
+];
+
+const LOW_VALUE_IMAGE_FILE_PATTERNS = [
+  /paint/i,
+  /skin/i,
+  /atx/i,
+  /score/i
+];
+
+function isLikelyPlanImage(fileName) {
+  if (!fileName) {
+    return false;
+  }
+  return /plan/i.test(fileName) && !/(icon|caps|gold|weight|notrade|wiki\.png)/i.test(fileName);
+}
+
+function parseInfoboxImageFile(wikitext, images = []) {
+  const imageField = String(wikitext || "").match(/^\|\s*image\s*=\s*(.+)$/im)?.[1] || "";
+  const extracted = imageField
+    .replace(/\[\[(?:File|Image):([^|\]]+)(?:\|[^\]]*)?\]\]/i, "$1")
+    .replace(/_/g, " ")
+    .trim();
+  if (extracted) {
+    return extracted;
+  }
+
+  const candidates = Array.isArray(images) ? images : [];
+  return candidates.find(isLikelyPlanImage) || candidates[0] || "";
+}
+
+function extractInfoboxFieldFile(wikitext, fieldName) {
+  const field = String(fieldName || "").trim();
+  if (!field) {
+    return "";
+  }
+
+  const value = String(wikitext || "").match(new RegExp(`^\\|\\s*${escapeRegExp(field)}\\s*=\\s*(.+)$`, "im"))?.[1] || "";
+  return value
+    .replace(/\[\[(?:File|Image):([^|\]]+)(?:\|[^\]]*)?\]\]/i, "$1")
+    .replace(/_/g, " ")
+    .trim();
+}
+
+function normalizeImageCandidateName(value) {
+  return String(value || "")
+    .replace(/^file:/i, "")
+    .replace(/_/g, " ")
+    .trim();
+}
+
+function tokenizeWikiTitle(value) {
+  return sanitizeLocalImageName(String(value || ""))
+    .split("_")
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3 && !TITLE_TOKEN_STOP_WORDS.has(token));
+}
+
+function isGenericImageFile(fileName) {
+  const value = String(fileName || "").trim();
+  return GENERIC_IMAGE_FILE_PATTERNS.some((pattern) => pattern.test(value));
+}
+
+function isLowValueImageFile(fileName) {
+  const value = String(fileName || "").trim();
+  return LOW_VALUE_IMAGE_FILE_PATTERNS.some((pattern) => pattern.test(value));
+}
+
+function scoreImageFileForPage(fileName, pageTitle = "", { isInfobox = false, order = 0, directUnlockFile = false } = {}) {
+  const normalizedFileName = sanitizeLocalImageName(fileName);
+  const fileTokens = normalizedFileName.split("_").filter(Boolean);
+  const titleTokens = tokenizeWikiTitle(pageTitle);
+
+  let score = directUnlockFile ? 260 : isInfobox ? 90 : 45;
+  score -= Math.max(0, order) * 2;
+
+  if (isGenericImageFile(fileName)) {
+    score -= 160;
+  }
+  if (isLowValueImageFile(fileName)) {
+    score -= 55;
+  }
+  if (/plan/i.test(fileName) && !directUnlockFile) {
+    score -= 35;
+  }
+  if (/^fo76|^f76/i.test(normalizedFileName)) {
+    score += 12;
+  }
+
+  for (const token of titleTokens) {
+    if (fileTokens.includes(token)) {
+      score += 28;
+      continue;
+    }
+    if (normalizedFileName.includes(token)) {
+      score += 16;
+    }
+  }
+
+  return score;
+}
+
+function selectBestImageCandidate(candidates = [], pageTitle = "") {
+  const seen = new Set();
+  let best = null;
+
+  for (const candidate of Array.isArray(candidates) ? candidates : []) {
+    const fileName = normalizeImageCandidateName(candidate?.fileName || "");
+    if (!fileName) {
+      continue;
+    }
+
+    const cacheKey = fileName.toLowerCase();
+    if (seen.has(cacheKey)) {
+      continue;
+    }
+    seen.add(cacheKey);
+
+    const score = scoreImageFileForPage(fileName, pageTitle, {
+      isInfobox: Boolean(candidate?.isInfobox),
+      order: Number(candidate?.order || 0),
+      directUnlockFile: Boolean(candidate?.directUnlockFile)
+    });
+
+    if (!best || score > best.score) {
+      best = {
+        fileName,
+        score
+      };
+    }
+  }
+
+  return best;
+}
+
+function selectBestItemImageFile(pageTitle, wikitext, images = []) {
+  const candidates = [];
+  let order = 0;
+
+  for (const fieldName of IMAGE_FIELD_CANDIDATES) {
+    const fileName = extractInfoboxFieldFile(wikitext, fieldName);
+    if (fileName) {
+      candidates.push({
+        fileName,
+        isInfobox: true,
+        order
+      });
+      order += 1;
+    }
+  }
+
+  for (const fileName of Array.isArray(images) ? images : []) {
+    candidates.push({
+      fileName,
+      isInfobox: false,
+      order
+    });
+    order += 1;
+  }
+
+  return selectBestImageCandidate(candidates, pageTitle);
+}
+
+function extractUnlockImageFileCandidates(sectionText) {
+  const matches = [];
+  const pattern = /\[\[(?:File|Image):([^|\]]+)/gi;
+  let match;
+
+  while ((match = pattern.exec(String(sectionText || ""))) !== null) {
+    const fileName = normalizeImageCandidateName(match[1]);
+    if (fileName) {
+      matches.push(fileName);
+    }
+  }
+
+  return [...new Set(matches)];
+}
+
+function isRelevantUnlockLinkTarget(target) {
+  const value = String(target || "").trim();
+  if (!value) {
+    return false;
+  }
+
+  if (/^(?:File|Image|Category|Template|Help|User):/i.test(value)) {
+    return false;
+  }
+
+  return !IRRELEVANT_UNLOCK_LINK_PATTERNS.some((pattern) => pattern.test(value));
+}
+
+function extractUnlockLinkCandidates(sectionText) {
+  const matches = [];
+  const pattern = /\[\[([^|\]#]+)(?:#[^|\]]+)?(?:\|[^\]]+)?\]\]/gi;
+  let match;
+
+  while ((match = pattern.exec(String(sectionText || ""))) !== null) {
+    const title = String(match[1] || "").trim();
+    if (!isRelevantUnlockLinkTarget(title)) {
+      continue;
+    }
+    matches.push(normalizeWikiTitle(title));
+  }
+
+  return [...new Set(matches)];
+}
+
+function deriveUnlockedSubjectTitle(sourceTitle) {
+  return normalizeWikiTitle(String(sourceTitle || "").replace(/^Plan:_?/i, ""));
+}
+
+function shouldUsePlanStyleArt(imageName) {
+  return WHERE_IS_MINERVA_GENERIC_PLAN_IMAGE_NAMES.has(String(imageName || "").trim().toLowerCase());
+}
+
+async function resolveCanonicalPlanStyleArt(imageName, fallbackFileName, imageCache) {
+  const normalized = String(imageName || "").trim().toLowerCase();
+  const canonicalFileName = CANONICAL_GENERIC_PLAN_FILES[normalized] || fallbackFileName || "";
+  return resolveLocalDetailImageUrl(canonicalFileName, imageCache, "en");
+}
+
+function buildWikiTitleVariants(title) {
+  const variants = [];
+
+  const pushVariant = (value) => {
+    const normalized = normalizeWikiTitle(value);
+    if (!normalized || variants.includes(normalized)) {
+      return;
+    }
+    variants.push(normalized);
+  };
+
+  const normalized = normalizeWikiTitle(title);
+  pushVariant(normalized);
+  pushVariant(normalized.replace(/_\([^)]*\)$/i, ""));
+
+  return variants;
+}
 
 function normalizeWikiUrl(url) {
   const value = String(url || "").trim();
@@ -144,6 +439,53 @@ function sanitizeDetailText(value) {
   return text.replace(/\s+/g, " ").trim();
 }
 
+async function fileExists(targetPath) {
+  try {
+    await access(targetPath, fsConstants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function sanitizeLocalImageName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\.[a-z0-9]+$/i, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function contentTypeToImageExtension(contentType) {
+  const normalized = String(contentType || "").trim().toLowerCase();
+  if (normalized.includes("image/webp")) {
+    return ".webp";
+  }
+  if (normalized.includes("image/png")) {
+    return ".png";
+  }
+  if (normalized.includes("image/jpeg") || normalized.includes("image/jpg")) {
+    return ".jpg";
+  }
+  if (normalized.includes("image/avif")) {
+    return ".avif";
+  }
+  if (normalized.includes("image/gif")) {
+    return ".gif";
+  }
+  return "";
+}
+
+function buildLocalDetailImagePath(fileName, contentType = "") {
+  const normalized = String(fileName || "")
+    .replace(/^file:/i, "")
+    .trim();
+  const extension = contentTypeToImageExtension(contentType) || extname(normalized).toLowerCase() || ".png";
+  const safeBase = sanitizeLocalImageName(normalized) || "minerva_detail";
+  return `${LOCAL_DETAIL_IMAGE_BASE}/${safeBase}${extension}`;
+}
+
 function extractOtherSourcesFromLocations(sectionText) {
   const bulletSources = extractWikiBullets(sectionText)
     .map((line) => {
@@ -200,17 +542,225 @@ async function fetchJsonWithTimeout(url, timeoutMs = REQUEST_TIMEOUT_MS) {
   }
 }
 
-async function fetchWikitext(apiBase, title) {
+async function fetchImageBuffer(url, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const contentType = String(response.headers.get("content-type") || "").trim().toLowerCase();
+    if (!contentType.startsWith("image/")) {
+      throw new Error(`Unexpected content type: ${contentType || "unknown"}`);
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (!buffer.length) {
+      throw new Error("Received empty image payload.");
+    }
+
+    return {
+      buffer,
+      contentType
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchWikiParse(apiBase, title) {
   const page = normalizeWikiTitle(title);
   if (!page) {
-    return "";
+    return {
+      wikitext: "",
+      images: []
+    };
   }
-  const url = `${apiBase}?action=parse&page=${encodeURIComponent(page)}&prop=wikitext&format=json&formatversion=2&origin=*`;
+  const url = `${apiBase}?action=parse&page=${encodeURIComponent(page)}&prop=wikitext|images&format=json&formatversion=2&origin=*`;
   const data = await fetchJsonWithTimeout(url);
   if (data?.error || !data?.parse?.wikitext) {
     throw new Error(data?.error?.info || "Missing parse payload.");
   }
-  return String(data.parse.wikitext || "");
+  return {
+    wikitext: String(data.parse.wikitext || ""),
+    images: Array.isArray(data?.parse?.images) ? data.parse.images : []
+  };
+}
+
+async function resolveWikiImageMeta(fileName, lang = "en") {
+  const normalized = String(fileName || "")
+    .replace(/^file:/i, "")
+    .trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const apiBase = lang === "es" ? WIKI_API_ES : WIKI_API_EN;
+  const title = `File:${normalized}`;
+  const url = `${apiBase}?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=url|size&format=json&formatversion=2&origin=*`;
+  const data = await fetchJsonWithTimeout(url);
+  const pages = Array.isArray(data?.query?.pages) ? data.query.pages : [];
+  const page = pages.find((entry) => Array.isArray(entry?.imageinfo) && entry.imageinfo.length) || null;
+  const imageInfo = page?.imageinfo?.[0] || null;
+  const remoteUrl = String(imageInfo?.url || "").trim();
+  if (!remoteUrl) {
+    return null;
+  }
+
+  return {
+    fileName: String(page?.title || normalized).replace(/^File:/i, "").trim() || normalized,
+    remoteUrl,
+    width: Number(imageInfo?.width || 0),
+    height: Number(imageInfo?.height || 0)
+  };
+}
+
+async function resolveLocalDetailImageUrl(fileName, imageCache, lang = "en") {
+  const normalized = String(fileName || "")
+    .replace(/^file:/i, "")
+    .trim();
+  if (!normalized) {
+    return "";
+  }
+
+  const cacheKey = normalized.toLowerCase();
+  if (imageCache.has(cacheKey)) {
+    return imageCache.get(cacheKey);
+  }
+
+  const pending = (async () => {
+    try {
+      const imageMeta = await resolveWikiImageMeta(normalized, lang);
+      if (!imageMeta?.remoteUrl) {
+        return "";
+      }
+
+      const image = await fetchImageBuffer(imageMeta.remoteUrl);
+      const localPath = buildLocalDetailImagePath(imageMeta.fileName || normalized, image.contentType);
+      const absolutePath = resolve(ROOT, localPath);
+      if (await fileExists(absolutePath)) {
+        return localPath;
+      }
+
+      await writeFile(absolutePath, image.buffer);
+      return localPath;
+    } catch {
+      return "";
+    }
+  })();
+
+  imageCache.set(cacheKey, pending);
+  return pending;
+}
+
+async function resolveBestImageForPageTitle(pageTitle, pageImageCache) {
+  const normalizedTitle = normalizeWikiTitle(pageTitle);
+  if (!normalizedTitle) {
+    return null;
+  }
+
+  const cacheKey = normalizedTitle.toLowerCase();
+  if (pageImageCache.has(cacheKey)) {
+    return pageImageCache.get(cacheKey);
+  }
+
+  const pending = (async () => {
+    try {
+      const pageParse = await fetchWikiParse(WIKI_API_EN, normalizedTitle);
+      return selectBestItemImageFile(normalizedTitle, pageParse.wikitext, pageParse.images);
+    } catch {
+      return null;
+    }
+  })();
+
+  pageImageCache.set(cacheKey, pending);
+  return pending;
+}
+
+async function resolvePreferredItemImageUrl(sourceTitle, unlocksSection, planImageFile, imageCache, pageImageCache) {
+  const planSubjectTitle = deriveUnlockedSubjectTitle(sourceTitle);
+  const fileCandidates = extractUnlockImageFileCandidates(unlocksSection);
+  const pageCandidates = [];
+
+  for (const rawTitle of extractUnlockLinkCandidates(unlocksSection)) {
+    for (const variant of buildWikiTitleVariants(rawTitle)) {
+      if (!pageCandidates.includes(variant)) {
+        pageCandidates.push(variant);
+      }
+    }
+  }
+
+  if (planSubjectTitle) {
+    for (const variant of buildWikiTitleVariants(planSubjectTitle)) {
+      if (!pageCandidates.includes(variant)) {
+        pageCandidates.push(variant);
+      }
+    }
+  }
+
+  let best = null;
+
+  for (let index = 0; index < fileCandidates.length; index += 1) {
+    const fileName = fileCandidates[index];
+    const score = scoreImageFileForPage(fileName, planSubjectTitle || sourceTitle, {
+      directUnlockFile: true,
+      order: index
+    });
+
+    if (best && score <= best.score) {
+      continue;
+    }
+
+    const localUrl = await resolveLocalDetailImageUrl(fileName, imageCache, "en");
+    if (!localUrl) {
+      continue;
+    }
+
+    best = {
+      localUrl,
+      score
+    };
+  }
+
+  for (let index = 0; index < pageCandidates.length; index += 1) {
+    const pageTitle = pageCandidates[index];
+    const bestImage = await resolveBestImageForPageTitle(pageTitle, pageImageCache);
+    if (!bestImage?.fileName) {
+      continue;
+    }
+
+    const score = bestImage.score + 120 - (index * 4);
+    if (best && score <= best.score) {
+      continue;
+    }
+
+    const localUrl = await resolveLocalDetailImageUrl(bestImage.fileName, imageCache, "en");
+    if (!localUrl) {
+      continue;
+    }
+
+    best = {
+      localUrl,
+      score
+    };
+  }
+
+  if (best?.localUrl) {
+    return best.localUrl;
+  }
+
+  if (planImageFile) {
+    return resolveLocalDetailImageUrl(planImageFile, imageCache, "en");
+  }
+
+  return "";
 }
 
 async function resolveSpanishTitle(sourceTitle) {
@@ -290,7 +840,7 @@ async function normalizeSpanishDetail(esDetail, enDetail) {
   };
 }
 
-async function processItem(item) {
+async function processItem(item, imageCache = new Map(), pageImageCache = new Map()) {
   const wikiUrl = normalizeWikiUrl(item.url);
   const key = minervaDetailKeyFromUrl(wikiUrl);
   const sourceTitle = wikiPageTitleFromUrl(wikiUrl);
@@ -314,13 +864,31 @@ async function processItem(item) {
     };
   }
 
-  let enWikitext = "";
+  let enParse = {
+    wikitext: "",
+    images: []
+  };
   try {
-    enWikitext = await fetchWikitext(WIKI_API_EN, sourceTitle);
+    enParse = await fetchWikiParse(WIKI_API_EN, sourceTitle);
   } catch {
-    enWikitext = "";
+    enParse = {
+      wikitext: "",
+      images: []
+    };
   }
-  const enDetail = buildDetailFromWikitext(enWikitext, "en");
+  const enDetail = buildDetailFromWikitext(enParse.wikitext, "en");
+  const unlocksSection = extractFirstWikiSection(enParse.wikitext, SECTION_TITLES.en.unlocks);
+  const planImageFile = parseInfoboxImageFile(enParse.wikitext, enParse.images);
+  const prefersPlanStyleArt = shouldUsePlanStyleArt(item.imageName);
+  const preferredLocalImageUrl = prefersPlanStyleArt
+    ? (await resolveCanonicalPlanStyleArt(item.imageName, planImageFile, imageCache))
+    : (await resolvePreferredItemImageUrl(
+      sourceTitle,
+      unlocksSection,
+      planImageFile,
+      imageCache,
+      pageImageCache
+    ));
 
   let esTitle = "";
   try {
@@ -332,7 +900,8 @@ async function processItem(item) {
   let esWikitext = "";
   if (esTitle) {
     try {
-      esWikitext = await fetchWikitext(WIKI_API_ES, esTitle);
+      const esParse = await fetchWikiParse(WIKI_API_ES, esTitle);
+      esWikitext = esParse.wikitext;
     } catch {
       esWikitext = "";
     }
@@ -347,7 +916,7 @@ async function processItem(item) {
       name: item.name,
       wikiUrlEn: buildWikiPageUrl(sourceTitle, "en") || wikiUrl,
       wikiUrlEs: buildWikiPageUrl(esTitle || sourceTitle, esTitle ? "es" : "en"),
-      imageUrl: DEFAULT_LOCAL_IMAGE,
+      imageUrl: preferredLocalImageUrl || DEFAULT_LOCAL_IMAGE,
       en: {
         whereElse: enDetail.whereElse,
         unlocks: enDetail.unlocks
@@ -385,8 +954,12 @@ async function runWithConcurrency(items, limit, worker) {
 }
 
 async function main() {
+  await mkdir(DETAIL_IMAGE_DIR, { recursive: true });
+
   const listJson = await readFile(LISTS_PATH, "utf8");
   const lists = JSON.parse(String(listJson).replace(/^\uFEFF/, ""));
+  const imageCache = new Map();
+  const pageImageCache = new Map();
 
   const uniqueItems = new Map();
   for (const list of Array.isArray(lists) ? lists : []) {
@@ -403,7 +976,8 @@ async function main() {
       if (!uniqueItems.has(key)) {
         uniqueItems.set(key, {
           name: String(entry.Name || "").trim() || "Unknown plan",
-          url: wikiUrl
+          url: wikiUrl,
+          imageName: String(entry.ImageName || "").trim()
         });
       }
     }
@@ -412,7 +986,7 @@ async function main() {
   const itemArray = [...uniqueItems.values()];
   let completed = 0;
   const processed = await runWithConcurrency(itemArray, CONCURRENCY, async (item) => {
-    const result = await processItem(item);
+    const result = await processItem(item, imageCache, pageImageCache);
     completed += 1;
     if (completed % 10 === 0 || completed === itemArray.length) {
       console.log(`Processed ${completed}/${itemArray.length}`);
@@ -427,7 +1001,7 @@ async function main() {
 
   const payload = {
     generatedAtUtc: new Date().toISOString(),
-    source: "fallout.fandom.com + translate.googleapis.com",
+    source: "fallout.fandom.com + translate.googleapis.com + local hi-res detail images",
     defaultImageUrl: DEFAULT_LOCAL_IMAGE,
     itemCount: Object.keys(byKey).length,
     byKey

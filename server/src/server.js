@@ -3724,7 +3724,9 @@ app.get("/api/intel/minerva", async (_req, res) => {
       items: Array.isArray(minerva?.items)
         ? minerva.items.map((item) => ({
           name: String(item?.name || "").trim() || "--",
-          price: Number.isFinite(Number(item?.price)) ? Number(item.price) : null,
+          price: item?.price == null || (typeof item?.price === "string" && !item.price.trim())
+            ? null
+            : (Number.isFinite(Number(item.price)) ? Number(item.price) : null),
           url: String(item?.url || "").trim()
         }))
         : [],
