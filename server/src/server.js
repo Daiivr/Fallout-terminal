@@ -1150,6 +1150,7 @@ function normalizeMetadataFileEntry(entry) {
   const hasImage = Boolean(imageStoredName);
   const imageName = hasImage ? (sanitizeDisplayFilename(entry.imageName || "image") || "image") : "";
   const imageSize = hasImage ? Math.max(0, Number(entry.imageSize) || 0) : 0;
+  const outdated = parseBoolean(entry.outdated ?? entry.isOutdated, false);
 
   return {
     id: id.toLowerCase(),
@@ -1159,6 +1160,7 @@ function normalizeMetadataFileEntry(entry) {
     mimeType,
     size: Number.isFinite(size) && size >= 0 ? size : 0,
     downloadCount: Number.isFinite(downloadCount) && downloadCount > 0 ? Math.floor(downloadCount) : 0,
+    outdated,
     description: sanitizeFileDescription(entry.description),
     group: sanitizeFileGroup(entry.group),
     uploadedAt: uploadedAt || new Date(0).toISOString(),
@@ -1211,6 +1213,7 @@ function buildFileListEntry(entry) {
     mimeType: normalized.mimeType,
     size: normalized.size,
     downloadCount: normalized.downloadCount,
+    outdated: normalized.outdated,
     uploadedAt: normalized.uploadedAt,
     updatedAt: normalized.updatedAt || normalized.uploadedAt,
     contentUpdatedAt: normalized.contentUpdatedAt || normalized.uploadedAt,
@@ -3296,6 +3299,7 @@ app.post("/api/files/upload", requireAdmin, uploadFileWithOptionalImage, (req, r
   const displayName = sanitizeFileDisplayName(req.body.displayName);
   const description = sanitizeFileDescription(req.body.description);
   const group = sanitizeFileGroup(req.body.group);
+  const outdated = parseBoolean(req.body.outdated, false);
   const hasImageUpload = Boolean(uploadedImage);
   const safeImageName = hasImageUpload
     ? (sanitizeDisplayFilename(uploadedImage.originalname || "image") || "image")
@@ -3334,6 +3338,7 @@ app.post("/api/files/upload", requireAdmin, uploadFileWithOptionalImage, (req, r
     mimeType: String(uploadedFile.mimetype || "application/octet-stream"),
     size: uploadedFile.size,
     downloadCount: 0,
+    outdated,
     description,
     group,
     uploadedAt: now,
@@ -3489,6 +3494,7 @@ app.patch("/api/files/:id", requireAdmin, uploadFileMetadataUpdate, (req, res) =
   const hasDescription = Object.prototype.hasOwnProperty.call(req.body || {}, "description");
   const hasGroup = Object.prototype.hasOwnProperty.call(req.body || {}, "group");
   const hasDisplayName = Object.prototype.hasOwnProperty.call(req.body || {}, "displayName");
+  const hasOutdated = Object.prototype.hasOwnProperty.call(req.body || {}, "outdated");
   const removeImage = parseBoolean(req.body?.removeImage, false);
   const imageMimeType = uploadedImage
     ? String(uploadedImage.mimetype || "application/octet-stream").trim()
@@ -3531,6 +3537,9 @@ app.patch("/api/files/:id", requireAdmin, uploadFileMetadataUpdate, (req, res) =
     }
     if (hasDisplayName) {
       nextEntry.displayName = sanitizeFileDisplayName(req.body.displayName);
+    }
+    if (hasOutdated) {
+      nextEntry.outdated = parseBoolean(req.body.outdated, false);
     }
 
     if (uploadedImage) {
@@ -3661,6 +3670,11 @@ app.get("/api/files/:id/download", requireAuthorized, (req, res) => {
     return;
   }
   const entry = entries[index];
+  const normalizedEntryForDownload = normalizeMetadataFileEntry(entry);
+  if (normalizedEntryForDownload?.outdated) {
+    res.status(410).json({ error: "This file is outdated and downloads are blocked." });
+    return;
+  }
 
   const storedPath = resolveUploadStoredPath(entry.storedName);
   if (!storedPath) {

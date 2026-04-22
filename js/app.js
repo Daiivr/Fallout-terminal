@@ -3790,6 +3790,14 @@ function mountFilesDescriptionEditor(textarea) {
   return editor;
 }
 
+function normalizeFilesBooleanFlag(value) {
+  if (value === true || value === 1) {
+    return true;
+  }
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
 function normalizeFilesEntry(payload) {
   if (!payload || typeof payload !== "object") {
     return null;
@@ -3807,6 +3815,7 @@ function normalizeFilesEntry(payload) {
     mimeType: String(payload.mimeType || payload.type || "").trim(),
     size: Math.max(0, Number(payload.size) || 0),
     downloadCount: Math.max(0, Number(payload.downloadCount || payload.download_count) || 0),
+    outdated: normalizeFilesBooleanFlag(payload.outdated ?? payload.isOutdated),
     uploadedAt: String(payload.uploadedAt || payload.uploaded_at || "").trim(),
     updatedAt: String(payload.updatedAt || payload.updated_at || payload.uploadedAt || "").trim(),
     contentUpdatedAt: String(
@@ -5140,7 +5149,8 @@ function getFilteredFilesList(files = []) {
     const group = normalizeSearchText(file.group || "");
     const description = normalizeSearchText(file.descriptionPlain || file.description || "");
     const uploader = normalizeSearchText(file.uploader || file.uploaderDiscordId || "");
-    const haystack = `${displayName} ${realName} ${type} ${group} ${description} ${uploader}`;
+    const status = normalizeFilesBooleanFlag(file.outdated) ? normalizeSearchText(t("files_outdated_badge")) : "";
+    const haystack = `${displayName} ${realName} ${type} ${group} ${description} ${uploader} ${status}`;
     return queryTokens.every((token) => haystack.includes(token));
   });
 }
@@ -5263,6 +5273,34 @@ function createFilesDescriptionBlock({
   return wrap;
 }
 
+function createFilesOutdatedNotice() {
+  const notice = document.createElement("div");
+  notice.className = "files-outdated-notice";
+
+  const title = document.createElement("strong");
+  title.className = "files-outdated-notice-title";
+  title.textContent = t("files_outdated_notice_title");
+
+  const body = document.createElement("span");
+  body.className = "files-outdated-notice-body";
+  body.textContent = t("files_outdated_notice_body");
+
+  notice.appendChild(title);
+  notice.appendChild(body);
+  return notice;
+}
+
+function appendFilesOutdatedBadge(container, file) {
+  if (!(container instanceof HTMLElement) || !normalizeFilesBooleanFlag(file?.outdated)) {
+    return;
+  }
+
+  const outdatedBadge = document.createElement("span");
+  outdatedBadge.className = "files-file-badge is-outdated";
+  outdatedBadge.textContent = t("files_outdated_badge");
+  container.appendChild(outdatedBadge);
+}
+
 function buildFilesDetailRenderKey(file, { isAdmin = false } = {}) {
   const safeFile = file && typeof file === "object" ? file : {};
   return [
@@ -5278,6 +5316,7 @@ function buildFilesDetailRenderKey(file, { isAdmin = false } = {}) {
     String(Math.max(0, Number(safeFile.downloadCount) || 0)),
     normalizeFilesGroup(safeFile.group),
     String(safeFile.description || ""),
+    normalizeFilesBooleanFlag(safeFile.outdated) ? "1" : "0",
     String(safeFile.uploader || safeFile.uploaderDiscordId || ""),
     String(safeFile.imageUrl || ""),
     String(safeFile.imageName || ""),
@@ -5391,6 +5430,22 @@ function createFilesAdminEditForm(file) {
   descriptionInput.placeholder = t("files_upload_description_placeholder");
   form.appendChild(descriptionInput);
 
+  const outdatedWrap = document.createElement("label");
+  outdatedWrap.className = "files-edit-toggle";
+
+  const outdatedInput = document.createElement("input");
+  outdatedInput.type = "checkbox";
+  outdatedInput.name = "outdated";
+  outdatedInput.value = "1";
+  outdatedInput.checked = normalizeFilesBooleanFlag(file.outdated);
+
+  const outdatedText = document.createElement("span");
+  outdatedText.textContent = t("files_edit_outdated_label");
+
+  outdatedWrap.appendChild(outdatedInput);
+  outdatedWrap.appendChild(outdatedText);
+  form.appendChild(outdatedWrap);
+
   const groupLabel = document.createElement("label");
   groupLabel.className = "files-edit-label";
   groupLabel.textContent = t("files_edit_group_label");
@@ -5471,6 +5526,7 @@ function renderFilesDetailCard(file) {
   const imageUrl = String(file.imageUrl || "").trim();
   const imageName = String(file.imageName || "").trim();
   const isReplacing = String(state.files.replace.fileId || "") === fileId;
+  const isOutdated = normalizeFilesBooleanFlag(file.outdated);
 
   const detailCard = document.createElement("article");
   detailCard.className = "panel files-detail-card";
@@ -5529,7 +5585,15 @@ function renderFilesDetailCard(file) {
   downloadButton.className = "files-card-action";
   downloadButton.setAttribute("data-files-action", "download");
   downloadButton.setAttribute("data-file-id", fileId);
-  decorateFilesActionIconButton(downloadButton, t("files_download_button"), "download");
+  if (isOutdated) {
+    downloadButton.setAttribute("aria-disabled", "true");
+  }
+  downloadButton.classList.toggle("is-outdated", isOutdated);
+  decorateFilesActionIconButton(
+    downloadButton,
+    isOutdated ? t("files_outdated_badge") : t("files_download_button"),
+    isOutdated ? "error" : "download"
+  );
   actions.appendChild(downloadButton);
 
   if (state.files.me?.isAdmin) {
@@ -5567,6 +5631,9 @@ function renderFilesDetailCard(file) {
   }
 
   detailBody.appendChild(metadata);
+  if (isOutdated) {
+    detailBody.appendChild(createFilesOutdatedNotice());
+  }
   detailBody.appendChild(descriptionBlock);
   detailBody.appendChild(actions);
 
@@ -6584,6 +6651,7 @@ function renderFilesList() {
         imageBadge.textContent = "IMG";
         badges.appendChild(imageBadge);
       }
+      appendFilesOutdatedBadge(badges, file);
 
       cardHead.appendChild(title);
       cardHead.appendChild(badges);
@@ -6814,6 +6882,7 @@ function renderFilesList() {
           imageBadge.textContent = "IMG";
           badges.appendChild(imageBadge);
         }
+        appendFilesOutdatedBadge(badges, file);
 
         cardHead.appendChild(title);
         cardHead.appendChild(badges);
@@ -8000,6 +8069,7 @@ async function handleFilesMetadataEdit(formElement) {
   }
 
   const descriptionInput = formElement.querySelector("textarea[name=\"description\"]");
+  const outdatedInput = formElement.querySelector("input[name=\"outdated\"]");
   const groupInput = formElement.querySelector("input[name=\"group\"]");
   const imageInput = formElement.querySelector("input[name=\"image\"]");
   const removeImageInput = formElement.querySelector("input[name=\"removeImage\"]");
@@ -8013,10 +8083,12 @@ async function handleFilesMetadataEdit(formElement) {
   const imageFile = imageInput instanceof HTMLInputElement && imageInput.files?.length
     ? imageInput.files[0]
     : null;
+  const outdated = outdatedInput instanceof HTMLInputElement && outdatedInput.checked;
   const removeImage = removeImageInput instanceof HTMLInputElement && removeImageInput.checked;
 
   const formData = new FormData();
   formData.append("description", description);
+  formData.append("outdated", outdated ? "1" : "0");
   formData.append("group", group);
   if (imageFile) {
     formData.append("image", imageFile);
@@ -8066,6 +8138,7 @@ async function handleFilesUpload(event) {
   const selectedImage = elements.filesImageInput?.files?.length ? elements.filesImageInput.files[0] : null;
   const group = normalizeFilesGroup(elements.filesGroupInput?.value || "");
   const description = String(elements.filesDescriptionInput?.value || "").trim();
+  const outdated = Boolean(elements.filesOutdatedInput?.checked);
   const formData = new FormData();
   formData.append("file", selectedFile);
   if (selectedImage) {
@@ -8077,6 +8150,7 @@ async function handleFilesUpload(event) {
   if (description) {
     formData.append("description", description);
   }
+  formData.append("outdated", outdated ? "1" : "0");
 
   state.files.uploadBusy = true;
   setFilesUploadFeedback("", "");
@@ -8458,6 +8532,11 @@ function handleFilesDownload(fileId) {
 
   const matchedFile = state.files.list.find((entry) => String(entry?.id || "").trim().toLowerCase() === normalizedFileId) || null;
   if (!matchedFile) {
+    return;
+  }
+  if (normalizeFilesBooleanFlag(matchedFile.outdated)) {
+    setFilesUploadFeedback(t("files_outdated_download_blocked"), "error");
+    renderFilesAccessView();
     return;
   }
 
@@ -13673,6 +13752,9 @@ function applyLanguage(lang, persist = true) {
   }
   syncFilesGroupSuggestions();
   elements.filesDescriptionInput.placeholder = t("files_upload_description_placeholder");
+  if (elements.filesUploadOutdatedLabel) {
+    elements.filesUploadOutdatedLabel.textContent = t("files_upload_outdated_label");
+  }
   refreshFilesDescriptionEditors();
   elements.filesEmptyState.textContent = t("files_empty_state");
   elements.filesDeleteTitle.textContent = t("files_delete_modal_title");

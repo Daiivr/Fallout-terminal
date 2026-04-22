@@ -6264,6 +6264,141 @@ body.is-files .files-browser-panel.is-disclaimer-accept-loading > :not(.files-di
   resize: vertical;
 }
 
+.files-upload-toggle,
+body.is-files .files-edit-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  width: 100%;
+  max-width: 100%;
+  padding: 8px 10px 8px 38px;
+  border: 1px solid rgba(139, 255, 139, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(139, 255, 139, 0.08), rgba(0, 0, 0, 0.18)),
+    rgba(0, 0, 0, 0.26);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.42) inset,
+    0 0 18px rgba(139, 255, 139, 0.04);
+  color: rgba(255, 239, 175, 0.9);
+  font-size: 11px;
+  line-height: 1.35;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease;
+}
+
+.files-upload-toggle input,
+body.is-files .files-edit-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.files-upload-toggle span,
+body.is-files .files-edit-toggle span {
+  overflow-wrap: anywhere;
+}
+
+.files-upload-toggle span::before,
+.files-upload-toggle span::after,
+body.is-files .files-edit-toggle span::before,
+body.is-files .files-edit-toggle span::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.files-upload-toggle span::before,
+body.is-files .files-edit-toggle span::before {
+  left: 11px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(139, 255, 139, 0.46);
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(to bottom, rgba(139, 255, 139, 0.08) 0 1px, transparent 1px 4px),
+    rgba(0, 0, 0, 0.48);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5) inset,
+    0 0 10px rgba(139, 255, 139, 0.08);
+  transform: translateY(-50%);
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.files-upload-toggle span::after,
+body.is-files .files-edit-toggle span::after {
+  left: 17px;
+  top: 50%;
+  width: 5px;
+  height: 9px;
+  border-right: 2px solid rgba(9, 23, 9, 0.94);
+  border-bottom: 2px solid rgba(9, 23, 9, 0.94);
+  opacity: 0;
+  transform: translateY(-64%) rotate(38deg) scale(0.72);
+  transition:
+    opacity 120ms ease,
+    transform 140ms ease;
+}
+
+.files-upload-toggle:hover,
+body.is-files .files-edit-toggle:hover {
+  border-color: rgba(255, 225, 122, 0.34);
+  color: #fff3ba;
+  background:
+    linear-gradient(180deg, rgba(255, 225, 122, 0.1), rgba(0, 0, 0, 0.2)),
+    rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.42) inset,
+    0 0 18px rgba(255, 225, 122, 0.08);
+}
+
+.files-upload-toggle:has(input:focus-visible),
+body.is-files .files-edit-toggle:has(input:focus-visible) {
+  outline: 1px solid var(--line-hot);
+  outline-offset: 2px;
+}
+
+.files-upload-toggle:has(input:checked),
+body.is-files .files-edit-toggle:has(input:checked) {
+  border-color: rgba(255, 139, 95, 0.42);
+  background:
+    linear-gradient(90deg, rgba(255, 118, 62, 0.12), rgba(139, 255, 139, 0.06)),
+    rgba(0, 0, 0, 0.32);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.42) inset,
+    0 0 18px rgba(255, 118, 62, 0.08);
+}
+
+.files-upload-toggle input:checked + span::before,
+body.is-files .files-edit-toggle input:checked + span::before {
+  border-color: rgba(255, 225, 122, 0.76);
+  background:
+    linear-gradient(180deg, rgba(255, 225, 122, 0.92), rgba(255, 139, 95, 0.76)),
+    rgba(255, 225, 122, 0.82);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.38) inset,
+    0 0 14px rgba(255, 225, 122, 0.18);
+}
+
+.files-upload-toggle input:checked + span::after,
+body.is-files .files-edit-toggle input:checked + span::after {
+  opacity: 1;
+  transform: translateY(-64%) rotate(38deg) scale(1);
+}
+
 .files-description-editor {
   display: grid;
   gap: 8px;
@@ -8525,6 +8660,12 @@ body.is-files .files-file-badge.is-image {
   background: rgba(139, 255, 139, 0.14);
 }
 
+body.is-files .files-file-badge.is-outdated {
+  border-color: rgba(255, 139, 95, 0.55);
+  color: #ffd0b8;
+  background: rgba(255, 118, 62, 0.16);
+}
+
 body.is-files .files-file-summary {
   margin: 0;
   display: flex;
@@ -8978,6 +9119,16 @@ body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action
   opacity: 0;
 }
 
+.files-card-action.is-icon.is-outdated {
+  border-color: rgba(255, 139, 95, 0.38);
+  color: #ffd0b8;
+  background: rgba(255, 118, 62, 0.08);
+}
+
+.files-card-action.is-icon.is-outdated[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 .files-card-action-icon {
   width: 18px;
   height: 18px;
@@ -9323,6 +9474,35 @@ body.is-files .files-description-block {
   border-top: 1px solid rgba(139, 255, 139, 0.16);
   display: grid;
   gap: 4px;
+}
+
+body.is-files .files-outdated-notice {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 139, 95, 0.38);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(255, 118, 62, 0.14), rgba(255, 118, 62, 0.03)),
+    rgba(0, 0, 0, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.34) inset,
+    0 0 18px rgba(255, 118, 62, 0.08);
+}
+
+body.is-files .files-outdated-notice-title {
+  color: #ffd0b8;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body.is-files .files-outdated-notice-body {
+  color: rgba(255, 239, 175, 0.86);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 body.is-files .files-description-value {

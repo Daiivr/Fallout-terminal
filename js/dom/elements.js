@@ -231,6 +231,8 @@ globalThis.FALLOUT_CODEX_ELEMENTS = {
   filesGroupSuggestMenu: document.getElementById("filesGroupSuggestMenu"),
   filesUploadDescLabel: document.getElementById("filesUploadDescLabel"),
   filesDescriptionInput: document.getElementById("filesDescriptionInput"),
+  filesOutdatedInput: document.getElementById("filesOutdatedInput"),
+  filesUploadOutdatedLabel: document.getElementById("filesUploadOutdatedLabel"),
   filesUploadBtn: document.getElementById("filesUploadBtn"),
   filesUploadFeedback: document.getElementById("filesUploadFeedback"),
   filesAdminRequestsPanel: document.getElementById("filesAdminRequestsPanel"),

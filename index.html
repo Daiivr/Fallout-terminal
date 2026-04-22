@@ -326,6 +326,10 @@
               maxlength="900"
               placeholder="Optional dossier note..."
             ></textarea>
+            <label class="files-upload-toggle" for="filesOutdatedInput">
+              <input id="filesOutdatedInput" type="checkbox" name="outdated" value="1" />
+              <span id="filesUploadOutdatedLabel">Mark as outdated and block downloads</span>
+            </label>
             <button id="filesUploadBtn" class="files-btn" type="submit">UPLOAD FILE</button>
           </form>
           <p id="filesUploadFeedback" class="files-upload-feedback" aria-live="polite" hidden></p>
