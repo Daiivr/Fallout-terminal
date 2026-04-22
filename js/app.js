@@ -422,6 +422,11 @@ const state = {
       fileName: "",
       deleting: false
     },
+    cautionModal: {
+      open: false,
+      fileId: "",
+      fileName: ""
+    },
     botAdmin: {
       loading: false,
       overview: null,
@@ -1454,6 +1459,7 @@ function hideFilesPage() {
   document.body.classList.remove("is-files");
   document.body.classList.remove("is-files-unauthorized", "is-files-guest");
   closeFilesDeleteModal({ force: true });
+  closeFilesCautionModal();
   closeFilesDisclaimerModal();
   closeFilesGroupRenameModal({ force: true });
   closeFilesAdminModal();
@@ -3816,6 +3822,7 @@ function normalizeFilesEntry(payload) {
     size: Math.max(0, Number(payload.size) || 0),
     downloadCount: Math.max(0, Number(payload.downloadCount || payload.download_count) || 0),
     outdated: normalizeFilesBooleanFlag(payload.outdated ?? payload.isOutdated),
+    caution: normalizeFilesBooleanFlag(payload.caution ?? payload.hasCaution),
     uploadedAt: String(payload.uploadedAt || payload.uploaded_at || "").trim(),
     updatedAt: String(payload.updatedAt || payload.updated_at || payload.uploadedAt || "").trim(),
     contentUpdatedAt: String(
@@ -3829,6 +3836,24 @@ function normalizeFilesEntry(payload) {
     imageName: String(payload.imageName || "").trim(),
     hasImage: Boolean(payload.hasImage || payload.imageUrl)
   };
+}
+
+function mergeFilesListEntry(fileId, patch = {}) {
+  const normalizedFileId = String(fileId || "").trim();
+  if (!normalizedFileId || !patch || typeof patch !== "object") {
+    return;
+  }
+
+  state.files.list = (Array.isArray(state.files.list) ? state.files.list : []).map((file) => {
+    if (String(file?.id || "").trim() !== normalizedFileId) {
+      return file;
+    }
+    return {
+      ...file,
+      ...patch,
+      id: file.id
+    };
+  });
 }
 
 function setFilesUploadFeedback(message = "", kind = "") {
@@ -4822,6 +4847,61 @@ function closeFilesDeleteModal({ force = false } = {}) {
   renderFilesDeleteModal();
 }
 
+function renderFilesCautionModal() {
+  const modalState = state.files.cautionModal;
+  const isOpen = Boolean(modalState.open);
+
+  if (elements.filesCautionTitle) {
+    elements.filesCautionTitle.textContent = t("files_caution_modal_title");
+  }
+  if (elements.filesCautionMessage) {
+    elements.filesCautionMessage.textContent = t("files_caution_modal_body");
+  }
+  if (elements.filesCautionRejectBtn) {
+    elements.filesCautionRejectBtn.textContent = t("files_caution_modal_reject");
+  }
+  if (elements.filesCautionConfirmBtn) {
+    elements.filesCautionConfirmBtn.textContent = t("files_caution_modal_confirm");
+  }
+  if (elements.filesCautionOverlay) {
+    elements.filesCautionOverlay.classList.toggle("is-active", isOpen);
+    elements.filesCautionOverlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  }
+}
+
+function openFilesCautionModal(fileId) {
+  const matchedFile = state.files.list.find((entry) => String(entry.id || "") === String(fileId || ""));
+  if (!matchedFile) {
+    return;
+  }
+
+  state.files.cautionModal.open = true;
+  state.files.cautionModal.fileId = String(fileId);
+  state.files.cautionModal.fileName = getFilesDisplayName(matchedFile);
+  renderFilesCautionModal();
+  setTimeout(() => {
+    elements.filesCautionConfirmBtn?.focus();
+  }, 0);
+}
+
+function closeFilesCautionModal() {
+  state.files.cautionModal.open = false;
+  state.files.cautionModal.fileId = "";
+  state.files.cautionModal.fileName = "";
+  renderFilesCautionModal();
+}
+
+function confirmFilesCautionDownload() {
+  const fileId = String(state.files.cautionModal.fileId || "").trim();
+  if (!fileId) {
+    closeFilesCautionModal();
+    return;
+  }
+
+  closeFilesCautionModal();
+  startFilesDownload(fileId);
+}
+
 function renderFilesBotAdminLeaveModal() {
   const modalState = state.files.botAdmin.leaveConfirm;
   const me = normalizeFilesProfile(state.files.me);
@@ -5149,7 +5229,10 @@ function getFilteredFilesList(files = []) {
     const group = normalizeSearchText(file.group || "");
     const description = normalizeSearchText(file.descriptionPlain || file.description || "");
     const uploader = normalizeSearchText(file.uploader || file.uploaderDiscordId || "");
-    const status = normalizeFilesBooleanFlag(file.outdated) ? normalizeSearchText(t("files_outdated_badge")) : "";
+    const status = [
+      normalizeFilesBooleanFlag(file.outdated) ? t("files_outdated_badge") : "",
+      normalizeFilesBooleanFlag(file.caution) ? t("files_caution_badge") : ""
+    ].filter(Boolean).map((value) => normalizeSearchText(value)).join(" ");
     const haystack = `${displayName} ${realName} ${type} ${group} ${description} ${uploader} ${status}`;
     return queryTokens.every((token) => haystack.includes(token));
   });
@@ -5290,6 +5373,23 @@ function createFilesOutdatedNotice() {
   return notice;
 }
 
+function createFilesCautionNotice() {
+  const notice = document.createElement("div");
+  notice.className = "files-outdated-notice files-caution-notice";
+
+  const title = document.createElement("strong");
+  title.className = "files-outdated-notice-title";
+  title.textContent = t("files_caution_notice_title");
+
+  const body = document.createElement("span");
+  body.className = "files-outdated-notice-body";
+  body.textContent = t("files_caution_notice_body");
+
+  notice.appendChild(title);
+  notice.appendChild(body);
+  return notice;
+}
+
 function appendFilesOutdatedBadge(container, file) {
   if (!(container instanceof HTMLElement) || !normalizeFilesBooleanFlag(file?.outdated)) {
     return;
@@ -5299,6 +5399,17 @@ function appendFilesOutdatedBadge(container, file) {
   outdatedBadge.className = "files-file-badge is-outdated";
   outdatedBadge.textContent = t("files_outdated_badge");
   container.appendChild(outdatedBadge);
+}
+
+function appendFilesCautionBadge(container, file) {
+  if (!(container instanceof HTMLElement) || !normalizeFilesBooleanFlag(file?.caution)) {
+    return;
+  }
+
+  const cautionBadge = document.createElement("span");
+  cautionBadge.className = "files-file-badge is-caution";
+  cautionBadge.textContent = t("files_caution_badge");
+  container.appendChild(cautionBadge);
 }
 
 function buildFilesDetailRenderKey(file, { isAdmin = false } = {}) {
@@ -5317,6 +5428,7 @@ function buildFilesDetailRenderKey(file, { isAdmin = false } = {}) {
     normalizeFilesGroup(safeFile.group),
     String(safeFile.description || ""),
     normalizeFilesBooleanFlag(safeFile.outdated) ? "1" : "0",
+    normalizeFilesBooleanFlag(safeFile.caution) ? "1" : "0",
     String(safeFile.uploader || safeFile.uploaderDiscordId || ""),
     String(safeFile.imageUrl || ""),
     String(safeFile.imageName || ""),
@@ -5446,6 +5558,22 @@ function createFilesAdminEditForm(file) {
   outdatedWrap.appendChild(outdatedText);
   form.appendChild(outdatedWrap);
 
+  const cautionWrap = document.createElement("label");
+  cautionWrap.className = "files-edit-toggle files-edit-toggle-caution";
+
+  const cautionInput = document.createElement("input");
+  cautionInput.type = "checkbox";
+  cautionInput.name = "caution";
+  cautionInput.value = "1";
+  cautionInput.checked = normalizeFilesBooleanFlag(file.caution);
+
+  const cautionText = document.createElement("span");
+  cautionText.textContent = t("files_edit_caution_label");
+
+  cautionWrap.appendChild(cautionInput);
+  cautionWrap.appendChild(cautionText);
+  form.appendChild(cautionWrap);
+
   const groupLabel = document.createElement("label");
   groupLabel.className = "files-edit-label";
   groupLabel.textContent = t("files_edit_group_label");
@@ -5527,6 +5655,7 @@ function renderFilesDetailCard(file) {
   const imageName = String(file.imageName || "").trim();
   const isReplacing = String(state.files.replace.fileId || "") === fileId;
   const isOutdated = normalizeFilesBooleanFlag(file.outdated);
+  const hasCaution = normalizeFilesBooleanFlag(file.caution);
 
   const detailCard = document.createElement("article");
   detailCard.className = "panel files-detail-card";
@@ -5589,9 +5718,14 @@ function renderFilesDetailCard(file) {
     downloadButton.setAttribute("aria-disabled", "true");
   }
   downloadButton.classList.toggle("is-outdated", isOutdated);
+  downloadButton.classList.toggle("is-caution", !isOutdated && hasCaution);
   decorateFilesActionIconButton(
     downloadButton,
-    isOutdated ? t("files_outdated_badge") : t("files_download_button"),
+    isOutdated
+      ? t("files_outdated_badge")
+      : hasCaution
+        ? t("files_caution_badge")
+        : t("files_download_button"),
     isOutdated ? "error" : "download"
   );
   actions.appendChild(downloadButton);
@@ -5633,6 +5767,8 @@ function renderFilesDetailCard(file) {
   detailBody.appendChild(metadata);
   if (isOutdated) {
     detailBody.appendChild(createFilesOutdatedNotice());
+  } else if (hasCaution) {
+    detailBody.appendChild(createFilesCautionNotice());
   }
   detailBody.appendChild(descriptionBlock);
   detailBody.appendChild(actions);
@@ -6652,6 +6788,7 @@ function renderFilesList() {
         badges.appendChild(imageBadge);
       }
       appendFilesOutdatedBadge(badges, file);
+      appendFilesCautionBadge(badges, file);
 
       cardHead.appendChild(title);
       cardHead.appendChild(badges);
@@ -6883,6 +7020,7 @@ function renderFilesList() {
           badges.appendChild(imageBadge);
         }
         appendFilesOutdatedBadge(badges, file);
+        appendFilesCautionBadge(badges, file);
 
         cardHead.appendChild(title);
         cardHead.appendChild(badges);
@@ -7050,6 +7188,9 @@ function renderFilesAccessView() {
   if ((!authorized || !isAdmin) && state.files.deleteModal.open) {
     closeFilesDeleteModal({ force: true });
   }
+  if (!authorized && state.files.cautionModal.open) {
+    closeFilesCautionModal();
+  }
 
   document.body.classList.toggle("is-files-unauthorized", !authorized);
   document.body.classList.toggle("is-files-guest", !loggedIn && !authorized);
@@ -7178,6 +7319,7 @@ function renderFilesAccessView() {
     renderFilesBotAdminLeaveModal();
     renderFilesAdminModals();
     renderFilesGroupRenameModal();
+    renderFilesCautionModal();
     renderFilesDisclaimerModal();
     renderFilesDecisionTabBadge();
     renderFilesList();
@@ -7339,6 +7481,7 @@ function renderFilesAccessView() {
   renderFilesBotAdminLeaveModal();
   renderFilesAdminModals();
   renderFilesGroupRenameModal();
+  renderFilesCautionModal();
   renderFilesDisclaimerModal();
   renderFilesDecisionTabBadge();
   renderFilesList();
@@ -8070,6 +8213,7 @@ async function handleFilesMetadataEdit(formElement) {
 
   const descriptionInput = formElement.querySelector("textarea[name=\"description\"]");
   const outdatedInput = formElement.querySelector("input[name=\"outdated\"]");
+  const cautionInput = formElement.querySelector("input[name=\"caution\"]");
   const groupInput = formElement.querySelector("input[name=\"group\"]");
   const imageInput = formElement.querySelector("input[name=\"image\"]");
   const removeImageInput = formElement.querySelector("input[name=\"removeImage\"]");
@@ -8084,11 +8228,13 @@ async function handleFilesMetadataEdit(formElement) {
     ? imageInput.files[0]
     : null;
   const outdated = outdatedInput instanceof HTMLInputElement && outdatedInput.checked;
+  const caution = cautionInput instanceof HTMLInputElement && cautionInput.checked;
   const removeImage = removeImageInput instanceof HTMLInputElement && removeImageInput.checked;
 
   const formData = new FormData();
   formData.append("description", description);
   formData.append("outdated", outdated ? "1" : "0");
+  formData.append("caution", caution ? "1" : "0");
   formData.append("group", group);
   if (imageFile) {
     formData.append("image", imageFile);
@@ -8101,11 +8247,20 @@ async function handleFilesMetadataEdit(formElement) {
   setFilesUploadFeedback("", "");
 
   try {
-    await requestJson(`/api/files/${encodeURIComponent(fileId)}`, {
+    const payload = await requestJson(`/api/files/${encodeURIComponent(fileId)}`, {
       method: "PATCH",
       body: formData
     });
+    const responseFile = normalizeFilesEntry(payload?.file);
+    mergeFilesListEntry(fileId, {
+      ...(responseFile || {}),
+      description,
+      group,
+      outdated,
+      caution
+    });
     setFilesUploadFeedback(t("files_edit_success"), "success");
+    renderFilesAccessView();
     await refreshFilesList();
   } catch (error) {
     setFilesUploadFeedback(String(error?.message || t("files_upload_error")), "error");
@@ -8139,6 +8294,7 @@ async function handleFilesUpload(event) {
   const group = normalizeFilesGroup(elements.filesGroupInput?.value || "");
   const description = String(elements.filesDescriptionInput?.value || "").trim();
   const outdated = Boolean(elements.filesOutdatedInput?.checked);
+  const caution = Boolean(elements.filesCautionInput?.checked);
   const formData = new FormData();
   formData.append("file", selectedFile);
   if (selectedImage) {
@@ -8151,6 +8307,7 @@ async function handleFilesUpload(event) {
     formData.append("description", description);
   }
   formData.append("outdated", outdated ? "1" : "0");
+  formData.append("caution", caution ? "1" : "0");
 
   state.files.uploadBusy = true;
   setFilesUploadFeedback("", "");
@@ -8524,7 +8681,7 @@ function scheduleFilesDownloadRefresh() {
   }, 1400);
 }
 
-function handleFilesDownload(fileId) {
+function startFilesDownload(fileId) {
   const normalizedFileId = String(fileId || "").trim().toLowerCase();
   if (!normalizedFileId) {
     return;
@@ -8532,11 +8689,6 @@ function handleFilesDownload(fileId) {
 
   const matchedFile = state.files.list.find((entry) => String(entry?.id || "").trim().toLowerCase() === normalizedFileId) || null;
   if (!matchedFile) {
-    return;
-  }
-  if (normalizeFilesBooleanFlag(matchedFile.outdated)) {
-    setFilesUploadFeedback(t("files_outdated_download_blocked"), "error");
-    renderFilesAccessView();
     return;
   }
 
@@ -8562,6 +8714,29 @@ function handleFilesDownload(fileId) {
 
   scheduleFilesDownloadRefresh();
   renderFilesList();
+}
+
+function handleFilesDownload(fileId) {
+  const normalizedFileId = String(fileId || "").trim().toLowerCase();
+  if (!normalizedFileId) {
+    return;
+  }
+
+  const matchedFile = state.files.list.find((entry) => String(entry?.id || "").trim().toLowerCase() === normalizedFileId) || null;
+  if (!matchedFile) {
+    return;
+  }
+  if (normalizeFilesBooleanFlag(matchedFile.outdated)) {
+    setFilesUploadFeedback(t("files_outdated_download_blocked"), "error");
+    renderFilesAccessView();
+    return;
+  }
+  if (normalizeFilesBooleanFlag(matchedFile.caution)) {
+    openFilesCautionModal(normalizedFileId);
+    return;
+  }
+
+  startFilesDownload(normalizedFileId);
 }
 
 function startFilesRename(fileId) {
@@ -13755,6 +13930,9 @@ function applyLanguage(lang, persist = true) {
   if (elements.filesUploadOutdatedLabel) {
     elements.filesUploadOutdatedLabel.textContent = t("files_upload_outdated_label");
   }
+  if (elements.filesUploadCautionLabel) {
+    elements.filesUploadCautionLabel.textContent = t("files_upload_caution_label");
+  }
   refreshFilesDescriptionEditors();
   elements.filesEmptyState.textContent = t("files_empty_state");
   elements.filesDeleteTitle.textContent = t("files_delete_modal_title");
@@ -13833,6 +14011,7 @@ function applyLanguage(lang, persist = true) {
   renderFilesDeleteModal();
   renderFilesAdminModals();
   renderFilesGroupRenameModal();
+  renderFilesCautionModal();
   renderFilesDisclaimerModal();
   if (document.body.classList.contains("is-classified")) {
     elements.mainTitle.textContent = t("classified_main_title");
@@ -13960,6 +14139,7 @@ function wireEvents() {
   const filesBotAdminDiagnosticsModalRoot = elements.filesBotAdminDiagnosticsOverlay?.querySelector(".files-bot-admin-diagnostics-core") || null;
   const filesBotAdminServerModalRoot = elements.filesBotAdminServerOverlay?.querySelector(".files-bot-admin-server-core") || null;
   const filesGroupRenameModalRoot = elements.filesGroupRenameOverlay?.querySelector(".files-group-rename-core") || null;
+  const filesCautionModalRoot = elements.filesCautionOverlay?.querySelector(".files-caution-core") || null;
   const filesDisclaimerModalRoot = elements.filesDisclaimerOverlay?.querySelector(".files-disclaimer-core") || null;
   const filesUploadModalRoot = elements.filesUploadOverlay?.querySelector(".files-admin-modal-core") || null;
   const filesAdminRequestsModalRoot = elements.filesAdminRequestsOverlay?.querySelector(".files-admin-modal-core") || null;
@@ -14000,6 +14180,12 @@ function wireEvents() {
         return true;
       }
       return !filesGroupRenameModalRoot.contains(target);
+    }
+    if (elements.filesCautionOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node) || !(filesCautionModalRoot instanceof Node)) {
+        return true;
+      }
+      return !filesCautionModalRoot.contains(target);
     }
     if (elements.filesDisclaimerOverlay?.classList.contains("is-active")) {
       if (!(target instanceof Node) || !(filesDisclaimerModalRoot instanceof Node)) {
@@ -14428,6 +14614,17 @@ function wireEvents() {
       closeFilesDeleteModal();
     }
   });
+  elements.filesCautionRejectBtn?.addEventListener("click", () => {
+    closeFilesCautionModal();
+  });
+  elements.filesCautionConfirmBtn?.addEventListener("click", () => {
+    confirmFilesCautionDownload();
+  });
+  elements.filesCautionOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.filesCautionOverlay) {
+      closeFilesCautionModal();
+    }
+  });
   elements.filesBotAdminLeaveCancelBtn?.addEventListener("click", () => {
     closeFilesBotAdminLeaveModal();
   });
@@ -14593,6 +14790,11 @@ function wireEvents() {
       if (!isDesktopModalViewport()) {
         closeFilesDisclaimerModal();
       }
+      return;
+    }
+
+    if (elements.filesCautionOverlay?.classList.contains("is-active")) {
+      closeFilesCautionModal();
       return;
     }
 

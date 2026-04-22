@@ -2685,6 +2685,28 @@ body.is-silo-dossier-open {
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.65) inset, 0 18px 80px rgba(0, 0, 0, 0.78);
 }
 
+.files-caution-core {
+  border-color: rgba(255, 225, 122, 0.42);
+  background:
+    linear-gradient(135deg, rgba(255, 225, 122, 0.12), rgba(255, 118, 62, 0.05) 42%, rgba(0, 0, 0, 0.24)),
+    rgba(0, 0, 0, 0.82);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.65) inset,
+    0 0 34px rgba(255, 225, 122, 0.08),
+    0 18px 80px rgba(0, 0, 0, 0.78);
+}
+
+.files-caution-confirm {
+  border-color: rgba(139, 255, 139, 0.46);
+  color: var(--fg-bright);
+  background: rgba(139, 255, 139, 0.08);
+}
+
+.files-caution-confirm:hover {
+  border-color: rgba(139, 255, 139, 0.66);
+  background: rgba(139, 255, 139, 0.13);
+}
+
 .intel-bot-modal-core {
   position: relative;
   width: min(520px, 100%);
@@ -8666,6 +8688,12 @@ body.is-files .files-file-badge.is-outdated {
   background: rgba(255, 118, 62, 0.16);
 }
 
+body.is-files .files-file-badge.is-caution {
+  border-color: rgba(255, 225, 122, 0.55);
+  color: #fff0be;
+  background: rgba(255, 225, 122, 0.14);
+}
+
 body.is-files .files-file-summary {
   margin: 0;
   display: flex;
@@ -9129,6 +9157,12 @@ body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action
   cursor: not-allowed;
 }
 
+.files-card-action.is-icon.is-caution {
+  border-color: rgba(255, 225, 122, 0.42);
+  color: #fff0be;
+  background: rgba(255, 225, 122, 0.08);
+}
+
 .files-card-action-icon {
   width: 18px;
   height: 18px;
@@ -9503,6 +9537,20 @@ body.is-files .files-outdated-notice-body {
   font-size: 12px;
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+body.is-files .files-caution-notice {
+  border-color: rgba(255, 225, 122, 0.36);
+  background:
+    linear-gradient(90deg, rgba(255, 225, 122, 0.12), rgba(139, 255, 139, 0.03)),
+    rgba(0, 0, 0, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.34) inset,
+    0 0 18px rgba(255, 225, 122, 0.08);
+}
+
+body.is-files .files-caution-notice .files-outdated-notice-title {
+  color: #fff0be;
 }
 
 body.is-files .files-description-value {

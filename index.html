@@ -156,6 +156,24 @@
         </div>
       </div>
     </div>
+    <div id="filesCautionOverlay" class="files-delete-overlay files-caution-overlay" aria-hidden="true">
+      <div
+        class="files-delete-core files-caution-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesCautionTitle"
+        aria-describedby="filesCautionMessage"
+      >
+        <p id="filesCautionTitle" class="files-delete-title">WARNING</p>
+        <p id="filesCautionMessage" class="files-delete-message">
+          Be careful. Bans have been reported from using this class of mods after the latest update.
+        </p>
+        <div class="files-delete-actions files-caution-actions">
+          <button id="filesCautionRejectBtn" class="files-btn is-delete" type="button">REJECT</button>
+          <button id="filesCautionConfirmBtn" class="files-btn files-caution-confirm" type="button">CONFIRM DOWNLOAD</button>
+        </div>
+      </div>
+    </div>
     <div id="filesBotAdminLeaveOverlay" class="files-delete-overlay files-bot-admin-leave-overlay" aria-hidden="true">
       <div
         class="files-delete-core files-bot-admin-leave-core"
@@ -329,6 +347,10 @@
             <label class="files-upload-toggle" for="filesOutdatedInput">
               <input id="filesOutdatedInput" type="checkbox" name="outdated" value="1" />
               <span id="filesUploadOutdatedLabel">Mark as outdated and block downloads</span>
+            </label>
+            <label class="files-upload-toggle files-upload-toggle-caution" for="filesCautionInput">
+              <input id="filesCautionInput" type="checkbox" name="caution" value="1" />
+              <span id="filesUploadCautionLabel">Mark as warning and require download confirmation</span>
             </label>
             <button id="filesUploadBtn" class="files-btn" type="submit">UPLOAD FILE</button>
           </form>

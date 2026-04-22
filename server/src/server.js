@@ -1151,6 +1151,7 @@ function normalizeMetadataFileEntry(entry) {
   const imageName = hasImage ? (sanitizeDisplayFilename(entry.imageName || "image") || "image") : "";
   const imageSize = hasImage ? Math.max(0, Number(entry.imageSize) || 0) : 0;
   const outdated = parseBoolean(entry.outdated ?? entry.isOutdated, false);
+  const caution = parseBoolean(entry.caution ?? entry.hasCaution, false);
 
   return {
     id: id.toLowerCase(),
@@ -1161,6 +1162,7 @@ function normalizeMetadataFileEntry(entry) {
     size: Number.isFinite(size) && size >= 0 ? size : 0,
     downloadCount: Number.isFinite(downloadCount) && downloadCount > 0 ? Math.floor(downloadCount) : 0,
     outdated,
+    caution,
     description: sanitizeFileDescription(entry.description),
     group: sanitizeFileGroup(entry.group),
     uploadedAt: uploadedAt || new Date(0).toISOString(),
@@ -1214,6 +1216,7 @@ function buildFileListEntry(entry) {
     size: normalized.size,
     downloadCount: normalized.downloadCount,
     outdated: normalized.outdated,
+    caution: normalized.caution,
     uploadedAt: normalized.uploadedAt,
     updatedAt: normalized.updatedAt || normalized.uploadedAt,
     contentUpdatedAt: normalized.contentUpdatedAt || normalized.uploadedAt,
@@ -3300,6 +3303,7 @@ app.post("/api/files/upload", requireAdmin, uploadFileWithOptionalImage, (req, r
   const description = sanitizeFileDescription(req.body.description);
   const group = sanitizeFileGroup(req.body.group);
   const outdated = parseBoolean(req.body.outdated, false);
+  const caution = parseBoolean(req.body.caution, false);
   const hasImageUpload = Boolean(uploadedImage);
   const safeImageName = hasImageUpload
     ? (sanitizeDisplayFilename(uploadedImage.originalname || "image") || "image")
@@ -3339,6 +3343,7 @@ app.post("/api/files/upload", requireAdmin, uploadFileWithOptionalImage, (req, r
     size: uploadedFile.size,
     downloadCount: 0,
     outdated,
+    caution,
     description,
     group,
     uploadedAt: now,
@@ -3495,6 +3500,7 @@ app.patch("/api/files/:id", requireAdmin, uploadFileMetadataUpdate, (req, res) =
   const hasGroup = Object.prototype.hasOwnProperty.call(req.body || {}, "group");
   const hasDisplayName = Object.prototype.hasOwnProperty.call(req.body || {}, "displayName");
   const hasOutdated = Object.prototype.hasOwnProperty.call(req.body || {}, "outdated");
+  const hasCaution = Object.prototype.hasOwnProperty.call(req.body || {}, "caution");
   const removeImage = parseBoolean(req.body?.removeImage, false);
   const imageMimeType = uploadedImage
     ? String(uploadedImage.mimetype || "application/octet-stream").trim()
@@ -3540,6 +3546,9 @@ app.patch("/api/files/:id", requireAdmin, uploadFileMetadataUpdate, (req, res) =
     }
     if (hasOutdated) {
       nextEntry.outdated = parseBoolean(req.body.outdated, false);
+    }
+    if (hasCaution) {
+      nextEntry.caution = parseBoolean(req.body.caution, false);
     }
 
     if (uploadedImage) {
