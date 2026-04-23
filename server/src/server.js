@@ -15,6 +15,7 @@ const app = express();
 app.set("trust proxy", 1);
 
 const SITE_ROOT = path.resolve(__dirname, "..", "..");
+const INDEX_PAGE = path.join(SITE_ROOT, "index.html");
 const NOT_FOUND_PAGE = path.join(SITE_ROOT, "404.html");
 const configuredStorageDir = String(process.env.STORAGE_DIR || "").trim();
 const STORAGE_DIR = configuredStorageDir
@@ -57,6 +58,11 @@ const BOT_ADMIN_API_PORT_RAW = String(process.env.BOT_ADMIN_API_PORT || "").trim
 const BOT_ADMIN_API_TOKEN = String(process.env.BOT_ADMIN_API_TOKEN || "").trim();
 const ACCESS_REQUEST_MAX_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 const DEFAULT_AUTH_RETURN_TO = "/#files";
+const DEFAULT_SHARE_PREVIEW_IMAGE_PATH = "/assets/images/image.png";
+const FILE_SHARE_ROUTE_PREFIX = "/share/";
+const FILE_SHARE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const FILE_SHARE_META_MAX_CHARS = 260;
+const INDEX_HTML_TEMPLATE = fs.readFileSync(INDEX_PAGE, "utf8");
 
 function parsePositiveInteger(value, fallback) {
   const parsed = Number.parseInt(String(value || "").trim(), 10);
@@ -1227,6 +1233,344 @@ function buildFileListEntry(entry) {
     imageName: normalized.imageName,
     hasImage: Boolean(imageUrl)
   };
+}
+
+function normalizeFileShareSlugValue(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 96);
+}
+
+function isValidFileShareSlug(value) {
+  return FILE_SHARE_SLUG_PATTERN.test(String(value || "").trim());
+}
+
+function stripFileShareExtension(name) {
+  const value = String(name || "").trim();
+  if (!value) {
+    return "";
+  }
+  const dotIndex = value.lastIndexOf(".");
+  if (dotIndex <= 0) {
+    return value;
+  }
+  return value.slice(0, dotIndex);
+}
+
+function buildFileShareSlug(entry) {
+  const normalized = normalizeMetadataFileEntry(entry);
+  if (!normalized) {
+    return "";
+  }
+
+  const stableName = stripFileShareExtension(normalized.name) || normalized.displayName || normalized.name;
+  const slugBase = normalizeFileShareSlugValue(stableName) || "shared-file";
+  const shortId = normalized.id.replace(/-/g, "").slice(0, 8);
+  return shortId ? `${slugBase}-${shortId}` : slugBase;
+}
+
+function resolveSharedFileEntryBySlug(shareSlug) {
+  const normalizedSlug = normalizeFileShareSlugValue(shareSlug);
+  if (!isValidFileShareSlug(normalizedSlug)) {
+    return null;
+  }
+
+  return readMetadataStore().find((entry) => buildFileShareSlug(entry) === normalizedSlug) || null;
+}
+
+function getFileShareDisplayName(entry) {
+  const normalized = normalizeMetadataFileEntry(entry);
+  if (!normalized) {
+    return "Shared File";
+  }
+  return normalized.displayName || normalized.name || "Shared File";
+}
+
+function stripFileDescriptionForMeta(value) {
+  return String(value || "")
+    .replace(/\[(?:\/)?[a-z]+\]/gi, " ")
+    .replace(/\r\n/g, " ")
+    .replace(/\r/g, " ")
+    .replace(/\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function truncateMetaText(value, maxChars = FILE_SHARE_META_MAX_CHARS) {
+  const normalized = String(value || "").trim();
+  if (!normalized || normalized.length <= maxChars) {
+    return normalized;
+  }
+  return `${normalized.slice(0, Math.max(0, maxChars - 3)).trimEnd()}...`;
+}
+
+function formatFileSizeForMeta(bytes) {
+  const size = Number(bytes);
+  if (!Number.isFinite(size) || size < 0) {
+    return "";
+  }
+  if (size < 1024) {
+    return `${Math.round(size)} B`;
+  }
+
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = size / 1024;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  const precision = value >= 10 ? 0 : 1;
+  return `${value.toFixed(precision).replace(/\.0$/, "")} ${units[unitIndex]}`;
+}
+
+function resolveFileTypeForMeta(entry) {
+  const normalized = normalizeMetadataFileEntry(entry);
+  if (!normalized) {
+    return "FILE";
+  }
+
+  const name = normalized.displayName || normalized.name;
+  const extension = path.extname(name).replace(/^\./, "").trim();
+  if (extension) {
+    return extension.toUpperCase();
+  }
+
+  const mimeType = String(normalized.mimeType || "").trim();
+  if (mimeType && mimeType !== "application/octet-stream") {
+    return mimeType;
+  }
+
+  return "FILE";
+}
+
+function formatFileMetaDate(value) {
+  const timestamp = Date.parse(String(value || "").trim());
+  if (!Number.isFinite(timestamp)) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(new Date(timestamp));
+}
+
+function buildSharedFileMetaTitle(entry) {
+  const normalized = normalizeMetadataFileEntry(entry);
+  if (!normalized) {
+    return "Fallout Codex | Pip-Boy Terminal";
+  }
+
+  const statusPrefix = normalized.outdated
+    ? "[OUTDATED] "
+    : (normalized.caution ? "[WARNING] " : "");
+  const title = `${statusPrefix}${getFileShareDisplayName(normalized)} | Fallout Codex File`;
+  return truncateMetaText(title, 120);
+}
+
+function buildSharedFileMetaDescription(entry) {
+  const normalized = normalizeMetadataFileEntry(entry);
+  if (!normalized) {
+    return "Shared Fallout Codex file.";
+  }
+
+  const summaryParts = [];
+  const fileType = resolveFileTypeForMeta(normalized);
+  const sizeLabel = formatFileSizeForMeta(normalized.size);
+  const updatedLabel = formatFileMetaDate(normalized.contentUpdatedAt || normalized.updatedAt || normalized.uploadedAt);
+
+  if (fileType) {
+    summaryParts.push(fileType);
+  }
+  if (sizeLabel) {
+    summaryParts.push(sizeLabel);
+  }
+  if (normalized.group) {
+    summaryParts.push(`Group: ${normalized.group}`);
+  }
+  if (updatedLabel) {
+    summaryParts.push(`Updated: ${updatedLabel}`);
+  }
+  if (normalized.outdated) {
+    summaryParts.push("Status: outdated, downloads blocked");
+  } else if (normalized.caution) {
+    summaryParts.push("Status: warning flagged");
+  }
+
+  const description = stripFileDescriptionForMeta(normalized.description);
+  const summary = summaryParts.join(" | ");
+  const combined = description
+    ? (summary ? `${summary} | ${description}` : description)
+    : (summary ? `Shared Fallout Codex file | ${summary}` : "Shared Fallout Codex file.");
+
+  return truncateMetaText(combined, FILE_SHARE_META_MAX_CHARS);
+}
+
+function buildFileSharePath(shareSlug) {
+  const normalizedSlug = normalizeFileShareSlugValue(shareSlug);
+  if (!isValidFileShareSlug(normalizedSlug)) {
+    return FILE_SHARE_ROUTE_PREFIX;
+  }
+  return `${FILE_SHARE_ROUTE_PREFIX}${encodeURIComponent(normalizedSlug)}`;
+}
+
+function buildAbsoluteSiteUrl(req, pathname) {
+  const baseUrl = getRequestBaseUrl(req);
+  if (!baseUrl) {
+    return "";
+  }
+
+  try {
+    return new URL(String(pathname || "/"), `${baseUrl}/`).toString();
+  } catch {
+    return "";
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function replaceOrInsertHeadTag(html, pattern, replacement) {
+  if (pattern.test(html)) {
+    return html.replace(pattern, replacement);
+  }
+  return html.replace(/<\/head>/i, `${replacement}\n</head>`);
+}
+
+function upsertHeadMetaByName(html, name, content) {
+  const tag = `  <meta name="${escapeHtml(name)}" content="${escapeHtml(content)}" />`;
+  const pattern = new RegExp(`\\s*<meta\\b[^>]*\\bname=["']${escapeRegExp(name)}["'][^>]*>`, "i");
+  return replaceOrInsertHeadTag(html, pattern, tag);
+}
+
+function upsertHeadMetaByProperty(html, property, content) {
+  const tag = `  <meta property="${escapeHtml(property)}" content="${escapeHtml(content)}" />`;
+  const pattern = new RegExp(`\\s*<meta\\b[^>]*\\bproperty=["']${escapeRegExp(property)}["'][^>]*>`, "i");
+  return replaceOrInsertHeadTag(html, pattern, tag);
+}
+
+function removeHeadMetaByProperty(html, property) {
+  const pattern = new RegExp(`\\s*<meta\\b[^>]*\\bproperty=["']${escapeRegExp(property)}["'][^>]*>`, "ig");
+  return html.replace(pattern, "");
+}
+
+function upsertCanonicalLink(html, href) {
+  const tag = `  <link rel="canonical" href="${escapeHtml(href)}" />`;
+  const pattern = /<link\b[^>]*\brel=["']canonical["'][^>]*>/i;
+  return replaceOrInsertHeadTag(html, pattern, tag);
+}
+
+function upsertDocumentTitle(html, title) {
+  const tag = `  <title>${escapeHtml(title)}</title>`;
+  return replaceOrInsertHeadTag(html, /<title>[\s\S]*?<\/title>/i, tag);
+}
+
+function buildSharedFilePreviewImageUrl(req, entry, shareSlug) {
+  const normalized = normalizeMetadataFileEntry(entry);
+  if (!normalized) {
+    return buildAbsoluteSiteUrl(req, DEFAULT_SHARE_PREVIEW_IMAGE_PATH);
+  }
+
+  const imagePath = normalized.imageStoredName
+    ? `${buildFileSharePath(shareSlug)}/image`
+    : DEFAULT_SHARE_PREVIEW_IMAGE_PATH;
+  return buildAbsoluteSiteUrl(req, imagePath);
+}
+
+function renderSharedFilePage(entry, req) {
+  const normalized = normalizeMetadataFileEntry(entry);
+  if (!normalized) {
+    return INDEX_HTML_TEMPLATE;
+  }
+
+  const shareSlug = buildFileShareSlug(normalized);
+  const shareUrl = buildAbsoluteSiteUrl(req, buildFileSharePath(shareSlug));
+  const previewImageUrl = buildSharedFilePreviewImageUrl(req, normalized, shareSlug);
+  const previewImageMimeType = normalized.imageStoredName
+    ? (String(normalized.imageMimeType || "").trim() || "application/octet-stream")
+    : "image/png";
+  const previewImageAlt = `${getFileShareDisplayName(normalized)} preview`;
+  const title = buildSharedFileMetaTitle(normalized);
+  const description = buildSharedFileMetaDescription(normalized);
+
+  let html = INDEX_HTML_TEMPLATE;
+  html = upsertDocumentTitle(html, title);
+  html = upsertHeadMetaByName(html, "description", description);
+  html = upsertHeadMetaByProperty(html, "og:title", title);
+  html = upsertHeadMetaByProperty(html, "og:description", description);
+  html = upsertHeadMetaByProperty(html, "og:type", "website");
+  if (shareUrl) {
+    html = upsertHeadMetaByProperty(html, "og:url", shareUrl);
+    html = upsertCanonicalLink(html, shareUrl);
+  }
+  if (previewImageUrl) {
+    html = upsertHeadMetaByProperty(html, "og:image", previewImageUrl);
+    if (previewImageUrl.startsWith("https://")) {
+      html = upsertHeadMetaByProperty(html, "og:image:secure_url", previewImageUrl);
+    } else {
+      html = removeHeadMetaByProperty(html, "og:image:secure_url");
+    }
+    html = upsertHeadMetaByProperty(html, "og:image:type", previewImageMimeType);
+    html = upsertHeadMetaByProperty(html, "og:image:alt", previewImageAlt);
+    html = upsertHeadMetaByName(html, "twitter:image", previewImageUrl);
+  }
+  html = removeHeadMetaByProperty(html, "og:image:width");
+  html = removeHeadMetaByProperty(html, "og:image:height");
+  html = upsertHeadMetaByName(html, "twitter:card", "summary_large_image");
+  html = upsertHeadMetaByName(html, "twitter:title", title);
+  html = upsertHeadMetaByName(html, "twitter:description", description);
+  html = upsertHeadMetaByName(html, "robots", "noindex");
+  return html;
+}
+
+function sendStoredFileImage(res, entry) {
+  const normalized = normalizeMetadataFileEntry(entry);
+  if (!normalized) {
+    res.status(404).json({ error: "File not found" });
+    return;
+  }
+
+  const imageStoredName = String(normalized.imageStoredName || "").trim();
+  if (!imageStoredName) {
+    res.status(404).json({ error: "Image not found" });
+    return;
+  }
+
+  const storedPath = resolveUploadStoredPath(imageStoredName);
+  if (!storedPath) {
+    res.status(400).json({ error: "Invalid storage path" });
+    return;
+  }
+  if (!fs.existsSync(storedPath)) {
+    res.status(404).json({ error: "Image blob not found" });
+    return;
+  }
+
+  const safeImageName = sanitizeDisplayFilename(normalized.imageName || `${normalized.name || "image"}.png`) || "image.png";
+  const quotedImageName = safeImageName.replace(/"/g, "");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Content-Disposition", `inline; filename="${quotedImageName}"`);
+  res.type(normalized.imageMimeType || "application/octet-stream");
+  res.sendFile(storedPath);
 }
 
 function formatDiscordUsername(userPayload) {
@@ -3641,28 +3985,7 @@ app.get("/api/files/:id/image", requireAuthorized, (req, res) => {
     return;
   }
 
-  const imageStoredName = String(entry.imageStoredName || "").trim();
-  if (!imageStoredName) {
-    res.status(404).json({ error: "Image not found" });
-    return;
-  }
-
-  const storedPath = resolveUploadStoredPath(imageStoredName);
-  if (!storedPath) {
-    res.status(400).json({ error: "Invalid storage path" });
-    return;
-  }
-  if (!fs.existsSync(storedPath)) {
-    res.status(404).json({ error: "Image blob not found" });
-    return;
-  }
-
-  const safeImageName = sanitizeDisplayFilename(entry.imageName || `${entry.name || "image"}.png`) || "image.png";
-  const quotedImageName = safeImageName.replace(/"/g, "");
-  res.setHeader("Cache-Control", "no-store");
-  res.setHeader("Content-Disposition", `inline; filename="${quotedImageName}"`);
-  res.type(entry.imageMimeType || "application/octet-stream");
-  res.sendFile(storedPath);
+  sendStoredFileImage(res, entry);
 });
 
 app.get("/api/files/:id/download", requireAuthorized, (req, res) => {
@@ -3781,11 +4104,29 @@ app.post("/api/visits", (req, res) => {
 app.use(express.static(SITE_ROOT));
 
 app.get("/", (_req, res) => {
-  res.sendFile(path.join(SITE_ROOT, "index.html"));
+  res.sendFile(INDEX_PAGE);
 });
 
-app.get("/share/:shareSlug", (_req, res) => {
-  res.sendFile(path.join(SITE_ROOT, "index.html"));
+app.get("/share/:shareSlug/image", (req, res) => {
+  const entry = resolveSharedFileEntryBySlug(req.params.shareSlug);
+  if (!entry) {
+    res.status(404).json({ error: "File not found" });
+    return;
+  }
+
+  sendStoredFileImage(res, entry);
+});
+
+app.get("/share/:shareSlug", (req, res) => {
+  const entry = resolveSharedFileEntryBySlug(req.params.shareSlug);
+  if (!entry) {
+    res.sendFile(INDEX_PAGE);
+    return;
+  }
+
+  res.setHeader("Cache-Control", "no-store");
+  res.type("html");
+  res.send(renderSharedFilePage(entry, req));
 });
 
 app.use((req, res) => {

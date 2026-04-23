@@ -9157,6 +9157,12 @@ body.is-files .files-detail-actions .files-card-action.is-icon[data-files-action
   cursor: not-allowed;
 }
 
+.files-card-action.is-icon.is-outdated .files-card-action-icon {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.2;
+}
+
 .files-card-action.is-icon.is-caution {
   border-color: rgba(255, 225, 122, 0.42);
   color: #fff0be;

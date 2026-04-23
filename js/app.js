@@ -5465,6 +5465,14 @@ function createFilesActionIcon(kind) {
     return svg;
   }
 
+  if (kind === "download-blocked") {
+    appendShape("path", { d: "M12 6.25v7.25" });
+    appendShape("path", { d: "m8.75 10.75 3.25 3.25 3.25-3.25" });
+    appendShape("path", { d: "M7 18h10" });
+    appendShape("path", { d: "M6 6 18 18" });
+    return svg;
+  }
+
   if (kind === "replace") {
     appendShape("path", { d: "M20 7v5h-5" });
     appendShape("path", { d: "M20 12a8 8 0 0 0-13.8-4.8L4 9.5" });
@@ -5726,7 +5734,7 @@ function renderFilesDetailCard(file) {
       : hasCaution
         ? t("files_caution_badge")
         : t("files_download_button"),
-    isOutdated ? "error" : "download"
+    isOutdated ? "download-blocked" : "download"
   );
   actions.appendChild(downloadButton);
 
