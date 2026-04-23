@@ -306,53 +306,85 @@
         <article id="filesUploadPanel" class="panel files-upload-panel" hidden>
           <h2 id="filesUploadTitle">ADMIN CONSOLE</h2>
           <form id="filesUploadForm" class="files-upload-form" novalidate>
-            <label id="filesUploadFileLabel" for="filesUploadInput">File</label>
-            <input id="filesUploadInput" class="files-upload-input" type="file" name="file" />
-            <label id="filesUploadImageLabel" for="filesImageInput">Image</label>
-            <input id="filesImageInput" class="files-upload-input files-upload-image-input" type="file" name="image" accept="image/*" />
-            <label id="filesUploadGroupLabel" for="filesGroupInput">Group</label>
-            <input
-              id="filesGroupInput"
-              name="group"
-              class="files-upload-text"
-              type="text"
-              maxlength="80"
-              placeholder="Optional group..."
-            />
-            <div id="filesGroupSuggestDropdown" class="files-admin-requests-filter-dropdown files-group-suggest-dropdown" data-files-group-suggest-dropdown="true" data-files-group-suggest-target="filesGroupInput">
-              <button
-                id="filesGroupSuggestBtn"
-                class="files-admin-requests-filter-trigger files-group-suggest-trigger"
-                type="button"
-                data-files-action="toggle-group-suggest-menu"
-                data-files-group-suggest-toggle="true"
-                aria-haspopup="listbox"
-                aria-expanded="false"
-                aria-label="Select existing group"
-              >
-                <span id="filesGroupSuggestCurrent" data-files-group-suggest-current="true">Select existing group...</span>
-                <span class="files-admin-requests-filter-caret" aria-hidden="true">▾</span>
-              </button>
-              <ul id="filesGroupSuggestMenu" class="files-admin-requests-filter-menu files-group-suggest-menu" data-files-group-suggest-menu="true" role="listbox" hidden></ul>
+            <div class="files-upload-grid">
+              <section class="files-upload-shell files-upload-shell-assets" aria-labelledby="filesUploadAssetsLabel">
+                <div class="files-upload-shell-head">
+                  <p id="filesUploadAssetsLabel" class="files-upload-shell-label">FILE ROUTING</p>
+                  <p id="filesUploadAssetsHint" class="files-upload-shell-hint">
+                    Load the package, cover image, and destination group.
+                  </p>
+                </div>
+                <div class="files-upload-field">
+                  <label id="filesUploadFileLabel" for="filesUploadInput">File</label>
+                  <input id="filesUploadInput" class="files-upload-input" type="file" name="file" />
+                </div>
+                <div class="files-upload-field">
+                  <label id="filesUploadImageLabel" for="filesImageInput">Image</label>
+                  <input id="filesImageInput" class="files-upload-input files-upload-image-input" type="file" name="image" accept="image/*" />
+                </div>
+                <div class="files-upload-field">
+                  <label id="filesUploadGroupLabel" for="filesGroupInput">Group</label>
+                  <input
+                    id="filesGroupInput"
+                    name="group"
+                    class="files-upload-text"
+                    type="text"
+                    maxlength="80"
+                    placeholder="Optional group..."
+                  />
+                </div>
+                <div class="files-upload-field">
+                  <div id="filesGroupSuggestDropdown" class="files-admin-requests-filter-dropdown files-group-suggest-dropdown" data-files-group-suggest-dropdown="true" data-files-group-suggest-target="filesGroupInput">
+                    <button
+                      id="filesGroupSuggestBtn"
+                      class="files-admin-requests-filter-trigger files-group-suggest-trigger"
+                      type="button"
+                      data-files-action="toggle-group-suggest-menu"
+                      data-files-group-suggest-toggle="true"
+                      aria-haspopup="listbox"
+                      aria-expanded="false"
+                      aria-label="Select existing group"
+                    >
+                      <span id="filesGroupSuggestCurrent" data-files-group-suggest-current="true">Select existing group...</span>
+                      <span class="files-admin-requests-filter-caret" aria-hidden="true">▾</span>
+                    </button>
+                    <ul id="filesGroupSuggestMenu" class="files-admin-requests-filter-menu files-group-suggest-menu" data-files-group-suggest-menu="true" role="listbox" hidden></ul>
+                  </div>
+                </div>
+              </section>
+              <section class="files-upload-shell files-upload-shell-dossier" aria-labelledby="filesUploadDossierLabel">
+                <div class="files-upload-shell-head">
+                  <p id="filesUploadDossierLabel" class="files-upload-shell-label">DOSSIER INPUT</p>
+                  <p id="filesUploadDossierHint" class="files-upload-shell-hint">
+                    Write the note, preview the styling, and set release flags.
+                  </p>
+                </div>
+                <div class="files-upload-field">
+                  <label id="filesUploadDescLabel" for="filesDescriptionInput">Description</label>
+                  <textarea
+                    id="filesDescriptionInput"
+                    name="description"
+                    class="files-upload-description"
+                    rows="3"
+                    maxlength="900"
+                    placeholder="Optional dossier note..."
+                  ></textarea>
+                </div>
+                <div class="files-upload-toggle-group">
+                  <label class="files-upload-toggle" for="filesOutdatedInput">
+                    <input id="filesOutdatedInput" type="checkbox" name="outdated" value="1" />
+                    <span id="filesUploadOutdatedLabel">Mark as outdated and block downloads</span>
+                  </label>
+                  <label class="files-upload-toggle files-upload-toggle-caution" for="filesCautionInput">
+                    <input id="filesCautionInput" type="checkbox" name="caution" value="1" />
+                    <span id="filesUploadCautionLabel">Mark as warning and require download confirmation</span>
+                  </label>
+                </div>
+              </section>
             </div>
-            <label id="filesUploadDescLabel" for="filesDescriptionInput">Description</label>
-            <textarea
-              id="filesDescriptionInput"
-              name="description"
-              class="files-upload-description"
-              rows="3"
-              maxlength="900"
-              placeholder="Optional dossier note..."
-            ></textarea>
-            <label class="files-upload-toggle" for="filesOutdatedInput">
-              <input id="filesOutdatedInput" type="checkbox" name="outdated" value="1" />
-              <span id="filesUploadOutdatedLabel">Mark as outdated and block downloads</span>
-            </label>
-            <label class="files-upload-toggle files-upload-toggle-caution" for="filesCautionInput">
-              <input id="filesCautionInput" type="checkbox" name="caution" value="1" />
-              <span id="filesUploadCautionLabel">Mark as warning and require download confirmation</span>
-            </label>
-            <button id="filesUploadBtn" class="files-btn" type="submit">UPLOAD FILE</button>
+            <div class="files-upload-submit-row">
+              <button id="filesUploadBtn" class="files-btn" type="submit">UPLOAD FILE</button>
+            </div>
           </form>
           <p id="filesUploadFeedback" class="files-upload-feedback" aria-live="polite" hidden></p>
         </article>
@@ -370,67 +402,88 @@
           <button id="filesAdminRequestsModalCloseBtn" class="files-btn files-admin-modal-close" type="button">CLOSE</button>
         </div>
         <article id="filesAdminRequestsPanel" class="panel files-admin-requests-panel" hidden>
-          <h2 id="filesAdminRequestsTitle">ACCESS CONTROL</h2>
-          <p id="filesAdminRequestsHint" class="files-admin-requests-hint">
-            Search users and process pending applications from this console.
-          </p>
-          <div class="files-admin-requests-controls">
-            <div class="files-admin-requests-control">
-              <label id="filesAdminRequestsSearchLabel" for="filesAdminRequestsSearchInput">Search</label>
-              <input
-                id="filesAdminRequestsSearchInput"
-                class="files-admin-requests-search-input"
-                type="search"
-                inputmode="search"
-                autocomplete="off"
-                spellcheck="false"
-                placeholder="Search by nick, username, Discord ID, or email..."
-              />
+          <div class="files-admin-requests-hero">
+            <div class="files-admin-requests-hero-copy">
+              <h2 id="filesAdminRequestsTitle">ACCESS CONTROL</h2>
+              <p id="filesAdminRequestsHint" class="files-admin-requests-hint">
+                Search users and process pending applications from this console.
+              </p>
             </div>
-            <div class="files-admin-requests-control-row">
-              <div class="files-admin-requests-control">
-                <label id="filesAdminRequestsFilterLabel" for="filesAdminRequestsFilterBtn">Filter</label>
-                <div id="filesAdminRequestsFilterDropdown" class="files-admin-requests-filter-dropdown">
-                  <button
-                    id="filesAdminRequestsFilterBtn"
-                    class="files-admin-requests-filter-trigger"
-                    type="button"
-                    aria-haspopup="listbox"
-                    aria-expanded="false"
-                    aria-labelledby="filesAdminRequestsFilterLabel"
-                  >
-                    <span id="filesAdminRequestsFilterCurrent">Pending</span>
-                    <span class="files-admin-requests-filter-caret" aria-hidden="true">▾</span>
-                  </button>
-                  <ul
-                    id="filesAdminRequestsFilterMenu"
-                    class="files-admin-requests-filter-menu"
-                    role="listbox"
-                    aria-labelledby="filesAdminRequestsFilterLabel"
-                    hidden
-                  >
-                    <li><button id="filesAdminRequestsFilterPending" class="files-admin-requests-filter-option" type="button" role="option" data-filter="pending">Pending</button></li>
-                    <li><button id="filesAdminRequestsFilterApproved" class="files-admin-requests-filter-option" type="button" role="option" data-filter="approved">Approved</button></li>
-                    <li><button id="filesAdminRequestsFilterDeclined" class="files-admin-requests-filter-option" type="button" role="option" data-filter="declined">Declined</button></li>
-                    <li><button id="filesAdminRequestsFilterAuthorized" class="files-admin-requests-filter-option" type="button" role="option" data-filter="authorized">Authorized</button></li>
-                    <li><button id="filesAdminRequestsFilterAll" class="files-admin-requests-filter-option" type="button" role="option" data-filter="all">All</button></li>
-                  </ul>
-                </div>
-                <select id="filesAdminRequestsFilter" class="files-admin-requests-filter-select" aria-label="Access control filter" hidden>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="declined">Declined</option>
-                  <option value="authorized">Authorized</option>
-                  <option value="all">All</option>
-                </select>
-              </div>
-              <button id="filesAdminRequestsRefreshBtn" class="files-btn files-admin-requests-refresh" type="button">
-                REFRESH
-              </button>
-            </div>
+            <p id="filesAdminRequestsStateBadge" class="files-admin-requests-state-badge">PENDING</p>
           </div>
-          <p id="filesAdminRequestsFeedback" class="files-upload-feedback files-admin-requests-feedback" aria-live="polite" hidden></p>
-          <div id="filesAdminRequestsList" class="files-admin-requests-list"></div>
+          <section class="files-admin-requests-console-shell" aria-labelledby="filesAdminRequestsConsoleLabel">
+            <div class="files-admin-requests-shell-head">
+              <p id="filesAdminRequestsConsoleLabel" class="files-admin-requests-shell-label">CONTROL MATRIX</p>
+              <p id="filesAdminRequestsConsoleHint" class="files-admin-requests-shell-hint">
+                Search signals and adjust the live access filter.
+              </p>
+            </div>
+            <div class="files-admin-requests-controls">
+              <div class="files-admin-requests-control">
+                <label id="filesAdminRequestsSearchLabel" for="filesAdminRequestsSearchInput">Search</label>
+                <input
+                  id="filesAdminRequestsSearchInput"
+                  class="files-admin-requests-search-input"
+                  type="search"
+                  inputmode="search"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="Search by nick, username, Discord ID, or email..."
+                />
+              </div>
+              <div class="files-admin-requests-control-row">
+                <div class="files-admin-requests-control">
+                  <label id="filesAdminRequestsFilterLabel" for="filesAdminRequestsFilterBtn">Filter</label>
+                  <div id="filesAdminRequestsFilterDropdown" class="files-admin-requests-filter-dropdown">
+                    <button
+                      id="filesAdminRequestsFilterBtn"
+                      class="files-admin-requests-filter-trigger"
+                      type="button"
+                      aria-haspopup="listbox"
+                      aria-expanded="false"
+                      aria-labelledby="filesAdminRequestsFilterLabel"
+                    >
+                      <span id="filesAdminRequestsFilterCurrent">Pending</span>
+                      <span class="files-admin-requests-filter-caret" aria-hidden="true">▾</span>
+                    </button>
+                    <ul
+                      id="filesAdminRequestsFilterMenu"
+                      class="files-admin-requests-filter-menu"
+                      role="listbox"
+                      aria-labelledby="filesAdminRequestsFilterLabel"
+                      hidden
+                    >
+                      <li><button id="filesAdminRequestsFilterPending" class="files-admin-requests-filter-option" type="button" role="option" data-filter="pending">Pending</button></li>
+                      <li><button id="filesAdminRequestsFilterApproved" class="files-admin-requests-filter-option" type="button" role="option" data-filter="approved">Approved</button></li>
+                      <li><button id="filesAdminRequestsFilterDeclined" class="files-admin-requests-filter-option" type="button" role="option" data-filter="declined">Declined</button></li>
+                      <li><button id="filesAdminRequestsFilterAuthorized" class="files-admin-requests-filter-option" type="button" role="option" data-filter="authorized">Authorized</button></li>
+                      <li><button id="filesAdminRequestsFilterAll" class="files-admin-requests-filter-option" type="button" role="option" data-filter="all">All</button></li>
+                    </ul>
+                  </div>
+                  <select id="filesAdminRequestsFilter" class="files-admin-requests-filter-select" aria-label="Access control filter" hidden>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="declined">Declined</option>
+                    <option value="authorized">Authorized</option>
+                    <option value="all">All</option>
+                  </select>
+                </div>
+                <button id="filesAdminRequestsRefreshBtn" class="files-btn files-admin-requests-refresh" type="button">
+                  REFRESH
+                </button>
+              </div>
+            </div>
+            <p id="filesAdminRequestsFeedback" class="files-upload-feedback files-admin-requests-feedback" aria-live="polite" hidden></p>
+          </section>
+          <section class="files-admin-requests-registry-shell" aria-labelledby="filesAdminRequestsRegistryLabel">
+            <div class="files-admin-requests-shell-head">
+              <p id="filesAdminRequestsRegistryLabel" class="files-admin-requests-shell-label">ACCESS REGISTRY</p>
+              <p id="filesAdminRequestsRegistryHint" class="files-admin-requests-shell-hint">
+                Pending requests and authorized users stream here.
+              </p>
+            </div>
+            <div id="filesAdminRequestsList" class="files-admin-requests-list"></div>
+          </section>
         </article>
       </div>
     </div>
@@ -911,7 +964,10 @@
           </article>
 
           <article id="filesAdminToolsPanel" class="panel files-admin-tools-panel" hidden>
-            <h2 id="filesAdminToolsTitle">ADMIN TOOLS</h2>
+            <div class="files-admin-tools-head">
+              <h2 id="filesAdminToolsTitle">ADMIN TOOLS</h2>
+              <p id="filesAdminToolsHint" class="files-admin-tools-hint">Select a console module and continue.</p>
+            </div>
             <div class="files-admin-tools-actions">
               <button
                 id="filesAdminConsoleModalBtn"
@@ -921,7 +977,12 @@
                 aria-expanded="false"
                 aria-controls="filesUploadOverlay"
               >
-                <span id="filesAdminConsoleModalBtnText">ADMIN CONSOLE</span>
+                <span class="files-admin-tools-btn-copy">
+                  <span class="files-admin-tools-btn-topline">
+                    <span id="filesAdminConsoleModalBtnText" class="files-admin-tools-btn-title">ADMIN CONSOLE</span>
+                  </span>
+                  <span id="filesAdminConsoleModalBtnHint" class="files-admin-tools-btn-hint">Upload files, images, and release flags.</span>
+                </span>
               </button>
               <button
                 id="filesAccessControlModalBtn"
@@ -931,8 +992,13 @@
                 aria-expanded="false"
                 aria-controls="filesAdminRequestsOverlay"
               >
-                <span id="filesAccessControlModalBtnText">ACCESS CONTROL</span>
-                <span id="filesAccessControlPendingBadge" class="files-access-control-pending-badge" hidden>0</span>
+                <span class="files-admin-tools-btn-copy">
+                  <span class="files-admin-tools-btn-topline">
+                    <span id="filesAccessControlModalBtnText" class="files-admin-tools-btn-title">ACCESS CONTROL</span>
+                    <span id="filesAccessControlPendingBadge" class="files-access-control-pending-badge" hidden>0</span>
+                  </span>
+                  <span id="filesAccessControlModalBtnHint" class="files-admin-tools-btn-hint">Review pending users and live permissions.</span>
+                </span>
               </button>
             </div>
           </article>

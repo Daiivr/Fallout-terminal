@@ -3959,6 +3959,10 @@ function syncFilesAdminRequestsFilterMenu() {
   if (elements.filesAdminRequestsFilterCurrent) {
     elements.filesAdminRequestsFilterCurrent.textContent = getFilesAdminRequestsFilterLabel(resolvedFilter);
   }
+  if (elements.filesAdminRequestsStateBadge) {
+    elements.filesAdminRequestsStateBadge.textContent = getFilesAdminRequestsFilterLabel(resolvedFilter);
+    elements.filesAdminRequestsStateBadge.dataset.filter = resolvedFilter;
+  }
   if (!Array.isArray(elements.filesAdminRequestsFilterOptions)) {
     return;
   }
@@ -5800,6 +5804,29 @@ function renderFilesDetailCard(file) {
   });
 }
 
+function setFilesSessionRankEffect(element, text, rank = "") {
+  if (!(element instanceof HTMLElement)) {
+    return;
+  }
+
+  const normalizedText = String(text || "");
+  const normalizedRank = rank === "admin" || rank === "authorized" ? rank : "";
+
+  element.textContent = normalizedText;
+  element.classList.toggle("has-rank-effect", Boolean(normalizedRank));
+  element.classList.toggle("is-admin", normalizedRank === "admin");
+  element.classList.toggle("is-authorized", normalizedRank === "authorized");
+
+  if (normalizedRank) {
+    element.dataset.sessionRank = normalizedRank;
+    element.dataset.sessionText = normalizedText;
+    return;
+  }
+
+  delete element.dataset.sessionRank;
+  delete element.dataset.sessionText;
+}
+
 function renderFilesSessionProfile({ loggedIn, authorized, isAdmin, username, discordId, accessRequestStatus } = {}) {
   const unknown = t("files_unknown_value");
   const resolvedLoggedIn = Boolean(loggedIn);
@@ -5825,16 +5852,18 @@ function renderFilesSessionProfile({ loggedIn, authorized, isAdmin, username, di
       : resolvedAuthorized
         ? t("files_session_badge_authorized")
         : t("files_session_badge_unauthorized");
+  const sessionRank = resolvedAdmin
+    ? "admin"
+    : (resolvedAuthorized ? "authorized" : "");
 
   if (elements.filesSessionUser) {
-    elements.filesSessionUser.textContent = resolvedUsername;
+    setFilesSessionRankEffect(elements.filesSessionUser, resolvedUsername, sessionRank);
   }
   if (elements.filesSessionId) {
     elements.filesSessionId.textContent = resolvedDiscordId;
   }
   if (elements.filesSessionClearance) {
-    elements.filesSessionClearance.textContent = resolvedClearance;
-    elements.filesSessionClearance.classList.toggle("is-admin", resolvedAdmin);
+    setFilesSessionRankEffect(elements.filesSessionClearance, resolvedClearance, sessionRank);
   }
   if (elements.filesSessionState) {
     elements.filesSessionState.textContent = resolvedState;
@@ -13769,20 +13798,28 @@ function applyLanguage(lang, persist = true) {
   elements.filesSessionClearanceLabel.textContent = t("files_session_clearance_label");
   elements.filesSessionStateLabel.textContent = t("files_session_state_label");
   elements.filesSessionBadge.textContent = t("files_unknown_value");
-  elements.filesSessionUser.textContent = t("files_unknown_value");
+  setFilesSessionRankEffect(elements.filesSessionUser, t("files_unknown_value"));
   elements.filesSessionId.textContent = t("files_unknown_value");
-  elements.filesSessionClearance.textContent = t("files_unknown_value");
+  setFilesSessionRankEffect(elements.filesSessionClearance, t("files_unknown_value"));
   elements.filesSessionState.textContent = t("files_unknown_value");
   elements.filesSessionBadge.classList.remove("is-admin");
-  elements.filesSessionClearance.classList.remove("is-admin");
   if (elements.filesAdminToolsTitle) {
     elements.filesAdminToolsTitle.textContent = t("files_admin_tools_title");
+  }
+  if (elements.filesAdminToolsHint) {
+    elements.filesAdminToolsHint.textContent = t("files_admin_tools_hint");
   }
   if (elements.filesAdminConsoleModalBtnText) {
     elements.filesAdminConsoleModalBtnText.textContent = t("files_admin_console_title");
   }
+  if (elements.filesAdminConsoleModalBtnHint) {
+    elements.filesAdminConsoleModalBtnHint.textContent = t("files_admin_tools_console_hint");
+  }
   if (elements.filesAccessControlModalBtnText) {
     elements.filesAccessControlModalBtnText.textContent = t("files_admin_requests_title");
+  }
+  if (elements.filesAccessControlModalBtnHint) {
+    elements.filesAccessControlModalBtnHint.textContent = t("files_admin_tools_access_hint");
   }
   if (elements.filesBotAdminModalBtnText) {
     elements.filesBotAdminModalBtnText.textContent = t("files_bot_admin_modal_title");
@@ -13809,6 +13846,18 @@ function applyLanguage(lang, persist = true) {
   elements.filesUploadTitle.textContent = t("files_admin_console_title");
   elements.filesAdminRequestsTitle.textContent = t("files_admin_requests_title");
   elements.filesAdminRequestsHint.textContent = t("files_admin_requests_hint");
+  if (elements.filesAdminRequestsConsoleLabel) {
+    elements.filesAdminRequestsConsoleLabel.textContent = t("files_admin_requests_console_label");
+  }
+  if (elements.filesAdminRequestsConsoleHint) {
+    elements.filesAdminRequestsConsoleHint.textContent = t("files_admin_requests_console_hint");
+  }
+  if (elements.filesAdminRequestsRegistryLabel) {
+    elements.filesAdminRequestsRegistryLabel.textContent = t("files_admin_requests_registry_label");
+  }
+  if (elements.filesAdminRequestsRegistryHint) {
+    elements.filesAdminRequestsRegistryHint.textContent = t("files_admin_requests_registry_hint");
+  }
   if (elements.filesBotAdminBadge) {
     elements.filesBotAdminBadge.textContent = t("files_bot_admin_modal_badge");
   }
@@ -13922,6 +13971,18 @@ function applyLanguage(lang, persist = true) {
     elements.filesGroupManagerToggleText.textContent = t(managerTextKey);
   }
   elements.filesUploadFileLabel.textContent = t("files_upload_file_label");
+  if (elements.filesUploadAssetsLabel) {
+    elements.filesUploadAssetsLabel.textContent = t("files_upload_assets_label");
+  }
+  if (elements.filesUploadAssetsHint) {
+    elements.filesUploadAssetsHint.textContent = t("files_upload_assets_hint");
+  }
+  if (elements.filesUploadDossierLabel) {
+    elements.filesUploadDossierLabel.textContent = t("files_upload_dossier_label");
+  }
+  if (elements.filesUploadDossierHint) {
+    elements.filesUploadDossierHint.textContent = t("files_upload_dossier_hint");
+  }
   if (elements.filesUploadImageLabel) {
     elements.filesUploadImageLabel.textContent = t("files_upload_image_label");
   }

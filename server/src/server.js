@@ -62,6 +62,8 @@ const DEFAULT_SHARE_PREVIEW_IMAGE_PATH = "/assets/images/image.png";
 const FILE_SHARE_ROUTE_PREFIX = "/share/";
 const FILE_SHARE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const FILE_SHARE_META_MAX_CHARS = 260;
+const FILE_SHARE_META_SUMMARY_MAX_CHARS = 120;
+const FILE_SHARE_META_EXCERPT_MAX_CHARS = 150;
 const INDEX_HTML_TEMPLATE = fs.readFileSync(INDEX_PAGE, "utf8");
 
 function parsePositiveInteger(value, fallback) {
@@ -1336,18 +1338,48 @@ function resolveFileTypeForMeta(entry) {
     return "FILE";
   }
 
-  const name = normalized.displayName || normalized.name;
-  const extension = path.extname(name).replace(/^\./, "").trim();
-  if (extension) {
-    return extension.toUpperCase();
+  for (const candidateName of [normalized.displayName, normalized.name]) {
+    const extension = path.extname(String(candidateName || "")).replace(/^\./, "").trim();
+    if (extension) {
+      return extension.toUpperCase();
+    }
   }
 
-  const mimeType = String(normalized.mimeType || "").trim();
-  if (mimeType && mimeType !== "application/octet-stream") {
-    return mimeType;
+  const mimeType = String(normalized.mimeType || "").trim().toLowerCase();
+  if (!mimeType || mimeType === "application/octet-stream") {
+    return "FILE";
   }
 
-  return "FILE";
+  const friendlyMimeTypeLabels = {
+    "application/x-msdownload": "EXE",
+    "application/x-msdos-program": "EXE",
+    "application/vnd.microsoft.portable-executable": "EXE",
+    "application/zip": "ZIP",
+    "application/x-zip-compressed": "ZIP",
+    "application/x-rar-compressed": "RAR",
+    "application/vnd.rar": "RAR",
+    "application/x-7z-compressed": "7Z",
+    "application/pdf": "PDF",
+    "text/plain": "TXT",
+    "text/csv": "CSV",
+    "application/json": "JSON"
+  };
+  if (friendlyMimeTypeLabels[mimeType]) {
+    return friendlyMimeTypeLabels[mimeType];
+  }
+
+  const [topLevelType] = mimeType.split("/");
+  if (topLevelType === "image") {
+    return "IMAGE";
+  }
+  if (topLevelType === "video") {
+    return "VIDEO";
+  }
+  if (topLevelType === "audio") {
+    return "AUDIO";
+  }
+
+  return mimeType.toUpperCase();
 }
 
 function formatFileMetaDate(value) {
@@ -1386,6 +1418,7 @@ function buildSharedFileMetaDescription(entry) {
   const summaryParts = [];
   const fileType = resolveFileTypeForMeta(normalized);
   const sizeLabel = formatFileSizeForMeta(normalized.size);
+  const uploadedLabel = formatFileMetaDate(normalized.uploadedAt);
   const updatedLabel = formatFileMetaDate(normalized.contentUpdatedAt || normalized.updatedAt || normalized.uploadedAt);
 
   if (fileType) {
@@ -1394,25 +1427,17 @@ function buildSharedFileMetaDescription(entry) {
   if (sizeLabel) {
     summaryParts.push(sizeLabel);
   }
-  if (normalized.group) {
-    summaryParts.push(`Group: ${normalized.group}`);
-  }
-  if (updatedLabel) {
-    summaryParts.push(`Updated: ${updatedLabel}`);
-  }
-  if (normalized.outdated) {
-    summaryParts.push("Status: outdated, downloads blocked");
-  } else if (normalized.caution) {
-    summaryParts.push("Status: warning flagged");
+  if (uploadedLabel && updatedLabel && uploadedLabel !== updatedLabel) {
+    summaryParts.push(`Uploaded ${uploadedLabel}`);
+    summaryParts.push(`Updated ${updatedLabel}`);
+  } else if (updatedLabel) {
+    summaryParts.push(`Uploaded/Updated ${updatedLabel}`);
+  } else if (uploadedLabel) {
+    summaryParts.push(`Uploaded ${uploadedLabel}`);
   }
 
-  const description = stripFileDescriptionForMeta(normalized.description);
-  const summary = summaryParts.join(" | ");
-  const combined = description
-    ? (summary ? `${summary} | ${description}` : description)
-    : (summary ? `Shared Fallout Codex file | ${summary}` : "Shared Fallout Codex file.");
-
-  return truncateMetaText(combined, FILE_SHARE_META_MAX_CHARS);
+  const summary = truncateMetaText(summaryParts.join(" - "), FILE_SHARE_META_SUMMARY_MAX_CHARS);
+  return summary || "Shared Fallout Codex file.";
 }
 
 function buildFileSharePath(shareSlug) {
