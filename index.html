@@ -390,6 +390,32 @@
         </article>
       </div>
     </div>
+    <div id="filesEditOverlay" class="files-admin-modal-overlay" aria-hidden="true">
+      <div
+        class="files-admin-modal-core files-edit-modal-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesEditTitle"
+        aria-describedby="filesEditHint"
+      >
+        <div class="files-admin-modal-head">
+          <button id="filesEditModalCloseBtn" class="files-btn files-admin-modal-close" type="button" aria-label="Close">X</button>
+        </div>
+        <article id="filesEditPanel" class="panel files-edit-modal-panel" hidden>
+          <div class="files-edit-modal-hero">
+            <div class="files-edit-modal-hero-copy">
+              <h2 id="filesEditTitle">EDIT FILE DOSSIER</h2>
+              <p id="filesEditHint" class="files-edit-modal-hint">
+                Refine the description, group, image, and release flags in a wider editor.
+              </p>
+            </div>
+            <p id="filesEditTargetName" class="files-edit-target-name">--</p>
+          </div>
+          <div id="filesEditModalBody" class="files-edit-modal-body"></div>
+          <p id="filesEditFeedback" class="files-upload-feedback files-edit-feedback" aria-live="polite" hidden></p>
+        </article>
+      </div>
+    </div>
     <div id="filesAdminRequestsOverlay" class="files-admin-modal-overlay" aria-hidden="true">
       <div
         class="files-admin-modal-core files-admin-requests-modal-core"

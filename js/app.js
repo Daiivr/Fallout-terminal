@@ -427,6 +427,12 @@ const state = {
       fileId: "",
       fileName: ""
     },
+    editModal: {
+      fileId: "",
+      message: "",
+      messageKind: "",
+      busy: false
+    },
     botAdmin: {
       loading: false,
       overview: null,
@@ -3879,6 +3885,18 @@ function setFilesUploadFeedback(message = "", kind = "") {
   }, FILES_UPLOAD_FEEDBACK_AUTO_HIDE_MS);
 }
 
+function clearFilesEditModalState() {
+  state.files.editModal.fileId = "";
+  state.files.editModal.message = "";
+  state.files.editModal.messageKind = "";
+  state.files.editModal.busy = false;
+}
+
+function setFilesEditModalFeedback(message = "", kind = "") {
+  state.files.editModal.message = String(message || "");
+  state.files.editModal.messageKind = kind === "success" ? "success" : kind === "error" ? "error" : "";
+}
+
 function setFilesRestrictedRequestFeedback(message = "", kind = "") {
   state.files.accessRequestMessage = String(message || "");
   state.files.accessRequestMessageKind = kind === "success" ? "success" : kind === "error" ? "error" : "";
@@ -4080,7 +4098,7 @@ function clearFilesAdminRequestsState() {
 
 function normalizeFilesAdminModalType(value) {
   const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "upload" || normalized === "requests" || normalized === "bot") {
+  if (normalized === "upload" || normalized === "edit" || normalized === "requests" || normalized === "bot") {
     return normalized;
   }
   return "";
@@ -4097,6 +4115,86 @@ function getFilesPendingAdminRequestCount() {
   return pendingCount;
 }
 
+function renderFilesEditModal({ force = false } = {}) {
+  if (!elements.filesEditPanel) {
+    return;
+  }
+
+  const me = normalizeFilesProfile(state.files.me);
+  const canUseAdminTools = Boolean(me.isAuthorized && me.isAdmin);
+  const editOpen = canUseAdminTools && normalizeFilesAdminModalType(state.files.adminModal.active) === "edit";
+  const fileId = String(state.files.editModal.fileId || "").trim();
+  const matchedFile = editOpen
+    ? state.files.list.find((entry) => String(entry?.id || "").trim() === fileId) || null
+    : null;
+
+  if (editOpen && !matchedFile) {
+    state.files.adminModal.active = "";
+    clearFilesEditModalState();
+  }
+
+  const shouldShow = editOpen && Boolean(matchedFile);
+  elements.filesEditPanel.hidden = !shouldShow;
+
+  if (!shouldShow || !matchedFile) {
+    if (elements.filesEditModalBody) {
+      elements.filesEditModalBody.replaceChildren();
+    }
+    if (elements.filesEditFeedback) {
+      elements.filesEditFeedback.hidden = true;
+      elements.filesEditFeedback.textContent = "";
+      elements.filesEditFeedback.classList.remove("is-error", "is-success");
+    }
+    delete elements.filesEditPanel.dataset.renderKey;
+    return;
+  }
+
+  if (elements.filesEditTitle) {
+    elements.filesEditTitle.textContent = t("files_edit_modal_title");
+  }
+  if (elements.filesEditHint) {
+    elements.filesEditHint.textContent = t("files_edit_modal_hint");
+  }
+  if (elements.filesEditTargetName) {
+    elements.filesEditTargetName.textContent = getFilesDisplayName(matchedFile);
+  }
+
+  const renderKey = [state.lang, buildFilesDetailRenderKey(matchedFile, { isAdmin: true })].join("|");
+  const currentForm = elements.filesEditModalBody?.querySelector("[data-files-edit-modal-form]") || null;
+  const needsRender = force || !(currentForm instanceof HTMLFormElement) || elements.filesEditPanel.dataset.renderKey !== renderKey;
+
+  if (needsRender && elements.filesEditModalBody) {
+    const nextForm = createFilesAdminEditForm(matchedFile);
+    elements.filesEditModalBody.replaceChildren();
+    if (nextForm) {
+      elements.filesEditModalBody.appendChild(nextForm);
+      const descriptionInput = nextForm.querySelector("textarea[name=\"description\"]");
+      if (descriptionInput instanceof HTMLTextAreaElement) {
+        mountFilesDescriptionEditor(descriptionInput);
+      }
+    }
+    elements.filesEditPanel.dataset.renderKey = renderKey;
+  }
+
+  const form = elements.filesEditModalBody?.querySelector("[data-files-edit-modal-form]") || null;
+  if (form instanceof HTMLFormElement) {
+    setFilesEditFormBusy(form, Boolean(state.files.editModal.busy));
+  }
+
+  if (elements.filesEditFeedback) {
+    elements.filesEditFeedback.classList.remove("is-error", "is-success");
+    if (state.files.editModal.messageKind === "error") {
+      elements.filesEditFeedback.classList.add("is-error");
+    } else if (state.files.editModal.messageKind === "success") {
+      elements.filesEditFeedback.classList.add("is-success");
+    }
+
+    const hasMessage = Boolean(state.files.editModal.message);
+    elements.filesEditFeedback.hidden = !hasMessage;
+    elements.filesEditFeedback.textContent = hasMessage ? state.files.editModal.message : "";
+  }
+}
+
 function renderFilesAdminModals() {
   const me = normalizeFilesProfile(state.files.me);
   const canUseAdminTools = Boolean(me.isAuthorized && me.isAdmin);
@@ -4110,9 +4208,10 @@ function renderFilesAdminModals() {
   state.files.adminModal.active = activeModal;
 
   const uploadOpen = activeModal === "upload";
+  const editOpen = activeModal === "edit";
   const requestsOpen = activeModal === "requests";
   const botOpen = canUseBotAdmin && activeModal === "bot";
-  const modalOpen = uploadOpen || requestsOpen || botOpen;
+  const modalOpen = uploadOpen || editOpen || requestsOpen || botOpen;
   const pendingCount = getFilesPendingAdminRequestCount();
   const pendingBadgeText = pendingCount > 99 ? "99+" : String(pendingCount);
   if (!botOpen) {
@@ -4160,6 +4259,10 @@ function renderFilesAdminModals() {
     elements.filesUploadOverlay.classList.toggle("is-active", uploadOpen);
     elements.filesUploadOverlay.setAttribute("aria-hidden", uploadOpen ? "false" : "true");
   }
+  if (elements.filesEditOverlay) {
+    elements.filesEditOverlay.classList.toggle("is-active", editOpen);
+    elements.filesEditOverlay.setAttribute("aria-hidden", editOpen ? "false" : "true");
+  }
   if (elements.filesAdminRequestsOverlay) {
     elements.filesAdminRequestsOverlay.classList.toggle("is-active", requestsOpen);
     elements.filesAdminRequestsOverlay.setAttribute("aria-hidden", requestsOpen ? "false" : "true");
@@ -4174,9 +4277,13 @@ function renderFilesAdminModals() {
   if (!botOpen) {
     setFilesBotAdminSortMenuOpen(false);
   }
-  if (!uploadOpen) {
+  if (!uploadOpen && !editOpen) {
     closeAllFilesGroupSuggestMenus();
   }
+  if (!editOpen) {
+    clearFilesEditModalState();
+  }
+  renderFilesEditModal();
   renderFilesBotAdminDiagnosticsModal();
   renderFilesBotAdminPanel();
 }
@@ -4204,6 +4311,16 @@ function setFilesAdminModalOpen(nextModal, { focus = true } = {}) {
     if (elements.filesUploadInput instanceof HTMLInputElement) {
       focusFilesOpenTarget(elements.filesUploadInput, {
         fallback: elements.filesUploadModalCloseBtn
+      });
+    }
+    return;
+  }
+
+  if (normalizedModal === "edit") {
+    const descriptionInput = elements.filesEditPanel?.querySelector("textarea[name=\"description\"]") || null;
+    if (descriptionInput instanceof HTMLTextAreaElement) {
+      focusFilesOpenTarget(descriptionInput, {
+        fallback: elements.filesEditModalCloseBtn
       });
     }
     return;
@@ -5262,6 +5379,23 @@ function openFilesDeleteModal(fileId) {
   }, 0);
 }
 
+function openFilesEditModal(fileId) {
+  if (!state.files.me?.isAdmin) {
+    return;
+  }
+
+  const matchedFile = state.files.list.find((entry) => String(entry?.id || "").trim() === String(fileId || "").trim()) || null;
+  if (!matchedFile) {
+    return;
+  }
+
+  state.files.editModal.fileId = String(matchedFile.id || "");
+  state.files.editModal.message = "";
+  state.files.editModal.messageKind = "";
+  state.files.editModal.busy = false;
+  setFilesAdminModalOpen("edit");
+}
+
 async function confirmFilesDeleteModal() {
   if (!state.files.me?.isAdmin) {
     closeFilesDeleteModal({ force: true });
@@ -5323,14 +5457,31 @@ function createFilesDescriptionBlock({
   description = "",
   imageUrl = "",
   imageName = "",
-  fileName = ""
+  fileName = "",
+  editFileId = "",
+  allowEdit = false
 } = {}) {
   const wrap = document.createElement("div");
   wrap.className = "files-description-block";
 
+  const head = document.createElement("div");
+  head.className = "files-description-head";
+
   const labelEl = document.createElement("span");
   labelEl.className = "files-meta-label";
   labelEl.textContent = t("files_description_label");
+  head.appendChild(labelEl);
+
+  const normalizedEditFileId = String(editFileId || "").trim();
+  if (allowEdit && normalizedEditFileId) {
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "files-card-action files-description-edit-btn";
+    editButton.setAttribute("data-files-action", "edit-metadata");
+    editButton.setAttribute("data-file-id", normalizedEditFileId);
+    decorateFilesActionIconButton(editButton, t("files_edit_open_button"), "edit");
+    head.appendChild(editButton);
+  }
 
   const valueEl = document.createElement("div");
   valueEl.className = "files-description-value";
@@ -5338,7 +5489,7 @@ function createFilesDescriptionBlock({
     emptyText: t("files_unknown_value")
   });
 
-  wrap.appendChild(labelEl);
+  wrap.appendChild(head);
   wrap.appendChild(valueEl);
 
   const resolvedImageUrl = String(imageUrl || "").trim();
@@ -5477,6 +5628,12 @@ function createFilesActionIcon(kind) {
     return svg;
   }
 
+  if (kind === "edit") {
+    appendShape("path", { d: "M4 20h4.5l10-10a1.8 1.8 0 0 0 0-2.5l-2-2a1.8 1.8 0 0 0-2.5 0L4 15.5V20" });
+    appendShape("path", { d: "m12.5 7 4.5 4.5" });
+    return svg;
+  }
+
   if (kind === "replace") {
     appendShape("path", { d: "M20 7v5h-5" });
     appendShape("path", { d: "M20 12a8 8 0 0 0-13.8-4.8L4 9.5" });
@@ -5527,70 +5684,44 @@ function createFilesAdminEditForm(file) {
     return null;
   }
 
+  const isBusy = Boolean(state.files.editModal.busy);
+
   const form = document.createElement("form");
-  form.className = "files-edit-form";
+  form.className = "files-edit-modal-form";
   form.noValidate = true;
   form.setAttribute("data-files-edit-form", "true");
+  form.setAttribute("data-files-edit-modal-form", "true");
   form.setAttribute("data-file-id", fileId);
 
-  const title = document.createElement("p");
-  title.className = "files-edit-title";
-  title.textContent = t("files_edit_section_title");
-  form.appendChild(title);
+  const grid = document.createElement("div");
+  grid.className = "files-upload-grid files-edit-grid";
+
+  const controlsShell = document.createElement("section");
+  controlsShell.className = "files-upload-shell files-edit-shell";
+
+  const controlsHead = document.createElement("div");
+  controlsHead.className = "files-upload-shell-head";
+
+  const controlsLabel = document.createElement("p");
+  controlsLabel.className = "files-upload-shell-label";
+  controlsLabel.textContent = t("files_edit_modal_details_label");
+  controlsHead.appendChild(controlsLabel);
+
+  const controlsHint = document.createElement("p");
+  controlsHint.className = "files-upload-shell-hint";
+  controlsHint.textContent = t("files_edit_modal_details_hint");
+  controlsHead.appendChild(controlsHint);
+
+  controlsShell.appendChild(controlsHead);
+
+  const groupField = document.createElement("div");
+  groupField.className = "files-upload-field";
 
   const descriptionLabel = document.createElement("label");
   descriptionLabel.className = "files-edit-label";
-  descriptionLabel.textContent = t("files_edit_description_label");
-  descriptionLabel.setAttribute("for", `filesEditDescription-${fileId}`);
-  form.appendChild(descriptionLabel);
-
-  const descriptionInput = document.createElement("textarea");
-  descriptionInput.id = `filesEditDescription-${fileId}`;
-  descriptionInput.className = "files-upload-description files-edit-description";
-  descriptionInput.name = "description";
-  descriptionInput.rows = 4;
-  descriptionInput.maxLength = 900;
-  descriptionInput.value = String(file.description || "").trim();
-  descriptionInput.placeholder = t("files_upload_description_placeholder");
-  form.appendChild(descriptionInput);
-
-  const outdatedWrap = document.createElement("label");
-  outdatedWrap.className = "files-edit-toggle";
-
-  const outdatedInput = document.createElement("input");
-  outdatedInput.type = "checkbox";
-  outdatedInput.name = "outdated";
-  outdatedInput.value = "1";
-  outdatedInput.checked = normalizeFilesBooleanFlag(file.outdated);
-
-  const outdatedText = document.createElement("span");
-  outdatedText.textContent = t("files_edit_outdated_label");
-
-  outdatedWrap.appendChild(outdatedInput);
-  outdatedWrap.appendChild(outdatedText);
-  form.appendChild(outdatedWrap);
-
-  const cautionWrap = document.createElement("label");
-  cautionWrap.className = "files-edit-toggle files-edit-toggle-caution";
-
-  const cautionInput = document.createElement("input");
-  cautionInput.type = "checkbox";
-  cautionInput.name = "caution";
-  cautionInput.value = "1";
-  cautionInput.checked = normalizeFilesBooleanFlag(file.caution);
-
-  const cautionText = document.createElement("span");
-  cautionText.textContent = t("files_edit_caution_label");
-
-  cautionWrap.appendChild(cautionInput);
-  cautionWrap.appendChild(cautionText);
-  form.appendChild(cautionWrap);
-
-  const groupLabel = document.createElement("label");
-  groupLabel.className = "files-edit-label";
-  groupLabel.textContent = t("files_edit_group_label");
-  groupLabel.setAttribute("for", `filesEditGroup-${fileId}`);
-  form.appendChild(groupLabel);
+  descriptionLabel.textContent = t("files_edit_group_label");
+  descriptionLabel.setAttribute("for", `filesEditGroup-${fileId}`);
+  groupField.appendChild(descriptionLabel);
 
   const groupInput = document.createElement("input");
   groupInput.id = `filesEditGroup-${fileId}`;
@@ -5600,16 +5731,29 @@ function createFilesAdminEditForm(file) {
   groupInput.maxLength = 80;
   groupInput.value = normalizeFilesGroup(file.group || "");
   groupInput.placeholder = t("files_upload_group_placeholder");
-  form.appendChild(groupInput);
+  groupInput.disabled = isBusy;
+  groupField.appendChild(groupInput);
+  controlsShell.appendChild(groupField);
+
+  const groupSuggestField = document.createElement("div");
+  groupSuggestField.className = "files-upload-field";
 
   const groupSuggestDropdown = createFilesGroupSuggestionDropdown(groupInput.id, groupInput.value);
-  form.appendChild(groupSuggestDropdown);
+  const groupSuggestToggle = groupSuggestDropdown.querySelector("[data-files-group-suggest-toggle]");
+  if (groupSuggestToggle instanceof HTMLButtonElement) {
+    groupSuggestToggle.disabled = isBusy;
+  }
+  groupSuggestField.appendChild(groupSuggestDropdown);
+  controlsShell.appendChild(groupSuggestField);
+
+  const imageField = document.createElement("div");
+  imageField.className = "files-upload-field";
 
   const imageLabel = document.createElement("label");
   imageLabel.className = "files-edit-label";
   imageLabel.textContent = t("files_edit_image_label");
   imageLabel.setAttribute("for", `filesEditImage-${fileId}`);
-  form.appendChild(imageLabel);
+  imageField.appendChild(imageLabel);
 
   const imageInput = document.createElement("input");
   imageInput.id = `filesEditImage-${fileId}`;
@@ -5617,7 +5761,9 @@ function createFilesAdminEditForm(file) {
   imageInput.name = "image";
   imageInput.type = "file";
   imageInput.accept = "image/*";
-  form.appendChild(imageInput);
+  imageInput.disabled = isBusy;
+  imageField.appendChild(imageInput);
+  controlsShell.appendChild(imageField);
 
   if (file.hasImage || file.imageUrl) {
     const removeWrap = document.createElement("label");
@@ -5627,22 +5773,105 @@ function createFilesAdminEditForm(file) {
     removeInput.type = "checkbox";
     removeInput.name = "removeImage";
     removeInput.value = "1";
+    removeInput.disabled = isBusy;
 
     const removeText = document.createElement("span");
     removeText.textContent = t("files_edit_remove_image_label");
 
     removeWrap.appendChild(removeInput);
     removeWrap.appendChild(removeText);
-    form.appendChild(removeWrap);
+    controlsShell.appendChild(removeWrap);
   }
 
+  const toggleGroup = document.createElement("div");
+  toggleGroup.className = "files-upload-toggle-group";
+
+  const outdatedWrap = document.createElement("label");
+  outdatedWrap.className = "files-edit-toggle";
+
+  const outdatedInput = document.createElement("input");
+  outdatedInput.type = "checkbox";
+  outdatedInput.name = "outdated";
+  outdatedInput.value = "1";
+  outdatedInput.checked = normalizeFilesBooleanFlag(file.outdated);
+  outdatedInput.disabled = isBusy;
+
+  const outdatedText = document.createElement("span");
+  outdatedText.textContent = t("files_edit_outdated_label");
+
+  outdatedWrap.appendChild(outdatedInput);
+  outdatedWrap.appendChild(outdatedText);
+  toggleGroup.appendChild(outdatedWrap);
+
+  const cautionWrap = document.createElement("label");
+  cautionWrap.className = "files-edit-toggle files-edit-toggle-caution";
+
+  const cautionInput = document.createElement("input");
+  cautionInput.type = "checkbox";
+  cautionInput.name = "caution";
+  cautionInput.value = "1";
+  cautionInput.checked = normalizeFilesBooleanFlag(file.caution);
+  cautionInput.disabled = isBusy;
+
+  const cautionText = document.createElement("span");
+  cautionText.textContent = t("files_edit_caution_label");
+
+  cautionWrap.appendChild(cautionInput);
+  cautionWrap.appendChild(cautionText);
+  toggleGroup.appendChild(cautionWrap);
+  controlsShell.appendChild(toggleGroup);
+
+  const descriptionShell = document.createElement("section");
+  descriptionShell.className = "files-upload-shell files-edit-shell files-edit-shell-description";
+
+  const descriptionHead = document.createElement("div");
+  descriptionHead.className = "files-upload-shell-head";
+
+  const descriptionHeadLabel = document.createElement("p");
+  descriptionHeadLabel.className = "files-upload-shell-label";
+  descriptionHeadLabel.textContent = t("files_edit_modal_description_label");
+  descriptionHead.appendChild(descriptionHeadLabel);
+
+  const descriptionHeadHint = document.createElement("p");
+  descriptionHeadHint.className = "files-upload-shell-hint";
+  descriptionHeadHint.textContent = t("files_edit_modal_description_hint");
+  descriptionHead.appendChild(descriptionHeadHint);
+
+  descriptionShell.appendChild(descriptionHead);
+
+  const descriptionField = document.createElement("div");
+  descriptionField.className = "files-upload-field";
+
+  const descriptionFieldLabel = document.createElement("label");
+  descriptionFieldLabel.className = "files-edit-label";
+  descriptionFieldLabel.textContent = t("files_edit_description_label");
+  descriptionFieldLabel.setAttribute("for", `filesEditDescription-${fileId}`);
+  descriptionField.appendChild(descriptionFieldLabel);
+
+  const descriptionInput = document.createElement("textarea");
+  descriptionInput.id = `filesEditDescription-${fileId}`;
+  descriptionInput.className = "files-upload-description files-edit-description";
+  descriptionInput.name = "description";
+  descriptionInput.rows = 4;
+  descriptionInput.maxLength = 900;
+  descriptionInput.value = String(file.description || "").trim();
+  descriptionInput.placeholder = t("files_upload_description_placeholder");
+  descriptionInput.disabled = isBusy;
+  descriptionField.appendChild(descriptionInput);
+  descriptionShell.appendChild(descriptionField);
+
+  grid.appendChild(controlsShell);
+  grid.appendChild(descriptionShell);
+  form.appendChild(grid);
+
   const actions = document.createElement("div");
-  actions.className = "files-edit-actions";
+  actions.className = "files-upload-submit-row files-edit-submit-row";
 
   const saveButton = document.createElement("button");
   saveButton.type = "submit";
-  saveButton.className = "files-card-action";
-  saveButton.textContent = t("files_edit_save_button");
+  saveButton.className = "files-btn";
+  saveButton.textContent = isBusy ? t("files_edit_save_busy") : t("files_edit_save_button");
+  saveButton.disabled = isBusy;
   actions.appendChild(saveButton);
 
   form.appendChild(actions);
@@ -5707,7 +5936,9 @@ function renderFilesDetailCard(file) {
     description,
     imageUrl,
     imageName,
-    fileName
+    fileName,
+    editFileId: fileId,
+    allowEdit: Boolean(state.files.me?.isAdmin)
   });
 
   const actions = document.createElement("div");
@@ -5785,20 +6016,9 @@ function renderFilesDetailCard(file) {
   detailBody.appendChild(descriptionBlock);
   detailBody.appendChild(actions);
 
-  if (state.files.me?.isAdmin) {
-    const editForm = createFilesAdminEditForm(file);
-    if (editForm) {
-      detailBody.appendChild(editForm);
-    }
-  }
-
   detailCard.appendChild(detailTop);
   detailCard.appendChild(detailBody);
   elements.filesList.appendChild(detailCard);
-  const editDescriptionInput = detailCard.querySelector("[data-files-edit-form] textarea[name=\"description\"]");
-  if (editDescriptionInput instanceof HTMLTextAreaElement) {
-    mountFilesDescriptionEditor(editDescriptionInput);
-  }
   elements.filesList.dataset.detailRenderKey = buildFilesDetailRenderKey(file, {
     isAdmin: Boolean(state.files.me?.isAdmin)
   });
@@ -8053,6 +8273,9 @@ async function handleFilesLogout() {
   state.files.rename.fileId = "";
   state.files.rename.value = "";
   state.files.rename.busy = false;
+  state.files.adminModal.active = "";
+  clearFilesEditModalState();
+  stopFilesBotAdminLivePolling();
   clearFilesGroupManagerState();
   clearFilesGroupRenameState();
   state.files.listError = "";
@@ -8244,7 +8467,8 @@ async function handleFilesMetadataEdit(formElement) {
   }
 
   const fileId = String(formElement.dataset.fileId || "").trim();
-  if (!fileId) {
+  const isModalForm = formElement.hasAttribute("data-files-edit-modal-form");
+  if (!fileId || (isModalForm && state.files.editModal.busy)) {
     return;
   }
 
@@ -8280,8 +8504,15 @@ async function handleFilesMetadataEdit(formElement) {
     formData.append("removeImage", "1");
   }
 
+  if (isModalForm) {
+    state.files.editModal.busy = true;
+    setFilesEditModalFeedback("", "");
+    renderFilesEditModal();
+  }
   setFilesEditFormBusy(formElement, true);
-  setFilesUploadFeedback("", "");
+  if (!isModalForm) {
+    setFilesUploadFeedback("", "");
+  }
 
   try {
     const payload = await requestJson(`/api/files/${encodeURIComponent(fileId)}`, {
@@ -8296,15 +8527,33 @@ async function handleFilesMetadataEdit(formElement) {
       outdated,
       caution
     });
-    setFilesUploadFeedback(t("files_edit_success"), "success");
+    if (isModalForm) {
+      setFilesEditModalFeedback(t("files_edit_success"), "success");
+    } else {
+      setFilesUploadFeedback(t("files_edit_success"), "success");
+    }
     renderFilesAccessView();
     await refreshFilesList();
+    if (isModalForm) {
+      renderFilesEditModal({ force: true });
+    }
   } catch (error) {
-    setFilesUploadFeedback(String(error?.message || t("files_upload_error")), "error");
-    renderFilesAccessView();
+    if (isModalForm) {
+      setFilesEditModalFeedback(String(error?.message || t("files_upload_error")), "error");
+      renderFilesEditModal();
+    } else {
+      setFilesUploadFeedback(String(error?.message || t("files_upload_error")), "error");
+      renderFilesAccessView();
+    }
   } finally {
+    if (isModalForm) {
+      state.files.editModal.busy = false;
+    }
     if (formElement.isConnected) {
       setFilesEditFormBusy(formElement, false);
+    }
+    if (isModalForm) {
+      renderFilesEditModal();
     }
   }
 }
@@ -9309,6 +9558,11 @@ function handleFilesListClick(event) {
     return;
   }
 
+  if (action === "edit-metadata") {
+    openFilesEditModal(fileId);
+    return;
+  }
+
   if (action === "delete") {
     void handleFilesDelete(fileId);
   }
@@ -9359,6 +9613,66 @@ function handleFilesListSubmit(event) {
     event.preventDefault();
     void handleFilesRenameSubmit(target);
   }
+}
+
+function handleFilesEditPanelInput(event) {
+  handleFilesListInput(event);
+
+  if (!state.files.editModal.message) {
+    return;
+  }
+
+  setFilesEditModalFeedback("", "");
+  renderFilesEditModal();
+}
+
+function handleFilesEditPanelClick(event) {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return;
+  }
+
+  const actionTarget = target.closest("[data-files-action]");
+  if (!(actionTarget instanceof HTMLElement)) {
+    return;
+  }
+
+  const action = String(actionTarget.getAttribute("data-files-action") || "").trim().toLowerCase();
+  if (action === "toggle-group-suggest-menu") {
+    const dropdown = actionTarget.closest("[data-files-group-suggest-dropdown]");
+    if (!(dropdown instanceof HTMLElement)) {
+      return;
+    }
+    const shouldOpen = !dropdown.classList.contains("is-open");
+    closeAllFilesGroupSuggestMenus({ except: shouldOpen ? dropdown : null });
+    setFilesGroupSuggestMenuOpen(dropdown, shouldOpen);
+    return;
+  }
+
+  if (action === "select-group-suggest-option") {
+    const dropdown = actionTarget.closest("[data-files-group-suggest-dropdown]");
+    if (!(dropdown instanceof HTMLElement)) {
+      return;
+    }
+    const nextValue = normalizeFilesGroup(actionTarget.getAttribute("data-group-value") || "");
+    const linkedInput = getFilesGroupSuggestTargetInput(dropdown);
+    if (linkedInput instanceof HTMLInputElement) {
+      linkedInput.value = nextValue;
+      linkedInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    syncFilesGroupSuggestDropdown(dropdown, nextValue);
+    setFilesGroupSuggestMenuOpen(dropdown, false);
+  }
+}
+
+function handleFilesEditPanelSubmit(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLFormElement) || !target.matches("[data-files-edit-modal-form]")) {
+    return;
+  }
+
+  event.preventDefault();
+  void handleFilesMetadataEdit(target);
 }
 
 function queueImagePreload(url, { highPriority = false } = {}) {
@@ -13837,6 +14151,11 @@ function applyLanguage(lang, persist = true) {
   if (elements.filesUploadModalCloseBtn) {
     elements.filesUploadModalCloseBtn.textContent = t("files_admin_modal_close");
   }
+  if (elements.filesEditModalCloseBtn) {
+    elements.filesEditModalCloseBtn.textContent = "X";
+    elements.filesEditModalCloseBtn.setAttribute("aria-label", t("files_admin_modal_close"));
+    elements.filesEditModalCloseBtn.removeAttribute("title");
+  }
   if (elements.filesAdminRequestsModalCloseBtn) {
     elements.filesAdminRequestsModalCloseBtn.textContent = t("files_admin_modal_close");
   }
@@ -13844,6 +14163,12 @@ function applyLanguage(lang, persist = true) {
     elements.filesBotAdminModalCloseBtn.textContent = t("files_admin_modal_close");
   }
   elements.filesUploadTitle.textContent = t("files_admin_console_title");
+  if (elements.filesEditTitle) {
+    elements.filesEditTitle.textContent = t("files_edit_modal_title");
+  }
+  if (elements.filesEditHint) {
+    elements.filesEditHint.textContent = t("files_edit_modal_hint");
+  }
   elements.filesAdminRequestsTitle.textContent = t("files_admin_requests_title");
   elements.filesAdminRequestsHint.textContent = t("files_admin_requests_hint");
   if (elements.filesAdminRequestsConsoleLabel) {
@@ -14211,6 +14536,7 @@ function wireEvents() {
   const filesCautionModalRoot = elements.filesCautionOverlay?.querySelector(".files-caution-core") || null;
   const filesDisclaimerModalRoot = elements.filesDisclaimerOverlay?.querySelector(".files-disclaimer-core") || null;
   const filesUploadModalRoot = elements.filesUploadOverlay?.querySelector(".files-admin-modal-core") || null;
+  const filesEditModalRoot = elements.filesEditOverlay?.querySelector(".files-admin-modal-core") || null;
   const filesAdminRequestsModalRoot = elements.filesAdminRequestsOverlay?.querySelector(".files-admin-modal-core") || null;
   const filesBotAdminModalRoot = elements.filesBotAdminOverlay?.querySelector(".files-admin-modal-core") || null;
   const shouldBlockBackgroundForActiveOverlay = (target) => {
@@ -14267,6 +14593,12 @@ function wireEvents() {
         return true;
       }
       return !filesUploadModalRoot.contains(target);
+    }
+    if (elements.filesEditOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node) || !(filesEditModalRoot instanceof Node)) {
+        return true;
+      }
+      return !filesEditModalRoot.contains(target);
     }
     if (elements.filesAdminRequestsOverlay?.classList.contains("is-active")) {
       if (!(target instanceof Node) || !(filesAdminRequestsModalRoot instanceof Node)) {
@@ -14486,6 +14818,9 @@ function wireEvents() {
   elements.filesUploadModalCloseBtn?.addEventListener("click", () => {
     closeFilesAdminModal();
   });
+  elements.filesEditModalCloseBtn?.addEventListener("click", () => {
+    closeFilesAdminModal();
+  });
   elements.filesAdminRequestsModalCloseBtn?.addEventListener("click", () => {
     closeFilesAdminModal();
   });
@@ -14512,6 +14847,14 @@ function wireEvents() {
   });
   elements.filesUploadOverlay?.addEventListener("click", (event) => {
     if (event.target === elements.filesUploadOverlay) {
+      if (isDesktopModalViewport()) {
+        return;
+      }
+      closeFilesAdminModal();
+    }
+  });
+  elements.filesEditOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.filesEditOverlay) {
       if (isDesktopModalViewport()) {
         return;
       }
@@ -14660,6 +15003,9 @@ function wireEvents() {
     }
     syncFilesGroupSuggestions();
   });
+  elements.filesEditPanel?.addEventListener("input", handleFilesEditPanelInput);
+  elements.filesEditPanel?.addEventListener("click", handleFilesEditPanelClick);
+  elements.filesEditPanel?.addEventListener("submit", handleFilesEditPanelSubmit);
   elements.filesUploadPanel?.addEventListener("click", handleFilesListClick);
   elements.filesList?.addEventListener("click", handleFilesListClick);
   elements.filesList?.addEventListener("keydown", handleFilesListKeydown);
@@ -14889,6 +15235,7 @@ function wireEvents() {
 
     if (
       elements.filesUploadOverlay?.classList.contains("is-active")
+      || elements.filesEditOverlay?.classList.contains("is-active")
       || elements.filesAdminRequestsOverlay?.classList.contains("is-active")
       || elements.filesBotAdminOverlay?.classList.contains("is-active")
     ) {
