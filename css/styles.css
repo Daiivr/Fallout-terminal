@@ -3264,7 +3264,11 @@ body.is-silo-dossier-open {
 }
 
 .files-admin-requests-modal-core {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   width: min(1220px, calc(100% - 28px));
+  max-height: min(90vh, 900px);
+  overflow: hidden;
 }
 
 .files-bot-admin-modal-core {
@@ -7491,14 +7495,17 @@ body.is-files .files-edit-toggle input:checked + span::after {
 }
 
 .files-admin-requests-panel {
-  overflow: visible;
+  overflow: hidden;
   position: relative;
   isolation: isolate;
   display: grid;
   grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas:
     "hero hero"
     "console registry";
+  min-height: 0;
+  height: 100%;
   align-items: start;
   gap: 14px 18px;
   padding: 18px 18px 20px;
@@ -7619,12 +7626,17 @@ body.is-files .files-edit-toggle input:checked + span::after {
 .files-admin-requests-console-shell {
   grid-area: console;
   overflow: visible;
+  align-self: start;
 }
 
 .files-admin-requests-registry-shell {
   grid-area: registry;
+  align-self: stretch;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   min-width: 0;
+  height: 100%;
 }
 
 .files-admin-requests-console-shell::before,
@@ -7840,8 +7852,9 @@ body.is-files .files-edit-toggle input:checked + span::after {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
   grid-auto-rows: max-content;
   gap: 14px;
-  min-height: min(420px, 48vh);
-  max-height: min(640px, 68vh);
+  min-height: 0;
+  max-height: none;
+  height: 100%;
   overflow: auto;
   overflow-x: hidden;
   padding: 2px 4px 2px 1px;
