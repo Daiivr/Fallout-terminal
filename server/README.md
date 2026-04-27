@@ -175,6 +175,45 @@ Configure SMTP in `server/.env`:
 
 Note: existing logged-in sessions created before this change may need a fresh logout/login so the full Discord profile payload is available for email reporting.
 
+## Temporary Share Console
+
+The admin account now has a dedicated `Drops` tab for creating temporary public file links.
+
+Each temporary share can have:
+
+- a download limit
+- a time-based expiration
+- both at the same time
+- an optional public description
+- a public preview page at `/drops/<slug>`
+
+When a share expires or reaches its download cap, the server removes the metadata entry and deletes the stored file automatically.
+
+### VirusTotal badge
+
+If `VT_API_KEY` is configured, the server will queue each temporary share for a VirusTotal scan and show a status badge such as `VT SAFE`, `VT FLAGGED`, or `VT SCANNING`.
+
+Important:
+
+- `VT SAFE` means VirusTotal reported `0` malicious/suspicious detections at the time of the last check. It is not a guarantee that a file is harmless.
+- The default share upload limit is `32 MB`, which matches the straightforward VirusTotal file upload flow.
+- VirusTotal community API quotas are limited, so scans may stay in `VT SCANNING` briefly if multiple uploads are queued.
+
+### Optional env vars
+
+- `VT_API_KEY`
+  - Enables VirusTotal lookups and badges for temporary shares
+- `TEMP_SHARE_MAX_FILE_BYTES`
+  - Defaults to `33554432` (`32 MB`)
+- `TEMP_SHARE_RETENTION_MAX_HOURS`
+  - Defaults to `168` (`7 days`)
+- `TEMP_SHARE_TEXT_PREVIEW_MAX_BYTES`
+  - Defaults to `262144` (`256 KB`) for inline text previews
+- `TEMP_SHARE_VT_TICK_MS`
+  - Defaults to `20000`
+- `TEMP_SHARE_CLEANUP_INTERVAL_MS`
+  - Defaults to `60000`
+
 ## Render
 
 1. Deploy the `server` directory as a Node Web Service.

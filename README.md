@@ -16,6 +16,7 @@ The project is split into two main parts:
 - A classified/archive experience with authentication-gated content
 - Discord OAuth and session-based access control
 - Access request email flow for restricted files/archive access
+- Admin-only temporary public share links with auto-expiry and optional VirusTotal badges
 - A public Discord bot that can post rich silo and Minerva embeds into subscribed channels
 - English and Spanish support across the site and bot
 
@@ -199,4 +200,3 @@ If someone is new to the repo, these are the best files to read first:
 - The project uses a lot of handcrafted Fallout-themed UI and behavior, so changes often touch both presentation and data formatting.
 - The Minerva system is partly live and partly archival by design.
 - The Discord bot is not just a notifier anymore; it also includes interactive item inspection for Minerva sales.
-

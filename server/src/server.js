@@ -22,7 +22,10 @@ const STORAGE_DIR = configuredStorageDir
   ? path.resolve(configuredStorageDir)
   : path.resolve(__dirname, "..", "storage");
 const UPLOAD_DIR = path.join(STORAGE_DIR, "uploads");
+const TEMP_SHARE_UPLOAD_DIR = path.join(STORAGE_DIR, "temp-share-uploads");
 const METADATA_PATH = path.join(STORAGE_DIR, "files-metadata.json");
+const TEMP_SHARES_PATH = path.join(STORAGE_DIR, "temp-shares.json");
+const EXHAUSTED_SLUGS_PATH = path.join(STORAGE_DIR, "exhausted-slugs.json");
 const ACCESS_REQUESTS_PATH = path.join(STORAGE_DIR, "access-requests.json");
 const VISIT_COUNTER_PATH = path.join(STORAGE_DIR, "visit-counter.json");
 const PORT = Number(process.env.PORT || 3000);
@@ -56,6 +59,12 @@ const BOT_ADMIN_API_URL_RAW = String(process.env.BOT_ADMIN_API_URL || "").trim()
 const BOT_ADMIN_API_HOST = String(process.env.BOT_ADMIN_API_HOST || "127.0.0.1").trim() || "127.0.0.1";
 const BOT_ADMIN_API_PORT_RAW = String(process.env.BOT_ADMIN_API_PORT || "").trim();
 const BOT_ADMIN_API_TOKEN = String(process.env.BOT_ADMIN_API_TOKEN || "").trim();
+const TEMP_SHARE_MAX_FILE_BYTES_RAW = String(process.env.TEMP_SHARE_MAX_FILE_BYTES || "").trim();
+const TEMP_SHARE_RETENTION_MAX_HOURS_RAW = String(process.env.TEMP_SHARE_RETENTION_MAX_HOURS || "").trim();
+const TEMP_SHARE_TEXT_PREVIEW_MAX_BYTES_RAW = String(process.env.TEMP_SHARE_TEXT_PREVIEW_MAX_BYTES || "").trim();
+const TEMP_SHARE_VT_TICK_MS_RAW = String(process.env.TEMP_SHARE_VT_TICK_MS || "").trim();
+const TEMP_SHARE_CLEANUP_INTERVAL_MS_RAW = String(process.env.TEMP_SHARE_CLEANUP_INTERVAL_MS || "").trim();
+const VT_API_KEY = String(process.env.VT_API_KEY || process.env.VIRUSTOTAL_API_KEY || "").trim();
 const ACCESS_REQUEST_MAX_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 const DEFAULT_AUTH_RETURN_TO = "/#files";
 const DEFAULT_SHARE_PREVIEW_IMAGE_PATH = "/assets/images/image.png";
@@ -64,6 +73,18 @@ const FILE_SHARE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const FILE_SHARE_META_MAX_CHARS = 260;
 const FILE_SHARE_META_SUMMARY_MAX_CHARS = 120;
 const FILE_SHARE_META_EXCERPT_MAX_CHARS = 150;
+const TEMP_SHARE_ROUTE_PREFIX = "/drops/";
+const TEMP_SHARE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const TEMP_SHARE_VIRUS_STATUS = Object.freeze({
+  UNAVAILABLE: "unavailable",
+  QUEUED: "queued",
+  PENDING: "pending",
+  CLEAN: "clean",
+  FLAGGED: "flagged",
+  ERROR: "error",
+  SKIPPED: "skipped"
+});
+const VT_API_BASE_URL = "https://www.virustotal.com/api/v3";
 const INDEX_HTML_TEMPLATE = fs.readFileSync(INDEX_PAGE, "utf8");
 
 function parsePositiveInteger(value, fallback) {
@@ -72,6 +93,14 @@ function parsePositiveInteger(value, fallback) {
     return fallback;
   }
   return parsed;
+}
+
+function parseOptionalPositiveInteger(value, fallback = 0) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) {
+    return fallback;
+  }
+  return parsePositiveInteger(normalized, fallback);
 }
 
 function parseBoolean(value, fallback = false) {
@@ -127,6 +156,11 @@ const BOT_ADMIN_API_PORT = parsePositiveInteger(BOT_ADMIN_API_PORT_RAW, 3101);
 const BOT_ADMIN_API_URL = sanitizeHttpBaseUrl(BOT_ADMIN_API_URL_RAW)
   || (BOT_ADMIN_API_TOKEN ? `http://${BOT_ADMIN_API_HOST}:${BOT_ADMIN_API_PORT}` : "");
 const ACCESS_REQUEST_COOLDOWN_MS = parsePositiveInteger(ACCESS_REQUEST_COOLDOWN_MS_RAW, 15 * 60 * 1000);
+const TEMP_SHARE_MAX_FILE_BYTES = parsePositiveInteger(TEMP_SHARE_MAX_FILE_BYTES_RAW, 32 * 1024 * 1024);
+const TEMP_SHARE_RETENTION_MAX_HOURS = parsePositiveInteger(TEMP_SHARE_RETENTION_MAX_HOURS_RAW, 24 * 7);
+const TEMP_SHARE_TEXT_PREVIEW_MAX_BYTES = parsePositiveInteger(TEMP_SHARE_TEXT_PREVIEW_MAX_BYTES_RAW, 256 * 1024);
+const TEMP_SHARE_VT_TICK_MS = parsePositiveInteger(TEMP_SHARE_VT_TICK_MS_RAW, 20 * 1000);
+const TEMP_SHARE_CLEANUP_INTERVAL_MS = parsePositiveInteger(TEMP_SHARE_CLEANUP_INTERVAL_MS_RAW, 60 * 1000);
 const ACCESS_REQUEST_DECISION_TTL_MS = Math.min(
   parsePositiveInteger(ACCESS_REQUEST_DECISION_TTL_MS_RAW, ACCESS_REQUEST_MAX_WINDOW_MS),
   ACCESS_REQUEST_MAX_WINDOW_MS
@@ -174,8 +208,15 @@ if (isDiscordId(ADMIN_DISCORD_ID)) {
 }
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+fs.mkdirSync(TEMP_SHARE_UPLOAD_DIR, { recursive: true });
 if (!fs.existsSync(METADATA_PATH)) {
   fs.writeFileSync(METADATA_PATH, "[]\n", "utf8");
+}
+if (!fs.existsSync(TEMP_SHARES_PATH)) {
+  fs.writeFileSync(TEMP_SHARES_PATH, "[]\n", "utf8");
+}
+if (!fs.existsSync(EXHAUSTED_SLUGS_PATH)) {
+  fs.writeFileSync(EXHAUSTED_SLUGS_PATH, "{}\n", "utf8");
 }
 if (!fs.existsSync(ACCESS_REQUESTS_PATH)) {
   fs.writeFileSync(ACCESS_REQUESTS_PATH, "[]\n", "utf8");
@@ -1135,6 +1176,394 @@ function sanitizeFileDisplayName(value) {
   return sanitizeDisplayFilename(raw).slice(0, FILE_DISPLAY_NAME_MAX_CHARS);
 }
 
+function resolveTempShareStoredPath(storedName) {
+  const normalizedName = String(storedName || "").trim();
+  if (!normalizedName) {
+    return "";
+  }
+  const resolvedPath = path.resolve(TEMP_SHARE_UPLOAD_DIR, normalizedName);
+  const uploadsRoot = path.resolve(TEMP_SHARE_UPLOAD_DIR) + path.sep;
+  if (!resolvedPath.startsWith(uploadsRoot)) {
+    return "";
+  }
+  return resolvedPath;
+}
+
+function deleteStoredTempShareUpload(storedName) {
+  const resolvedPath = resolveTempShareStoredPath(storedName);
+  if (!resolvedPath) {
+    return;
+  }
+  fs.unlink(resolvedPath, () => {});
+}
+
+function normalizeTempShareVirusStatus(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (
+    normalized === TEMP_SHARE_VIRUS_STATUS.QUEUED
+    || normalized === TEMP_SHARE_VIRUS_STATUS.PENDING
+    || normalized === TEMP_SHARE_VIRUS_STATUS.CLEAN
+    || normalized === TEMP_SHARE_VIRUS_STATUS.FLAGGED
+    || normalized === TEMP_SHARE_VIRUS_STATUS.ERROR
+    || normalized === TEMP_SHARE_VIRUS_STATUS.SKIPPED
+  ) {
+    return normalized;
+  }
+  return TEMP_SHARE_VIRUS_STATUS.UNAVAILABLE;
+}
+
+function normalizeTempShareVirusStats(stats) {
+  const source = stats && typeof stats === "object" ? stats : {};
+  const normalizeCount = (value) => {
+    const parsed = Number.parseInt(String(value ?? 0), 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  };
+
+  return {
+    harmless: normalizeCount(source.harmless),
+    malicious: normalizeCount(source.malicious),
+    suspicious: normalizeCount(source.suspicious),
+    undetected: normalizeCount(source.undetected),
+    timeout: normalizeCount(source.timeout),
+    failure: normalizeCount(source.failure),
+    "type-unsupported": normalizeCount(source["type-unsupported"] ?? source.typeUnsupported),
+    "confirmed-timeout": normalizeCount(source["confirmed-timeout"] ?? source.confirmedTimeout)
+  };
+}
+
+function buildVirusTotalPermalink(sha256) {
+  const normalized = String(sha256 || "").trim().toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(normalized)) {
+    return "";
+  }
+  return `https://www.virustotal.com/gui/file/${normalized}`;
+}
+
+function normalizeTempShareEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const id = String(entry.id || "").trim().toLowerCase();
+  const storedName = String(entry.storedName || "").trim();
+  const name = sanitizeDisplayFilename(entry.name || entry.originalName || "");
+  if (!FILE_ID_PATTERN.test(id) || !storedName || !name) {
+    return null;
+  }
+
+  const mimeType = String(entry.mimeType || "application/octet-stream").trim() || "application/octet-stream";
+  const size = Number(entry.size);
+  const maxDownloads = parseOptionalPositiveInteger(entry.maxDownloads, 0);
+  const downloadCount = parseOptionalPositiveInteger(entry.downloadCount, 0);
+  const uploadedAt = String(entry.uploadedAt || "").trim() || new Date(0).toISOString();
+  const updatedAt = String(entry.updatedAt || "").trim() || uploadedAt;
+  const expiresAtRaw = String(entry.expiresAt || "").trim();
+  const expiresAtMs = Date.parse(expiresAtRaw);
+  const expiresAt = Number.isFinite(expiresAtMs) && expiresAtMs > 0
+    ? new Date(expiresAtMs).toISOString()
+    : "";
+  const virusTotalSource = entry.virusTotal && typeof entry.virusTotal === "object" ? entry.virusTotal : {};
+  const sha256 = String(virusTotalSource.sha256 || "").trim().toLowerCase();
+  const langRaw = String(entry.lang || "").trim().toLowerCase();
+  const lang = langRaw === "es" ? "es" : "en";
+
+  return {
+    id,
+    storedName,
+    name,
+    displayName: sanitizeFileDisplayName(entry.displayName),
+    mimeType,
+    size: Number.isFinite(size) && size >= 0 ? size : 0,
+    description: sanitizeFileDescription(entry.description),
+    maxDownloads,
+    downloadCount,
+    uploadedAt,
+    updatedAt,
+    expiresAt,
+    lang,
+    uploaderDiscordId: String(entry.uploaderDiscordId || "").trim(),
+    uploader: String(entry.uploader || "").trim(),
+    virusTotal: {
+      status: normalizeTempShareVirusStatus(virusTotalSource.status),
+      sha256: /^[a-f0-9]{64}$/.test(sha256) ? sha256 : "",
+      analysisId: String(virusTotalSource.analysisId || "").trim(),
+      permalink: buildVirusTotalPermalink(sha256),
+      stats: normalizeTempShareVirusStats(virusTotalSource.stats),
+      lastCheckedAt: String(virusTotalSource.lastCheckedAt || "").trim(),
+      completedAt: String(virusTotalSource.completedAt || "").trim(),
+      lastError: String(virusTotalSource.lastError || "").trim().slice(0, 320)
+    }
+  };
+}
+
+function writeTempShareStore(entries) {
+  const tempPath = `${TEMP_SHARES_PATH}.tmp`;
+  const payload = JSON.stringify(entries, null, 2);
+  fs.writeFileSync(tempPath, `${payload}\n`, "utf8");
+  fs.renameSync(tempPath, TEMP_SHARES_PATH);
+}
+
+function readTempShareStore() {
+  try {
+    const raw = fs.readFileSync(TEMP_SHARES_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed
+      .map((entry) => normalizeTempShareEntry(entry))
+      .filter(Boolean);
+  } catch (error) {
+    console.error("[temp-shares] read error:", error);
+    return [];
+  }
+}
+
+function normalizeTempShareSlugValue(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 96);
+}
+
+function isValidTempShareSlug(value) {
+  return TEMP_SHARE_SLUG_PATTERN.test(String(value || "").trim());
+}
+
+function stripTempShareExtension(name) {
+  const value = String(name || "").trim();
+  if (!value) {
+    return "";
+  }
+  const dotIndex = value.lastIndexOf(".");
+  if (dotIndex <= 0) {
+    return value;
+  }
+  return value.slice(0, dotIndex);
+}
+
+function buildTempShareSlug(entry) {
+  const normalized = normalizeTempShareEntry(entry);
+  if (!normalized) {
+    return "";
+  }
+  const stableName = stripTempShareExtension(normalized.displayName || normalized.name) || "shared-drop";
+  const slugBase = normalizeTempShareSlugValue(stableName) || "shared-drop";
+  const shortId = normalized.id.replace(/-/g, "").slice(0, 8);
+  return shortId ? `${slugBase}-${shortId}` : slugBase;
+}
+
+function hasTempShareExpired(entry, nowMs = Date.now()) {
+  const expiresAtMs = Date.parse(String(entry?.expiresAt || "").trim());
+  return Number.isFinite(expiresAtMs) && expiresAtMs > 0 && nowMs >= expiresAtMs;
+}
+
+function isTempShareExhausted(entry) {
+  const maxDownloads = parseOptionalPositiveInteger(entry?.maxDownloads, 0);
+  if (maxDownloads <= 0) {
+    return false;
+  }
+  return parseOptionalPositiveInteger(entry?.downloadCount, 0) >= maxDownloads;
+}
+
+function isTempShareActive(entry, nowMs = Date.now()) {
+  const normalized = normalizeTempShareEntry(entry);
+  if (!normalized) {
+    return false;
+  }
+  return !hasTempShareExpired(normalized, nowMs) && !isTempShareExhausted(normalized);
+}
+
+function getTempShareRemainingDownloads(entry) {
+  const normalized = normalizeTempShareEntry(entry);
+  if (!normalized) {
+    return 0;
+  }
+  if (normalized.maxDownloads <= 0) {
+    return 0;
+  }
+  return Math.max(0, normalized.maxDownloads - normalized.downloadCount);
+}
+
+function purgeInactiveTempShares(entries) {
+  const sourceEntries = Array.isArray(entries) ? entries : [];
+  const nowMs = Date.now();
+  const nextEntries = [];
+  let didChange = false;
+
+  for (const entry of sourceEntries) {
+    const normalized = normalizeTempShareEntry(entry);
+    if (!normalized) {
+      didChange = true;
+      continue;
+    }
+    if (!isTempShareActive(normalized, nowMs)) {
+      deleteStoredTempShareUpload(normalized.storedName);
+      didChange = true;
+      continue;
+    }
+    nextEntries.push(normalized);
+  }
+
+  return {
+    entries: nextEntries,
+    didChange
+  };
+}
+
+function getActiveTempShareEntries() {
+  const currentEntries = readTempShareStore();
+  const result = purgeInactiveTempShares(currentEntries);
+  if (result.didChange) {
+    writeTempShareStore(result.entries);
+  }
+  return result.entries;
+}
+
+const activeTempShareMutationIds = new Set();
+
+const exhaustedTempShareSlugs = new Map();
+
+function readExhaustedSlugs() {
+  try {
+    const raw = fs.readFileSync(EXHAUSTED_SLUGS_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeExhaustedSlugs(slugs) {
+  try {
+    const tempPath = `${EXHAUSTED_SLUGS_PATH}.tmp`;
+    fs.writeFileSync(tempPath, `${JSON.stringify(slugs, null, 2)}\n`, "utf8");
+    fs.renameSync(tempPath, EXHAUSTED_SLUGS_PATH);
+  } catch (err) {
+    console.error("[temp-shares] Failed to write exhausted slugs:", err);
+  }
+}
+
+function recordExhaustedTempShareSlug(slug, lang) {
+  const normalized = String(slug || "").trim();
+  if (!normalized) return;
+  const validLang = String(lang || "").trim() === "es" ? "es" : "en";
+  const now = Date.now();
+  exhaustedTempShareSlugs.set(normalized, { ts: now, lang: validLang });
+  try {
+    const slugs = readExhaustedSlugs();
+    const cutoff = now - 7 * 24 * 60 * 60 * 1000;
+    for (const k of Object.keys(slugs)) {
+      const v = slugs[k];
+      const ts = typeof v === "object" ? v.ts : v;
+      if (typeof ts !== "number" || ts < cutoff) delete slugs[k];
+    }
+    slugs[normalized] = { ts: now, lang: validLang };
+    writeExhaustedSlugs(slugs);
+  } catch (err) {
+    console.error("[temp-shares] Failed to record exhausted slug:", err);
+  }
+}
+
+function isExhaustedTempShareSlug(slug) {
+  const normalized = String(slug || "").trim();
+  if (!normalized) return false;
+  if (exhaustedTempShareSlugs.has(normalized)) return true;
+  try {
+    const slugs = readExhaustedSlugs();
+    const v = slugs[normalized];
+    if (v !== undefined && v !== null) {
+      const ts = typeof v === "object" ? v.ts : v;
+      const storedLang = typeof v === "object" ? (v.lang || "en") : "en";
+      exhaustedTempShareSlugs.set(normalized, { ts: typeof ts === "number" ? ts : Date.now(), lang: storedLang });
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
+function getExhaustedSlugLang(slug) {
+  const normalized = String(slug || "").trim();
+  if (!normalized) return "en";
+  const mem = exhaustedTempShareSlugs.get(normalized);
+  if (mem) return (typeof mem === "object" ? mem.lang : null) || "en";
+  try {
+    const slugs = readExhaustedSlugs();
+    const v = slugs[normalized];
+    if (v && typeof v === "object") return v.lang || "en";
+  } catch {}
+  return "en";
+}
+
+function tryLockTempShareMutation(shareId) {
+  const normalizedShareId = String(shareId || "").trim().toLowerCase();
+  if (!normalizedShareId || activeTempShareMutationIds.has(normalizedShareId)) {
+    return false;
+  }
+  activeTempShareMutationIds.add(normalizedShareId);
+  return true;
+}
+
+function unlockTempShareMutation(shareId) {
+  const normalizedShareId = String(shareId || "").trim().toLowerCase();
+  if (!normalizedShareId) {
+    return;
+  }
+  activeTempShareMutationIds.delete(normalizedShareId);
+}
+
+function buildTempShareListEntry(entry) {
+  const normalized = normalizeTempShareEntry(entry);
+  if (!normalized) {
+    return null;
+  }
+
+  const slug = buildTempShareSlug(normalized);
+  return {
+    id: normalized.id,
+    slug,
+    sharePath: `${TEMP_SHARE_ROUTE_PREFIX}${encodeURIComponent(slug)}`,
+    name: normalized.name,
+    displayName: normalized.displayName || normalized.name,
+    mimeType: normalized.mimeType,
+    size: normalized.size,
+    description: normalized.description,
+    uploadedAt: normalized.uploadedAt,
+    updatedAt: normalized.updatedAt,
+    expiresAt: normalized.expiresAt,
+    maxDownloads: normalized.maxDownloads,
+    downloadCount: normalized.downloadCount,
+    remainingDownloads: getTempShareRemainingDownloads(normalized),
+    uploader: normalized.uploader || normalized.uploaderDiscordId || "",
+    virusTotal: normalized.virusTotal
+  };
+}
+
+function resolveTempShareFileTypeLabel(entry) {
+  const normalized = normalizeTempShareEntry(entry);
+  if (!normalized) {
+    return "FILE";
+  }
+
+  for (const candidateName of [normalized.displayName, normalized.name]) {
+    const extension = path.extname(String(candidateName || "")).replace(/^\./, "").trim();
+    if (extension) {
+      return extension.toUpperCase();
+    }
+  }
+
+  const mimeType = String(normalized.mimeType || "").trim().toLowerCase();
+  if (!mimeType || mimeType === "application/octet-stream") {
+    return "FILE";
+  }
+  const [topLevelType] = mimeType.split("/");
+  return (topLevelType || mimeType).toUpperCase();
+}
+
 function normalizeMetadataFileEntry(entry) {
   if (!entry || typeof entry !== "object") {
     return null;
@@ -1595,6 +2024,1876 @@ function sendStoredFileImage(res, entry) {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Content-Disposition", `inline; filename="${quotedImageName}"`);
   res.type(normalized.imageMimeType || "application/octet-stream");
+  res.sendFile(storedPath);
+}
+
+function getTempShareById(shareId) {
+  const normalizedShareId = String(shareId || "").trim().toLowerCase();
+  if (!FILE_ID_PATTERN.test(normalizedShareId)) {
+    return null;
+  }
+  return getActiveTempShareEntries().find((entry) => entry.id === normalizedShareId) || null;
+}
+
+function resolveTempShareBySlug(shareSlug) {
+  const normalizedSlug = normalizeTempShareSlugValue(shareSlug);
+  if (!isValidTempShareSlug(normalizedSlug)) {
+    return null;
+  }
+  return getActiveTempShareEntries().find((entry) => buildTempShareSlug(entry) === normalizedSlug) || null;
+}
+
+function updateTempShareEntryById(shareId, updater) {
+  const normalizedShareId = String(shareId || "").trim().toLowerCase();
+  if (!FILE_ID_PATTERN.test(normalizedShareId)) {
+    return { ok: false, reason: "invalid_id" };
+  }
+  if (typeof updater !== "function") {
+    return { ok: false, reason: "invalid_updater" };
+  }
+  if (!tryLockTempShareMutation(normalizedShareId)) {
+    return { ok: false, reason: "busy" };
+  }
+
+  try {
+    const entries = getActiveTempShareEntries();
+    const index = entries.findIndex((entry) => entry.id === normalizedShareId);
+    if (index < 0) {
+      return { ok: false, reason: "not_found" };
+    }
+
+    const currentEntry = entries[index];
+    const nextEntryCandidate = updater(currentEntry);
+    if (nextEntryCandidate == null) {
+      entries.splice(index, 1);
+      writeTempShareStore(entries);
+      deleteStoredTempShareUpload(currentEntry.storedName);
+      return { ok: true, removed: true, entry: currentEntry };
+    }
+
+    const normalizedNextEntry = normalizeTempShareEntry(nextEntryCandidate);
+    if (!normalizedNextEntry) {
+      return { ok: false, reason: "invalid_entry" };
+    }
+
+    entries[index] = normalizedNextEntry;
+    writeTempShareStore(entries);
+    return {
+      ok: true,
+      removed: false,
+      entry: normalizedNextEntry,
+      previous: currentEntry
+    };
+  } finally {
+    unlockTempShareMutation(normalizedShareId);
+  }
+}
+
+function deleteTempShareById(shareId) {
+  return updateTempShareEntryById(shareId, () => null);
+}
+
+async function computeFileSha256(filePath) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash("sha256");
+    const stream = fs.createReadStream(filePath);
+    stream.on("error", reject);
+    stream.on("data", (chunk) => {
+      hash.update(chunk);
+    });
+    stream.on("end", () => {
+      resolve(hash.digest("hex"));
+    });
+  });
+}
+
+function virusTotalConfigured() {
+  return Boolean(VT_API_KEY);
+}
+
+async function requestVirusTotal(targetPath, options = {}) {
+  if (!virusTotalConfigured()) {
+    const error = new Error("VirusTotal is not configured on the server.");
+    error.status = 503;
+    throw error;
+  }
+
+  const targetUrl = /^https?:\/\//i.test(String(targetPath || ""))
+    ? String(targetPath || "")
+    : `${VT_API_BASE_URL}${String(targetPath || "")}`;
+
+  const headers = {
+    "x-apikey": VT_API_KEY,
+    Accept: "application/json",
+    ...(options.headers && typeof options.headers === "object" ? options.headers : {})
+  };
+  const requestOptions = {
+    method: String(options.method || "GET").trim().toUpperCase() || "GET",
+    headers,
+    cache: "no-store"
+  };
+  if (Object.prototype.hasOwnProperty.call(options, "body")) {
+    requestOptions.body = options.body;
+  }
+
+  let response;
+  try {
+    response = await fetch(targetUrl, requestOptions);
+  } catch (error) {
+    const nextError = new Error("VirusTotal is unreachable right now.");
+    nextError.status = 502;
+    nextError.cause = error;
+    throw nextError;
+  }
+
+  const text = await response.text();
+  let payload = null;
+  if (text) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (!response.ok) {
+    const error = new Error(
+      payload?.error?.message
+      || payload?.error
+      || payload?.message
+      || `VirusTotal HTTP ${response.status}`
+    );
+    error.status = response.status;
+    throw error;
+  }
+
+  return payload || {};
+}
+
+function buildTempShareVirusStateFromStats(stats, overrides = {}) {
+  const normalizedStats = normalizeTempShareVirusStats(stats);
+  const flaggedCount = normalizedStats.malicious + normalizedStats.suspicious;
+  const completedAt = new Date().toISOString();
+  return {
+    status: flaggedCount > 0 ? TEMP_SHARE_VIRUS_STATUS.FLAGGED : TEMP_SHARE_VIRUS_STATUS.CLEAN,
+    stats: normalizedStats,
+    lastCheckedAt: completedAt,
+    completedAt,
+    lastError: "",
+    ...overrides
+  };
+}
+
+async function submitTempShareVirusTotalUpload(entry) {
+  const storedPath = resolveTempShareStoredPath(entry.storedName);
+  if (!storedPath || !fs.existsSync(storedPath)) {
+    return updateTempShareEntryById(entry.id, (currentEntry) => ({
+      ...currentEntry,
+      virusTotal: {
+        ...currentEntry.virusTotal,
+        status: TEMP_SHARE_VIRUS_STATUS.ERROR,
+        lastCheckedAt: new Date().toISOString(),
+        lastError: "Stored file could not be found for scanning."
+      }
+    }));
+  }
+
+  const sha256 = String(entry.virusTotal?.sha256 || "").trim().toLowerCase();
+  if (sha256) {
+    try {
+      const fileReport = await requestVirusTotal(`/files/${encodeURIComponent(sha256)}`);
+      const stats = fileReport?.data?.attributes?.last_analysis_stats;
+      if (stats && typeof stats === "object") {
+        return updateTempShareEntryById(entry.id, (currentEntry) => ({
+          ...currentEntry,
+          virusTotal: {
+            ...currentEntry.virusTotal,
+            sha256,
+            permalink: buildVirusTotalPermalink(sha256),
+            ...buildTempShareVirusStateFromStats(stats)
+          }
+        }));
+      }
+    } catch (error) {
+      if (Number(error?.status) !== 404) {
+        const recoverable = Number(error?.status) === 429 || Number(error?.status) >= 500;
+        return updateTempShareEntryById(entry.id, (currentEntry) => ({
+          ...currentEntry,
+          virusTotal: {
+            ...currentEntry.virusTotal,
+            status: recoverable ? TEMP_SHARE_VIRUS_STATUS.QUEUED : TEMP_SHARE_VIRUS_STATUS.ERROR,
+            lastCheckedAt: new Date().toISOString(),
+            lastError: String(error?.message || "VirusTotal lookup failed.")
+          }
+        }));
+      }
+    }
+  }
+
+  try {
+    const buffer = await fs.promises.readFile(storedPath);
+    const formData = new FormData();
+    formData.append(
+      "file",
+      new Blob([buffer], { type: entry.mimeType || "application/octet-stream" }),
+      entry.name
+    );
+
+    const payload = await requestVirusTotal("/files", {
+      method: "POST",
+      body: formData
+    });
+    const analysisId = String(payload?.data?.id || "").trim();
+    if (!analysisId) {
+      throw new Error("VirusTotal did not return an analysis id.");
+    }
+
+    return updateTempShareEntryById(entry.id, (currentEntry) => ({
+      ...currentEntry,
+      virusTotal: {
+        ...currentEntry.virusTotal,
+        status: TEMP_SHARE_VIRUS_STATUS.PENDING,
+        analysisId,
+        lastCheckedAt: new Date().toISOString(),
+        lastError: ""
+      }
+    }));
+  } catch (error) {
+    const recoverable = Number(error?.status) === 429 || Number(error?.status) >= 500;
+    return updateTempShareEntryById(entry.id, (currentEntry) => ({
+      ...currentEntry,
+      virusTotal: {
+        ...currentEntry.virusTotal,
+        status: recoverable ? TEMP_SHARE_VIRUS_STATUS.QUEUED : TEMP_SHARE_VIRUS_STATUS.ERROR,
+        lastCheckedAt: new Date().toISOString(),
+        lastError: String(error?.message || "VirusTotal upload failed.")
+      }
+    }));
+  }
+}
+
+async function pollTempShareVirusTotalAnalysis(entry) {
+  const analysisId = String(entry?.virusTotal?.analysisId || "").trim();
+  if (!analysisId) {
+    return updateTempShareEntryById(entry.id, (currentEntry) => ({
+      ...currentEntry,
+      virusTotal: {
+        ...currentEntry.virusTotal,
+        status: TEMP_SHARE_VIRUS_STATUS.ERROR,
+        lastCheckedAt: new Date().toISOString(),
+        lastError: "VirusTotal analysis id is missing."
+      }
+    }));
+  }
+
+  try {
+    const payload = await requestVirusTotal(`/analyses/${encodeURIComponent(analysisId)}`);
+    const attributes = payload?.data?.attributes && typeof payload.data.attributes === "object"
+      ? payload.data.attributes
+      : {};
+    const status = String(attributes.status || "").trim().toLowerCase();
+    const stats = attributes.stats;
+
+    if (status === "completed" && stats && typeof stats === "object") {
+      return updateTempShareEntryById(entry.id, (currentEntry) => ({
+        ...currentEntry,
+        virusTotal: {
+          ...currentEntry.virusTotal,
+          ...buildTempShareVirusStateFromStats(stats, {
+            analysisId: "",
+            sha256: currentEntry.virusTotal.sha256,
+            permalink: buildVirusTotalPermalink(currentEntry.virusTotal.sha256)
+          })
+        }
+      }));
+    }
+
+    return updateTempShareEntryById(entry.id, (currentEntry) => ({
+      ...currentEntry,
+      virusTotal: {
+        ...currentEntry.virusTotal,
+        status: TEMP_SHARE_VIRUS_STATUS.PENDING,
+        lastCheckedAt: new Date().toISOString(),
+        lastError: ""
+      }
+    }));
+  } catch (error) {
+    const recoverable = Number(error?.status) === 429 || Number(error?.status) >= 500;
+    return updateTempShareEntryById(entry.id, (currentEntry) => ({
+      ...currentEntry,
+      virusTotal: {
+        ...currentEntry.virusTotal,
+        status: recoverable ? TEMP_SHARE_VIRUS_STATUS.PENDING : TEMP_SHARE_VIRUS_STATUS.ERROR,
+        lastCheckedAt: new Date().toISOString(),
+        lastError: String(error?.message || "VirusTotal analysis lookup failed.")
+      }
+    }));
+  }
+}
+
+let tempShareVirusWorkerBusy = false;
+
+async function tickTempShareVirusScans() {
+  if (!virusTotalConfigured() || tempShareVirusWorkerBusy) {
+    return;
+  }
+
+  const activeEntries = getActiveTempShareEntries();
+  const nextEntry = activeEntries.find((entry) => {
+    const status = normalizeTempShareVirusStatus(entry?.virusTotal?.status);
+    return status === TEMP_SHARE_VIRUS_STATUS.QUEUED || status === TEMP_SHARE_VIRUS_STATUS.PENDING;
+  });
+  if (!nextEntry) {
+    return;
+  }
+
+  tempShareVirusWorkerBusy = true;
+  try {
+    if (normalizeTempShareVirusStatus(nextEntry.virusTotal.status) === TEMP_SHARE_VIRUS_STATUS.QUEUED) {
+      await submitTempShareVirusTotalUpload(nextEntry);
+      return;
+    }
+    await pollTempShareVirusTotalAnalysis(nextEntry);
+  } finally {
+    tempShareVirusWorkerBusy = false;
+  }
+}
+
+function getTempSharePublicPath(entry) {
+  const slug = buildTempShareSlug(entry);
+  return slug ? `${TEMP_SHARE_ROUTE_PREFIX}${encodeURIComponent(slug)}` : TEMP_SHARE_ROUTE_PREFIX;
+}
+
+function resolveTempSharePreviewKind(entry) {
+  const normalized = normalizeTempShareEntry(entry);
+  if (!normalized) {
+    return "";
+  }
+
+  const mimeType = String(normalized.mimeType || "").trim().toLowerCase();
+  if (/^image\/(?:png|jpeg|gif|webp|bmp|avif|x-icon|vnd\.microsoft\.icon)$/i.test(mimeType)) {
+    return "image";
+  }
+  if (/^audio\//i.test(mimeType)) {
+    return "audio";
+  }
+  if (/^video\//i.test(mimeType)) {
+    return "video";
+  }
+  if (mimeType === "application/pdf") {
+    return "pdf";
+  }
+  if (
+    /^text\//i.test(mimeType)
+    || mimeType === "application/json"
+    || mimeType === "application/xml"
+    || mimeType === "text/xml"
+  ) {
+    return "text";
+  }
+  if (mimeType === "application/zip" || mimeType === "application/x-zip-compressed") {
+    return "zip";
+  }
+  if (
+    mimeType === "application/vnd.rar"
+    || mimeType === "application/x-rar-compressed"
+    || mimeType === "application/x-rar"
+  ) {
+    return "rar";
+  }
+  const ext = String(normalized.name || "").toLowerCase().trim().split(".").pop();
+  if (ext === "rar") return "rar";
+  if (ext === "zip") return "zip";
+  return "";
+}
+
+const MAX_ZIP_LIST_ENTRIES = 300;
+
+async function listZipContents(filePath) {
+  const EOCD_SIG = 0x06054b50;
+  const CD_SIG = 0x02014b50;
+  const EOCD_SIZE = 22;
+  const MAX_SEARCH = Math.min(EOCD_SIZE + 65535, 1 << 20);
+
+  let fd;
+  try {
+    fd = await fs.promises.open(filePath, "r");
+    const { size } = await fd.stat();
+    if (size < EOCD_SIZE) {
+      return null;
+    }
+
+    const searchLen = Math.min(MAX_SEARCH, size);
+    const tail = Buffer.allocUnsafe(searchLen);
+    await fd.read(tail, 0, searchLen, size - searchLen);
+
+    let eocdPos = -1;
+    for (let i = tail.length - EOCD_SIZE; i >= 0; i--) {
+      if (tail.readUInt32LE(i) === EOCD_SIG) {
+        eocdPos = i;
+        break;
+      }
+    }
+    if (eocdPos < 0) {
+      return null;
+    }
+
+    const cdEntryCount = tail.readUInt16LE(eocdPos + 10);
+    const cdSize = tail.readUInt32LE(eocdPos + 12);
+    const cdOffset = tail.readUInt32LE(eocdPos + 16);
+
+    if (cdOffset + cdSize > size || cdSize > 32 * 1024 * 1024) {
+      return null;
+    }
+
+    const cd = Buffer.allocUnsafe(cdSize);
+    await fd.read(cd, 0, cdSize, cdOffset);
+
+    const entries = [];
+    let pos = 0;
+    for (let i = 0; i < cdEntryCount && pos + 46 <= cd.length; i++) {
+      if (cd.readUInt32LE(pos) !== CD_SIG) {
+        break;
+      }
+      const uncompressedSize = cd.readUInt32LE(pos + 24);
+      const nameLen = cd.readUInt16LE(pos + 28);
+      const extraLen = cd.readUInt16LE(pos + 30);
+      const commentLen = cd.readUInt16LE(pos + 32);
+      const name = cd.slice(pos + 46, pos + 46 + nameLen).toString("utf8");
+      if (!name.endsWith("/")) {
+        entries.push({ name, size: uncompressedSize });
+      }
+      pos += 46 + nameLen + extraLen + commentLen;
+      if (entries.length >= MAX_ZIP_LIST_ENTRIES) {
+        break;
+      }
+    }
+
+    return { entries, totalCount: cdEntryCount };
+  } catch {
+    return null;
+  } finally {
+    try {
+      await fd?.close();
+    } catch {}
+  }
+}
+
+const MAX_RAR_LIST_ENTRIES = 300;
+
+async function listRarContents(filePath) {
+  let fd;
+  try {
+    fd = await fs.promises.open(filePath, "r");
+    const { size } = await fd.stat();
+    if (size < 8) return null;
+
+    const sigBuf = Buffer.allocUnsafe(8);
+    await fd.read(sigBuf, 0, 8, 0);
+
+    const RAR4_SIG = Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x00]);
+    const RAR5_SIG = Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x01, 0x00]);
+
+    const isRar5 = sigBuf.slice(0, 8).equals(RAR5_SIG);
+    const isRar4 = !isRar5 && sigBuf.slice(0, 7).equals(RAR4_SIG);
+    if (!isRar4 && !isRar5) return null;
+
+    const entries = [];
+    let totalCount = 0;
+
+    if (isRar4) {
+      // RAR4: fixed-size block headers at offset 7
+      // Block header: CRC(2) Type(1) Flags(2) Size(2) [AddSize(4) if flags&0x8000]
+      // File header type: 0x74
+      // File block: after base header: PackSize(4) UnpSize(4) HostOS(1) CRC(4) DateTime(4) UnpVer(1) Method(1) NameLen(2) Attr(4) [HiPack(4) HiUnp(4) if flags&0x100]
+      const CHUNK = 65536;
+      const buf = Buffer.allocUnsafe(CHUNK);
+      let pos = 7;
+
+      while (pos + 7 <= size) {
+        const headerBuf = Buffer.allocUnsafe(11);
+        const { bytesRead: hRead } = await fd.read(headerBuf, 0, 11, pos);
+        if (hRead < 7) break;
+
+        const type = headerBuf[2];
+        const flags = headerBuf.readUInt16LE(3);
+        const headSize = headerBuf.readUInt16LE(5);
+        if (headSize < 7) break;
+
+        let addSize = 0;
+        if ((flags & 0x8000) && hRead >= 11) {
+          addSize = headerBuf.readUInt32LE(7);
+        }
+
+        if (type === 0x74 && headSize >= 32) {
+          // File header
+          const fhBuf = Buffer.allocUnsafe(headSize);
+          const { bytesRead: fhRead } = await fd.read(fhBuf, 0, headSize, pos);
+          if (fhRead < 32) break;
+
+          let unpSize = fhBuf.readUInt32LE(10);
+          const nameLen = fhBuf.readUInt16LE(26);
+          const fileFlags = fhBuf.readUInt16LE(3);
+          let dataOffset = 32;
+
+          if ((fileFlags & 0x100) && fhRead >= 36) {
+            // High parts of pack/unpack size
+            const hiUnp = fhBuf.readUInt32LE(dataOffset + 4);
+            unpSize = (BigInt(hiUnp) * 0x100000000n + BigInt(unpSize));
+            dataOffset += 8;
+          }
+
+          const nameEnd = Math.min(dataOffset + nameLen, fhRead);
+          const name = fhBuf.slice(dataOffset, nameEnd).toString("latin1");
+          const isDir = (fileFlags & 0x20) !== 0 || name.endsWith("\\") || name.endsWith("/");
+
+          if (!isDir) {
+            totalCount++;
+            if (entries.length < MAX_RAR_LIST_ENTRIES) {
+              entries.push({ name: name.replace(/\\/g, "/"), size: Number(unpSize) });
+            }
+          }
+        } else if (type === 0x73 && headSize === 13) {
+          // Archive header — skip
+        } else if (type === 0x7b) {
+          // End of archive
+          break;
+        }
+
+        const blockTotal = headSize + addSize;
+        if (blockTotal <= 0) break;
+        pos += blockTotal;
+      }
+    } else {
+      // RAR5: vint-based block headers at offset 8
+      // Vint: 7 bits per byte, LSB first, high bit = continuation
+      function readVint(buf, offset) {
+        let value = 0n;
+        let shift = 0n;
+        let i = offset;
+        while (i < buf.length) {
+          const byte = buf[i++];
+          value |= BigInt(byte & 0x7f) << shift;
+          shift += 7n;
+          if (!(byte & 0x80)) break;
+          if (shift >= 63n) break;
+        }
+        return { value, next: i };
+      }
+
+      const HEADER_BUF_SIZE = 256;
+      let pos = 8;
+
+      while (pos < size) {
+        const hBuf = Buffer.allocUnsafe(HEADER_BUF_SIZE);
+        const { bytesRead } = await fd.read(hBuf, 0, HEADER_BUF_SIZE, pos);
+        if (bytesRead < 4) break;
+
+        // Header CRC32 (4 bytes) then vint header_size, vint header_type, vint flags
+        let cur = 4;
+        const hsz = readVint(hBuf, cur);
+        cur = hsz.next;
+        const htype = readVint(hBuf, cur);
+        cur = htype.next;
+        const hflags = readVint(hBuf, cur);
+        cur = hflags.next;
+
+        const headerSize = Number(hsz.value);
+        const headerType = Number(htype.value);
+        const headerFlags = Number(hflags.value);
+
+        if (headerSize <= 0 || headerSize > 4 * 1024 * 1024) break;
+
+        // Read the full block header so we can parse extra_area_size and data_size.
+        // RAR5 HEADER_FLAGS common bits:
+        //   0x0001 = extra area present  → extra_area_size vint follows HEADER_FLAGS
+        //   0x0002 = data area present   → data_area_size vint follows (after extra_area_size if 0x0001)
+        // These two optional vints always come immediately after HEADER_FLAGS (in that order),
+        // before any block-type-specific fields.
+        const fullHdr = Buffer.allocUnsafe(Math.min(hsz.next + headerSize + 16, size - pos));
+        const { bytesRead: fhRead } = await fd.read(fullHdr, 0, fullHdr.length, pos);
+
+        let c = cur; // points to first byte after HEADER_FLAGS within fullHdr
+        let extraAreaSize = 0n;
+        let dataSize = 0n;
+
+        if (headerFlags & 0x0001) {
+          const esz = readVint(fullHdr, c);
+          extraAreaSize = esz.value;
+          c = esz.next;
+        }
+        if (headerFlags & 0x0002) {
+          const dsz = readVint(fullHdr, c);
+          dataSize = dsz.value;
+          c = dsz.next;
+        }
+
+        // Block type 5 = end of archive
+        if (headerType === 5) break;
+
+        // Block type 2 = file block
+        if (headerType === 2) {
+          // c now points to the first type-specific field: FILE_FLAGS
+          const ff = readVint(fullHdr, c); c = ff.next;
+          const fileFlags = Number(ff.value);
+          const us = readVint(fullHdr, c); c = us.next;
+          const unpSize = us.value;
+          const at = readVint(fullHdr, c); c = at.next;
+          if (fileFlags & 0x002) c += 4; // mtime
+          if (fileFlags & 0x004) c += 4; // file CRC32
+          const ci = readVint(fullHdr, c); c = ci.next; // compression info
+          const ho = readVint(fullHdr, c); c = ho.next; // host OS
+          const nl = readVint(fullHdr, c); c = nl.next; // name length
+          const nameLen = Number(nl.value);
+          const nameEnd = Math.min(c + nameLen, fhRead);
+          const name = fullHdr.slice(c, nameEnd).toString("utf8");
+          const isDir = (fileFlags & 0x0001) !== 0;
+
+          if (!isDir && name) {
+            totalCount++;
+            if (entries.length < MAX_RAR_LIST_ENTRIES) {
+              entries.push({ name, size: Number(unpSize) });
+            }
+          }
+        }
+
+        const blockTotal = hsz.next + headerSize + Number(dataSize);
+        if (blockTotal <= 0) break;
+        pos += blockTotal;
+      }
+    }
+
+    if (entries.length === 0 && totalCount === 0) return null;
+    return { entries, totalCount };
+  } catch {
+    return null;
+  } finally {
+    try { await fd?.close(); } catch {}
+  }
+}
+
+async function readTempShareTextPreview(entry) {
+  const normalized = normalizeTempShareEntry(entry);
+  if (!normalized) {
+    return { text: "", truncated: false };
+  }
+
+  const storedPath = resolveTempShareStoredPath(normalized.storedName);
+  if (!storedPath || !fs.existsSync(storedPath)) {
+    return { text: "", truncated: false };
+  }
+
+  const fileHandle = await fs.promises.open(storedPath, "r");
+  try {
+    const buffer = Buffer.alloc(TEMP_SHARE_TEXT_PREVIEW_MAX_BYTES + 1);
+    const { bytesRead } = await fileHandle.read(buffer, 0, buffer.length, 0);
+    const slice = buffer.subarray(0, Math.min(bytesRead, TEMP_SHARE_TEXT_PREVIEW_MAX_BYTES));
+    return {
+      text: slice.toString("utf8"),
+      truncated: bytesRead > TEMP_SHARE_TEXT_PREVIEW_MAX_BYTES
+    };
+  } finally {
+    await fileHandle.close();
+  }
+}
+
+function formatTempSharePublicDate(value) {
+  const timestamp = Date.parse(String(value || "").trim());
+  if (!Number.isFinite(timestamp)) {
+    return "--";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC"
+  }).format(new Date(timestamp));
+}
+
+function buildTempShareVirusBadge(entry) {
+  const status = normalizeTempShareVirusStatus(entry?.virusTotal?.status);
+  const stats = normalizeTempShareVirusStats(entry?.virusTotal?.stats);
+  const detected = stats.malicious + stats.suspicious;
+
+  if (status === TEMP_SHARE_VIRUS_STATUS.CLEAN) {
+    return {
+      kind: "safe",
+      title: "VT SAFE",
+      body: `${detected} detections reported`
+    };
+  }
+  if (status === TEMP_SHARE_VIRUS_STATUS.FLAGGED) {
+    return {
+      kind: "flagged",
+      title: "VT FLAGGED",
+      body: `${detected} detections reported`
+    };
+  }
+  if (status === TEMP_SHARE_VIRUS_STATUS.PENDING || status === TEMP_SHARE_VIRUS_STATUS.QUEUED) {
+    return {
+      kind: "pending",
+      title: "VT SCANNING",
+      body: "Analysis in progress"
+    };
+  }
+  if (status === TEMP_SHARE_VIRUS_STATUS.ERROR) {
+    return {
+      kind: "error",
+      title: "VT ERROR",
+      body: "Scan status unavailable"
+    };
+  }
+  if (status === TEMP_SHARE_VIRUS_STATUS.SKIPPED) {
+    return {
+      kind: "muted",
+      title: "VT SKIPPED",
+      body: "Scan skipped"
+    };
+  }
+  return {
+    kind: "muted",
+    title: "VT UNCHECKED",
+    body: "Not scanned"
+  };
+}
+
+// ── i18n strings for public-facing drop pages ──────────────────────────────
+const DROP_I18N = {
+  en: {
+    htmlLang: "en",
+    badge: "TEMPORARY SHARE",
+    kicker: "PUBLIC FILE DROP",
+    labelFileType: "FILE TYPE",
+    labelFileSize: "FILE SIZE",
+    labelUploaded: "UPLOADED",
+    labelExpires: "EXPIRES",
+    labelDownloads: "DOWNLOADS",
+    labelVt: "VIRUSTOTAL",
+    btnVtReport: "OPEN VT REPORT",
+    btnDownload: "DOWNLOAD FILE",
+    btnOpenTab: "OPEN IN TAB",
+    downloadLimitOnly: "Download limit only",
+    expired: "Expired",
+    downloadsUsedSuffix: " used",
+    vtNote: "VirusTotal badges describe scan results, not a guarantee of safety. If anything looks off, treat the file with caution.",
+    noPreviewMsg: "No preview available for this file type.",
+    noPreviewHint: "Use the download button to access the file.",
+    previewTruncated: "[preview truncated]",
+    archiveContents: "ARCHIVE CONTENTS",
+    zipUnreadable: "ZIP contents could not be read.",
+    rarUnreadable: "RAR contents could not be read.",
+    zipColName: "Name",
+    zipColSize: "Size",
+    zipCount: (n) => `${n} ${n === 1 ? "file" : "files"}`,
+    zipTruncated: (shown, total) => `Showing ${shown} of ${total} entries`,
+    unavailTitle: "Temporary Share Unavailable",
+    unavailStatusLabel: "LINK OFFLINE",
+    unavailMessage: "This temporary share is missing or has expired.",
+    unavailBusyMessage: "This temporary share is missing, expired, or has already reached its download limit.",
+    unavailFileMissingTitle: "Temporary Share File Missing",
+    unavailFileMissingStatus: "FILE REMOVED",
+    unavailFileMissingMessage: "The share record still existed, but the stored file could not be found anymore.",
+    unavailErrorTitle: "Temporary Share Error",
+    unavailErrorStatus: "RENDER FAILURE",
+    unavailErrorMessage: "The share exists, but the preview page could not be rendered right now.",
+    limitEyebrow: "DOWNLOAD LIMIT REACHED",
+    limitTitle: "Download Limit Reached",
+    limitMessage: "This file has reached its maximum number of allowed downloads and is no longer available for download.",
+    limitHintLabel: "What to do",
+    limitHint: "If you still need access to this file, please contact whoever shared this link with you and ask them to create a new share."
+  },
+  es: {
+    htmlLang: "es",
+    badge: "ENLACE TEMPORAL",
+    kicker: "ARCHIVO PÚBLICO",
+    labelFileType: "TIPO DE ARCHIVO",
+    labelFileSize: "TAMAÑO",
+    labelUploaded: "SUBIDO",
+    labelExpires: "EXPIRA",
+    labelDownloads: "DESCARGAS",
+    labelVt: "VIRUSTOTAL",
+    btnVtReport: "VER REPORTE VT",
+    btnDownload: "DESCARGAR ARCHIVO",
+    btnOpenTab: "ABRIR EN PESTAÑA",
+    downloadLimitOnly: "Solo límite de descargas",
+    expired: "Expirado",
+    downloadsUsedSuffix: " usadas",
+    vtNote: "Los badges de VirusTotal muestran los resultados del análisis, no garantizan la seguridad del archivo. Si algo parece sospechoso, procede con precaución.",
+    noPreviewMsg: "No hay vista previa disponible para este tipo de archivo.",
+    noPreviewHint: "Usa el botón de descarga para acceder al archivo.",
+    previewTruncated: "[vista previa recortada]",
+    archiveContents: "CONTENIDO DEL ARCHIVO",
+    zipUnreadable: "No se pudo leer el contenido del ZIP.",
+    rarUnreadable: "No se pudo leer el contenido del RAR.",
+    zipColName: "Nombre",
+    zipColSize: "Tamaño",
+    zipCount: (n) => `${n} ${n === 1 ? "archivo" : "archivos"}`,
+    zipTruncated: (shown, total) => `Mostrando ${shown} de ${total} entradas`,
+    unavailTitle: "Enlace temporal no disponible",
+    unavailStatusLabel: "ENLACE OFFLINE",
+    unavailMessage: "Este enlace temporal no existe o ha expirado.",
+    unavailBusyMessage: "Este enlace temporal no existe, ha expirado o ya alcanzó su límite de descargas.",
+    unavailFileMissingTitle: "Archivo temporal no encontrado",
+    unavailFileMissingStatus: "ARCHIVO ELIMINADO",
+    unavailFileMissingMessage: "El registro del enlace existía, pero el archivo almacenado ya no se puede encontrar.",
+    unavailErrorTitle: "Error en el enlace temporal",
+    unavailErrorStatus: "ERROR DE RENDERIZADO",
+    unavailErrorMessage: "El enlace existe, pero no se pudo generar la página de vista previa en este momento.",
+    limitEyebrow: "LÍMITE DE DESCARGAS ALCANZADO",
+    limitTitle: "Límite de Descargas Alcanzado",
+    limitMessage: "Este archivo alcanzó el número máximo de descargas permitidas y ya no está disponible.",
+    limitHintLabel: "¿Qué hacer?",
+    limitHint: "Si aún necesitas acceso a este archivo, contacta a quien te compartió el enlace y pídele que cree un nuevo envío."
+  }
+};
+
+function getDropI18n(lang) {
+  return DROP_I18N[lang] || DROP_I18N.en;
+}
+
+async function renderTempSharePublicPage(entry, req) {
+  const normalized = normalizeTempShareEntry(entry);
+  if (!normalized) {
+    return "";
+  }
+
+  const t = getDropI18n(normalized.lang);
+  const previewKind = resolveTempSharePreviewKind(normalized);
+  const publicPath = getTempSharePublicPath(normalized);
+  const contentPath = `${publicPath}/content`;
+  const downloadPath = `${publicPath}/download`;
+  const absolutePageUrl = buildAbsoluteSiteUrl(req, publicPath);
+  const absolutePreviewImageUrl = previewKind === "image"
+    ? buildAbsoluteSiteUrl(req, contentPath)
+    : buildAbsoluteSiteUrl(req, DEFAULT_SHARE_PREVIEW_IMAGE_PATH);
+  const title = `${normalized.displayName || normalized.name} | Fallout Codex Drop`;
+  const descriptionSource = stripFileDescriptionForMeta(normalized.description)
+    || `${resolveTempShareFileTypeLabel(normalized)} • ${formatFileSizeForMeta(normalized.size)} • Temporary share`;
+  const description = truncateMetaText(descriptionSource, 160);
+  const virusBadge = buildTempShareVirusBadge(normalized);
+  const vtLink = String(normalized.virusTotal?.permalink || "").trim();
+
+  const isPending = virusBadge.kind === "pending";
+  const statusApiPath = `${publicPath}/status`;
+
+  let previewMarkup = `<div class="drop-preview-empty"><span class="drop-preview-empty-icon">&#9632;</span><span>${escapeHtml(t.noPreviewMsg)}</span><span class="drop-preview-empty-hint">${escapeHtml(t.noPreviewHint)}</span></div>`;
+  if (previewKind === "image") {
+    previewMarkup = `<img class="drop-preview-media" src="${escapeHtml(contentPath)}" alt="${escapeHtml(normalized.displayName || normalized.name)}" loading="lazy" decoding="async" />`;
+  } else if (previewKind === "audio") {
+    previewMarkup = `<audio class="drop-preview-audio" controls preload="metadata" src="${escapeHtml(contentPath)}"></audio>`;
+  } else if (previewKind === "video") {
+    previewMarkup = `<video class="drop-preview-video" controls preload="metadata" src="${escapeHtml(contentPath)}"></video>`;
+  } else if (previewKind === "pdf") {
+    previewMarkup = `<iframe class="drop-preview-frame" src="${escapeHtml(contentPath)}" title="${escapeHtml(normalized.displayName || normalized.name)} preview"></iframe>`;
+  } else if (previewKind === "text") {
+    const preview = await readTempShareTextPreview(normalized);
+    previewMarkup = `<pre class="drop-preview-text">${escapeHtml(preview.text)}${preview.truncated ? `\n\n${escapeHtml(t.previewTruncated)}` : ""}</pre>`;
+  } else if (previewKind === "zip") {
+    const storedPath = resolveTempShareStoredPath(normalized.storedName);
+    const zipData = storedPath ? await listZipContents(storedPath) : null;
+    if (zipData && zipData.entries.length > 0) {
+      const rows = zipData.entries.map((e) => {
+        const parts = e.name.split("/");
+        const depth = parts.length - 1;
+        const displayName = parts[parts.length - 1];
+        const indent = depth > 0 ? `style="padding-left:${Math.min(depth * 16, 64) + 12}px"` : `style="padding-left:12px"`;
+        const ext = displayName.includes(".") ? displayName.split(".").pop().toLowerCase() : "";
+        return `<tr><td class="zip-name" ${indent}><span class="zip-ext" data-ext="${escapeHtml(ext)}">${escapeHtml(ext.toUpperCase() || "FILE")}</span>${escapeHtml(displayName)}</td><td class="zip-size">${escapeHtml(formatFileSizeForMeta(e.size) || "0 B")}</td></tr>`;
+      }).join("");
+      const truncNote = zipData.totalCount > MAX_ZIP_LIST_ENTRIES
+        ? `<p class="zip-truncated">${escapeHtml(t.zipTruncated(MAX_ZIP_LIST_ENTRIES, zipData.totalCount))}</p>`
+        : "";
+      previewMarkup = `<div class="drop-preview-zip"><div class="zip-header"><span class="zip-header-label">${escapeHtml(t.archiveContents)}</span><span class="zip-header-count">${escapeHtml(t.zipCount(zipData.entries.length))}</span></div><div class="zip-scroll"><table class="zip-table"><thead><tr><th>${escapeHtml(t.zipColName)}</th><th>${escapeHtml(t.zipColSize)}</th></tr></thead><tbody>${rows}</tbody></table></div>${truncNote}</div>`;
+    } else {
+      previewMarkup = `<div class="drop-preview-empty"><span class="drop-preview-empty-icon">&#9632;</span><span>${escapeHtml(t.zipUnreadable)}</span></div>`;
+    }
+  } else if (previewKind === "rar") {
+    const storedPath = resolveTempShareStoredPath(normalized.storedName);
+    const rarData = storedPath ? await listRarContents(storedPath) : null;
+    if (rarData && rarData.entries.length > 0) {
+      const rows = rarData.entries.map((e) => {
+        const parts = e.name.split("/");
+        const depth = parts.length - 1;
+        const displayName = parts[parts.length - 1];
+        const indent = depth > 0 ? `style="padding-left:${Math.min(depth * 16, 64) + 12}px"` : `style="padding-left:12px"`;
+        const ext = displayName.includes(".") ? displayName.split(".").pop().toLowerCase() : "";
+        return `<tr><td class="zip-name" ${indent}><span class="zip-ext" data-ext="${escapeHtml(ext)}">${escapeHtml(ext.toUpperCase() || "FILE")}</span>${escapeHtml(displayName)}</td><td class="zip-size">${escapeHtml(formatFileSizeForMeta(e.size) || "0 B")}</td></tr>`;
+      }).join("");
+      const truncNote = rarData.totalCount > MAX_RAR_LIST_ENTRIES
+        ? `<p class="zip-truncated">${escapeHtml(t.zipTruncated(MAX_RAR_LIST_ENTRIES, rarData.totalCount))}</p>`
+        : "";
+      previewMarkup = `<div class="drop-preview-zip"><div class="zip-header"><span class="zip-header-label">${escapeHtml(t.archiveContents)}</span><span class="zip-header-count">${escapeHtml(t.zipCount(rarData.entries.length))}</span></div><div class="zip-scroll"><table class="zip-table"><thead><tr><th>${escapeHtml(t.zipColName)}</th><th>${escapeHtml(t.zipColSize)}</th></tr></thead><tbody>${rows}</tbody></table></div>${truncNote}</div>`;
+    } else {
+      previewMarkup = `<div class="drop-preview-empty"><span class="drop-preview-empty-icon">&#9632;</span><span>${escapeHtml(t.rarUnreadable)}</span></div>`;
+    }
+  }
+
+  return `<!doctype html>
+<html lang="${escapeHtml(t.htmlLang)}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(title)}</title>
+  <meta name="description" content="${escapeHtml(description)}" />
+  <meta name="robots" content="noindex" />
+  <meta property="og:title" content="${escapeHtml(title)}" />
+  <meta property="og:description" content="${escapeHtml(description)}" />
+  <meta property="og:type" content="website" />
+  ${absolutePageUrl ? `<meta property="og:url" content="${escapeHtml(absolutePageUrl)}" />` : ""}
+  ${absolutePreviewImageUrl ? `<meta property="og:image" content="${escapeHtml(absolutePreviewImageUrl)}" />` : ""}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #060e08;
+      --panel: rgba(9, 19, 11, 0.92);
+      --panel-inner: rgba(5, 11, 7, 0.88);
+      --line: rgba(123, 255, 160, 0.2);
+      --line-strong: rgba(123, 255, 160, 0.34);
+      --text: #cfffda;
+      --muted: rgba(199, 255, 215, 0.64);
+      --accent: #7dff96;
+      --accent-dim: rgba(125, 255, 150, 0.72);
+      --warn: #ffd27d;
+      --danger: #ff8a8a;
+      --shadow: 0 32px 80px rgba(0, 0, 0, 0.52), 0 2px 8px rgba(0,0,0,0.28);
+      --font: "Share Tech Mono", "Courier New", monospace;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      font-family: var(--font);
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(90,255,130,0.13), transparent),
+        repeating-linear-gradient(180deg, rgba(255,255,255,0.022) 0 1px, transparent 1px 4px);
+      mix-blend-mode: screen;
+    }
+    .drop-topbar {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px clamp(16px, 4vw, 40px);
+      border-bottom: 1px solid var(--line);
+      background: rgba(4, 9, 5, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .drop-topbar-brand {
+      display: grid;
+      gap: 2px;
+    }
+    .drop-topbar-kicker {
+      color: var(--muted);
+      font-size: 0.68rem;
+      letter-spacing: 0.28em;
+    }
+    .drop-topbar-name {
+      color: var(--accent);
+      font-size: 0.9rem;
+      letter-spacing: 0.12em;
+    }
+    .drop-topbar-badge {
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(6, 14, 8, 0.82);
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+    }
+    main {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 56px;
+      display: grid;
+      gap: 20px;
+      align-content: start;
+    }
+    .drop-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding: clamp(18px, 3vw, 28px);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .drop-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      padding-bottom: 18px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    .drop-head-info { min-width: 0; flex: 1; }
+    .drop-kicker {
+      color: var(--accent-dim);
+      font-size: 0.72rem;
+      letter-spacing: 0.36em;
+      margin-bottom: 8px;
+    }
+    .drop-title {
+      font-size: clamp(1.5rem, 4vw, 2.4rem);
+      line-height: 1.05;
+      color: #e8ffee;
+      word-break: break-word;
+    }
+    .drop-description {
+      margin-top: 10px;
+      color: var(--muted);
+      max-width: 64ch;
+      line-height: 1.6;
+      font-size: 0.9rem;
+    }
+    .drop-virus {
+      flex-shrink: 0;
+      min-width: 190px;
+      max-width: 260px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--panel-inner);
+      text-align: right;
+      transition: border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+    .drop-virus.is-safe {
+      border-color: rgba(125, 255, 150, 0.52);
+      box-shadow: 0 0 28px rgba(125,255,150,0.08);
+    }
+    .drop-virus.is-safe .drop-virus-title { color: var(--accent); }
+    .drop-virus.is-flagged {
+      border-color: rgba(255, 100, 100, 0.52);
+      box-shadow: 0 0 28px rgba(255,100,100,0.1);
+    }
+    .drop-virus.is-flagged .drop-virus-title { color: var(--danger); }
+    .drop-virus.is-pending {
+      border-color: rgba(255, 210, 125, 0.44);
+      animation: vtPulse 2.4s ease-in-out infinite;
+    }
+    .drop-virus.is-pending .drop-virus-title { color: var(--warn); }
+    .drop-virus.is-error .drop-virus-title { color: #ffbdbd; }
+    .drop-virus.is-muted .drop-virus-title { color: var(--muted); }
+    @keyframes vtPulse {
+      0%, 100% { box-shadow: 0 0 0 rgba(255,210,125,0); }
+      50% { box-shadow: 0 0 22px rgba(255,210,125,0.18); }
+    }
+    .drop-virus-title {
+      display: block;
+      font-size: 0.98rem;
+      letter-spacing: 0.2em;
+    }
+    .drop-virus-body {
+      display: block;
+      margin-top: 5px;
+      font-size: 0.76rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+    .drop-virus-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      margin-right: 6px;
+      vertical-align: middle;
+      position: relative;
+      top: -1px;
+    }
+    .is-pending .drop-virus-dot {
+      animation: dotBlink 1.2s step-start infinite;
+    }
+    @keyframes dotBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+    .drop-grid {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: minmax(0, 1.55fr) minmax(270px, 0.9fr);
+    }
+    .drop-preview {
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(2, 5, 3, 0.72);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .drop-preview-media,
+    .drop-preview-video,
+    .drop-preview-frame {
+      display: block;
+      width: 100%;
+      min-height: 400px;
+      max-height: 70vh;
+      border: 0;
+      background: #010302;
+      object-fit: contain;
+    }
+    .drop-preview-audio {
+      width: min(480px, calc(100% - 32px));
+    }
+    .drop-preview-text {
+      width: 100%;
+      padding: 22px;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.86rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      align-self: flex-start;
+    }
+    .drop-preview-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 40px 24px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .drop-preview-empty-icon {
+      font-size: 2rem;
+      opacity: 0.3;
+      display: block;
+    }
+    .drop-preview-empty-hint {
+      font-size: 0.8rem;
+      opacity: 0.7;
+    }
+    .drop-preview-zip {
+      width: 100%;
+      align-self: stretch;
+      display: flex;
+      flex-direction: column;
+    }
+    .zip-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(6, 14, 8, 0.62);
+    }
+    .zip-header-label {
+      color: var(--accent-dim);
+      font-size: 0.72rem;
+      letter-spacing: 0.26em;
+    }
+    .zip-header-count {
+      color: var(--muted);
+      font-size: 0.76rem;
+    }
+    .zip-scroll {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 520px;
+    }
+    .zip-scroll::-webkit-scrollbar { width: 6px; }
+    .zip-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+    .zip-scroll::-webkit-scrollbar-thumb { background: rgba(123,255,160,0.22); border-radius: 3px; }
+    .zip-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .zip-table thead th {
+      padding: 8px 12px;
+      text-align: left;
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      background: rgba(5, 12, 7, 0.96);
+    }
+    .zip-table thead th:last-child { text-align: right; }
+    .zip-table tbody tr { border-bottom: 1px solid rgba(123,255,160,0.06); transition: background 0.1s; }
+    .zip-table tbody tr:last-child { border-bottom: 0; }
+    .zip-table tbody tr:hover { background: rgba(123,255,160,0.04); }
+    .zip-name { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 380px; padding-top: 9px; padding-bottom: 9px; }
+    .zip-size { color: var(--muted); text-align: right; padding: 9px 12px; white-space: nowrap; }
+    .zip-ext {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 4px;
+      border: 1px solid rgba(123,255,160,0.18);
+      background: rgba(6,14,8,0.72);
+      color: var(--accent-dim);
+      font-size: 0.66rem;
+      letter-spacing: 0.08em;
+      margin-right: 8px;
+      vertical-align: middle;
+      position: relative;
+      top: -1px;
+    }
+    .zip-truncated {
+      padding: 8px 16px;
+      font-size: 0.76rem;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      text-align: center;
+    }
+    .drop-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .drop-meta-row {
+      display: grid;
+      gap: 4px;
+      padding: 11px 14px;
+      border-radius: 12px;
+      background: var(--panel-inner);
+      border: 1px solid var(--line);
+    }
+    .drop-meta-label {
+      color: var(--muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+    }
+    .drop-meta-value {
+      font-size: 0.95rem;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+      color: #e2ffea;
+    }
+    .drop-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .drop-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 20px;
+      border-radius: 10px;
+      border: 1px solid rgba(123,255,160,0.26);
+      color: var(--accent);
+      text-decoration: none;
+      background: rgba(8, 18, 10, 0.88);
+      letter-spacing: 0.14em;
+      font: inherit;
+      font-size: 0.86rem;
+      cursor: pointer;
+      transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+    }
+    .drop-btn:hover {
+      border-color: rgba(123,255,160,0.48);
+      background: rgba(10, 24, 13, 0.96);
+      box-shadow: 0 0 18px rgba(123,255,160,0.08);
+    }
+    .drop-btn.is-primary {
+      background: linear-gradient(180deg, rgba(100,255,130,0.18), rgba(50,160,80,0.08));
+      border-color: rgba(123,255,160,0.38);
+      color: #b0ffbf;
+    }
+    .drop-btn.is-primary:hover {
+      background: linear-gradient(180deg, rgba(100,255,130,0.26), rgba(50,160,80,0.14));
+      border-color: rgba(123,255,160,0.54);
+    }
+    .drop-footer-note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      line-height: 1.55;
+      opacity: 0.8;
+    }
+    @media (max-width: 860px) {
+      .drop-grid { grid-template-columns: minmax(0, 1fr); }
+      .drop-virus { min-width: 0; width: 100%; max-width: none; text-align: left; }
+      .drop-preview { min-height: 280px; }
+      .drop-preview-media, .drop-preview-video, .drop-preview-frame { min-height: 280px; }
+    }
+    @media (max-width: 560px) {
+      .drop-topbar { flex-direction: column; align-items: flex-start; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="drop-topbar">
+    <div class="drop-topbar-brand">
+      <span class="drop-topbar-kicker">ROBCO INDUSTRIES (TM) TERMLINK</span>
+      <span class="drop-topbar-name">FALLOUT CODEX // SECURE DROP</span>
+    </div>
+    <span class="drop-topbar-badge">${escapeHtml(t.badge)}</span>
+  </header>
+  <main>
+    <article class="drop-card">
+      <div class="drop-head">
+        <div class="drop-head-info">
+          <p class="drop-kicker">${escapeHtml(t.kicker)}</p>
+          <h1 class="drop-title">${escapeHtml(normalized.displayName || normalized.name)}</h1>
+          ${normalized.description ? `<p class="drop-description">${escapeHtml(normalized.description)}</p>` : ""}
+        </div>
+        <div id="vtBadge" class="drop-virus is-${escapeHtml(virusBadge.kind)}">
+          <span class="drop-virus-title"><span class="drop-virus-dot"></span>${escapeHtml(virusBadge.title)}</span>
+          <span class="drop-virus-body">${escapeHtml(virusBadge.body)}</span>
+        </div>
+      </div>
+      <div class="drop-grid">
+        <section class="drop-preview">
+          ${previewMarkup}
+        </section>
+        <aside class="drop-meta">
+          <div class="drop-meta-row">
+            <span class="drop-meta-label">${escapeHtml(t.labelFileType)}</span>
+            <span class="drop-meta-value">${escapeHtml(resolveTempShareFileTypeLabel(normalized))}</span>
+          </div>
+          <div class="drop-meta-row">
+            <span class="drop-meta-label">${escapeHtml(t.labelFileSize)}</span>
+            <span class="drop-meta-value">${escapeHtml(formatFileSizeForMeta(normalized.size) || "--")}</span>
+          </div>
+          <div class="drop-meta-row">
+            <span class="drop-meta-label">${escapeHtml(t.labelUploaded)}</span>
+            <span class="drop-meta-value">${escapeHtml(formatTempSharePublicDate(normalized.uploadedAt))} UTC</span>
+          </div>
+          <div class="drop-meta-row">
+            <span class="drop-meta-label">${escapeHtml(t.labelExpires)}</span>
+            <span class="drop-meta-value" id="expiresValue">${normalized.expiresAt ? `${escapeHtml(formatTempSharePublicDate(normalized.expiresAt))} UTC` : escapeHtml(t.downloadLimitOnly)}</span>
+          </div>
+          <div class="drop-meta-row">
+            <span class="drop-meta-label">${escapeHtml(t.labelDownloads)}</span>
+            <span class="drop-meta-value" id="downloadsValue">${normalized.maxDownloads > 0 ? `${normalized.downloadCount}/${normalized.maxDownloads}` : `${normalized.downloadCount}${escapeHtml(t.downloadsUsedSuffix)}`}</span>
+          </div>
+          <div id="vtRow" class="drop-meta-row" ${!vtLink ? 'style="display:none"' : ""}>
+            <span class="drop-meta-label">${escapeHtml(t.labelVt)}</span>
+            <span class="drop-meta-value"><a id="vtLink" class="drop-btn" href="${escapeHtml(vtLink || "#")}" target="_blank" rel="noopener noreferrer">${escapeHtml(t.btnVtReport)}</a></span>
+          </div>
+          <div class="drop-actions">
+            <a class="drop-btn is-primary" href="${escapeHtml(downloadPath)}" id="downloadBtn">${escapeHtml(t.btnDownload)}</a>
+            ${previewKind && previewKind !== "text" && previewKind !== "zip" && previewKind !== "rar" ? `<a class="drop-btn" href="${escapeHtml(contentPath)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t.btnOpenTab)}</a>` : ""}
+          </div>
+          <p class="drop-footer-note">${escapeHtml(t.vtNote)}</p>
+        </aside>
+      </div>
+    </article>
+  </main>
+  <script>
+    (function() {
+      var statusUrl = ${JSON.stringify(statusApiPath)};
+      var expiresAtMs = ${normalized.expiresAt ? JSON.stringify(new Date(normalized.expiresAt).getTime()) : "0"};
+      var maxDownloads = ${JSON.stringify(normalized.maxDownloads)};
+      var I18N_EXPIRED = ${JSON.stringify(t.expired)};
+      var I18N_USED_SUFFIX = ${JSON.stringify(t.downloadsUsedSuffix)};
+
+      var badge = document.getElementById("vtBadge");
+      var vtRow = document.getElementById("vtRow");
+      var vtLinkEl = document.getElementById("vtLink");
+      var expiresEl = document.getElementById("expiresValue");
+      var downloadsEl = document.getElementById("downloadsValue");
+      var downloadBtn = document.getElementById("downloadBtn");
+      var kindMap = { safe: "is-safe", flagged: "is-flagged", pending: "is-pending", error: "is-error", muted: "is-muted" };
+      var allKinds = Object.values(kindMap);
+      var vtPending = ${JSON.stringify(isPending)};
+      var vtTries = 0;
+      var maxVtTries = 40;
+      var reloading = false;
+
+      var channel = null;
+      try {
+        channel = new BroadcastChannel("drop-status:" + statusUrl);
+        channel.onmessage = function(ev) {
+          if (!ev.data) return;
+          if (ev.data.type === "exhausted") {
+            goToLimitReached();
+          } else if (ev.data.type === "gone") {
+            triggerReload();
+          } else if (ev.data.type === "count" && downloadsEl && typeof ev.data.count === "number") {
+            downloadsEl.textContent = formatDownloads(ev.data.count, maxDownloads);
+            if (maxDownloads > 0 && ev.data.count >= maxDownloads) goToLimitReached();
+          }
+        };
+      } catch (e) {}
+
+      function broadcast(msg) {
+        if (channel) { try { channel.postMessage(msg); } catch (e) {} }
+      }
+
+      function goToLimitReached() {
+        if (reloading) return;
+        reloading = true;
+        broadcast({ type: "exhausted" });
+        window.location.reload();
+      }
+
+      function triggerReload() {
+        if (reloading) return;
+        reloading = true;
+        broadcast({ type: "gone" });
+        window.location.reload();
+      }
+
+      function formatCountdown(ms) {
+        if (ms <= 0) return I18N_EXPIRED;
+        var s = Math.floor(ms / 1000);
+        var m = Math.floor(s / 60); s %= 60;
+        var h = Math.floor(m / 60); m %= 60;
+        var d = Math.floor(h / 24); h %= 24;
+        if (d > 0) return d + "d " + h + "h " + m + "m";
+        if (h > 0) return h + "h " + m + "m " + s + "s";
+        if (m > 0) return m + "m " + s + "s";
+        return s + "s";
+      }
+
+      function formatDownloads(count, max) {
+        return max > 0 ? count + "/" + max : count + I18N_USED_SUFFIX;
+      }
+
+      function updateExpires() {
+        if (!expiresAtMs || !expiresEl) return;
+        var remaining = expiresAtMs - Date.now();
+        var countdown = formatCountdown(remaining);
+        expiresEl.textContent = countdown === I18N_EXPIRED ? I18N_EXPIRED : expiresEl.dataset.utc + " UTC (" + countdown + ")";
+      }
+
+      if (expiresAtMs && expiresEl) {
+        expiresEl.dataset.utc = expiresEl.textContent.replace(/ UTC$/, "");
+        updateExpires();
+        setInterval(updateExpires, 1000);
+      }
+
+      function pollStatus() {
+        if (reloading) return;
+        fetch(statusUrl, { cache: "no-store" }).then(function(r) {
+          if (r.status === 410) {
+            goToLimitReached();
+            return null;
+          }
+          if (!r.ok) {
+            triggerReload();
+            return null;
+          }
+          return r.json();
+        }).then(function(data) {
+          if (!data || reloading) return;
+
+          if (data.badge && badge) {
+            var b = data.badge;
+            allKinds.forEach(function(k) { badge.classList.remove(k); });
+            badge.classList.add(kindMap[b.kind] || "is-muted");
+            var titleEl = badge.querySelector(".drop-virus-title");
+            var bodyEl = badge.querySelector(".drop-virus-body");
+            if (titleEl) titleEl.innerHTML = '<span class="drop-virus-dot"></span>' + b.title;
+            if (bodyEl) bodyEl.textContent = b.body;
+            if (b.permalink) {
+              if (vtRow) vtRow.style.display = "";
+              if (vtLinkEl) vtLinkEl.href = b.permalink;
+            }
+            if (b.kind === "pending" && vtPending && vtTries < maxVtTries) {
+              vtTries++;
+              setTimeout(pollStatus, 5000);
+            }
+          }
+
+          if (downloadsEl && typeof data.downloadCount === "number") {
+            downloadsEl.textContent = formatDownloads(data.downloadCount, maxDownloads);
+            broadcast({ type: "count", count: data.downloadCount });
+          }
+
+          if (maxDownloads > 0 && typeof data.downloadCount === "number" && data.downloadCount >= maxDownloads) {
+            goToLimitReached();
+          }
+        }).catch(function() {});
+      }
+
+      if (vtPending) {
+        setTimeout(pollStatus, 5000);
+      }
+
+      if (downloadBtn) {
+        downloadBtn.addEventListener("click", function() {
+          [500, 1500, 3000, 5000, 8000, 12000].forEach(function(t) {
+            setTimeout(pollStatus, t);
+          });
+        });
+      }
+
+      setInterval(pollStatus, 10000);
+    })();
+  </script>
+</body>
+</html>`;
+}
+
+function renderTempShareUnavailablePage({ title, message, statusLabel, lang = "en" }) {
+  return `<!doctype html>
+<html lang="${escapeHtml(lang)}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(title)}</title>
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #060e08;
+      --panel: rgba(9, 17, 11, 0.94);
+      --line: rgba(255, 100, 100, 0.22);
+      --line-strong: rgba(255, 100, 100, 0.38);
+      --text: #cfffda;
+      --muted: rgba(199, 255, 215, 0.58);
+      --danger: #ff8a8a;
+      --danger-dim: rgba(255, 138, 138, 0.72);
+      --accent: #7dff96;
+      --font: "Share Tech Mono", "Courier New", monospace;
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      font-family: var(--font);
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 70% 45% at 50% 0%, rgba(255, 80, 80, 0.11), transparent),
+        repeating-linear-gradient(180deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 4px);
+      mix-blend-mode: screen;
+    }
+    .card {
+      position: relative;
+      z-index: 1;
+      width: min(580px, 100%);
+      padding: clamp(24px, 4vw, 36px);
+      border-radius: var(--radius);
+      border: 1px solid var(--line-strong);
+      background: var(--panel);
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.5) inset,
+        0 32px 80px rgba(0,0,0,0.54),
+        0 0 40px rgba(255,80,80,0.05);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .card-topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--line-strong);
+      background: rgba(255,80,80,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .card-icon svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: var(--danger);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .card-meta { min-width: 0; }
+    .card-eyebrow {
+      color: var(--danger-dim);
+      font-size: 0.68rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+    .card-brand {
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      margin-top: 2px;
+    }
+    h1 {
+      font-size: clamp(1.35rem, 3.5vw, 1.9rem);
+      letter-spacing: 0.06em;
+      line-height: 1.15;
+      color: #ffe8e8;
+      margin-bottom: 14px;
+    }
+    .message {
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 0.9rem;
+    }
+    .card-footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: rgba(199,255,215,0.38);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+    }
+  </style>
+</head>
+<body>
+  <article class="card">
+    <div class="card-topbar">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <div class="card-meta">
+        <div class="card-eyebrow">${escapeHtml(statusLabel)}</div>
+        <div class="card-brand">FALLOUT CODEX // SECURE DROP</div>
+      </div>
+    </div>
+    <h1>${escapeHtml(title)}</h1>
+    <p class="message">${escapeHtml(message)}</p>
+    <div class="card-footer">ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL</div>
+  </article>
+</body>
+</html>`;
+}
+
+function renderTempShareLimitReachedPage(lang) {
+  const t = getDropI18n(lang);
+  return `<!doctype html>
+<html lang="${escapeHtml(t.htmlLang)}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(t.limitTitle)}</title>
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080a04;
+      --panel: rgba(12, 14, 6, 0.96);
+      --line: rgba(210, 160, 60, 0.22);
+      --line-strong: rgba(210, 160, 60, 0.38);
+      --text: #fff8dc;
+      --muted: rgba(255, 240, 180, 0.58);
+      --amber: #ffc94a;
+      --amber-dim: rgba(255, 200, 80, 0.72);
+      --accent: #ffe066;
+      --font: "Share Tech Mono", "Courier New", monospace;
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      font-family: var(--font);
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 70% 45% at 50% 0%, rgba(210, 150, 30, 0.11), transparent),
+        repeating-linear-gradient(180deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 4px);
+      mix-blend-mode: screen;
+    }
+    .card {
+      position: relative;
+      z-index: 1;
+      width: min(600px, 100%);
+      padding: clamp(24px, 4vw, 36px);
+      border-radius: var(--radius);
+      border: 1px solid var(--line-strong);
+      background: var(--panel);
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.5) inset,
+        0 32px 80px rgba(0,0,0,0.54),
+        0 0 40px rgba(200,140,20,0.07);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .card-topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--line-strong);
+      background: rgba(210,150,20,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .card-icon svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: var(--amber);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .card-meta { min-width: 0; }
+    .card-eyebrow {
+      color: var(--amber-dim);
+      font-size: 0.68rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+    .card-brand {
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      margin-top: 2px;
+    }
+    h1 {
+      font-size: clamp(1.3rem, 3.5vw, 1.8rem);
+      letter-spacing: 0.06em;
+      line-height: 1.15;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+    .message {
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 0.9rem;
+    }
+    .hint-box {
+      margin-top: 20px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(210,160,60,0.2);
+      background: rgba(210,150,20,0.06);
+    }
+    .hint-box p {
+      color: rgba(255,230,140,0.75);
+      font-size: 0.84rem;
+      line-height: 1.6;
+    }
+    .hint-label {
+      display: block;
+      font-size: 0.66rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--amber-dim);
+      margin-bottom: 6px;
+    }
+    .card-footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: rgba(255,230,140,0.28);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+    }
+  </style>
+</head>
+<body>
+  <article class="card">
+    <div class="card-topbar">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2L2 19h20L12 2z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="card-meta">
+        <div class="card-eyebrow">${escapeHtml(t.limitEyebrow)}</div>
+        <div class="card-brand">FALLOUT CODEX // SECURE DROP</div>
+      </div>
+    </div>
+    <h1>${escapeHtml(t.limitTitle)}</h1>
+    <p class="message">${escapeHtml(t.limitMessage)}</p>
+    <div class="hint-box">
+      <span class="hint-label">${escapeHtml(t.limitHintLabel)}</span>
+      <p>${escapeHtml(t.limitHint)}</p>
+    </div>
+    <div class="card-footer">ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL</div>
+  </article>
+</body>
+</html>`;
+}
+
+function sendTempSharePreviewContent(res, entry) {
+  const normalized = normalizeTempShareEntry(entry);
+  if (!normalized) {
+    res.status(404).json({ error: "File not found" });
+    return;
+  }
+
+  const previewKind = resolveTempSharePreviewKind(normalized);
+  if (!previewKind || previewKind === "text") {
+    res.status(404).json({ error: "Preview is not available for this file type" });
+    return;
+  }
+
+  const storedPath = resolveTempShareStoredPath(normalized.storedName);
+  if (!storedPath || !fs.existsSync(storedPath)) {
+    res.status(404).json({ error: "File blob not found" });
+    return;
+  }
+
+  const safeName = sanitizeDisplayFilename(normalized.name || "file.bin") || "file.bin";
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Disposition", `inline; filename="${safeName.replace(/"/g, "")}"`);
+  res.type(normalized.mimeType || "application/octet-stream");
   res.sendFile(storedPath);
 }
 
@@ -2792,10 +5091,27 @@ const uploadStorage = multer.diskStorage({
   }
 });
 
+const tempShareUploadStorage = multer.diskStorage({
+  destination: (_req, _file, callback) => {
+    callback(null, TEMP_SHARE_UPLOAD_DIR);
+  },
+  filename: (_req, file, callback) => {
+    callback(null, buildStoredFilename(file.originalname));
+  }
+});
+
 const upload = multer({
   storage: uploadStorage,
   limits: {
     files: 2
+  }
+});
+
+const tempShareUpload = multer({
+  storage: tempShareUploadStorage,
+  limits: {
+    files: 1,
+    fileSize: TEMP_SHARE_MAX_FILE_BYTES
   }
 });
 
@@ -2847,6 +5163,24 @@ function uploadFileMetadataUpdate(req, res, next) {
       return;
     }
     next();
+  });
+}
+
+function uploadTempShareFile(req, res, next) {
+  tempShareUpload.single("file")(req, res, (error) => {
+    if (!error) {
+      next();
+      return;
+    }
+    if (error.code === "LIMIT_FILE_SIZE") {
+      res.status(400).json({ error: `File exceeds ${TEMP_SHARE_MAX_FILE_BYTES} byte limit.` });
+      return;
+    }
+    if (error instanceof multer.MulterError) {
+      res.status(400).json({ error: "Invalid temporary share upload payload" });
+      return;
+    }
+    res.status(500).json({ error: "Temporary share upload failed" });
   });
 }
 
@@ -4062,6 +6396,178 @@ app.get("/api/files/:id/download", requireAuthorized, (req, res) => {
   res.download(storedPath, entry.name);
 });
 
+app.get("/api/admin/temp-shares", requireAdmin, (req, res) => {
+  const entries = getActiveTempShareEntries()
+    .sort((left, right) => String(right.uploadedAt || "").localeCompare(String(left.uploadedAt || "")))
+    .map((entry) => {
+      const payload = buildTempShareListEntry(entry);
+      if (!payload) {
+        return null;
+      }
+      return {
+        ...payload,
+        shareUrl: buildAbsoluteSiteUrl(req, payload.sharePath)
+      };
+    })
+    .filter(Boolean);
+
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    entries,
+    virusTotalConfigured: virusTotalConfigured(),
+    uploadLimitBytes: TEMP_SHARE_MAX_FILE_BYTES,
+    retentionMaxHours: TEMP_SHARE_RETENTION_MAX_HOURS
+  });
+  void tickTempShareVirusScans();
+});
+
+app.post("/api/admin/temp-shares", requireAdmin, uploadTempShareFile, async (req, res) => {
+  const uploadedFile = req.file || null;
+  const cleanupUpload = () => {
+    if (uploadedFile?.filename) {
+      deleteStoredTempShareUpload(uploadedFile.filename);
+    } else if (uploadedFile?.path) {
+      fs.unlink(uploadedFile.path, () => {});
+    }
+  };
+
+  if (!uploadedFile) {
+    res.status(400).json({ error: "No file uploaded" });
+    return;
+  }
+
+  const originalName = String(uploadedFile.originalname || "");
+  const safeOriginalName = sanitizeDisplayFilename(originalName);
+  const displayName = sanitizeFileDisplayName(req.body.displayName);
+  const description = sanitizeFileDescription(req.body.description);
+  const langRaw = String(req.body.lang || "").trim().toLowerCase();
+  const lang = langRaw === "es" ? "es" : "en";
+  const maxDownloads = parseOptionalPositiveInteger(req.body.maxDownloads, 0);
+  const expiresInHours = parseOptionalPositiveInteger(req.body.expiresInHours, 0);
+  const expiresAtRaw = String(req.body.expiresAt || "").trim();
+  const expiresAtMs = expiresAtRaw ? Date.parse(expiresAtRaw) : Number.NaN;
+  const hasExplicitExpiresAt = Boolean(expiresAtRaw);
+
+  if (!isValidOriginalFilename(originalName) || !safeOriginalName) {
+    cleanupUpload();
+    res.status(400).json({ error: "Invalid filename" });
+    return;
+  }
+  if (!Number.isFinite(uploadedFile.size) || uploadedFile.size <= 0) {
+    cleanupUpload();
+    res.status(400).json({ error: "Empty uploads are not allowed" });
+    return;
+  }
+  if (hasExplicitExpiresAt && !Number.isFinite(expiresAtMs)) {
+    cleanupUpload();
+    res.status(400).json({ error: "Invalid expiration date." });
+    return;
+  }
+  if (hasExplicitExpiresAt && expiresAtMs <= Date.now()) {
+    cleanupUpload();
+    res.status(400).json({ error: "Expiration must be in the future." });
+    return;
+  }
+  if (maxDownloads <= 0 && expiresInHours <= 0 && !hasExplicitExpiresAt) {
+    cleanupUpload();
+    res.status(400).json({ error: "Set a download limit or an expiration time." });
+    return;
+  }
+  if (expiresInHours > TEMP_SHARE_RETENTION_MAX_HOURS) {
+    cleanupUpload();
+    res.status(400).json({ error: `Expiration cannot exceed ${TEMP_SHARE_RETENTION_MAX_HOURS} hours.` });
+    return;
+  }
+  if (hasExplicitExpiresAt && expiresAtMs - Date.now() > TEMP_SHARE_RETENTION_MAX_HOURS * 60 * 60 * 1000) {
+    cleanupUpload();
+    res.status(400).json({ error: `Expiration cannot exceed ${TEMP_SHARE_RETENTION_MAX_HOURS} hours.` });
+    return;
+  }
+
+  try {
+    const sha256 = await computeFileSha256(uploadedFile.path);
+    const now = new Date().toISOString();
+    const expiresAt = hasExplicitExpiresAt
+      ? new Date(expiresAtMs).toISOString()
+      : expiresInHours > 0
+        ? new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString()
+        : "";
+    const entry = normalizeTempShareEntry({
+      id: crypto.randomUUID(),
+      storedName: uploadedFile.filename,
+      name: safeOriginalName,
+      displayName,
+      mimeType: String(uploadedFile.mimetype || "application/octet-stream").trim() || "application/octet-stream",
+      size: uploadedFile.size,
+      description,
+      lang,
+      maxDownloads,
+      downloadCount: 0,
+      uploadedAt: now,
+      updatedAt: now,
+      expiresAt,
+      uploaderDiscordId: req.currentUser.discordId,
+      uploader: req.currentUser.username,
+      virusTotal: {
+        status: virusTotalConfigured() ? TEMP_SHARE_VIRUS_STATUS.QUEUED : TEMP_SHARE_VIRUS_STATUS.UNAVAILABLE,
+        sha256,
+        permalink: buildVirusTotalPermalink(sha256),
+        stats: {},
+        lastCheckedAt: "",
+        completedAt: "",
+        lastError: virusTotalConfigured() ? "" : "VirusTotal is not configured."
+      }
+    });
+
+    if (!entry) {
+      cleanupUpload();
+      res.status(400).json({ error: "Invalid temporary share metadata" });
+      return;
+    }
+
+    const entries = getActiveTempShareEntries();
+    entries.push(entry);
+    writeTempShareStore(entries);
+
+    const payload = buildTempShareListEntry(entry);
+    res.status(201).json({
+      ok: true,
+      entry: payload
+        ? {
+            ...payload,
+            shareUrl: buildAbsoluteSiteUrl(req, payload.sharePath)
+          }
+        : null
+    });
+
+    if (virusTotalConfigured()) {
+      void tickTempShareVirusScans();
+    }
+  } catch (error) {
+    cleanupUpload();
+    console.error("[temp-shares] create error:", error);
+    res.status(500).json({ error: "Unable to create temporary share" });
+  }
+});
+
+app.delete("/api/admin/temp-shares/:id", requireAdmin, (req, res) => {
+  const shareId = String(req.params.id || "").trim().toLowerCase();
+  const result = deleteTempShareById(shareId);
+  if (!result.ok && result.reason === "invalid_id") {
+    res.status(400).json({ error: "Invalid share id" });
+    return;
+  }
+  if (!result.ok && result.reason === "busy") {
+    res.status(409).json({ error: "Share update already in progress" });
+    return;
+  }
+  if (!result.ok) {
+    res.status(404).json({ error: "Share not found" });
+    return;
+  }
+  res.json({ ok: true });
+});
+
 app.get("/api/intel/silo", async (_req, res) => {
   try {
     const silo = await fetchSiloIntel();
@@ -4132,6 +6638,199 @@ app.get("/", (_req, res) => {
   res.sendFile(INDEX_PAGE);
 });
 
+app.get("/drops/:shareSlug/status", (req, res) => {
+  const entry = resolveTempShareBySlug(req.params.shareSlug);
+  if (!entry) {
+    const slug = normalizeTempShareSlugValue(req.params.shareSlug);
+    res.setHeader("Cache-Control", "no-store");
+    res.status(isExhaustedTempShareSlug(slug) ? 410 : 404).json({ error: "Share not found" });
+    return;
+  }
+  const normalized = normalizeTempShareEntry(entry);
+  const badge = buildTempShareVirusBadge(normalized);
+  const permalink = String(normalized.virusTotal?.permalink || "").trim();
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    status: normalized.virusTotal?.status || "unavailable",
+    badge: { ...badge, permalink },
+    downloadCount: normalized.downloadCount,
+    maxDownloads: normalized.maxDownloads,
+    expiresAt: normalized.expiresAt || null
+  });
+});
+
+app.get("/drops/:shareSlug/content", (req, res) => {
+  const entry = resolveTempShareBySlug(req.params.shareSlug);
+  if (!entry) {
+    res.status(404).json({ error: "Share not found" });
+    return;
+  }
+  sendTempSharePreviewContent(res, entry);
+});
+
+app.get("/drops/:shareSlug/download", (req, res) => {
+  const entry = resolveTempShareBySlug(req.params.shareSlug);
+  if (!entry) {
+    const slug = normalizeTempShareSlugValue(req.params.shareSlug);
+    if (isExhaustedTempShareSlug(slug)) {
+      res.status(410).type("html").send(renderTempShareLimitReachedPage(getExhaustedSlugLang(slug)));
+      return;
+    }
+    const tu = getDropI18n("en");
+    res
+      .status(404)
+      .type("html")
+      .send(
+        renderTempShareUnavailablePage({
+          title: tu.unavailTitle,
+          statusLabel: tu.unavailStatusLabel,
+          message: tu.unavailMessage,
+          lang: "en"
+        })
+      );
+    return;
+  }
+
+  const shareId = entry.id;
+  if (!tryLockTempShareMutation(shareId)) {
+    res.status(409).json({ error: "Share is busy. Try again in a moment." });
+    return;
+  }
+
+  let storedPath = "";
+  let responseName = entry.name;
+  let responseType = entry.mimeType || "application/octet-stream";
+  let deleteAfterSend = false;
+  let storedNameToDelete = "";
+
+  try {
+    const entries = getActiveTempShareEntries();
+    const index = entries.findIndex((candidate) => candidate.id === shareId);
+    if (index < 0) {
+      unlockTempShareMutation(shareId);
+      const te = getDropI18n(entry.lang);
+      res
+        .status(404)
+        .type("html")
+        .send(
+          renderTempShareUnavailablePage({
+            title: te.unavailTitle,
+            statusLabel: te.unavailStatusLabel,
+            message: te.unavailBusyMessage,
+            lang: entry.lang
+          })
+        );
+      return;
+    }
+
+    const currentEntry = entries[index];
+    storedPath = resolveTempShareStoredPath(currentEntry.storedName);
+    if (!storedPath || !fs.existsSync(storedPath)) {
+      entries.splice(index, 1);
+      writeTempShareStore(entries);
+      deleteStoredTempShareUpload(currentEntry.storedName);
+      unlockTempShareMutation(shareId);
+      const tf = getDropI18n(currentEntry.lang);
+      res
+        .status(404)
+        .type("html")
+        .send(
+          renderTempShareUnavailablePage({
+            title: tf.unavailFileMissingTitle,
+            statusLabel: tf.unavailFileMissingStatus,
+            message: tf.unavailFileMissingMessage,
+            lang: currentEntry.lang
+          })
+        );
+      return;
+    }
+
+    responseName = currentEntry.name;
+    responseType = currentEntry.mimeType || "application/octet-stream";
+    storedNameToDelete = currentEntry.storedName;
+
+    const nextDownloadCount = Math.max(0, Number(currentEntry.downloadCount) || 0) + 1;
+    const now = new Date().toISOString();
+    const shouldRemoveAfterDownload = currentEntry.maxDownloads > 0 && nextDownloadCount >= currentEntry.maxDownloads;
+    deleteAfterSend = shouldRemoveAfterDownload;
+
+    if (shouldRemoveAfterDownload) {
+      entries.splice(index, 1);
+      recordExhaustedTempShareSlug(buildTempShareSlug(currentEntry), currentEntry.lang);
+    } else {
+      entries[index] = normalizeTempShareEntry({
+        ...currentEntry,
+        downloadCount: nextDownloadCount,
+        updatedAt: now
+      });
+    }
+    writeTempShareStore(entries);
+  } catch (error) {
+    unlockTempShareMutation(shareId);
+    console.error("[temp-shares] download error:", error);
+    res.status(500).json({ error: "Unable to prepare temporary share download" });
+    return;
+  }
+
+  unlockTempShareMutation(shareId);
+
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.type(responseType);
+  res.download(storedPath, responseName, (error) => {
+    if (deleteAfterSend && storedNameToDelete) {
+      deleteStoredTempShareUpload(storedNameToDelete);
+    }
+    if (error && !res.headersSent) {
+      res.status(500).json({ error: "Unable to stream temporary share download" });
+    }
+  });
+});
+
+app.get("/drops/:shareSlug", async (req, res) => {
+  const entry = resolveTempShareBySlug(req.params.shareSlug);
+  if (!entry) {
+    const slug = normalizeTempShareSlugValue(req.params.shareSlug);
+    if (isExhaustedTempShareSlug(slug)) {
+      res.status(410).type("html").send(renderTempShareLimitReachedPage(getExhaustedSlugLang(slug)));
+      return;
+    }
+    const tu = getDropI18n("en");
+    res
+      .status(404)
+      .type("html")
+      .send(
+        renderTempShareUnavailablePage({
+          title: tu.unavailTitle,
+          statusLabel: tu.unavailStatusLabel,
+          message: tu.unavailMessage,
+          lang: "en"
+        })
+      );
+    return;
+  }
+
+  try {
+    res.setHeader("Cache-Control", "no-store");
+    res.type("html");
+    res.send(await renderTempSharePublicPage(entry, req));
+  } catch (error) {
+    console.error("[temp-shares] render error:", error);
+    const te = getDropI18n(entry.lang);
+    res
+      .status(500)
+      .type("html")
+      .send(
+        renderTempShareUnavailablePage({
+          title: te.unavailErrorTitle,
+          statusLabel: te.unavailErrorStatus,
+          message: te.unavailErrorMessage,
+          lang: entry.lang
+        })
+      );
+  }
+});
+
 app.get("/share/:shareSlug/image", (req, res) => {
   const entry = resolveSharedFileEntryBySlug(req.params.shareSlug);
   if (!entry) {
@@ -4175,11 +6874,27 @@ async function startServer() {
     }
   }
 
+  const tempShareCleanupTimer = setInterval(() => {
+    try {
+      getActiveTempShareEntries();
+    } catch (error) {
+      console.error("[temp-shares] cleanup error:", error);
+    }
+  }, TEMP_SHARE_CLEANUP_INTERVAL_MS);
+  tempShareCleanupTimer.unref?.();
+
+  const tempShareVirusTimer = setInterval(() => {
+    void tickTempShareVirusScans();
+  }, TEMP_SHARE_VT_TICK_MS);
+  tempShareVirusTimer.unref?.();
+  void tickTempShareVirusScans();
+
   const server = app.listen(PORT, () => {
     console.log(`[server] Fallout Codex listening on http://localhost:${PORT}`);
     console.log(`[server] Static root: ${SITE_ROOT}`);
     console.log(`[server] Storage directory: ${STORAGE_DIR}`);
     console.log(`[server] Metadata file: ${METADATA_PATH}`);
+    console.log(`[temp-shares] Metadata file: ${TEMP_SHARES_PATH}`);
     console.log(`[session] Store: ${sessionStoreLabel}`);
     if (!REDIS_URL && NODE_ENV === "production") {
       console.warn("[session] REDIS_URL is not set. Production is using MemoryStore (not recommended).");
@@ -4192,6 +6907,9 @@ async function startServer() {
     }
     if (!mailConfigured()) {
       console.warn("[mail] Access request email is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, SMTP_FROM.");
+    }
+    if (!virusTotalConfigured()) {
+      console.warn("[temp-shares] VirusTotal is not configured. Set VT_API_KEY to enable safety badges for temporary shares.");
     }
     if (botAdminApiConfigured()) {
       console.log(`[bot-admin] Using external bot admin bridge at ${BOT_ADMIN_API_URL}.`);
@@ -4209,6 +6927,8 @@ async function startServer() {
         console.error("[redis] quit error:", error);
       }
     }
+    clearInterval(tempShareCleanupTimer);
+    clearInterval(tempShareVirusTimer);
     server.close(() => {
       process.exit(0);
     });

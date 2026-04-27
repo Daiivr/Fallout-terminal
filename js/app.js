@@ -142,6 +142,7 @@ const HACK_BRACKET_PAIRS = [
 const VIEW_HASHES = {
   intel: "#intel",
   files: "#files",
+  drops: "#drops",
   classified: "#clasified"
 };
 const FILES_ACCESS_REQUEST_REASON_MAX = 1200;
@@ -459,6 +460,18 @@ const state = {
       open: false
     }
   },
+  drops: {
+    list: [],
+    loading: false,
+    error: "",
+    uploadBusy: false,
+    uploadMessage: "",
+    uploadMessageKind: "",
+    virusTotalConfigured: false,
+    uploadLimitBytes: 0,
+    retentionMaxHours: 0,
+    expiryMode: "hours"
+  },
   easterEgg: {
     unlocked: false,
     triggerClicks: 0,
@@ -500,6 +513,9 @@ function getHashView() {
   if (hash === VIEW_HASHES.files) {
     return "files";
   }
+  if (hash === VIEW_HASHES.drops) {
+    return "drops";
+  }
   if (!hash && sharedTargetActive) {
     return "files";
   }
@@ -515,6 +531,8 @@ function getHashView() {
 function setHashView(view, { replace = false } = {}) {
   const targetHash = view === "files"
     ? VIEW_HASHES.files
+    : view === "drops"
+      ? VIEW_HASHES.drops
     : view === "classified"
       ? VIEW_HASHES.classified
       : VIEW_HASHES.intel;
@@ -800,6 +818,7 @@ async function copyTextToClipboard(text) {
 function setTopTabActive(view) {
   elements.tabIntel?.classList.toggle("active", view === "intel");
   elements.tabStatus?.classList.toggle("active", view === "files");
+  elements.tabDrops?.classList.toggle("active", view === "drops");
   elements.tabData?.classList.toggle("active", view === "data");
 }
 
@@ -868,6 +887,11 @@ function closeIntelBotInviteModal() {
 function syncTopTabForCurrentView() {
   if (state.view === "classified") {
     setTopTabActive("data");
+    syncDiscordBotInviteButton();
+    return;
+  }
+  if (state.view === "drops") {
+    setTopTabActive("drops");
     syncDiscordBotInviteButton();
     return;
   }
@@ -1479,6 +1503,16 @@ function hideFilesPage() {
   renderFilesBotAdminPanel();
 }
 
+function hideDropsPage() {
+  stopDropsVtAutoPoll();
+  stopDropsCountAutoPoll();
+  document.body.classList.remove("is-drops");
+  if (elements.dropsPage) {
+    elements.dropsPage.classList.remove("is-entering");
+    elements.dropsPage.hidden = true;
+  }
+}
+
 function closeClassifiedPageForNavigation() {
   showClassifiedLoadOverlay(false);
   document.body.classList.remove("is-classified");
@@ -1492,6 +1526,7 @@ function closeClassifiedPageForNavigation() {
 function showIntelPage({ updateHash = true } = {}) {
   closeClassifiedPageForNavigation();
   hideFilesPage();
+  hideDropsPage();
   state.view = "intel";
   syncVisitCounterEyeMode();
   elements.mainTitle.textContent = t("main_title");
@@ -1506,6 +1541,7 @@ function showFilesPage({ updateHash = true } = {}) {
   closeIntelBotInviteModal();
   hideSiloDossier({ updateHash: false });
   closeClassifiedPageForNavigation();
+  hideDropsPage();
   markFilesDecisionNoticeSeen();
   startFilesLiveIdentityPolling();
   syncFilesLoginReturnToField();
@@ -1532,6 +1568,34 @@ function showFilesPage({ updateHash = true } = {}) {
   }
 }
 
+function showDropsPage({ updateHash = true } = {}) {
+  closeIntelBotInviteModal();
+  hideSiloDossier({ updateHash: false });
+  closeClassifiedPageForNavigation();
+  hideFilesPage();
+  document.body.classList.add("is-drops");
+  if (elements.dropsPage) {
+    elements.dropsPage.hidden = false;
+    elements.dropsPage.classList.remove("is-entering");
+    void elements.dropsPage.offsetWidth;
+    elements.dropsPage.classList.add("is-entering");
+    setTimeout(() => {
+      elements.dropsPage?.classList.remove("is-entering");
+    }, 540);
+  }
+
+  state.view = "drops";
+  syncVisitCounterEyeMode();
+  elements.mainTitle.textContent = t("drops_main_title");
+  syncTopTabForCurrentView();
+  renderFilesBotAdminPanel();
+  renderDropsPage();
+  void refreshFilesIdentity({ loadFiles: false });
+  if (updateHash) {
+    setHashView("drops");
+  }
+}
+
 function applyViewFromHash() {
   const hashView = getHashView();
   if (!hashView) {
@@ -1546,6 +1610,14 @@ function applyViewFromHash() {
       return;
     }
     showFilesPage({ updateHash: false });
+    return;
+  }
+
+  if (hashView === "drops") {
+    if (state.view === "drops" && document.body.classList.contains("is-drops")) {
+      return;
+    }
+    showDropsPage({ updateHash: false });
     return;
   }
 
@@ -7745,6 +7817,952 @@ function renderFilesAccessView() {
   renderFilesGroupManagerPanel();
 }
 
+function normalizeDropVirusStatus(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (
+    normalized === "queued"
+    || normalized === "pending"
+    || normalized === "clean"
+    || normalized === "flagged"
+    || normalized === "error"
+    || normalized === "skipped"
+  ) {
+    return normalized;
+  }
+  return "unavailable";
+}
+
+function normalizeDropVirusStats(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const normalizeCount = (raw) => {
+    const parsed = Number.parseInt(String(raw ?? 0), 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  };
+
+  return {
+    harmless: normalizeCount(source.harmless),
+    malicious: normalizeCount(source.malicious),
+    suspicious: normalizeCount(source.suspicious),
+    undetected: normalizeCount(source.undetected)
+  };
+}
+
+function normalizeDropEntry(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const id = String(payload.id || "").trim().toLowerCase();
+  const slug = String(payload.slug || "").trim();
+  const sharePath = String(payload.sharePath || (slug ? `/drops/${encodeURIComponent(slug)}` : "")).trim();
+  if (!id || !sharePath) {
+    return null;
+  }
+
+  const shareUrl = String(payload.shareUrl || "").trim()
+    || new URL(sharePath, window.location.origin).toString();
+
+  return {
+    id,
+    slug,
+    sharePath,
+    shareUrl,
+    name: String(payload.name || "").trim(),
+    displayName: String(payload.displayName || payload.name || "").trim() || "--",
+    mimeType: String(payload.mimeType || "application/octet-stream").trim() || "application/octet-stream",
+    size: Math.max(0, Number(payload.size) || 0),
+    description: String(payload.description || "").trim(),
+    uploadedAt: String(payload.uploadedAt || "").trim(),
+    updatedAt: String(payload.updatedAt || "").trim(),
+    expiresAt: String(payload.expiresAt || "").trim(),
+    maxDownloads: Math.max(0, Number(payload.maxDownloads) || 0),
+    downloadCount: Math.max(0, Number(payload.downloadCount) || 0),
+    remainingDownloads: Math.max(0, Number(payload.remainingDownloads) || 0),
+    uploader: String(payload.uploader || "").trim(),
+    virusTotal: {
+      status: normalizeDropVirusStatus(payload.virusTotal?.status),
+      permalink: String(payload.virusTotal?.permalink || "").trim(),
+      stats: normalizeDropVirusStats(payload.virusTotal?.stats),
+      lastError: String(payload.virusTotal?.lastError || "").trim()
+    }
+  };
+}
+
+let dropsUploadFeedbackTimer = null;
+function setDropsUploadFeedback(message, kind = "") {
+  if (dropsUploadFeedbackTimer !== null) {
+    clearTimeout(dropsUploadFeedbackTimer);
+    dropsUploadFeedbackTimer = null;
+  }
+  state.drops.uploadMessage = String(message || "");
+  state.drops.uploadMessageKind = kind === "success" ? "success" : kind === "error" ? "error" : "";
+  if (kind === "success" && message) {
+    dropsUploadFeedbackTimer = setTimeout(() => {
+      dropsUploadFeedbackTimer = null;
+      state.drops.uploadMessage = "";
+      state.drops.uploadMessageKind = "";
+      renderDropsPage();
+    }, 3500);
+  }
+}
+
+function formatDropsUploadFileName(name) {
+  const value = String(name || "").trim();
+  if (!value) {
+    return "No file selected";
+  }
+  const extensionIndex = value.lastIndexOf(".");
+  if (value.length <= 42) {
+    return value;
+  }
+  if (extensionIndex > 0 && value.length - extensionIndex <= 10) {
+    const extension = value.slice(extensionIndex);
+    const base = value.slice(0, Math.max(1, 39 - extension.length));
+    return `${base}...${extension}`;
+  }
+  return `${value.slice(0, 39)}...`;
+}
+
+function syncDropsUploadFileName() {
+  if (!elements.dropsUploadFileName) {
+    return;
+  }
+  const file = elements.dropsUploadInput?.files?.[0] || null;
+  const hasFile = Boolean(file && String(file.name || "").trim());
+  const fullName = hasFile ? String(file.name || "").trim() : "";
+  elements.dropsUploadFileName.textContent = hasFile
+    ? formatDropsUploadFileName(fullName)
+    : "No file selected";
+  elements.dropsUploadFileName.title = hasFile ? fullName : "";
+  elements.dropsUploadFileName.classList.toggle("is-empty", !hasFile);
+}
+
+function normalizeDropsExpiryMode(mode) {
+  return String(mode || "").trim().toLowerCase() === "datetime" ? "datetime" : "hours";
+}
+
+function formatDropDateTimeLocalValue(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "";
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function setDropsExpiryMode(mode, { render = true } = {}) {
+  state.drops.expiryMode = normalizeDropsExpiryMode(mode);
+  if (render) {
+    renderDropsPage();
+  }
+}
+
+function initDropsDatetimePicker() {
+  const nativeInput = elements.dropsExpiresAtInput;
+  const wrap = elements.dropsExpiresAtWrap;
+  if (!nativeInput || !wrap) return;
+
+  nativeInput.style.display = "none";
+  nativeInput.setAttribute("tabindex", "-1");
+  nativeInput.setAttribute("aria-hidden", "true");
+
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const DAYS   = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+
+  let sel    = null;
+  let viewY  = new Date().getFullYear();
+  let viewM  = new Date().getMonth();
+  let isOpen = false;
+
+  // --- build DOM ---
+  const display = document.createElement("button");
+  display.type = "button";
+  display.className = "drops-dt-display";
+  display.setAttribute("aria-haspopup", "dialog");
+  display.setAttribute("aria-expanded", "false");
+
+  const calIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  calIcon.setAttribute("viewBox", "0 0 16 16");
+  calIcon.setAttribute("fill", "none");
+  calIcon.setAttribute("aria-hidden", "true");
+  calIcon.classList.add("drops-dt-display-icon");
+  calIcon.innerHTML = `<rect x="1" y="2.5" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/>` +
+    `<line x1="1" y1="6" x2="15" y2="6" stroke="currentColor" stroke-width="1.4"/>` +
+    `<line x1="5" y1="1" x2="5" y2="4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>` +
+    `<line x1="11" y1="1" x2="11" y2="4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`;
+
+  const displayText = document.createElement("span");
+  displayText.textContent = "Select date & time…";
+  display.append(calIcon, displayText);
+
+  const popup = document.createElement("div");
+  popup.className = "drops-dt-popup";
+  popup.setAttribute("role", "dialog");
+  popup.hidden = true;
+
+  // calendar
+  const calNav = document.createElement("div");
+  calNav.className = "drops-dt-cal-nav";
+  const prevBtn = document.createElement("button");
+  prevBtn.type = "button"; prevBtn.className = "drops-dt-nav-btn"; prevBtn.innerHTML = "&#8249;"; prevBtn.setAttribute("aria-label", "Previous month");
+  const monthLbl = document.createElement("span");
+  monthLbl.className = "drops-dt-month-lbl";
+  const nextBtn = document.createElement("button");
+  nextBtn.type = "button"; nextBtn.className = "drops-dt-nav-btn"; nextBtn.innerHTML = "&#8250;"; nextBtn.setAttribute("aria-label", "Next month");
+  calNav.append(prevBtn, monthLbl, nextBtn);
+
+  const calGrid = document.createElement("div");
+  calGrid.className = "drops-dt-cal-grid";
+
+  const calSection = document.createElement("div");
+  calSection.className = "drops-dt-cal-section";
+  calSection.append(calNav, calGrid);
+
+  // time columns
+  const hourCol  = document.createElement("div"); hourCol.className  = "drops-dt-time-col";
+  const colonEl  = document.createElement("span"); colonEl.className = "drops-dt-time-colon"; colonEl.textContent = ":";
+  const minCol   = document.createElement("div"); minCol.className   = "drops-dt-time-col";
+  const ampmCol  = document.createElement("div"); ampmCol.className  = "drops-dt-time-col drops-dt-ampm-col";
+  const timeSection = document.createElement("div");
+  timeSection.className = "drops-dt-time-section";
+  timeSection.append(hourCol, colonEl, minCol, ampmCol);
+  // highlight band sits on top of the columns, centred in the scroll window
+  const timeHighlight = document.createElement("div");
+  timeHighlight.className = "drops-dt-time-highlight";
+  timeSection.appendChild(timeHighlight);
+
+  // footer
+  const clearBtn = document.createElement("button");
+  clearBtn.type = "button"; clearBtn.className = "drops-dt-foot-btn"; clearBtn.textContent = "Clear";
+  const nowBtn = document.createElement("button");
+  nowBtn.type = "button"; nowBtn.className = "drops-dt-foot-btn drops-dt-foot-accent"; nowBtn.textContent = "Now";
+  const footer = document.createElement("div");
+  footer.className = "drops-dt-footer";
+  footer.append(clearBtn, nowBtn);
+
+  popup.append(calSection, timeSection, footer);
+  wrap.append(display);
+  document.body.append(popup);
+
+  // --- rendering ---
+  function renderCalendar() {
+    monthLbl.textContent = `${MONTHS[viewM]} ${viewY}`;
+    calGrid.innerHTML = "";
+    DAYS.forEach(d => {
+      const h = document.createElement("span");
+      h.className = "drops-dt-cal-hdr"; h.textContent = d;
+      calGrid.appendChild(h);
+    });
+    const firstDay = new Date(viewY, viewM, 1).getDay();
+    for (let i = 0; i < firstDay; i++) {
+      const b = document.createElement("span"); b.className = "drops-dt-cal-blank";
+      calGrid.appendChild(b);
+    }
+    const today = new Date();
+    const dim = new Date(viewY, viewM + 1, 0).getDate();
+    for (let d = 1; d <= dim; d++) {
+      const btn = document.createElement("button");
+      btn.type = "button"; btn.className = "drops-dt-cal-day"; btn.textContent = d;
+      if (today.getFullYear() === viewY && today.getMonth() === viewM && today.getDate() === d) btn.classList.add("is-today");
+      if (sel && sel.y === viewY && sel.mo === viewM && sel.d === d) btn.classList.add("is-selected");
+      btn.addEventListener("click", () => {
+        if (!sel) { const n = new Date(); sel = { y: viewY, mo: viewM, d, h: n.getHours(), mi: n.getMinutes() }; }
+        else { sel = { ...sel, y: viewY, mo: viewM, d }; }
+        renderCalendar(); renderTime(); commit();
+      });
+      calGrid.appendChild(btn);
+    }
+  }
+
+  function renderTimeCol(el, items, selectedVal) {
+    el.innerHTML = "";
+    // top spacer — lets the first item scroll to the centre highlight band
+    const topSpacer = document.createElement("div");
+    topSpacer.className = "drops-dt-time-spacer";
+    el.appendChild(topSpacer);
+    items.forEach(item => {
+      const btn = document.createElement("button");
+      btn.type = "button"; btn.className = "drops-dt-time-item"; btn.textContent = item.lbl; btn.dataset.val = item.val;
+      if (item.val === selectedVal) btn.classList.add("is-selected");
+      btn.addEventListener("click", () => {
+        if (!sel) { const n = new Date(); sel = { y: n.getFullYear(), mo: n.getMonth(), d: n.getDate(), h: n.getHours(), mi: n.getMinutes() }; }
+        if (el === hourCol) {
+          const isAm = sel.h < 12;
+          let hv = Number(item.val); if (hv === 12) hv = 0;
+          sel.h = isAm ? hv : hv + 12;
+        } else if (el === minCol) {
+          sel.mi = Number(item.val);
+        } else {
+          const h12 = sel.h % 12;
+          sel.h = item.val === "AM" ? h12 : h12 + 12;
+        }
+        renderTime(); commit();
+      });
+      el.appendChild(btn);
+    });
+    // bottom spacer — lets the last item scroll to the centre highlight band
+    const botSpacer = document.createElement("div");
+    botSpacer.className = "drops-dt-time-spacer";
+    el.appendChild(botSpacer);
+    requestAnimationFrame(() => {
+      const s = el.querySelector(".is-selected");
+      if (s) {
+        // Manually centre the selected item in the scroll viewport
+        el.scrollTop = s.offsetTop - el.clientHeight / 2 + s.offsetHeight / 2;
+      }
+    });
+  }
+
+  function renderTime() {
+    const h24 = sel ? sel.h : new Date().getHours();
+    const mi  = sel ? sel.mi : new Date().getMinutes();
+    const h12val = h24 % 12; // 0 for noon/midnight, 1-11 otherwise
+    const ampm = h24 < 12 ? "AM" : "PM";
+    const hours = [{ lbl: "12", val: 0 }, ...Array.from({ length: 11 }, (_, i) => ({ lbl: String(i + 1).padStart(2, "0"), val: i + 1 }))];
+    const mins  = Array.from({ length: 60 }, (_, i) => ({ lbl: String(i).padStart(2, "0"), val: i }));
+    renderTimeCol(hourCol, hours, h12val);
+    renderTimeCol(minCol, mins, mi);
+    renderTimeCol(ampmCol, [{ lbl: "AM", val: "AM" }, { lbl: "PM", val: "PM" }], ampm);
+  }
+
+  function commit() {
+    if (!sel) { nativeInput.value = ""; }
+    else {
+      const y  = String(sel.y).padStart(4, "0");
+      const mo = String(sel.mo + 1).padStart(2, "0");
+      const d  = String(sel.d).padStart(2, "0");
+      const h  = String(sel.h).padStart(2, "0");
+      const mi = String(sel.mi).padStart(2, "0");
+      nativeInput.value = `${y}-${mo}-${d}T${h}:${mi}`;
+    }
+    nativeInput.dispatchEvent(new Event("input", { bubbles: true }));
+    updateDisplay();
+  }
+
+  function updateDisplay() {
+    if (!sel) {
+      displayText.textContent = "Select date & time…";
+      display.classList.remove("has-value");
+    } else {
+      const h12 = sel.h % 12 === 0 ? 12 : sel.h % 12;
+      const ampm = sel.h < 12 ? "AM" : "PM";
+      const mo = String(sel.mo + 1).padStart(2, "0");
+      const d  = String(sel.d).padStart(2, "0");
+      const mi = String(sel.mi).padStart(2, "0");
+      displayText.textContent = `${mo}/${d}/${sel.y}  ${h12}:${mi} ${ampm}`;
+      display.classList.add("has-value");
+    }
+  }
+
+  function positionPopup() {
+    const rect   = display.getBoundingClientRect();
+    const popupW = 340;
+    const estH   = 480;
+
+    // Open to the right of the button
+    let left = rect.right + 8;
+    if (left + popupW > window.innerWidth - 8) {
+      left = Math.max(8, rect.left - popupW - 8);
+    }
+
+    // Center vertically on the button, clamped to viewport
+    let top = rect.top + rect.height / 2 - estH / 2;
+    top = Math.max(8, Math.min(top, window.innerHeight - estH - 8));
+
+    popup.style.left = `${left}px`;
+    popup.style.top  = `${top}px`;
+  }
+
+  function openPicker() {
+    // sync from native input if it has a value
+    if (nativeInput.value) {
+      const [dp, tp] = nativeInput.value.split("T");
+      if (dp && tp) {
+        const [y, mo, d] = dp.split("-").map(Number);
+        const [h, mi]    = tp.split(":").map(Number);
+        sel = { y, mo: mo - 1, d, h, mi };
+        viewY = y; viewM = mo - 1;
+      }
+    }
+    isOpen = true;
+    positionPopup();
+    popup.hidden = false;
+    display.setAttribute("aria-expanded", "true");
+    renderCalendar();
+    renderTime();
+  }
+
+  function closePicker() {
+    isOpen = false;
+    popup.hidden = true;
+    display.setAttribute("aria-expanded", "false");
+  }
+
+  // expose reset so resetDropsExpiryControls can clear the display
+  nativeInput._dtPickerReset = () => { sel = null; updateDisplay(); };
+
+  display.addEventListener("click", e => { e.stopPropagation(); isOpen ? closePicker() : openPicker(); });
+  popup.addEventListener("click", e => e.stopPropagation());
+  document.addEventListener("click", () => { if (isOpen) closePicker(); });
+  prevBtn.addEventListener("click", () => { viewM--; if (viewM < 0) { viewM = 11; viewY--; } renderCalendar(); });
+  nextBtn.addEventListener("click", () => { viewM++; if (viewM > 11) { viewM = 0; viewY++; } renderCalendar(); });
+  clearBtn.addEventListener("click", () => { sel = null; commit(); closePicker(); });
+  nowBtn.addEventListener("click", () => {
+    const n = new Date();
+    sel = { y: n.getFullYear(), mo: n.getMonth(), d: n.getDate(), h: n.getHours(), mi: n.getMinutes() };
+    viewY = sel.y; viewM = sel.mo;
+    renderCalendar(); renderTime(); commit(); closePicker();
+  });
+
+  renderCalendar();
+  renderTime();
+}
+
+function resetDropsExpiryControls() {
+  state.drops.expiryMode = "hours";
+  if (elements.dropsExpiresHoursInput) {
+    elements.dropsExpiresHoursInput.value = "";
+  }
+  if (elements.dropsExpiresAtInput) {
+    elements.dropsExpiresAtInput.value = "";
+    if (typeof elements.dropsExpiresAtInput._dtPickerReset === "function") {
+      elements.dropsExpiresAtInput._dtPickerReset();
+    }
+  }
+}
+
+function getDropShareUrl(entry) {
+  if (entry?.shareUrl) {
+    return String(entry.shareUrl);
+  }
+  const sharePath = String(entry?.sharePath || "").trim();
+  if (!sharePath) {
+    return "";
+  }
+  return new URL(sharePath, window.location.origin).toString();
+}
+
+function buildDropVirusBadgeState(entry) {
+  const status = normalizeDropVirusStatus(entry?.virusTotal?.status);
+  const stats = normalizeDropVirusStats(entry?.virusTotal?.stats);
+  const detected = Math.max(0, stats.malicious + stats.suspicious);
+
+  if (status === "clean") {
+    return {
+      className: "is-safe",
+      title: "VT SAFE",
+      body: `${detected} detections`
+    };
+  }
+  if (status === "flagged") {
+    return {
+      className: "is-flagged",
+      title: "VT FLAGGED",
+      body: `${detected} detections`
+    };
+  }
+  if (status === "pending" || status === "queued") {
+    return {
+      className: "is-pending",
+      title: "VT SCANNING",
+      body: "Awaiting result"
+    };
+  }
+  if (status === "error") {
+    return {
+      className: "is-error",
+      title: "VT ERROR",
+      body: "Scan unavailable"
+    };
+  }
+  if (status === "skipped") {
+    return {
+      className: "is-muted",
+      title: "VT SKIPPED",
+      body: "Not scanned"
+    };
+  }
+  return {
+    className: "is-muted",
+    title: "VT UNCHECKED",
+    body: "Not scanned"
+  };
+}
+
+function renderDropsAdminTabVisibility() {
+  if (!elements.tabDrops) {
+    return;
+  }
+  const isAdmin = Boolean(state.files.me?.isAdmin);
+  elements.tabDrops.hidden = !isAdmin;
+  elements.tabDrops.setAttribute("aria-hidden", isAdmin ? "false" : "true");
+}
+
+function renderDropsList() {
+  if (!elements.dropsList || !elements.dropsEmptyState || !elements.dropsListMeta) {
+    return;
+  }
+
+  const entries = Array.isArray(state.drops.list) ? state.drops.list : [];
+  elements.dropsList.replaceChildren();
+
+  if (state.drops.loading) {
+    elements.dropsListMeta.textContent = "Refreshing temporary shares...";
+  } else if (state.drops.error) {
+    elements.dropsListMeta.textContent = state.drops.error;
+  } else {
+    const uploadLimitLabel = state.drops.uploadLimitBytes > 0 ? formatFileSize(state.drops.uploadLimitBytes) : "--";
+    const vtLabel = state.drops.virusTotalConfigured ? "VirusTotal scanning enabled." : "VirusTotal not configured.";
+    elements.dropsListMeta.textContent = `Upload limit ${uploadLimitLabel}. Max retention ${state.drops.retentionMaxHours || "--"} hours. ${vtLabel}`;
+  }
+
+  elements.dropsEmptyState.hidden = state.drops.loading || entries.length > 0;
+  if (!entries.length) {
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  for (const entry of entries) {
+    const badge = buildDropVirusBadgeState(entry);
+
+    const card = document.createElement("article");
+    card.className = "drops-item";
+
+    const header = document.createElement("div");
+    header.className = "drops-item-head";
+
+    const heading = document.createElement("div");
+    heading.className = "drops-item-heading";
+
+    const title = document.createElement("h3");
+    title.className = "drops-item-title";
+    title.textContent = entry.displayName;
+    heading.appendChild(title);
+
+    const url = document.createElement("p");
+    url.className = "drops-item-url";
+    url.textContent = getDropShareUrl(entry);
+    heading.appendChild(url);
+
+    header.appendChild(heading);
+
+    const virusBadge = document.createElement("div");
+    virusBadge.className = `drops-virus-badge ${badge.className}`.trim();
+    const virusTitle = document.createElement("span");
+    virusTitle.className = "drops-virus-title";
+    virusTitle.textContent = badge.title;
+    const virusBody = document.createElement("span");
+    virusBody.className = "drops-virus-body";
+    virusBody.textContent = badge.body;
+    virusBadge.appendChild(virusTitle);
+    virusBadge.appendChild(virusBody);
+    header.appendChild(virusBadge);
+
+    const meta = document.createElement("div");
+    meta.className = "drops-item-meta";
+
+    const metaRows = [
+      [
+        { label: "TYPE", value: String(entry.mimeType || "").trim() || "--" },
+        { label: "SIZE", value: formatFileSize(entry.size) }
+      ],
+      [
+        { label: "UPLOADED", value: formatFileDateTime(entry.uploadedAt) },
+        { label: "EXPIRES", value: entry.expiresAt ? formatFileDateTime(entry.expiresAt) : "Download limit only" }
+      ],
+      [
+        {
+          label: "DOWNLOADS",
+          value: entry.maxDownloads > 0
+            ? `${entry.downloadCount} / ${entry.maxDownloads}`
+            : `${entry.downloadCount} used`
+        },
+        entry.uploader ? { label: "UPLOADER", value: entry.uploader } : null
+      ].filter(Boolean)
+    ];
+
+    for (const rowItems of metaRows) {
+      const row = document.createElement("div");
+      row.className = "drops-meta-row";
+      for (const item of rowItems) {
+        const cell = document.createElement("div");
+        cell.className = "drops-meta-cell";
+        const lbl = document.createElement("span");
+        lbl.className = "drops-meta-cell-label";
+        lbl.textContent = item.label;
+        const val = document.createElement("span");
+        val.className = "drops-meta-cell-value";
+        val.textContent = item.value;
+        cell.appendChild(lbl);
+        cell.appendChild(val);
+        row.appendChild(cell);
+      }
+      meta.appendChild(row);
+    }
+
+    const description = document.createElement("p");
+    description.className = "drops-item-description";
+    description.textContent = entry.description || "No public description added.";
+
+    const actions = document.createElement("div");
+    actions.className = "drops-item-actions";
+
+    const copyButton = document.createElement("button");
+    copyButton.type = "button";
+    copyButton.className = "files-btn drops-item-btn";
+    copyButton.textContent = "COPY LINK";
+    copyButton.setAttribute("data-drops-action", "copy");
+    copyButton.setAttribute("data-share-id", entry.id);
+    actions.appendChild(copyButton);
+
+    const openLink = document.createElement("a");
+    openLink.className = "files-btn drops-item-btn";
+    openLink.href = getDropShareUrl(entry);
+    openLink.target = "_blank";
+    openLink.rel = "noopener noreferrer";
+    openLink.textContent = "OPEN LINK";
+    actions.appendChild(openLink);
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "files-btn drops-item-btn is-delete";
+    deleteButton.textContent = "DELETE";
+    deleteButton.setAttribute("data-drops-action", "delete");
+    deleteButton.setAttribute("data-share-id", entry.id);
+    actions.appendChild(deleteButton);
+
+    card.appendChild(header);
+    card.appendChild(meta);
+    card.appendChild(description);
+    card.appendChild(actions);
+    fragment.appendChild(card);
+  }
+
+  elements.dropsList.appendChild(fragment);
+}
+
+function renderDropsPage() {
+  renderDropsAdminTabVisibility();
+  if (!elements.dropsGatePanel || !elements.dropsAdminView || !elements.dropsUploadFeedback) {
+    return;
+  }
+
+  const me = normalizeFilesProfile(state.files.me);
+  const isAdmin = Boolean(me.loggedIn && me.isAuthorized && me.isAdmin);
+  const loadingIdentity = Boolean(state.files.loadingMe);
+  const showGate = !isAdmin;
+
+  elements.dropsGatePanel.hidden = !showGate;
+  elements.dropsAdminView.hidden = !isAdmin;
+
+  if (showGate) {
+    const message = loadingIdentity
+      ? "Checking administrator clearance for this console..."
+      : !me.loggedIn
+        ? "Log in with the configured admin Discord account to open the temporary share console."
+        : "This tab is visible only to the configured admin account.";
+    if (elements.dropsGateMessage) {
+      elements.dropsGateMessage.textContent = message;
+    }
+  }
+
+  const feedbackMessage = String(state.drops.uploadMessage || "");
+  elements.dropsUploadFeedback.hidden = !feedbackMessage;
+  elements.dropsUploadFeedback.textContent = feedbackMessage;
+  elements.dropsUploadFeedback.classList.toggle("is-success", state.drops.uploadMessageKind === "success");
+  elements.dropsUploadFeedback.classList.toggle("is-error", state.drops.uploadMessageKind === "error");
+
+  if (elements.dropsUploadBtn) {
+    elements.dropsUploadBtn.disabled = state.drops.uploadBusy || !isAdmin;
+    elements.dropsUploadBtn.textContent = state.drops.uploadBusy ? "CREATING..." : "CREATE SHARE";
+  }
+  if (elements.dropsUploadPickerBtn) {
+    elements.dropsUploadPickerBtn.disabled = state.drops.uploadBusy || !isAdmin;
+  }
+  if (elements.dropsRefreshBtn) {
+    elements.dropsRefreshBtn.disabled = state.drops.loading || !isAdmin;
+    elements.dropsRefreshBtn.textContent = state.drops.loading ? "REFRESHING..." : "REFRESH";
+  }
+  const expiryMode = normalizeDropsExpiryMode(state.drops.expiryMode);
+  if (elements.dropsExpiryModeHoursBtn) {
+    const isActive = expiryMode === "hours";
+    elements.dropsExpiryModeHoursBtn.classList.toggle("is-active", isActive);
+    elements.dropsExpiryModeHoursBtn.setAttribute("aria-pressed", isActive ? "true" : "false");
+  }
+  if (elements.dropsExpiryModeDateBtn) {
+    const isActive = expiryMode === "datetime";
+    elements.dropsExpiryModeDateBtn.classList.toggle("is-active", isActive);
+    elements.dropsExpiryModeDateBtn.setAttribute("aria-pressed", isActive ? "true" : "false");
+  }
+  if (elements.dropsExpiresHoursWrap) {
+    elements.dropsExpiresHoursWrap.hidden = expiryMode !== "hours";
+  }
+  if (elements.dropsExpiresAtWrap) {
+    elements.dropsExpiresAtWrap.hidden = expiryMode !== "datetime";
+  }
+  if (elements.dropsExpiryHint) {
+    elements.dropsExpiryHint.textContent = expiryMode === "datetime"
+      ? "Pick the exact local date and time when this share should self-delete."
+      : "Set a relative expiration in hours from the moment you create the share.";
+  }
+  if (elements.dropsExpiresAtInput) {
+    const now = new Date();
+    const minDate = new Date(now.getTime() + 60 * 1000);
+    const maxDate = state.drops.retentionMaxHours > 0
+      ? new Date(now.getTime() + state.drops.retentionMaxHours * 60 * 60 * 1000)
+      : null;
+    elements.dropsExpiresAtInput.min = formatDropDateTimeLocalValue(minDate);
+    elements.dropsExpiresAtInput.max = maxDate ? formatDropDateTimeLocalValue(maxDate) : "";
+  }
+  syncDropsUploadFileName();
+
+  renderDropsList();
+}
+
+let dropsVtPollTimer = null;
+let dropsCountPollTimer = null;
+
+function stopDropsCountAutoPoll() {
+  if (dropsCountPollTimer !== null) {
+    clearInterval(dropsCountPollTimer);
+    dropsCountPollTimer = null;
+  }
+}
+
+function startDropsCountAutoPoll() {
+  if (dropsCountPollTimer !== null) return;
+  dropsCountPollTimer = setInterval(async () => {
+    if (state.view !== "drops") {
+      stopDropsCountAutoPoll();
+      return;
+    }
+    await refreshDrops({ silent: true });
+  }, 30000);
+}
+
+function dropsHasPendingVtScans() {
+  return state.drops.virusTotalConfigured && state.drops.list.some((entry) => {
+    const s = String(entry?.virusTotal?.status || "").trim();
+    return s === "queued" || s === "pending";
+  });
+}
+
+function stopDropsVtAutoPoll() {
+  if (dropsVtPollTimer !== null) {
+    clearInterval(dropsVtPollTimer);
+    dropsVtPollTimer = null;
+  }
+}
+
+function startDropsVtAutoPoll() {
+  if (dropsVtPollTimer !== null) {
+    return;
+  }
+  dropsVtPollTimer = setInterval(async () => {
+    if (state.view !== "drops" || !dropsHasPendingVtScans()) {
+      stopDropsVtAutoPoll();
+      return;
+    }
+    await refreshDrops({ silent: true });
+  }, 5000);
+}
+
+async function refreshDrops({ silent = false } = {}) {
+  const me = normalizeFilesProfile(state.files.me);
+  if (!me.isAuthorized || !me.isAdmin) {
+    state.drops.list = [];
+    state.drops.loading = false;
+    state.drops.error = "";
+    stopDropsVtAutoPoll();
+    renderDropsPage();
+    return;
+  }
+
+  if (!silent) {
+    state.drops.loading = true;
+    state.drops.error = "";
+    renderDropsPage();
+  }
+
+  try {
+    const payload = await requestJson("/api/admin/temp-shares");
+    state.drops.list = (Array.isArray(payload.entries) ? payload.entries : [])
+      .map((entry) => normalizeDropEntry(entry))
+      .filter(Boolean);
+    state.drops.virusTotalConfigured = Boolean(payload.virusTotalConfigured);
+    state.drops.uploadLimitBytes = Math.max(0, Number(payload.uploadLimitBytes) || 0);
+    state.drops.retentionMaxHours = Math.max(0, Number(payload.retentionMaxHours) || 0);
+  } catch (error) {
+    if (error?.status === 401 || error?.status === 403) {
+      stopDropsVtAutoPoll();
+      await refreshFilesIdentity({ loadFiles: false });
+      return;
+    }
+    state.drops.list = [];
+    state.drops.error = String(error?.message || "Unable to load temporary shares.");
+  } finally {
+    if (!silent) {
+      state.drops.loading = false;
+    }
+  }
+
+  renderDropsPage();
+  if (dropsHasPendingVtScans()) {
+    startDropsVtAutoPoll();
+  } else {
+    stopDropsVtAutoPoll();
+  }
+  startDropsCountAutoPoll();
+}
+
+async function handleDropsUploadSubmit() {
+  if (state.drops.uploadBusy) {
+    return;
+  }
+
+  const file = elements.dropsUploadInput?.files?.[0] || null;
+  const maxDownloadsRaw = String(elements.dropsMaxDownloadsInput?.value || "").trim();
+  const expiryMode = normalizeDropsExpiryMode(state.drops.expiryMode);
+  const expiresHoursRaw = String(elements.dropsExpiresHoursInput?.value || "").trim();
+  const expiresAtRaw = String(elements.dropsExpiresAtInput?.value || "").trim();
+  const maxDownloads = maxDownloadsRaw ? Math.max(0, Number.parseInt(maxDownloadsRaw, 10) || 0) : 0;
+  const expiresInHours = expiryMode === "hours" && expiresHoursRaw
+    ? Math.max(0, Number.parseInt(expiresHoursRaw, 10) || 0)
+    : 0;
+  const expiresAtMs = expiryMode === "datetime" && expiresAtRaw ? Date.parse(expiresAtRaw) : Number.NaN;
+  const expiresAtIso = Number.isFinite(expiresAtMs) ? new Date(expiresAtMs).toISOString() : "";
+  const maxRetentionMs = Math.max(0, Number(state.drops.retentionMaxHours) || 0) * 60 * 60 * 1000;
+
+  if (!file) {
+    setDropsUploadFeedback("Select a file before creating a share.", "error");
+    renderDropsPage();
+    return;
+  }
+  if (expiryMode === "datetime" && expiresAtRaw) {
+    if (!expiresAtIso) {
+      setDropsUploadFeedback("Pick a valid expiration date and time.", "error");
+      renderDropsPage();
+      return;
+    }
+    if (expiresAtMs <= Date.now() + 30 * 1000) {
+      setDropsUploadFeedback("Pick a future expiration date and time.", "error");
+      renderDropsPage();
+      return;
+    }
+    if (maxRetentionMs > 0 && expiresAtMs - Date.now() > maxRetentionMs) {
+      setDropsUploadFeedback(`Expiration cannot exceed ${state.drops.retentionMaxHours} hours from now.`, "error");
+      renderDropsPage();
+      return;
+    }
+  }
+  if (maxDownloads <= 0 && expiresInHours <= 0 && !expiresAtIso) {
+    setDropsUploadFeedback("Add a download limit or an expiration time before creating a share.", "error");
+    renderDropsPage();
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("displayName", String(elements.dropsDisplayNameInput?.value || "").trim());
+  formData.append("description", String(elements.dropsDescriptionInput?.value || "").trim());
+  formData.append("lang", String(elements.dropsLangSelect?.value || "en").trim());
+  if (maxDownloads > 0) {
+    formData.append("maxDownloads", String(maxDownloads));
+  }
+  if (expiresInHours > 0) {
+    formData.append("expiresInHours", String(expiresInHours));
+  }
+  if (expiresAtIso) {
+    formData.append("expiresAt", expiresAtIso);
+  }
+
+  state.drops.uploadBusy = true;
+  setDropsUploadFeedback("", "");
+  renderDropsPage();
+
+  try {
+    await requestJson("/api/admin/temp-shares", {
+      method: "POST",
+      body: formData
+    });
+    if (elements.dropsUploadForm instanceof HTMLFormElement) {
+      elements.dropsUploadForm.reset();
+    }
+    syncDropsLangMenu();
+    setDropsLangMenuOpen(false);
+    resetDropsExpiryControls();
+    syncDropsUploadFileName();
+    setDropsUploadFeedback("Temporary share created.", "success");
+    await refreshDrops();
+  } catch (error) {
+    setDropsUploadFeedback(String(error?.message || "Unable to create temporary share."), "error");
+  } finally {
+    state.drops.uploadBusy = false;
+    renderDropsPage();
+  }
+}
+
+async function handleDropDelete(shareId) {
+  const normalizedShareId = String(shareId || "").trim().toLowerCase();
+  if (!normalizedShareId) {
+    return;
+  }
+  const matchedEntry = state.drops.list.find((entry) => entry.id === normalizedShareId) || null;
+  const label = matchedEntry?.displayName || "this temporary share";
+  if (!window.confirm(`Delete ${label} now?`)) {
+    return;
+  }
+
+  try {
+    await requestJson(`/api/admin/temp-shares/${encodeURIComponent(normalizedShareId)}`, {
+      method: "DELETE"
+    });
+    setDropsUploadFeedback("Temporary share deleted.", "success");
+    await refreshDrops();
+  } catch (error) {
+    setDropsUploadFeedback(String(error?.message || "Unable to delete temporary share."), "error");
+    renderDropsPage();
+  }
+}
+
+async function handleDropsListClick(event) {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return;
+  }
+
+  const actionTarget = target.closest("[data-drops-action]");
+  if (!(actionTarget instanceof HTMLElement)) {
+    return;
+  }
+
+  const action = String(actionTarget.dataset.dropsAction || "").trim();
+  const shareId = String(actionTarget.dataset.shareId || "").trim().toLowerCase();
+  const matchedEntry = state.drops.list.find((entry) => entry.id === shareId) || null;
+  if (!matchedEntry) {
+    return;
+  }
+
+  if (action === "copy") {
+    try {
+      await copyTextToClipboard(getDropShareUrl(matchedEntry));
+      setDropsUploadFeedback("Public link copied.", "success");
+    } catch {
+      setDropsUploadFeedback("Unable to copy the public link.", "error");
+    }
+    renderDropsPage();
+    return;
+  }
+
+  if (action === "delete") {
+    await handleDropDelete(shareId);
+  }
+}
+
 async function requestJson(url, options = {}) {
   const response = await fetch(url, {
     cache: "no-store",
@@ -8192,6 +9210,7 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
   state.files.loadingMe = true;
   state.files.meError = "";
   renderFilesAccessView();
+  renderDropsPage();
 
   try {
     const payload = await requestJson("/api/me");
@@ -8206,6 +9225,16 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
   }
 
   syncDiscordBotInviteButton();
+  renderDropsAdminTabVisibility();
+
+  if (state.view === "drops" && document.body.classList.contains("is-drops")) {
+    if (state.files.me.isAdmin) {
+      await refreshDrops();
+      return;
+    }
+    showFilesPage({ updateHash: true });
+    return;
+  }
 
   if (state.files.me.isAuthorized && loadFiles) {
     await refreshFilesList();
@@ -8244,6 +9273,7 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
   }
 
   renderFilesAccessView();
+  renderDropsPage();
 }
 
 async function refreshFilesIdentityBadgeOnly() {
@@ -8255,6 +9285,15 @@ async function refreshFilesIdentityBadgeOnly() {
   }
 
   syncFilesDecisionNoticeFromProfile(state.files.me);
+  renderDropsAdminTabVisibility();
+  if (state.view === "drops" && document.body.classList.contains("is-drops")) {
+    if (state.files.me.isAdmin) {
+      void refreshDrops();
+    } else {
+      showFilesPage({ updateHash: true });
+      return;
+    }
+  }
   renderFilesDecisionTabBadge();
   syncDiscordBotInviteButton();
   renderFilesBotAdminPanel();
@@ -8284,6 +9323,15 @@ async function handleFilesLogout() {
   state.files.transition = "";
   state.files.uploadBusy = false;
   state.files.replace.fileId = "";
+  state.drops.list = [];
+  state.drops.loading = false;
+  state.drops.error = "";
+  state.drops.uploadBusy = false;
+  state.drops.uploadMessage = "";
+  state.drops.uploadMessageKind = "";
+  state.drops.virusTotalConfigured = false;
+  state.drops.uploadLimitBytes = 0;
+  state.drops.retentionMaxHours = 0;
   setFilesUploadFeedback("", "");
   state.files.accessRequestBusy = false;
   setFilesRestrictedRequestFeedback("", "");
@@ -8304,6 +9352,8 @@ async function handleFilesLogout() {
   state.files.decisionNotice.token = "";
   renderFilesDecisionTabBadge();
   renderFilesAccessView();
+  renderDropsAdminTabVisibility();
+  renderDropsPage();
   await refreshFilesIdentity({ loadFiles: false });
 }
 
@@ -10734,6 +11784,16 @@ function setLanguageMenuOpen(active) {
   elements.langMenu.hidden = !active;
 }
 
+function setDropsLangMenuOpen(active) {
+  if (!elements.dropsLangDropdown || !elements.dropsLangToggleBtn || !elements.dropsLangMenu) {
+    return;
+  }
+
+  elements.dropsLangDropdown.classList.toggle("is-open", active);
+  elements.dropsLangToggleBtn.setAttribute("aria-expanded", active ? "true" : "false");
+  elements.dropsLangMenu.hidden = !active;
+}
+
 function syncLanguageMenu() {
   if (elements.langCurrent) {
     elements.langCurrent.textContent = state.lang.toUpperCase();
@@ -10745,6 +11805,35 @@ function syncLanguageMenu() {
 
   elements.langOptions.forEach((option) => {
     const selected = option.dataset.lang === state.lang;
+    option.classList.toggle("is-selected", selected);
+    option.setAttribute("aria-selected", selected ? "true" : "false");
+  });
+}
+
+function getDropsLangLabel(value) {
+  const normalized = value === "es" ? "es" : "en";
+  if (elements.dropsLangSelect instanceof HTMLSelectElement) {
+    const matchedOption = Array.from(elements.dropsLangSelect.options).find((option) => option.value === normalized);
+    const matchedLabel = String(matchedOption?.textContent || "").trim();
+    if (matchedLabel) {
+      return matchedLabel;
+    }
+  }
+  return normalized === "es" ? "Español" : "English";
+}
+
+function syncDropsLangMenu() {
+  if (elements.dropsLangCurrent) {
+    elements.dropsLangCurrent.textContent = getDropsLangLabel(elements.dropsLangSelect?.value || "en");
+  }
+
+  if (!Array.isArray(elements.dropsLangOptions)) {
+    return;
+  }
+
+  const selectedValue = elements.dropsLangSelect?.value === "es" ? "es" : "en";
+  elements.dropsLangOptions.forEach((option) => {
+    const selected = option.dataset.dropsLang === selectedValue;
     option.classList.toggle("is-selected", selected);
     option.setAttribute("aria-selected", selected ? "true" : "false");
   });
@@ -12147,6 +13236,7 @@ function showClassifiedPage({ updateHash = true } = {}) {
   showClassifiedLoadOverlay(false);
   hideHackOverlay();
   hideFilesPage();
+  hideDropsPage();
 
   if (elements.classifiedPage) {
     elements.classifiedPage.hidden = false;
@@ -13877,6 +14967,9 @@ function applyLanguage(lang, persist = true) {
     elements.tabStatus.textContent = t("tab_status");
   }
   elements.tabIntel.textContent = t("tab_intel");
+  if (elements.tabDrops) {
+    elements.tabDrops.textContent = t("tab_drop");
+  }
   elements.tabData.textContent = t("tab_data");
   if (elements.discordBotInviteLabel) {
     elements.discordBotInviteLabel.textContent = t("discord_bot_invite_label");
@@ -14409,6 +15502,8 @@ function applyLanguage(lang, persist = true) {
   renderFilesDisclaimerModal();
   if (document.body.classList.contains("is-classified")) {
     elements.mainTitle.textContent = t("classified_main_title");
+  } else if (document.body.classList.contains("is-drops")) {
+    elements.mainTitle.textContent = t("drops_main_title");
   } else if (document.body.classList.contains("is-files")) {
     elements.mainTitle.textContent = t("files_main_title");
   } else {
@@ -14663,6 +15758,27 @@ function wireEvents() {
       setLanguageMenuOpen(false);
     });
   });
+  elements.dropsLangSelect?.addEventListener("change", () => {
+    syncDropsLangMenu();
+  });
+  elements.dropsLangToggleBtn?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const isOpen = elements.dropsLangDropdown?.classList.contains("is-open");
+    setLanguageMenuOpen(false);
+    setDropsLangMenuOpen(!isOpen);
+  });
+  elements.dropsLangOptions?.forEach((option) => {
+    option.addEventListener("click", () => {
+      const targetLang = option.dataset.dropsLang === "es" ? "es" : "en";
+      if (elements.dropsLangSelect) {
+        elements.dropsLangSelect.value = targetLang;
+        elements.dropsLangSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      setDropsLangMenuOpen(false);
+    });
+  });
+  syncDropsLangMenu();
+  setDropsLangMenuOpen(false);
   elements.discordBotInviteBtn?.addEventListener("click", (event) => {
     event.preventDefault();
     openIntelBotInviteModal();
@@ -14709,6 +15825,12 @@ function wireEvents() {
       showIntelPage({ updateHash: true });
     });
   }
+  if (elements.tabDrops) {
+    elements.tabDrops.classList.add("secret-trigger");
+    elements.tabDrops.addEventListener("click", () => {
+      showDropsPage({ updateHash: true });
+    });
+  }
   if (elements.tabData) {
     elements.tabData.classList.add("secret-trigger");
     elements.tabData.addEventListener("click", handleSecretTriggerTap);
@@ -14730,6 +15852,44 @@ function wireEvents() {
   });
   elements.filesDeniedLogoutBtn?.addEventListener("click", () => {
     void handleFilesLogout();
+  });
+  elements.dropsUploadForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void handleDropsUploadSubmit();
+  });
+  elements.dropsUploadPickerBtn?.addEventListener("click", () => {
+    elements.dropsUploadInput?.click();
+  });
+  elements.dropsUploadInput?.addEventListener("change", () => {
+    syncDropsUploadFileName();
+  });
+  elements.dropsExpiryModeHoursBtn?.addEventListener("click", () => {
+    setDropsExpiryMode("hours");
+  });
+  elements.dropsExpiryModeDateBtn?.addEventListener("click", () => {
+    setDropsExpiryMode("datetime");
+  });
+  elements.dropsExpiresHoursInput?.addEventListener("focus", () => {
+    if (state.drops.expiryMode !== "hours") {
+      setDropsExpiryMode("hours");
+    }
+  });
+  elements.dropsExpiresAtInput?.addEventListener("focus", () => {
+    if (state.drops.expiryMode !== "datetime") {
+      setDropsExpiryMode("datetime");
+    }
+  });
+  elements.dropsExpiresAtInput?.addEventListener("input", () => {
+    if (state.drops.expiryMode !== "datetime") {
+      setDropsExpiryMode("datetime");
+    }
+  });
+  initDropsDatetimePicker();
+  elements.dropsRefreshBtn?.addEventListener("click", () => {
+    void refreshDrops();
+  });
+  elements.dropsList?.addEventListener("click", (event) => {
+    void handleDropsListClick(event);
   });
   elements.filesRestrictedRetryBtn?.addEventListener("click", () => {
     void handleFilesAccessRequest();
@@ -15137,6 +16297,9 @@ function wireEvents() {
     if (elements.langDropdown && target instanceof Node && !elements.langDropdown.contains(target)) {
       setLanguageMenuOpen(false);
     }
+    if (elements.dropsLangDropdown && target instanceof Node && !elements.dropsLangDropdown.contains(target)) {
+      setDropsLangMenuOpen(false);
+    }
     if (elements.filesAdminRequestsFilterDropdown && target instanceof Node && !elements.filesAdminRequestsFilterDropdown.contains(target)) {
       setFilesAdminRequestsFilterMenuOpen(false);
     }
@@ -15164,6 +16327,11 @@ function wireEvents() {
 
     if (elements.langDropdown?.classList.contains("is-open")) {
       setLanguageMenuOpen(false);
+      return;
+    }
+
+    if (elements.dropsLangDropdown?.classList.contains("is-open")) {
+      setDropsLangMenuOpen(false);
       return;
     }
 
@@ -15294,6 +16462,7 @@ async function init() {
   renderVisitCounter();
   void loadVisitCounter();
   state.files.me = buildGuestFilesProfile();
+  renderDropsAdminTabVisibility();
   if (!getHashView()) {
     setHashView("intel", { replace: true });
   }
