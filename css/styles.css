@@ -18,6 +18,7 @@
   --map-parallax-x: 0px;
   --map-parallax-y: 0px;
   --font-main: "Share Tech Mono", "VT323", "Overseer", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-mono: "Share Tech Mono", "VT323", "Overseer", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 @font-face {
@@ -17085,6 +17086,9 @@ body.is-ready .visit-counter-badge {
 }
 
 .drops-upload-telemetry {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: grid;
   gap: 12px;
   margin-top: 18px;
@@ -17097,6 +17101,47 @@ body.is-ready .visit-counter-badge {
   box-shadow:
     inset 0 0 0 1px rgba(0, 0, 0, 0.42),
     0 14px 34px rgba(0, 0, 0, 0.2);
+}
+
+.drops-upload-telemetry::before,
+.drops-upload-telemetry::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.drops-upload-telemetry::before {
+  opacity: 0.18;
+  background-image:
+    linear-gradient(to right, rgba(255, 225, 122, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(86, 255, 148, 0.1) 1px, transparent 1px);
+  background-size: 28px 100%, 100% 18px;
+}
+
+.drops-upload-telemetry::after {
+  inset: -18% 0 auto;
+  height: 56%;
+  background: linear-gradient(180deg, rgba(255, 246, 196, 0.12), transparent 68%);
+  opacity: 0.56;
+}
+
+.drops-upload-telemetry > * {
+  position: relative;
+  z-index: 1;
+}
+
+.drops-upload-telemetry[data-phase="uploading"] {
+  border-color: rgba(132, 255, 160, 0.28);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.42),
+    0 18px 42px rgba(0, 0, 0, 0.24),
+    0 0 24px rgba(86, 255, 148, 0.06);
+  animation: dropsUploadTelemetryFramePulse 2.4s ease-in-out infinite;
+}
+
+.drops-upload-telemetry[data-phase="finalizing"] {
+  border-color: rgba(255, 225, 122, 0.28);
 }
 
 .drops-upload-telemetry-head,
@@ -17132,20 +17177,32 @@ body.is-ready .visit-counter-badge {
   font-size: 1rem;
   line-height: 1.3;
   overflow-wrap: anywhere;
+  text-shadow: 0 0 12px rgba(86, 255, 148, 0.08);
 }
 
 .drops-upload-telemetry-percent {
   flex: 0 0 auto;
+  min-width: 70px;
+  padding: 10px 12px 8px;
+  border: 1px solid rgba(132, 255, 160, 0.2);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(14, 28, 17, 0.96), rgba(5, 12, 7, 0.98));
   color: #84ffa0;
   font-size: clamp(1.1rem, 1.7vw, 1.34rem);
+  font-variant-numeric: tabular-nums;
   line-height: 1;
+  text-align: center;
   text-shadow: 0 0 16px rgba(86, 255, 148, 0.22);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.42),
+    0 0 18px rgba(86, 255, 148, 0.05);
 }
 
 .drops-upload-telemetry-bar {
   position: relative;
   overflow: hidden;
-  min-height: 14px;
+  min-height: 18px;
   border-radius: 999px;
   border: 1px solid rgba(132, 255, 160, 0.18);
   background:
@@ -17155,17 +17212,42 @@ body.is-ready .visit-counter-badge {
     inset 0 0 18px rgba(86, 255, 148, 0.06);
 }
 
+.drops-upload-telemetry-bar::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: inherit;
+  opacity: 0.34;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.1) 0 1px,
+      transparent 1px 24px
+    );
+}
+
+.drops-upload-telemetry-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, rgba(255, 246, 196, 0.16), transparent);
+  opacity: 0.32;
+  transform: translateX(-110%);
+  animation: dropsUploadTelemetrySweep 2.8s ease-in-out infinite;
+}
+
 .drops-upload-telemetry-fill {
   position: absolute;
   inset: 0 auto 0 0;
   width: 0%;
   border-radius: inherit;
   background:
-    linear-gradient(90deg, rgba(86, 255, 148, 0.36), rgba(132, 255, 160, 0.84) 48%, rgba(255, 225, 122, 0.78));
+    linear-gradient(90deg, rgba(86, 255, 148, 0.22), rgba(132, 255, 160, 0.88) 48%, rgba(255, 225, 122, 0.82));
   box-shadow:
-    0 0 16px rgba(86, 255, 148, 0.18),
-    inset 0 0 12px rgba(255, 255, 255, 0.08);
-  transition: width 140ms linear;
+    0 0 18px rgba(86, 255, 148, 0.22),
+    inset 0 0 12px rgba(255, 255, 255, 0.1);
+  transition: width 180ms ease-out, box-shadow 180ms ease-out, filter 180ms ease-out;
 }
 
 .drops-upload-telemetry-fill::before,
@@ -17180,20 +17262,25 @@ body.is-ready .visit-counter-badge {
   background:
     repeating-linear-gradient(
       120deg,
-      rgba(255, 255, 255, 0.24) 0 9px,
-      rgba(255, 255, 255, 0.04) 9px 18px
+      rgba(255, 255, 255, 0.24) 0 8px,
+      rgba(255, 255, 255, 0.06) 8px 16px
     );
   mix-blend-mode: screen;
-  opacity: 0.44;
-  animation: dropsUploadTelemetryFlow 1.15s linear infinite;
+  opacity: 0.5;
+  animation: dropsUploadTelemetryFlow 0.95s linear infinite;
 }
 
 .drops-upload-telemetry-fill::after {
-  inset: -25% -12%;
-  background: linear-gradient(90deg, transparent, rgba(255, 246, 196, 0.62), transparent);
-  opacity: 0.68;
-  transform: translateX(-65%);
-  animation: dropsUploadTelemetrySweep 1.9s ease-in-out infinite;
+  top: -30%;
+  right: -8px;
+  bottom: -30%;
+  width: 16px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 246, 196, 0.98), rgba(255, 246, 196, 0.32) 48%, transparent 74%);
+  opacity: 0.95;
+  filter: blur(1px);
+  animation: dropsUploadTelemetryHeadPulse 1.1s ease-in-out infinite;
 }
 
 .drops-upload-telemetry-bytes,
@@ -17204,8 +17291,54 @@ body.is-ready .visit-counter-badge {
 }
 
 .drops-upload-telemetry-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   color: rgba(255, 233, 154, 0.86);
   text-align: right;
+  padding: 4px 10px 3px;
+  border: 1px solid rgba(255, 225, 122, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 225, 122, 0.06);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.drops-upload-telemetry-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.drops-upload-telemetry[data-phase="uploading"] .drops-upload-telemetry-status {
+  color: rgba(214, 255, 224, 0.92);
+  border-color: rgba(132, 255, 160, 0.22);
+  background: rgba(86, 255, 148, 0.08);
+}
+
+.drops-upload-telemetry[data-phase="uploading"] .drops-upload-telemetry-status::before {
+  animation: dropsUploadTelemetryDotPulse 1.15s ease-in-out infinite;
+}
+
+.drops-upload-telemetry[data-phase="uploading"] .drops-upload-telemetry-percent {
+  animation: dropsUploadTelemetryPercentPulse 1.15s ease-in-out infinite;
+}
+
+.drops-upload-telemetry[data-phase="finalizing"] .drops-upload-telemetry-fill {
+  background:
+    linear-gradient(90deg, rgba(132, 255, 160, 0.24), rgba(255, 225, 122, 0.88) 52%, rgba(255, 246, 196, 0.92));
+  box-shadow:
+    0 0 18px rgba(255, 225, 122, 0.18),
+    inset 0 0 12px rgba(255, 255, 255, 0.12);
+}
+
+.drops-upload-telemetry[data-phase="finalizing"] .drops-upload-telemetry-status {
+  color: rgba(255, 246, 196, 0.96);
+  border-color: rgba(255, 225, 122, 0.28);
+  background: rgba(255, 225, 122, 0.08);
 }
 
 @keyframes dropsUploadTelemetryFlow {
@@ -17220,11 +17353,73 @@ body.is-ready .visit-counter-badge {
 
 @keyframes dropsUploadTelemetrySweep {
   0% {
-    transform: translateX(-65%);
+    transform: translateX(-110%);
   }
 
   100% {
-    transform: translateX(130%);
+    transform: translateX(120%);
+  }
+}
+
+@keyframes dropsUploadTelemetryHeadPulse {
+  0%,
+  100% {
+    opacity: 0.78;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes dropsUploadTelemetryPercentPulse {
+  0%,
+  100% {
+    filter: brightness(1);
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.42),
+      0 0 18px rgba(86, 255, 148, 0.05);
+  }
+
+  50% {
+    filter: brightness(1.08);
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.42),
+      0 0 22px rgba(86, 255, 148, 0.12);
+  }
+}
+
+@keyframes dropsUploadTelemetryDotPulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(0.92);
+    box-shadow: 0 0 8px currentColor;
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 14px currentColor;
+  }
+}
+
+@keyframes dropsUploadTelemetryFramePulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.42),
+      0 18px 42px rgba(0, 0, 0, 0.24),
+      0 0 24px rgba(86, 255, 148, 0.06);
+  }
+
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.42),
+      0 18px 42px rgba(0, 0, 0, 0.24),
+      0 0 30px rgba(86, 255, 148, 0.12);
   }
 }
 
@@ -17401,6 +17596,7 @@ body.is-ready .visit-counter-badge {
 
 /* ── Time section – slot-machine style ── */
 .drops-dt-time-section {
+  --drops-dt-time-slot-height: 34px;
   position: relative;
   display: flex;
   align-items: stretch;
@@ -17435,7 +17631,7 @@ body.is-ready .visit-counter-badge {
   position: absolute;
   top: 50%;
   left: 0; right: 0;
-  height: 34px;
+  height: var(--drops-dt-time-slot-height);
   transform: translateY(-50%);
   background: rgba(132, 255, 160, 0.07);
   border-top: 1px solid rgba(132, 255, 160, 0.14);
@@ -17447,9 +17643,12 @@ body.is-ready .visit-counter-badge {
 .drops-dt-time-col {
   flex: 1;
   height: 100%;
-  overflow-y: auto;
+  overflow-y: hidden;
   overflow-x: hidden;
   scrollbar-width: none;
+  overflow-anchor: none;
+  scroll-snap-type: y mandatory;
+  cursor: ns-resize;
 }
 
 .drops-dt-time-col::-webkit-scrollbar { display: none; }
@@ -17460,40 +17659,94 @@ body.is-ready .visit-counter-badge {
 }
 
 .drops-dt-time-colon {
+  flex: 0 0 18px;
+  justify-content: center;
   display: flex;
   align-items: center;
-  padding: 0 2px;
+  padding: 0;
   color: rgba(132, 255, 160, 0.28);
   font-family: var(--font-mono);
   font-size: 0.82rem;
+  line-height: 1;
   user-select: none;
   position: relative;
   z-index: 4;
 }
 
-.drops-dt-time-spacer { height: 67px; }
+.drops-dt-time-spacer {
+  height: 67px;
+  flex: 0 0 67px;
+}
 
 .drops-dt-time-item {
   width: 100%;
-  padding: 8px 0;
+  min-height: var(--drops-dt-time-slot-height);
+  padding: 0 16px;
   border: none;
   background: transparent;
   color: rgba(198, 255, 211, 0.38);
   font-family: var(--font-mono);
   font-size: 0.8rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   cursor: pointer;
+  line-height: 1;
   text-align: center;
   transition: color 90ms;
   position: relative;
   z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  scroll-snap-align: center;
 }
 
 .drops-dt-time-item:hover { color: rgba(218, 255, 228, 0.75); }
 
+.drops-dt-time-item-text {
+  display: block;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  white-space: nowrap;
+  transform: translateY(-0.5px);
+}
+
+.drops-dt-time-col-hour .drops-dt-time-item {
+  justify-content: flex-end;
+  padding-right: 18px;
+}
+
+.drops-dt-time-col-hour .drops-dt-time-item-text {
+  width: 2ch;
+  text-align: right;
+}
+
+.drops-dt-time-col-minute .drops-dt-time-item {
+  justify-content: flex-start;
+  padding-left: 18px;
+}
+
+.drops-dt-time-col-minute .drops-dt-time-item-text {
+  width: 2ch;
+  text-align: left;
+}
+
+.drops-dt-time-col-ampm .drops-dt-time-item {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+}
+
+.drops-dt-time-col-ampm .drops-dt-time-item-text {
+  min-width: 2.4ch;
+  text-align: center;
+}
+
 .drops-dt-time-item.is-selected {
   color: #cfffda;
-  font-size: 0.88rem;
+  text-shadow: 0 0 10px rgba(132, 255, 160, 0.22);
 }
 
 /* ── Footer ── */

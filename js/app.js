@@ -8001,9 +8001,11 @@ function renderDropsUploadTelemetry() {
   const progress = state.drops.uploadProgress;
   const active = Boolean(progress.active);
   elements.dropsUploadTelemetry.hidden = !active;
+  elements.dropsUploadTelemetry.dataset.phase = String(progress.phase || "").trim().toLowerCase() || "preparing";
   if (!active) {
     elements.dropsUploadTelemetryBar.setAttribute("aria-valuenow", "0");
     elements.dropsUploadTelemetryFill.style.width = "0%";
+    delete elements.dropsUploadTelemetry.dataset.phase;
     return;
   }
 
@@ -8206,6 +8208,7 @@ function initDropsDatetimePicker() {
 
   const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const DAYS   = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+  const TIME_WHEEL_THRESHOLD_PX = 18;
 
   let sel    = null;
   let viewY  = new Date().getFullYear();
@@ -8257,10 +8260,10 @@ function initDropsDatetimePicker() {
   calSection.append(calNav, calGrid);
 
   // time columns
-  const hourCol  = document.createElement("div"); hourCol.className  = "drops-dt-time-col";
+  const hourCol  = document.createElement("div"); hourCol.className  = "drops-dt-time-col drops-dt-time-col-hour";
   const colonEl  = document.createElement("span"); colonEl.className = "drops-dt-time-colon"; colonEl.textContent = ":";
-  const minCol   = document.createElement("div"); minCol.className   = "drops-dt-time-col";
-  const ampmCol  = document.createElement("div"); ampmCol.className  = "drops-dt-time-col drops-dt-ampm-col";
+  const minCol   = document.createElement("div"); minCol.className   = "drops-dt-time-col drops-dt-time-col-minute";
+  const ampmCol  = document.createElement("div"); ampmCol.className  = "drops-dt-time-col drops-dt-ampm-col drops-dt-time-col-ampm";
   const timeSection = document.createElement("div");
   timeSection.className = "drops-dt-time-section";
   timeSection.append(hourCol, colonEl, minCol, ampmCol);
@@ -8321,6 +8324,11 @@ function initDropsDatetimePicker() {
     items.forEach(item => {
       const btn = document.createElement("button");
       btn.type = "button"; btn.className = "drops-dt-time-item"; btn.textContent = item.lbl; btn.dataset.val = item.val;
+      const label = document.createElement("span");
+      label.className = "drops-dt-time-item-text";
+      label.textContent = item.lbl;
+      btn.textContent = "";
+      btn.appendChild(label);
       if (item.val === selectedVal) btn.classList.add("is-selected");
       btn.addEventListener("click", () => {
         if (!sel) { const n = new Date(); sel = { y: n.getFullYear(), mo: n.getMonth(), d: n.getDate(), h: n.getHours(), mi: n.getMinutes() }; }
@@ -8343,24 +8351,116 @@ function initDropsDatetimePicker() {
     botSpacer.className = "drops-dt-time-spacer";
     el.appendChild(botSpacer);
     requestAnimationFrame(() => {
-      const s = el.querySelector(".is-selected");
-      if (s) {
-        // Manually centre the selected item in the scroll viewport
-        el.scrollTop = s.offsetTop - el.clientHeight / 2 + s.offsetHeight / 2;
-      }
+      syncDropsTimeColumnScroll(el);
     });
+  }
+
+  function syncDropsTimeColumnScroll(el) {
+    const selected = el.querySelector(".is-selected");
+    if (!(selected instanceof HTMLElement)) {
+      return;
+    }
+    const snapToSelected = () => {
+      const target = Math.max(0, selected.offsetTop - (el.clientHeight - selected.offsetHeight) / 2);
+      el.scrollTop = Math.round(target);
+    };
+    snapToSelected();
+    requestAnimationFrame(snapToSelected);
   }
 
   function renderTime() {
     const h24 = sel ? sel.h : new Date().getHours();
     const mi  = sel ? sel.mi : new Date().getMinutes();
-    const h12val = h24 % 12; // 0 for noon/midnight, 1-11 otherwise
+    const h12val = h24 % 12 === 0 ? 12 : h24 % 12;
     const ampm = h24 < 12 ? "AM" : "PM";
-    const hours = [{ lbl: "12", val: 0 }, ...Array.from({ length: 11 }, (_, i) => ({ lbl: String(i + 1).padStart(2, "0"), val: i + 1 }))];
+    const hours = Array.from({ length: 12 }, (_, i) => {
+      const hour = i + 1;
+      return { lbl: String(hour).padStart(2, "0"), val: hour };
+    });
     const mins  = Array.from({ length: 60 }, (_, i) => ({ lbl: String(i).padStart(2, "0"), val: i }));
     renderTimeCol(hourCol, hours, h12val);
     renderTimeCol(minCol, mins, mi);
     renderTimeCol(ampmCol, [{ lbl: "AM", val: "AM" }, { lbl: "PM", val: "PM" }], ampm);
+  }
+
+  function ensureDropsTimeSelection() {
+    if (sel) {
+      return;
+    }
+    const now = new Date();
+    sel = {
+      y: now.getFullYear(),
+      mo: now.getMonth(),
+      d: now.getDate(),
+      h: now.getHours(),
+      mi: now.getMinutes()
+    };
+  }
+
+  function stepDropsHour(direction) {
+    ensureDropsTimeSelection();
+    const currentHour12 = sel.h % 12 === 0 ? 12 : sel.h % 12;
+    const nextHour12 = Math.max(1, Math.min(12, currentHour12 + direction));
+    const isAm = sel.h < 12;
+    const normalizedHour = nextHour12 === 12 ? 0 : nextHour12;
+    sel.h = isAm ? normalizedHour : normalizedHour + 12;
+  }
+
+  function stepDropsMinute(direction) {
+    ensureDropsTimeSelection();
+    sel.mi = Math.max(0, Math.min(59, sel.mi + direction));
+  }
+
+  function stepDropsMeridiem(direction) {
+    ensureDropsTimeSelection();
+    if (direction > 0 && sel.h < 12) {
+      sel.h += 12;
+    } else if (direction < 0 && sel.h >= 12) {
+      sel.h -= 12;
+    }
+  }
+
+  function handleDropsTimeWheelStep(targetCol, direction) {
+    if (!isOpen || !direction) {
+      return;
+    }
+    if (targetCol === hourCol) {
+      stepDropsHour(direction);
+    } else if (targetCol === minCol) {
+      stepDropsMinute(direction);
+    } else if (targetCol === ampmCol) {
+      stepDropsMeridiem(direction);
+    } else {
+      return;
+    }
+    renderTime();
+    commit();
+  }
+
+  function bindDropsTimeWheel(targetCol) {
+    let deltaCarry = 0;
+    let resetTimer = 0;
+    targetCol.addEventListener("wheel", (event) => {
+      if (!isOpen) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const threshold = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 1 : TIME_WHEEL_THRESHOLD_PX;
+      deltaCarry += Number(event.deltaY) || 0;
+      if (Math.abs(deltaCarry) >= threshold) {
+        const direction = deltaCarry > 0 ? 1 : -1;
+        deltaCarry = 0;
+        handleDropsTimeWheelStep(targetCol, direction);
+      }
+      if (resetTimer) {
+        clearTimeout(resetTimer);
+      }
+      resetTimer = window.setTimeout(() => {
+        deltaCarry = 0;
+        resetTimer = 0;
+      }, 120);
+    }, { passive: false });
   }
 
   function commit() {
@@ -8444,6 +8544,9 @@ function initDropsDatetimePicker() {
   document.addEventListener("click", () => { if (isOpen) closePicker(); });
   prevBtn.addEventListener("click", () => { viewM--; if (viewM < 0) { viewM = 11; viewY--; } renderCalendar(); });
   nextBtn.addEventListener("click", () => { viewM++; if (viewM > 11) { viewM = 0; viewY++; } renderCalendar(); });
+  bindDropsTimeWheel(hourCol);
+  bindDropsTimeWheel(minCol);
+  bindDropsTimeWheel(ampmCol);
   clearBtn.addEventListener("click", () => { sel = null; commit(); closePicker(); });
   nowBtn.addEventListener("click", () => {
     const n = new Date();
