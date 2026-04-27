@@ -470,7 +470,21 @@ const state = {
     virusTotalConfigured: false,
     uploadLimitBytes: 0,
     retentionMaxHours: 0,
-    expiryMode: "hours"
+    expiryMode: "hours",
+    uploadProgress: {
+      active: false,
+      fileName: "",
+      loadedBytes: 0,
+      totalBytes: 0,
+      percent: 0,
+      phase: ""
+    },
+    deleteModal: {
+      open: false,
+      shareId: "",
+      shareName: "",
+      deleting: false
+    }
   },
   easterEgg: {
     unlocked: false,
@@ -1506,6 +1520,7 @@ function hideFilesPage() {
 function hideDropsPage() {
   stopDropsVtAutoPoll();
   stopDropsCountAutoPoll();
+  closeDropsDeleteModal({ force: true });
   document.body.classList.remove("is-drops");
   if (elements.dropsPage) {
     elements.dropsPage.classList.remove("is-entering");
@@ -7896,13 +7911,232 @@ function setDropsUploadFeedback(message, kind = "") {
   }
   state.drops.uploadMessage = String(message || "");
   state.drops.uploadMessageKind = kind === "success" ? "success" : kind === "error" ? "error" : "";
-  if (kind === "success" && message) {
+  if (message) {
+    const timeoutMs = kind === "error" ? 4500 : 3500;
     dropsUploadFeedbackTimer = setTimeout(() => {
       dropsUploadFeedbackTimer = null;
       state.drops.uploadMessage = "";
       state.drops.uploadMessageKind = "";
       renderDropsPage();
-    }, 3500);
+    }, timeoutMs);
+  }
+}
+
+function resetDropsUploadProgress() {
+  state.drops.uploadProgress.active = false;
+  state.drops.uploadProgress.fileName = "";
+  state.drops.uploadProgress.loadedBytes = 0;
+  state.drops.uploadProgress.totalBytes = 0;
+  state.drops.uploadProgress.percent = 0;
+  state.drops.uploadProgress.phase = "";
+}
+
+function setDropsUploadProgress(patch = {}) {
+  const progress = state.drops.uploadProgress;
+  if (Object.prototype.hasOwnProperty.call(patch, "active")) {
+    progress.active = Boolean(patch.active);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "fileName")) {
+    progress.fileName = String(patch.fileName || "").trim();
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "loadedBytes")) {
+    progress.loadedBytes = Math.max(0, Number(patch.loadedBytes) || 0);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "totalBytes")) {
+    progress.totalBytes = Math.max(0, Number(patch.totalBytes) || 0);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "percent")) {
+    progress.percent = Math.max(0, Math.min(100, Number(patch.percent) || 0));
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "phase")) {
+    progress.phase = String(patch.phase || "").trim().toLowerCase();
+  }
+}
+
+function getDropsUploadTelemetryCopy() {
+  if (state.lang === "es") {
+    return {
+      badge: "TRANSFERENCIA DE ENLACE",
+      idleFile: "Esperando enlace...",
+      preparing: "Preparando enlace...",
+      uploading: "Subiendo archivo...",
+      finalizing: "Registrando enlace..."
+    };
+  }
+  return {
+    badge: "LINK TRANSFER",
+    idleFile: "Awaiting uplink...",
+    preparing: "Preparing uplink...",
+    uploading: "Uploading payload...",
+    finalizing: "Registering share..."
+  };
+}
+
+function getDropsUploadTelemetryStatus() {
+  const copy = getDropsUploadTelemetryCopy();
+  const phase = String(state.drops.uploadProgress.phase || "").trim().toLowerCase();
+  if (phase === "finalizing") {
+    return copy.finalizing;
+  }
+  if (phase === "uploading") {
+    return copy.uploading;
+  }
+  return copy.preparing;
+}
+
+function renderDropsUploadTelemetry() {
+  if (
+    !elements.dropsUploadTelemetry ||
+    !elements.dropsUploadTelemetryBadge ||
+    !elements.dropsUploadTelemetryFile ||
+    !elements.dropsUploadTelemetryPercent ||
+    !elements.dropsUploadTelemetryBar ||
+    !elements.dropsUploadTelemetryFill ||
+    !elements.dropsUploadTelemetryBytes ||
+    !elements.dropsUploadTelemetryStatus
+  ) {
+    return;
+  }
+
+  const progress = state.drops.uploadProgress;
+  const active = Boolean(progress.active);
+  elements.dropsUploadTelemetry.hidden = !active;
+  if (!active) {
+    elements.dropsUploadTelemetryBar.setAttribute("aria-valuenow", "0");
+    elements.dropsUploadTelemetryFill.style.width = "0%";
+    return;
+  }
+
+  const copy = getDropsUploadTelemetryCopy();
+  const totalBytes = Math.max(0, Number(progress.totalBytes) || 0);
+  const rawLoadedBytes = Math.max(0, Number(progress.loadedBytes) || 0);
+  const loadedBytes = totalBytes > 0 ? Math.min(rawLoadedBytes, totalBytes) : rawLoadedBytes;
+  const percent = totalBytes > 0
+    ? Math.max(0, Math.min(100, Number(progress.percent) || (loadedBytes / totalBytes) * 100))
+    : Math.max(0, Math.min(100, Number(progress.percent) || 0));
+
+  elements.dropsUploadTelemetryBadge.textContent = copy.badge;
+  elements.dropsUploadTelemetryFile.textContent = progress.fileName || copy.idleFile;
+  elements.dropsUploadTelemetryPercent.textContent = `${Math.round(percent)}%`;
+  elements.dropsUploadTelemetryBar.setAttribute("aria-valuenow", String(Math.round(percent)));
+  elements.dropsUploadTelemetryFill.style.width = `${percent}%`;
+  elements.dropsUploadTelemetryBytes.textContent = totalBytes > 0
+    ? `${formatFileSize(loadedBytes)} / ${formatFileSize(totalBytes)}`
+    : formatFileSize(loadedBytes);
+  elements.dropsUploadTelemetryStatus.textContent = getDropsUploadTelemetryStatus();
+}
+
+function getDropsDeleteModalCopy(shareName) {
+  const label = String(shareName || "").trim() || (state.lang === "es" ? "este enlace temporal" : "this temporary share");
+  if (state.lang === "es") {
+    return {
+      badge: "PURGA DE ENLACE",
+      title: "ELIMINAR ENLACE TEMPORAL",
+      message: `¿Eliminar ${label} ahora?`,
+      cancel: "CANCELAR",
+      confirm: "ELIMINAR ENLACE"
+    };
+  }
+  return {
+    badge: "TEMP LINK PURGE",
+    title: "DELETE TEMP SHARE",
+    message: `Delete ${label} now?`,
+    cancel: "CANCEL",
+    confirm: "DELETE SHARE"
+  };
+}
+
+function renderDropsDeleteModal() {
+  const modalState = state.drops.deleteModal;
+  const isOpen = Boolean(modalState.open);
+  const copy = getDropsDeleteModalCopy(modalState.shareName);
+
+  if (elements.dropsDeleteBadge) {
+    elements.dropsDeleteBadge.textContent = copy.badge;
+  }
+  if (elements.dropsDeleteTitle) {
+    elements.dropsDeleteTitle.textContent = copy.title;
+  }
+  if (elements.dropsDeleteMessage) {
+    elements.dropsDeleteMessage.textContent = copy.message;
+  }
+  if (elements.dropsDeleteCancelBtn) {
+    elements.dropsDeleteCancelBtn.textContent = copy.cancel;
+    elements.dropsDeleteCancelBtn.disabled = modalState.deleting;
+  }
+  if (elements.dropsDeleteConfirmBtn) {
+    elements.dropsDeleteConfirmBtn.textContent = copy.confirm;
+    elements.dropsDeleteConfirmBtn.disabled = modalState.deleting;
+  }
+  if (elements.dropsDeleteOverlay) {
+    elements.dropsDeleteOverlay.classList.toggle("is-active", isOpen);
+    elements.dropsDeleteOverlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  }
+}
+
+function closeDropsDeleteModal({ force = false } = {}) {
+  if (state.drops.deleteModal.deleting && !force) {
+    return;
+  }
+
+  state.drops.deleteModal.open = false;
+  state.drops.deleteModal.shareId = "";
+  state.drops.deleteModal.shareName = "";
+  state.drops.deleteModal.deleting = false;
+  renderDropsDeleteModal();
+}
+
+function openDropsDeleteModal(shareId) {
+  const normalizedShareId = String(shareId || "").trim().toLowerCase();
+  if (!normalizedShareId || !state.files.me?.isAdmin) {
+    return;
+  }
+
+  const matchedEntry = state.drops.list.find((entry) => entry.id === normalizedShareId) || null;
+  if (!matchedEntry) {
+    return;
+  }
+  const shareName = [matchedEntry.displayName, matchedEntry.name]
+    .map((value) => String(value || "").trim())
+    .find((value) => value && value !== "--")
+    || "this temporary share";
+
+  state.drops.deleteModal.open = true;
+  state.drops.deleteModal.shareId = normalizedShareId;
+  state.drops.deleteModal.shareName = shareName;
+  state.drops.deleteModal.deleting = false;
+  renderDropsDeleteModal();
+  setTimeout(() => {
+    elements.dropsDeleteConfirmBtn?.focus();
+  }, 0);
+}
+
+async function confirmDropsDeleteModal() {
+  if (!state.files.me?.isAdmin) {
+    closeDropsDeleteModal({ force: true });
+    return;
+  }
+
+  const shareId = String(state.drops.deleteModal.shareId || "").trim().toLowerCase();
+  if (!shareId) {
+    closeDropsDeleteModal({ force: true });
+    return;
+  }
+
+  state.drops.deleteModal.deleting = true;
+  renderDropsDeleteModal();
+
+  try {
+    await requestJson(`/api/admin/temp-shares/${encodeURIComponent(shareId)}`, {
+      method: "DELETE"
+    });
+    closeDropsDeleteModal({ force: true });
+    setDropsUploadFeedback(state.lang === "es" ? "Enlace temporal eliminado." : "Temporary share deleted.", "success");
+    await refreshDrops();
+  } catch (error) {
+    closeDropsDeleteModal({ force: true });
+    setDropsUploadFeedback(String(error?.message || (state.lang === "es" ? "No se pudo eliminar el enlace temporal." : "Unable to delete temporary share.")), "error");
+    renderDropsPage();
   }
 }
 
@@ -8308,6 +8542,7 @@ function renderDropsList() {
   }
 
   const entries = Array.isArray(state.drops.list) ? state.drops.list : [];
+  const progressActive = Boolean(state.drops.uploadProgress.active);
   elements.dropsList.replaceChildren();
 
   if (state.drops.loading) {
@@ -8320,7 +8555,8 @@ function renderDropsList() {
     elements.dropsListMeta.textContent = `Upload limit ${uploadLimitLabel}. Max retention ${state.drops.retentionMaxHours || "--"} hours. ${vtLabel}`;
   }
 
-  elements.dropsEmptyState.hidden = state.drops.loading || entries.length > 0;
+  renderDropsUploadTelemetry();
+  elements.dropsEmptyState.hidden = state.drops.loading || progressActive || entries.length > 0;
   if (!entries.length) {
     return;
   }
@@ -8455,6 +8691,12 @@ function renderDropsPage() {
   const isAdmin = Boolean(me.loggedIn && me.isAuthorized && me.isAdmin);
   const loadingIdentity = Boolean(state.files.loadingMe);
   const showGate = !isAdmin;
+  const hasActiveShare = Array.isArray(state.drops.list) && state.drops.list.length > 0;
+  const uploadsLocked = state.drops.uploadBusy || !isAdmin || hasActiveShare;
+
+  if (showGate && state.drops.deleteModal.open) {
+    closeDropsDeleteModal({ force: true });
+  }
 
   elements.dropsGatePanel.hidden = !showGate;
   elements.dropsAdminView.hidden = !isAdmin;
@@ -8477,16 +8719,55 @@ function renderDropsPage() {
   elements.dropsUploadFeedback.classList.toggle("is-error", state.drops.uploadMessageKind === "error");
 
   if (elements.dropsUploadBtn) {
-    elements.dropsUploadBtn.disabled = state.drops.uploadBusy || !isAdmin;
-    elements.dropsUploadBtn.textContent = state.drops.uploadBusy ? "CREATING..." : "CREATE SHARE";
+    elements.dropsUploadBtn.disabled = uploadsLocked;
+    elements.dropsUploadBtn.textContent = state.drops.uploadBusy
+      ? "CREATING..."
+      : hasActiveShare
+        ? "DELETE CURRENT SHARE FIRST"
+        : "CREATE SHARE";
   }
   if (elements.dropsUploadPickerBtn) {
-    elements.dropsUploadPickerBtn.disabled = state.drops.uploadBusy || !isAdmin;
+    elements.dropsUploadPickerBtn.disabled = uploadsLocked;
+  }
+  if (elements.dropsUploadInput) {
+    elements.dropsUploadInput.disabled = uploadsLocked;
+  }
+  if (elements.dropsDisplayNameInput) {
+    elements.dropsDisplayNameInput.disabled = uploadsLocked;
+  }
+  if (elements.dropsMaxDownloadsInput) {
+    elements.dropsMaxDownloadsInput.disabled = uploadsLocked;
+  }
+  if (elements.dropsExpiryModeHoursBtn) {
+    elements.dropsExpiryModeHoursBtn.disabled = uploadsLocked;
+  }
+  if (elements.dropsExpiryModeDateBtn) {
+    elements.dropsExpiryModeDateBtn.disabled = uploadsLocked;
+  }
+  if (elements.dropsExpiresHoursInput) {
+    elements.dropsExpiresHoursInput.disabled = uploadsLocked;
+  }
+  if (elements.dropsExpiresAtInput) {
+    elements.dropsExpiresAtInput.disabled = uploadsLocked;
+  }
+  if (elements.dropsDescriptionInput) {
+    elements.dropsDescriptionInput.disabled = uploadsLocked;
+  }
+  if (elements.dropsLangToggleBtn) {
+    elements.dropsLangToggleBtn.disabled = uploadsLocked;
+  }
+  if (uploadsLocked) {
+    setDropsLangMenuOpen(false);
   }
   if (elements.dropsRefreshBtn) {
-    elements.dropsRefreshBtn.disabled = state.drops.loading || !isAdmin;
-    elements.dropsRefreshBtn.textContent = state.drops.loading ? "REFRESHING..." : "REFRESH";
+    elements.dropsRefreshBtn.disabled = state.drops.loading || state.drops.uploadBusy || !isAdmin;
+    elements.dropsRefreshBtn.textContent = state.drops.loading
+      ? "REFRESHING..."
+      : state.drops.uploadBusy
+        ? "UPLOADING..."
+        : "REFRESH";
   }
+  renderDropsDeleteModal();
   const expiryMode = normalizeDropsExpiryMode(state.drops.expiryMode);
   if (elements.dropsExpiryModeHoursBtn) {
     const isActive = expiryMode === "hours";
@@ -8623,6 +8904,11 @@ async function handleDropsUploadSubmit() {
   if (state.drops.uploadBusy) {
     return;
   }
+  if (Array.isArray(state.drops.list) && state.drops.list.length > 0) {
+    setDropsUploadFeedback("Delete the current temporary share before uploading another file.", "error");
+    renderDropsPage();
+    return;
+  }
 
   const file = elements.dropsUploadInput?.files?.[0] || null;
   const maxDownloadsRaw = String(elements.dropsMaxDownloadsInput?.value || "").trim();
@@ -8639,6 +8925,11 @@ async function handleDropsUploadSubmit() {
 
   if (!file) {
     setDropsUploadFeedback("Select a file before creating a share.", "error");
+    renderDropsPage();
+    return;
+  }
+  if (state.drops.uploadLimitBytes > 0 && Number(file.size) > state.drops.uploadLimitBytes) {
+    setDropsUploadFeedback(`File exceeds the ${formatFileSize(state.drops.uploadLimitBytes)} upload limit.`, "error");
     renderDropsPage();
     return;
   }
@@ -8681,14 +8972,54 @@ async function handleDropsUploadSubmit() {
   }
 
   state.drops.uploadBusy = true;
+  setDropsUploadProgress({
+    active: true,
+    fileName: String(file.name || "").trim(),
+    loadedBytes: 0,
+    totalBytes: Math.max(0, Number(file.size) || 0),
+    percent: 0,
+    phase: "preparing"
+  });
   setDropsUploadFeedback("", "");
   renderDropsPage();
 
   try {
-    await requestJson("/api/admin/temp-shares", {
+    await requestJsonWithUploadProgress("/api/admin/temp-shares", {
       method: "POST",
-      body: formData
+      body: formData,
+      onUploadProgress: ({ loaded, total, lengthComputable }) => {
+        const totalBytes = lengthComputable && Number(total) > 0
+          ? Math.max(0, Number(total) || 0)
+          : Math.max(0, Number(file.size) || 0);
+        const loadedBytes = Math.max(0, Number(loaded) || 0);
+        setDropsUploadProgress({
+          active: true,
+          fileName: String(file.name || "").trim(),
+          loadedBytes,
+          totalBytes,
+          percent: totalBytes > 0 ? (loadedBytes / totalBytes) * 100 : 0,
+          phase: "uploading"
+        });
+        renderDropsUploadTelemetry();
+      },
+      onUploadComplete: () => {
+        const totalBytes = Math.max(
+          0,
+          Number(state.drops.uploadProgress.totalBytes) || 0,
+          Number(file.size) || 0
+        );
+        setDropsUploadProgress({
+          active: true,
+          fileName: String(file.name || "").trim(),
+          loadedBytes: totalBytes,
+          totalBytes,
+          percent: 100,
+          phase: "finalizing"
+        });
+        renderDropsUploadTelemetry();
+      }
     });
+    resetDropsUploadProgress();
     if (elements.dropsUploadForm instanceof HTMLFormElement) {
       elements.dropsUploadForm.reset();
     }
@@ -8699,32 +9030,10 @@ async function handleDropsUploadSubmit() {
     setDropsUploadFeedback("Temporary share created.", "success");
     await refreshDrops();
   } catch (error) {
+    resetDropsUploadProgress();
     setDropsUploadFeedback(String(error?.message || "Unable to create temporary share."), "error");
   } finally {
     state.drops.uploadBusy = false;
-    renderDropsPage();
-  }
-}
-
-async function handleDropDelete(shareId) {
-  const normalizedShareId = String(shareId || "").trim().toLowerCase();
-  if (!normalizedShareId) {
-    return;
-  }
-  const matchedEntry = state.drops.list.find((entry) => entry.id === normalizedShareId) || null;
-  const label = matchedEntry?.displayName || "this temporary share";
-  if (!window.confirm(`Delete ${label} now?`)) {
-    return;
-  }
-
-  try {
-    await requestJson(`/api/admin/temp-shares/${encodeURIComponent(normalizedShareId)}`, {
-      method: "DELETE"
-    });
-    setDropsUploadFeedback("Temporary share deleted.", "success");
-    await refreshDrops();
-  } catch (error) {
-    setDropsUploadFeedback(String(error?.message || "Unable to delete temporary share."), "error");
     renderDropsPage();
   }
 }
@@ -8759,7 +9068,7 @@ async function handleDropsListClick(event) {
   }
 
   if (action === "delete") {
-    await handleDropDelete(shareId);
+    openDropsDeleteModal(shareId);
   }
 }
 
@@ -8786,6 +9095,80 @@ async function requestJson(url, options = {}) {
   }
 
   return payload || {};
+}
+
+function requestJsonWithUploadProgress(url, options = {}) {
+  const {
+    method = "GET",
+    headers = {},
+    body = null,
+    onUploadProgress = null,
+    onUploadComplete = null
+  } = options;
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(String(method || "GET").toUpperCase(), url, true);
+    xhr.responseType = "text";
+    xhr.setRequestHeader("Accept", "application/json");
+
+    for (const [key, value] of Object.entries(headers || {})) {
+      if (value != null) {
+        xhr.setRequestHeader(key, value);
+      }
+    }
+
+    xhr.addEventListener("load", () => {
+      let payload = null;
+      const text = typeof xhr.responseText === "string" ? xhr.responseText : "";
+      if (text) {
+        try {
+          payload = JSON.parse(text);
+        } catch {
+          payload = null;
+        }
+      }
+
+      if (xhr.status < 200 || xhr.status >= 300) {
+        const error = new Error(payload?.error || payload?.message || `HTTP ${xhr.status}`);
+        error.status = xhr.status;
+        reject(error);
+        return;
+      }
+
+      resolve(payload || {});
+    });
+
+    xhr.addEventListener("error", () => {
+      const error = new Error("Network request failed.");
+      error.status = 0;
+      reject(error);
+    });
+
+    xhr.addEventListener("abort", () => {
+      const error = new Error("Upload request was aborted.");
+      error.status = 0;
+      reject(error);
+    });
+
+    if (xhr.upload && typeof onUploadProgress === "function") {
+      xhr.upload.addEventListener("progress", (event) => {
+        onUploadProgress({
+          loaded: event.loaded,
+          total: event.total,
+          lengthComputable: event.lengthComputable
+        });
+      });
+    }
+
+    if (xhr.upload && typeof onUploadComplete === "function") {
+      xhr.upload.addEventListener("load", () => {
+        onUploadComplete();
+      }, { once: true });
+    }
+
+    xhr.send(body);
+  });
 }
 
 function getDiscordAuthPopupFeatures() {
@@ -9332,6 +9715,11 @@ async function handleFilesLogout() {
   state.drops.virusTotalConfigured = false;
   state.drops.uploadLimitBytes = 0;
   state.drops.retentionMaxHours = 0;
+  resetDropsUploadProgress();
+  state.drops.deleteModal.open = false;
+  state.drops.deleteModal.shareId = "";
+  state.drops.deleteModal.shareName = "";
+  state.drops.deleteModal.deleting = false;
   setFilesUploadFeedback("", "");
   state.files.accessRequestBusy = false;
   setFilesRestrictedRequestFeedback("", "");
@@ -15511,6 +15899,8 @@ function applyLanguage(lang, persist = true) {
   }
 
   syncTopTabForCurrentView();
+  renderDropsDeleteModal();
+  renderDropsUploadTelemetry();
 
   elements.langSelect.value = state.lang;
   syncLanguageMenu();
@@ -15779,6 +16169,17 @@ function wireEvents() {
   });
   syncDropsLangMenu();
   setDropsLangMenuOpen(false);
+  elements.dropsDeleteCancelBtn?.addEventListener("click", () => {
+    closeDropsDeleteModal();
+  });
+  elements.dropsDeleteConfirmBtn?.addEventListener("click", () => {
+    void confirmDropsDeleteModal();
+  });
+  elements.dropsDeleteOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.dropsDeleteOverlay) {
+      closeDropsDeleteModal();
+    }
+  });
   elements.discordBotInviteBtn?.addEventListener("click", (event) => {
     event.preventDefault();
     openIntelBotInviteModal();
@@ -16393,6 +16794,11 @@ function wireEvents() {
 
     if (elements.filesDeleteOverlay?.classList.contains("is-active")) {
       closeFilesDeleteModal();
+      return;
+    }
+
+    if (elements.dropsDeleteOverlay?.classList.contains("is-active")) {
+      closeDropsDeleteModal();
       return;
     }
 

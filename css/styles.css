@@ -2701,6 +2701,63 @@ body.is-silo-dossier-open {
     0 18px 80px rgba(0, 0, 0, 0.78);
 }
 
+.drops-delete-overlay {
+  background:
+    radial-gradient(130% 110% at 100% 0%, rgba(255, 225, 122, 0.12), rgba(0, 0, 0, 0) 56%),
+    radial-gradient(120% 120% at 0% 100%, rgba(86, 255, 148, 0.14), rgba(0, 0, 0, 0) 58%),
+    rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(3px) saturate(1.08);
+  -webkit-backdrop-filter: blur(3px) saturate(1.08);
+}
+
+.drops-delete-core {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(132, 255, 160, 0.32);
+  background:
+    radial-gradient(140% 100% at 0% 0%, rgba(86, 255, 148, 0.12), rgba(86, 255, 148, 0) 52%),
+    linear-gradient(135deg, rgba(255, 225, 122, 0.08), rgba(0, 0, 0, 0.08) 30%, rgba(0, 0, 0, 0.2)),
+    linear-gradient(to bottom, rgba(14, 28, 18, 0.92), rgba(3, 9, 5, 0.96)),
+    rgba(0, 0, 0, 0.82);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.65) inset,
+    0 0 0 1px rgba(132, 255, 160, 0.12),
+    0 22px 80px rgba(0, 0, 0, 0.82);
+}
+
+.drops-delete-core::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  background-image:
+    linear-gradient(to right, rgba(255, 225, 122, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(86, 255, 148, 0.08) 1px, transparent 1px);
+  background-size: 34px 100%, 100% 22px;
+}
+
+.drops-delete-core > * {
+  position: relative;
+  z-index: 1;
+}
+
+.drops-delete-badge {
+  margin: 0 0 6px;
+  color: rgba(255, 233, 154, 0.76);
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.drops-delete-actions {
+  margin-top: 16px;
+}
+
+.drops-delete-confirm {
+  min-width: 148px;
+}
+
 .files-caution-confirm {
   border-color: rgba(139, 255, 139, 0.46);
   color: var(--fg-bright);
@@ -12348,10 +12405,8 @@ body.is-classified .classified-layout {
   }
 
   body.is-drops .topbar {
-    grid-template-columns: minmax(280px, 0.94fr) minmax(470px, 1.06fr);
-    align-items: start;
-    gap: 18px 24px;
-    padding: clamp(18px, 2.2vw, 24px);
+    grid-template-columns: 1.2fr 1fr;
+    align-items: center;
   }
 
   .error-topbar {
@@ -17029,6 +17084,150 @@ body.is-ready .visit-counter-badge {
   align-items: center;
 }
 
+.drops-upload-telemetry {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 18px 18px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(132, 255, 160, 0.2);
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(86, 255, 148, 0.08), rgba(86, 255, 148, 0) 48%),
+    linear-gradient(180deg, rgba(9, 20, 11, 0.96), rgba(4, 10, 6, 0.98));
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.42),
+    0 14px 34px rgba(0, 0, 0, 0.2);
+}
+
+.drops-upload-telemetry-head,
+.drops-upload-telemetry-meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.drops-upload-telemetry-copy {
+  min-width: 0;
+}
+
+.drops-upload-telemetry-badge,
+.drops-upload-telemetry-file,
+.drops-upload-telemetry-percent,
+.drops-upload-telemetry-bytes,
+.drops-upload-telemetry-status {
+  margin: 0;
+}
+
+.drops-upload-telemetry-badge {
+  color: rgba(255, 233, 154, 0.78);
+  font-size: 0.68rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.drops-upload-telemetry-file {
+  margin-top: 8px;
+  color: rgba(236, 255, 240, 0.94);
+  font-size: 1rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.drops-upload-telemetry-percent {
+  flex: 0 0 auto;
+  color: #84ffa0;
+  font-size: clamp(1.1rem, 1.7vw, 1.34rem);
+  line-height: 1;
+  text-shadow: 0 0 16px rgba(86, 255, 148, 0.22);
+}
+
+.drops-upload-telemetry-bar {
+  position: relative;
+  overflow: hidden;
+  min-height: 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(132, 255, 160, 0.18);
+  background:
+    linear-gradient(180deg, rgba(6, 15, 8, 0.96), rgba(2, 7, 4, 0.98));
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.46),
+    inset 0 0 18px rgba(86, 255, 148, 0.06);
+}
+
+.drops-upload-telemetry-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, rgba(86, 255, 148, 0.36), rgba(132, 255, 160, 0.84) 48%, rgba(255, 225, 122, 0.78));
+  box-shadow:
+    0 0 16px rgba(86, 255, 148, 0.18),
+    inset 0 0 12px rgba(255, 255, 255, 0.08);
+  transition: width 140ms linear;
+}
+
+.drops-upload-telemetry-fill::before,
+.drops-upload-telemetry-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.drops-upload-telemetry-fill::before {
+  background:
+    repeating-linear-gradient(
+      120deg,
+      rgba(255, 255, 255, 0.24) 0 9px,
+      rgba(255, 255, 255, 0.04) 9px 18px
+    );
+  mix-blend-mode: screen;
+  opacity: 0.44;
+  animation: dropsUploadTelemetryFlow 1.15s linear infinite;
+}
+
+.drops-upload-telemetry-fill::after {
+  inset: -25% -12%;
+  background: linear-gradient(90deg, transparent, rgba(255, 246, 196, 0.62), transparent);
+  opacity: 0.68;
+  transform: translateX(-65%);
+  animation: dropsUploadTelemetrySweep 1.9s ease-in-out infinite;
+}
+
+.drops-upload-telemetry-bytes,
+.drops-upload-telemetry-status {
+  color: rgba(198, 255, 211, 0.74);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.drops-upload-telemetry-status {
+  color: rgba(255, 233, 154, 0.86);
+  text-align: right;
+}
+
+@keyframes dropsUploadTelemetryFlow {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(18px);
+  }
+}
+
+@keyframes dropsUploadTelemetrySweep {
+  0% {
+    transform: translateX(-65%);
+  }
+
+  100% {
+    transform: translateX(130%);
+  }
+}
+
 /* ── Custom datetime picker ─────────────────────────────── */
 .drops-dt-display {
   display: inline-flex;
@@ -17817,11 +18016,11 @@ body.is-drops .files-upload-input::file-selector-button {
 }
 
 body.is-drops #mainTitle {
-  font-size: clamp(1.08rem, 2.2vw, 1.78rem);
-  letter-spacing: 0.05em;
-  line-height: 0.92;
-  max-width: 20ch;
-  text-wrap: balance;
+  font-size: clamp(1.36rem, 3.2vw, 2.2rem);
+  letter-spacing: 0.1em;
+  line-height: normal;
+  max-width: none;
+  text-wrap: normal;
 }
 
 body.is-drops .topbar-left {
@@ -17892,6 +18091,17 @@ body.is-drops .drops-list-panel {
 
   .drops-virus-badge {
     width: 100%;
+    text-align: left;
+  }
+
+  .drops-upload-telemetry-head,
+  .drops-upload-telemetry-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .drops-upload-telemetry-percent,
+  .drops-upload-telemetry-status {
     text-align: left;
   }
 }

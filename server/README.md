@@ -196,7 +196,9 @@ If `VT_API_KEY` is configured, the server will queue each temporary share for a 
 Important:
 
 - `VT SAFE` means VirusTotal reported `0` malicious/suspicious detections at the time of the last check. It is not a guarantee that a file is harmless.
-- The default share upload limit is `32 MB`, which matches the straightforward VirusTotal file upload flow.
+- Only one active temporary share is allowed at a time. Delete the current share before uploading another one.
+- The default share upload limit is `600 MB`.
+- VirusTotal uploads larger than `32 MB` use the large-file upload URL flow automatically.
 - VirusTotal community API quotas are limited, so scans may stay in `VT SCANNING` briefly if multiple uploads are queued.
 
 ### Optional env vars
@@ -204,7 +206,7 @@ Important:
 - `VT_API_KEY`
   - Enables VirusTotal lookups and badges for temporary shares
 - `TEMP_SHARE_MAX_FILE_BYTES`
-  - Defaults to `33554432` (`32 MB`)
+  - Defaults to `629145600` (`600 MB`)
 - `TEMP_SHARE_RETENTION_MAX_HOURS`
   - Defaults to `168` (`7 days`)
 - `TEMP_SHARE_TEXT_PREVIEW_MAX_BYTES`

@@ -156,6 +156,23 @@
         </div>
       </div>
     </div>
+    <div id="dropsDeleteOverlay" class="files-delete-overlay drops-delete-overlay" aria-hidden="true">
+      <div
+        class="files-delete-core drops-delete-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dropsDeleteTitle"
+        aria-describedby="dropsDeleteMessage"
+      >
+        <p id="dropsDeleteBadge" class="drops-delete-badge">TEMP LINK PURGE</p>
+        <p id="dropsDeleteTitle" class="files-delete-title">DELETE TEMP SHARE</p>
+        <p id="dropsDeleteMessage" class="files-delete-message">Delete this temporary share now?</p>
+        <div class="files-delete-actions drops-delete-actions">
+          <button id="dropsDeleteCancelBtn" class="files-btn" type="button">CANCEL</button>
+          <button id="dropsDeleteConfirmBtn" class="files-btn is-delete drops-delete-confirm" type="button">DELETE SHARE</button>
+        </div>
+      </div>
+    </div>
     <div id="filesCautionOverlay" class="files-delete-overlay files-caution-overlay" aria-hidden="true">
       <div
         class="files-delete-core files-caution-core"
@@ -1424,6 +1441,30 @@
             </div>
 
             <p id="dropsListMeta" class="drops-list-meta">Temporary public links expire automatically when their limits are reached.</p>
+            <section id="dropsUploadTelemetry" class="drops-upload-telemetry" aria-live="polite" hidden>
+              <div class="drops-upload-telemetry-head">
+                <div class="drops-upload-telemetry-copy">
+                  <p id="dropsUploadTelemetryBadge" class="drops-upload-telemetry-badge">LINK TRANSFER</p>
+                  <p id="dropsUploadTelemetryFile" class="drops-upload-telemetry-file">Awaiting uplink...</p>
+                </div>
+                <p id="dropsUploadTelemetryPercent" class="drops-upload-telemetry-percent">0%</p>
+              </div>
+              <div
+                id="dropsUploadTelemetryBar"
+                class="drops-upload-telemetry-bar"
+                role="progressbar"
+                aria-label="Temporary share upload progress"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="0"
+              >
+                <span id="dropsUploadTelemetryFill" class="drops-upload-telemetry-fill"></span>
+              </div>
+              <div class="drops-upload-telemetry-meta">
+                <span id="dropsUploadTelemetryBytes" class="drops-upload-telemetry-bytes">0 B / 0 B</span>
+                <span id="dropsUploadTelemetryStatus" class="drops-upload-telemetry-status">Preparing uplink...</span>
+              </div>
+            </section>
             <p id="dropsEmptyState" class="drops-empty-state" hidden>No active temporary shares.</p>
             <div id="dropsList" class="drops-list" aria-live="polite"></div>
           </article>

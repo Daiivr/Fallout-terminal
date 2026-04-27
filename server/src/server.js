@@ -156,7 +156,8 @@ const BOT_ADMIN_API_PORT = parsePositiveInteger(BOT_ADMIN_API_PORT_RAW, 3101);
 const BOT_ADMIN_API_URL = sanitizeHttpBaseUrl(BOT_ADMIN_API_URL_RAW)
   || (BOT_ADMIN_API_TOKEN ? `http://${BOT_ADMIN_API_HOST}:${BOT_ADMIN_API_PORT}` : "");
 const ACCESS_REQUEST_COOLDOWN_MS = parsePositiveInteger(ACCESS_REQUEST_COOLDOWN_MS_RAW, 15 * 60 * 1000);
-const TEMP_SHARE_MAX_FILE_BYTES = parsePositiveInteger(TEMP_SHARE_MAX_FILE_BYTES_RAW, 32 * 1024 * 1024);
+const TEMP_SHARE_MAX_FILE_BYTES = parsePositiveInteger(TEMP_SHARE_MAX_FILE_BYTES_RAW, 600 * 1024 * 1024);
+const TEMP_SHARE_VT_DIRECT_UPLOAD_MAX_FILE_BYTES = 32 * 1024 * 1024;
 const TEMP_SHARE_RETENTION_MAX_HOURS = parsePositiveInteger(TEMP_SHARE_RETENTION_MAX_HOURS_RAW, 24 * 7);
 const TEMP_SHARE_TEXT_PREVIEW_MAX_BYTES = parsePositiveInteger(TEMP_SHARE_TEXT_PREVIEW_MAX_BYTES_RAW, 256 * 1024);
 const TEMP_SHARE_VT_TICK_MS = parsePositiveInteger(TEMP_SHARE_VT_TICK_MS_RAW, 20 * 1000);
@@ -1425,6 +1426,7 @@ function getActiveTempShareEntries() {
 }
 
 const activeTempShareMutationIds = new Set();
+let activeTempShareCreateLock = false;
 
 const exhaustedTempShareSlugs = new Map();
 
@@ -1514,6 +1516,18 @@ function unlockTempShareMutation(shareId) {
     return;
   }
   activeTempShareMutationIds.delete(normalizedShareId);
+}
+
+function tryLockTempShareCreate() {
+  if (activeTempShareCreateLock) {
+    return false;
+  }
+  activeTempShareCreateLock = true;
+  return true;
+}
+
+function unlockTempShareCreate() {
+  activeTempShareCreateLock = false;
 }
 
 function buildTempShareListEntry(entry) {
@@ -2231,15 +2245,27 @@ async function submitTempShareVirusTotalUpload(entry) {
   }
 
   try {
-    const buffer = await fs.promises.readFile(storedPath);
     const formData = new FormData();
+    const fileBlob = typeof fs.openAsBlob === "function"
+      ? await fs.openAsBlob(storedPath, { type: entry.mimeType || "application/octet-stream" })
+      : new Blob(
+          [await fs.promises.readFile(storedPath)],
+          { type: entry.mimeType || "application/octet-stream" }
+        );
     formData.append(
       "file",
-      new Blob([buffer], { type: entry.mimeType || "application/octet-stream" }),
+      fileBlob,
       entry.name
     );
 
-    const payload = await requestVirusTotal("/files", {
+    const uploadTarget = entry.size > TEMP_SHARE_VT_DIRECT_UPLOAD_MAX_FILE_BYTES
+      ? String((await requestVirusTotal("/files/upload_url"))?.data || "").trim()
+      : "/files";
+    if (!uploadTarget) {
+      throw new Error("VirusTotal did not return an upload URL.");
+    }
+
+    const payload = await requestVirusTotal(uploadTarget, {
       method: "POST",
       body: formData
     });
@@ -5173,7 +5199,7 @@ function uploadTempShareFile(req, res, next) {
       return;
     }
     if (error.code === "LIMIT_FILE_SIZE") {
-      res.status(400).json({ error: `File exceeds ${TEMP_SHARE_MAX_FILE_BYTES} byte limit.` });
+      res.status(400).json({ error: `File exceeds the ${Math.round(TEMP_SHARE_MAX_FILE_BYTES / (1024 * 1024))} MB limit.` });
       return;
     }
     if (error instanceof multer.MulterError) {
@@ -5182,6 +5208,14 @@ function uploadTempShareFile(req, res, next) {
     }
     res.status(500).json({ error: "Temporary share upload failed" });
   });
+}
+
+function ensureTempShareUploadSlotAvailable(_req, res, next) {
+  if (getActiveTempShareEntries().length > 0) {
+    res.status(409).json({ error: "Delete the current temporary share before uploading another file." });
+    return;
+  }
+  next();
 }
 
 app.use(express.json());
@@ -6421,7 +6455,7 @@ app.get("/api/admin/temp-shares", requireAdmin, (req, res) => {
   void tickTempShareVirusScans();
 });
 
-app.post("/api/admin/temp-shares", requireAdmin, uploadTempShareFile, async (req, res) => {
+app.post("/api/admin/temp-shares", requireAdmin, ensureTempShareUploadSlotAvailable, uploadTempShareFile, async (req, res) => {
   const uploadedFile = req.file || null;
   const cleanupUpload = () => {
     if (uploadedFile?.filename) {
@@ -6483,8 +6517,20 @@ app.post("/api/admin/temp-shares", requireAdmin, uploadTempShareFile, async (req
     res.status(400).json({ error: `Expiration cannot exceed ${TEMP_SHARE_RETENTION_MAX_HOURS} hours.` });
     return;
   }
+  if (!tryLockTempShareCreate()) {
+    cleanupUpload();
+    res.status(409).json({ error: "Another temporary share upload is already in progress." });
+    return;
+  }
 
   try {
+    const entries = getActiveTempShareEntries();
+    if (entries.length > 0) {
+      cleanupUpload();
+      res.status(409).json({ error: "Delete the current temporary share before uploading another file." });
+      return;
+    }
+
     const sha256 = await computeFileSha256(uploadedFile.path);
     const now = new Date().toISOString();
     const expiresAt = hasExplicitExpiresAt
@@ -6525,7 +6571,6 @@ app.post("/api/admin/temp-shares", requireAdmin, uploadTempShareFile, async (req
       return;
     }
 
-    const entries = getActiveTempShareEntries();
     entries.push(entry);
     writeTempShareStore(entries);
 
@@ -6547,6 +6592,8 @@ app.post("/api/admin/temp-shares", requireAdmin, uploadTempShareFile, async (req
     cleanupUpload();
     console.error("[temp-shares] create error:", error);
     res.status(500).json({ error: "Unable to create temporary share" });
+  } finally {
+    unlockTempShareCreate();
   }
 });
 
