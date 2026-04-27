@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Temporary share unavailable favicon">
+  <defs>
+    <linearGradient id="unavailBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#271417" />
+      <stop offset="1" stop-color="#10080a" />
+    </linearGradient>
+    <linearGradient id="unavailAccent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffb3b3" />
+      <stop offset="1" stop-color="#ff7f7f" />
+    </linearGradient>
+    <filter id="unavailGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.05" result="b" />
+      <feMerge>
+        <feMergeNode in="b" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="64" height="64" rx="13" fill="#070505" />
+  <rect x="5" y="5" width="54" height="54" rx="11" fill="url(#unavailBg)" stroke="#ff8a8a" stroke-width="2" />
+
+  <path d="M21 27 L27 21 C30.1 17.9 35.1 17.9 38.2 21" fill="none" stroke="#ffb0b0" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round" filter="url(#unavailGlow)" />
+  <path d="M43 37 L37 43 C33.9 46.1 28.9 46.1 25.8 43" fill="none" stroke="#ffb0b0" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round" filter="url(#unavailGlow)" />
+  <path d="M28 36 L36 28" fill="none" stroke="#ffb0b0" stroke-width="4.4" stroke-linecap="round" filter="url(#unavailGlow)" />
+  <path d="M19 45 L45 19" fill="none" stroke="url(#unavailAccent)" stroke-width="5.4" stroke-linecap="round" filter="url(#unavailGlow)" />
+
+  <path d="M17 17 H28" stroke="#ff8a8a" stroke-opacity="0.24" stroke-width="2" stroke-linecap="round" />
+  <path d="M36 47 H47" stroke="#ff8a8a" stroke-opacity="0.24" stroke-width="2" stroke-linecap="round" />
+</svg>

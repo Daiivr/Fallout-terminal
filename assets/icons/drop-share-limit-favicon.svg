@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Download limit reached favicon">
+  <defs>
+    <linearGradient id="limitBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b2110" />
+      <stop offset="1" stop-color="#120c06" />
+    </linearGradient>
+    <linearGradient id="limitPanel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#24190d" />
+      <stop offset="1" stop-color="#120d08" />
+    </linearGradient>
+    <linearGradient id="limitAccent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff2b0" />
+      <stop offset="1" stop-color="#ffc44a" />
+    </linearGradient>
+    <filter id="limitGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.1" result="b" />
+      <feMerge>
+        <feMergeNode in="b" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="64" height="64" rx="13" fill="#080905" />
+  <rect x="5" y="5" width="54" height="54" rx="11" fill="url(#limitBg)" stroke="#ffc94a" stroke-width="2" />
+
+  <path d="M16 13 H40 L48 21 V31 H16 Z" fill="url(#limitPanel)" stroke="#ffc94a" stroke-opacity="0.2" stroke-width="1.4" />
+  <path d="M40 13 V21 H48" fill="none" stroke="#ffc94a" stroke-opacity="0.34" stroke-width="1.8" stroke-linejoin="round" />
+  <path d="M21 20 H34" stroke="#ffe18d" stroke-opacity="0.44" stroke-width="1.7" stroke-linecap="round" />
+  <path d="M21 24 H31" stroke="#ffe18d" stroke-opacity="0.24" stroke-width="1.5" stroke-linecap="round" />
+
+  <path d="M32 21 V38" fill="none" stroke="url(#limitAccent)" stroke-width="4.6" stroke-linecap="round" filter="url(#limitGlow)" />
+  <path d="M25.5 31.5 L32 38 L38.5 31.5" fill="none" stroke="url(#limitAccent)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round" filter="url(#limitGlow)" />
+
+  <rect x="16" y="43" width="32" height="9" rx="3.5" fill="none" stroke="#ffe18d" stroke-width="2.2" filter="url(#limitGlow)" />
+  <rect x="20" y="45.2" width="24" height="4.6" rx="2.1" fill="#ffc94a" fill-opacity="0.95" filter="url(#limitGlow)" />
+  <path d="M16 39 H48" stroke="#ffc94a" stroke-width="3.2" stroke-linecap="round" opacity="0.95" filter="url(#limitGlow)" />
+</svg>

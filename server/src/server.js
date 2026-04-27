@@ -3607,6 +3607,8 @@ function renderTempShareUnavailablePage({ title, message, statusLabel, lang = "e
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(title)}</title>
   <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/drop-share-unavailable-favicon.svg?v=2" />
+  <link rel="shortcut icon" href="/assets/icons/drop-share-unavailable-favicon.svg?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
@@ -3757,6 +3759,8 @@ function renderTempShareLimitReachedPage(lang) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(t.limitTitle)}</title>
   <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/drop-share-limit-favicon.svg?v=2" />
+  <link rel="shortcut icon" href="/assets/icons/drop-share-limit-favicon.svg?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
