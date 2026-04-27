@@ -2922,9 +2922,9 @@ async function renderTempSharePublicPage(entry, req) {
         const parts = e.name.split("/");
         const depth = parts.length - 1;
         const displayName = parts[parts.length - 1];
-        const indent = depth > 0 ? `style="padding-left:${Math.min(depth * 16, 64) + 12}px"` : `style="padding-left:12px"`;
+        const indent = Math.min(depth * 16, 64);
         const ext = displayName.includes(".") ? displayName.split(".").pop().toLowerCase() : "";
-        return `<tr><td class="zip-name" ${indent}><span class="zip-ext" data-ext="${escapeHtml(ext)}">${escapeHtml(ext.toUpperCase() || "FILE")}</span>${escapeHtml(displayName)}</td><td class="zip-size">${escapeHtml(formatFileSizeForMeta(e.size) || "0 B")}</td></tr>`;
+        return `<tr><td class="zip-name" style="--zip-depth-indent:${indent}px"><div class="zip-name-wrap"><span class="zip-ext" data-ext="${escapeHtml(ext)}">${escapeHtml(ext.toUpperCase() || "FILE")}</span><span class="zip-name-label">${escapeHtml(displayName)}</span></div></td><td class="zip-size">${escapeHtml(formatFileSizeForMeta(e.size) || "0 B")}</td></tr>`;
       }).join("");
       const truncNote = zipData.totalCount > MAX_ZIP_LIST_ENTRIES
         ? `<p class="zip-truncated">${escapeHtml(t.zipTruncated(MAX_ZIP_LIST_ENTRIES, zipData.totalCount))}</p>`
@@ -2941,9 +2941,9 @@ async function renderTempSharePublicPage(entry, req) {
         const parts = e.name.split("/");
         const depth = parts.length - 1;
         const displayName = parts[parts.length - 1];
-        const indent = depth > 0 ? `style="padding-left:${Math.min(depth * 16, 64) + 12}px"` : `style="padding-left:12px"`;
+        const indent = Math.min(depth * 16, 64);
         const ext = displayName.includes(".") ? displayName.split(".").pop().toLowerCase() : "";
-        return `<tr><td class="zip-name" ${indent}><span class="zip-ext" data-ext="${escapeHtml(ext)}">${escapeHtml(ext.toUpperCase() || "FILE")}</span>${escapeHtml(displayName)}</td><td class="zip-size">${escapeHtml(formatFileSizeForMeta(e.size) || "0 B")}</td></tr>`;
+        return `<tr><td class="zip-name" style="--zip-depth-indent:${indent}px"><div class="zip-name-wrap"><span class="zip-ext" data-ext="${escapeHtml(ext)}">${escapeHtml(ext.toUpperCase() || "FILE")}</span><span class="zip-name-label">${escapeHtml(displayName)}</span></div></td><td class="zip-size">${escapeHtml(formatFileSizeForMeta(e.size) || "0 B")}</td></tr>`;
       }).join("");
       const truncNote = rarData.totalCount > MAX_RAR_LIST_ENTRIES
         ? `<p class="zip-truncated">${escapeHtml(t.zipTruncated(MAX_RAR_LIST_ENTRIES, rarData.totalCount))}</p>`
@@ -2967,6 +2967,8 @@ async function renderTempSharePublicPage(entry, req) {
   <meta property="og:type" content="website" />
   ${absolutePageUrl ? `<meta property="og:url" content="${escapeHtml(absolutePageUrl)}" />` : ""}
   ${absolutePreviewImageUrl ? `<meta property="og:image" content="${escapeHtml(absolutePreviewImageUrl)}" />` : ""}
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/drop-share-favicon.svg?v=2" />
+  <link rel="shortcut icon" href="/assets/icons/drop-share-favicon.svg?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
@@ -3239,6 +3241,7 @@ async function renderTempSharePublicPage(entry, req) {
     }
     .zip-scroll {
       flex: 1;
+      position: relative;
       overflow-y: auto;
       max-height: 520px;
     }
@@ -3259,16 +3262,42 @@ async function renderTempSharePublicPage(entry, req) {
       border-bottom: 1px solid var(--line);
       position: sticky;
       top: 0;
-      background: rgba(5, 12, 7, 0.96);
+      z-index: 3;
+      background: rgba(5, 12, 7, 0.995);
+      box-shadow: 0 1px 0 rgba(123,255,160,0.16);
     }
     .zip-table thead th:last-child { text-align: right; }
     .zip-table tbody tr { border-bottom: 1px solid rgba(123,255,160,0.06); transition: background 0.1s; }
     .zip-table tbody tr:last-child { border-bottom: 0; }
     .zip-table tbody tr:hover { background: rgba(123,255,160,0.04); }
-    .zip-name { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 380px; padding-top: 9px; padding-bottom: 9px; }
+    .zip-name {
+      color: var(--text);
+      max-width: 380px;
+      padding: 9px 12px;
+      overflow: hidden;
+    }
+    .zip-name-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .zip-name-label {
+      display: block;
+      min-width: 0;
+      flex: 1 1 auto;
+      padding-left: var(--zip-depth-indent, 0px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .zip-size { color: var(--muted); text-align: right; padding: 9px 12px; white-space: nowrap; }
     .zip-ext {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      min-width: 52px;
       padding: 1px 5px;
       border-radius: 4px;
       border: 1px solid rgba(123,255,160,0.18);
@@ -3276,10 +3305,7 @@ async function renderTempSharePublicPage(entry, req) {
       color: var(--accent-dim);
       font-size: 0.66rem;
       letter-spacing: 0.08em;
-      margin-right: 8px;
       vertical-align: middle;
-      position: relative;
-      top: -1px;
     }
     .zip-truncated {
       padding: 8px 16px;

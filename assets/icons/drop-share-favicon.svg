@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Shared file download favicon">
+  <defs>
+    <linearGradient id="frameBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#162c1c" />
+      <stop offset="1" stop-color="#08120b" />
+    </linearGradient>
+    <linearGradient id="cardBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#122116" />
+      <stop offset="1" stop-color="#0b140d" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff1ae" />
+      <stop offset="1" stop-color="#86ff9c" />
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.1" result="b" />
+      <feMerge>
+        <feMergeNode in="b" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="64" height="64" rx="13" fill="#040905" />
+  <rect x="5" y="5" width="54" height="54" rx="11" fill="url(#frameBg)" stroke="#7dff96" stroke-width="2" />
+
+  <path d="M16 13 H42 L50 21 V33.5 H16 Z" fill="url(#cardBg)" stroke="#7dff96" stroke-opacity="0.22" stroke-width="1.4" />
+  <path d="M42 13 V21 H50" fill="none" stroke="#7dff96" stroke-opacity="0.34" stroke-width="1.8" stroke-linejoin="round" />
+  <path d="M21 20 H36" stroke="#7dff96" stroke-opacity="0.4" stroke-width="1.8" stroke-linecap="round" />
+  <path d="M21 24 H33" stroke="#7dff96" stroke-opacity="0.24" stroke-width="1.6" stroke-linecap="round" />
+
+  <path
+    d="M32 22 C33.66 22 35 23.34 35 25 V37 H39.25 C40.67 37 41.39 38.72 40.39 39.71 L34.12 45.94 C32.95 47.11 31.05 47.11 29.88 45.94 L23.61 39.71 C22.61 38.72 23.33 37 24.75 37 H29 V25 C29 23.34 30.34 22 32 22 Z"
+    fill="url(#accent)"
+    filter="url(#glow)"
+  />
+
+  <path d="M18 45 H46" stroke="#7dff96" stroke-opacity="0.22" stroke-width="1.8" />
+  <rect x="16" y="44" width="32" height="9" rx="3.5" fill="none" stroke="#ffe18d" stroke-width="2.2" filter="url(#glow)" />
+  <path d="M20 48 H44" stroke="#ffe18d" stroke-opacity="0.56" stroke-width="1.8" stroke-linecap="round" />
+</svg>
