@@ -65,9 +65,35 @@ Current behavior includes:
 - `404.html`
   - fallback not-found page
 - `css/`
-  - main site styles and standalone dossier styles
+  - `styles.css` — entry point; imports all split stylesheets in order
+  - `base/variables.css` — CSS custom properties (colors, fonts, spacing)
+  - `base/fonts.css` — `@font-face` declarations
+  - `base/reset.css` — global resets, scrollbar, base body
+  - `base/animations.css` — all `@keyframes` blocks
+  - `components/screen-effects.css` — `.screen-*` overlay layers and body state variants
+  - `components/overlays.css` — `body.is-syncing`, `body.is-hacking` interaction lock styles
+  - `components/boot.css` — boot overlay and `.boot-*` animation elements
+  - `components/terminal.css` — `.pipboy-terminal`, topbar, tab strip, language dropdown, status strip
+  - `components/buttons.css` — shared button group and interactive element states
+  - `components/cards.css` — panels, code cards, silo panel, table, links, footer note
+  - `pages/home.css` — all page-level styles for `/` (Intel overhaul, files/drops, hack overlay, error page, visit counter, admin panel, datetime picker, etc.)
+  - `dossier-loader.css` — loading overlay shared by all dossier pages
+  - `minerva-dossier.css` — standalone Minerva intel page
+  - `silo-dossier.css` — standalone Silo intel page
+  - `legal-dossier.css` — Privacy and Terms pages
 - `js/`
-  - main frontend logic, Minerva dossier logic, silo dossier logic
+  - `core/config.js` — all application constants (`const` declarations)
+  - `core/state.js` — mutable state, `let` timers, `const state`, `STRINGS`, `elements`, image cache
+  - `app.js` — all application functions and initialization logic; depends on `core/config.js` and `core/state.js` loaded first
+  - `dossier-loader.js` — loading overlay logic shared by all dossier pages
+  - `minerva-dossier.js` — Minerva standalone page logic
+  - `silo-dossier.js` — Silo standalone page logic
+  - `privacy-dossier.js` — Privacy page content and rendering
+  - `terms-dossier.js` — Terms page content and rendering
+  - `dom/elements.js` — pre-cached DOM element references (sets `globalThis.FALLOUT_CODEX_ELEMENTS`)
+  - `i18n/en.js` — English string dictionary
+  - `i18n/es.js` — Spanish string dictionary
+  - `i18n/index.js` — wires i18n dictionaries into `globalThis.FALLOUT_CODEX_STRINGS`
 - `assets/`
   - images, icons, fonts, Fallout-themed art, Minerva images, favicon
 - `minerva/`
@@ -76,6 +102,20 @@ Current behavior includes:
   - standalone silo intel page
 - `data/`
   - archived Minerva list data and localized Minerva detail fallback data
+
+#### Script load order for index.html
+
+```
+data/minerva-lists.js              ← global MINERVA_CYCLE_LISTS
+data/minerva-detail-fallback.js    ← global MINERVA_DETAIL_FALLBACK
+js/i18n/en.js                      ← global FALLOUT_CODEX_LOCALES.en
+js/i18n/es.js                      ← global FALLOUT_CODEX_LOCALES.es
+js/i18n/index.js                   ← global FALLOUT_CODEX_STRINGS
+js/dom/elements.js                 ← global FALLOUT_CODEX_ELEMENTS
+js/core/config.js                  ← all const declarations
+js/core/state.js                   ← state object, let timers
+js/app.js                          ← application logic
+```
 
 ### Backend
 
@@ -189,7 +229,11 @@ Keeping the web app and the bot as separate runtime entry points avoids deployme
 If someone is new to the repo, these are the best files to read first:
 
 - `index.html`
-- `js/app.js`
+- `js/core/config.js` — all feature constants and URLs
+- `js/core/state.js` — application state shape
+- `js/app.js` — all application logic
+- `css/styles.css` — CSS entry point (lists all imported partials)
+- `css/pages/home.css` — main page styles
 - `server/src/server.js`
 - `server/src/intel.js`
 - `server/src/discordIntelBot.js`

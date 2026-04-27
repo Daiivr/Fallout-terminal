@@ -1,0 +1,144 @@
+.refresh-btn,
+.hack-btn,
+.classified-back,
+.files-btn,
+.files-card-action {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  padding: 9px 12px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 160ms ease, background 160ms ease;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.refresh-btn {
+  grid-column: 1 / -1;
+}
+
+.refresh-btn:hover,
+.hack-btn:hover,
+.classified-back:hover,
+.files-btn:hover,
+.files-card-action:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background: rgba(139, 255, 139, 0.08);
+}
+
+.refresh-btn:active,
+.hack-btn:active,
+.classified-back:active,
+.files-btn:active,
+.files-card-action:active {
+  transform: translateY(0);
+}
+
+.refresh-btn:disabled,
+.hack-btn:disabled,
+.classified-back:disabled,
+.files-btn:disabled,
+.files-card-action:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.refresh-btn:focus-visible,
+.hack-btn:focus-visible,
+.classified-back:focus-visible,
+.files-btn:focus-visible,
+.files-card-action:focus-visible,
+.files-search-toggle:focus-visible,
+.hack-word:focus-visible,
+.hack-pair:focus-visible,
+.classified-search-input:focus-visible,
+.files-search-input:focus-visible,
+a:focus-visible {
+  outline: 1px solid var(--line-hot);
+  outline-offset: 2px;
+}
+
+.meta-card-btn {
+  appearance: none;
+  text-align: left;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.meta-card-btn:hover,
+.meta-card-btn:focus-visible {
+  border-color: var(--line-strong);
+  background: rgba(139, 255, 139, 0.08);
+  outline: none;
+}
+
+.meta-card-btn:focus-visible {
+  box-shadow: 0 0 0 2px rgba(139, 255, 139, 0.14);
+}
+
+.minerva-item-trigger {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: var(--fg-bright);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-transform: none;
+  border-bottom: 1px dotted rgba(139, 255, 139, 0.35);
+}
+
+.minerva-item-trigger:hover {
+  color: #d4ffd4;
+  border-bottom-color: rgba(139, 255, 139, 0.8);
+}
+
+.minerva-item-external {
+  margin-left: 0.45ch;
+  color: var(--fg-faint);
+  border-bottom: none;
+  font-size: 0.9em;
+}
+
+.minerva-item-external:hover {
+  color: var(--fg-bright);
+}
+
+
+.minerva-detail-back {
+  appearance: none;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.32);
+  color: var(--fg);
+  font: inherit;
+  font-size: 12px;
+  padding: 7px 10px 6px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.minerva-detail-back:hover {
+  border-color: var(--line-strong);
+  background: rgba(139, 255, 139, 0.08);
+}
+
+.minerva-detail-wiki {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  border-bottom: none;
+}

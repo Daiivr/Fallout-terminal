@@ -1,0 +1,22 @@
+﻿:root {
+  --bg: #050a06;
+  --fg: #8bff8b;
+  --fg-bright: #b7ffb7;
+  --fg-dim: rgba(139, 255, 139, 0.74);
+  --fg-faint: rgba(139, 255, 139, 0.48);
+  --line: rgba(139, 255, 139, 0.22);
+  --line-strong: rgba(139, 255, 139, 0.38);
+  --line-hot: rgba(139, 255, 139, 0.54);
+  --shadow: rgba(139, 255, 139, 0.16);
+  --glow: rgba(139, 255, 139, 0.34);
+  --warn: #ffe17a;
+  --bad: #ff6f6f;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --panel-pad: 14px;
+  --max: 1120px;
+  --map-parallax-x: 0px;
+  --map-parallax-y: 0px;
+  --font-main: "Share Tech Mono", "VT323", "Overseer", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-mono: "Share Tech Mono", "VT323", "Overseer", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}

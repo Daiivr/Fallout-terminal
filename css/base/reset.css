@@ -1,0 +1,46 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+html,
+body,
+.table-wrap,
+.hack-log,
+.classified-minerva-lists,
+.classified-search-results {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 255, 139, 0.56) rgba(0, 0, 0, 0.38);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.34);
+  border: 1px solid var(--line);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(139, 255, 139, 0.64), rgba(139, 255, 139, 0.24));
+  border: 1px solid rgba(139, 255, 139, 0.72);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(139, 255, 139, 0.76), rgba(139, 255, 139, 0.34));
+}
+
+body {
+  margin: 0;
+  color: var(--fg);
+  background: var(--bg);
+  font-family: var(--font-main);
+  letter-spacing: 0.02em;
+  overflow-x: hidden;
+}

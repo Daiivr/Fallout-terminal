@@ -1,0 +1,78 @@
+body.is-syncing,
+body.is-classified-loading {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.is-syncing .pipboy-terminal,
+body.is-ready.is-syncing:not(.error-page) .pipboy-terminal,
+body.is-ready.is-classified-loading:not(.error-page) .pipboy-terminal {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+}
+
+body.is-syncing > :not(.pipboy-terminal),
+body.is-classified-loading > :not(.pipboy-terminal),
+body.is-syncing .pipboy-terminal > :not(#syncOverlay),
+body.is-classified-loading .pipboy-terminal > :not(#classifiedLoadOverlay) {
+  filter: blur(4px) saturate(0.84) brightness(0.88);
+  pointer-events: none !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body.is-syncing .pipboy-terminal > :not(#syncOverlay) *,
+body.is-classified-loading .pipboy-terminal > :not(#classifiedLoadOverlay) * {
+  pointer-events: none !important;
+  touch-action: none !important;
+}
+
+body.is-syncing #syncOverlay,
+body.is-classified-loading #classifiedLoadOverlay {
+  pointer-events: auto;
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
+body.is-syncing #syncOverlay *,
+body.is-classified-loading #classifiedLoadOverlay * {
+  pointer-events: auto;
+}
+
+body.is-hacking {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.is-hacking .pipboy-terminal,
+body.is-ready.is-hacking:not(.error-page) .pipboy-terminal,
+body.is-ready.is-files.is-hacking:not(.error-page) .pipboy-terminal,
+body.is-ready.is-classified.is-hacking:not(.error-page) .pipboy-terminal {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+}
+
+body.is-hacking > :not(.pipboy-terminal),
+body.is-hacking .pipboy-terminal > :not(#hackOverlay) {
+  filter: blur(4px) saturate(0.82) brightness(0.86);
+  pointer-events: none !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body.is-hacking .pipboy-terminal > :not(#hackOverlay) * {
+  pointer-events: none !important;
+  touch-action: none !important;
+}
+
+body.is-hacking #hackOverlay {
+  pointer-events: auto;
+  touch-action: auto;
+  overscroll-behavior: contain;
+}
+
+body.is-hacking #hackOverlay * {
+  pointer-events: auto;
+}

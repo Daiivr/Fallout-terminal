@@ -1,0 +1,155 @@
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.02);
+  opacity: 0;
+  animation: flicker 5.5s infinite;
+}
+
+.screen-vignette,
+.screen-map,
+.screen-grid,
+.screen-scanlines,
+.screen-noise {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.screen-vignette {
+  z-index: 1;
+  background:
+    radial-gradient(140% 100% at 50% 45%, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.56) 90%),
+    radial-gradient(1200px 700px at 50% 30%, rgba(139, 255, 139, 0.12), rgba(0, 0, 0, 0) 55%);
+  mix-blend-mode: screen;
+  opacity: 0.86;
+}
+
+.screen-map {
+  z-index: 0;
+  opacity: 0.17;
+  mix-blend-mode: screen;
+  background-image:
+    radial-gradient(100% 85% at 52% 46%, rgba(139, 255, 139, 0.14), rgba(0, 0, 0, 0) 72%),
+    linear-gradient(to bottom, rgba(7, 19, 12, 0.35), rgba(0, 0, 0, 0.12)),
+    url("../../assets/images/appalachia-map-texture.svg");
+  background-position: center center, center center, center center;
+  background-size: 120% 120%, 100% 100%, cover;
+  background-repeat: no-repeat;
+  transform: translate3d(var(--map-parallax-x), var(--map-parallax-y), 0) scale(1.06);
+  transition: transform 240ms ease-out, opacity 240ms ease;
+  will-change: transform;
+  animation: mapGlow 10s ease-in-out infinite;
+}
+
+.screen-scanlines {
+  z-index: 2;
+  opacity: 0.5;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.2) 3px,
+    rgba(0, 0, 0, 0.2) 4px
+  );
+  animation: scanPulse 7s linear infinite;
+}
+
+.screen-grid {
+  z-index: 1;
+  opacity: 0.16;
+  mix-blend-mode: screen;
+  background-image:
+    linear-gradient(to right, rgba(139, 255, 139, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(139, 255, 139, 0.05) 1px, transparent 1px),
+    radial-gradient(1000px 620px at 52% 35%, rgba(139, 255, 139, 0.12), rgba(0, 0, 0, 0) 65%);
+  background-size: 38px 100%, 100% 26px, 100% 100%;
+  animation: gridPulse 8.5s ease-in-out infinite;
+}
+
+.screen-scanlines::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -40%;
+  height: 40%;
+  opacity: 0.12;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0),
+    rgba(139, 255, 139, 0.26),
+    rgba(0, 0, 0, 0)
+  );
+  animation: scanSweep 11s linear infinite;
+}
+
+.screen-noise {
+  z-index: 3;
+  opacity: 0.08;
+  mix-blend-mode: screen;
+  background-image:
+    radial-gradient(circle at 18% 28%, rgba(139, 255, 139, 0.09) 0 1px, transparent 1.35px),
+    radial-gradient(circle at 64% 72%, rgba(139, 255, 139, 0.08) 0 1px, transparent 1.45px),
+    radial-gradient(circle at 50% 48%, rgba(139, 255, 139, 0.06) 0 1px, transparent 1.6px);
+  background-size: 3px 3px, 4px 4px, 5px 5px;
+  animation: noiseShift 0.45s steps(2) infinite;
+}
+
+body.is-syncing .screen-grid,
+body.is-classified-loading .screen-grid,
+body.is-hacking .screen-grid {
+  opacity: 0.24;
+}
+
+body.is-syncing .screen-map,
+body.is-classified-loading .screen-map,
+body.is-hacking .screen-map {
+  opacity: 0.23;
+}
+
+body.is-syncing .screen-noise,
+body.is-classified-loading .screen-noise,
+body.is-hacking .screen-noise {
+  opacity: 0.12;
+}
+
+body.is-classified .screen-map {
+  opacity: 0.19;
+}
+
+body.is-classified .screen-grid {
+  opacity: 0.2;
+}
+
+body.is-syncing .screen-scanlines::before,
+body.is-classified-loading .screen-scanlines::before,
+body.is-hacking .screen-scanlines::before {
+  opacity: 0.2;
+  animation-duration: 8s;
+}
+
+/* Keep hacking background motion calmer so the modal feels readable/stable. */
+body.is-hacking .screen-map {
+  animation-duration: 24s;
+}
+
+body.is-hacking .screen-grid {
+  animation-duration: 20s;
+}
+
+body.is-hacking .screen-scanlines {
+  animation-duration: 18s;
+}
+
+body.is-hacking .screen-scanlines::before {
+  animation-duration: 26s;
+}
+
+body.is-hacking .screen-noise {
+  animation-duration: 2.8s;
+}
