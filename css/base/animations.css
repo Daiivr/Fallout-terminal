@@ -1436,37 +1436,66 @@
   }
 }
 
+/* Segment cell dividers scroll right — 16 px tile */
 @keyframes dropsUploadTelemetryFlow {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(18px);
-  }
+  from { background-position: 0 0; }
+  to   { background-position: 16px 0; }
 }
 
+/* Green radar scan — fades in/out, constant speed across full track */
 @keyframes dropsUploadTelemetrySweep {
-  0% {
-    transform: translateX(-110%);
-  }
-
-  100% {
-    transform: translateX(120%);
-  }
+  0%   { transform: translateX(-115%); opacity: 0; }
+  7%   { opacity: 1; }
+  91%  { opacity: 1; }
+  100% { transform: translateX(115%); opacity: 0; }
 }
 
+/* Plasma head — collapses to dim nub, surges into a wide glowing blade */
 @keyframes dropsUploadTelemetryHeadPulse {
   0%,
   100% {
-    opacity: 0.78;
-    transform: scale(0.92);
+    opacity: 0.38;
+    transform: scaleX(0.45) scaleY(0.4);
+    filter: blur(6px);
   }
 
-  50% {
+  38%,
+  62% {
     opacity: 1;
-    transform: scale(1);
+    transform: scaleX(2.2) scaleY(1.3);
+    filter: blur(1px) brightness(1.9);
   }
+}
+
+/* Phosphor charge — irregular brightness wave through the fill */
+@keyframes dropsUploadTelemetryFillRoll {
+  0%,
+  100% { filter: brightness(0.88) saturate(0.94); }
+  28%  { filter: brightness(1.1) saturate(1.07); }
+  58%  { filter: brightness(0.93) saturate(0.98); }
+  82%  { filter: brightness(1.16) saturate(1.1); }
+}
+
+/* CRT phosphor flicker — three uneven spikes across a 5 s cycle */
+@keyframes dropsUploadTelemetryFlicker {
+  0%,
+  4%,
+  12%,
+  40%,
+  49%,
+  68%,
+  79%,
+  100% { filter: brightness(1); }
+
+  7%   { filter: brightness(1.3); }
+  9%   { filter: brightness(0.88); }
+  11%  { filter: brightness(1.12); }
+  43%  { filter: brightness(1.34); }
+  46%  { filter: brightness(0.84); }
+  48%  { filter: brightness(1.1); }
+  71%  { filter: brightness(1.24); }
+  73%  { filter: brightness(0.9); }
+  78%  { filter: brightness(1.08); }
 }
 
 @keyframes dropsUploadTelemetryPercentPulse {
@@ -1475,29 +1504,29 @@
     filter: brightness(1);
     box-shadow:
       inset 0 0 0 1px rgba(0, 0, 0, 0.42),
-      0 0 18px rgba(86, 255, 148, 0.05);
+      0 0 18px rgba(86, 255, 148, 0.06);
   }
 
   50% {
-    filter: brightness(1.08);
+    filter: brightness(1.14);
     box-shadow:
       inset 0 0 0 1px rgba(0, 0, 0, 0.42),
-      0 0 22px rgba(86, 255, 148, 0.12);
+      0 0 30px rgba(86, 255, 148, 0.22);
   }
 }
 
 @keyframes dropsUploadTelemetryDotPulse {
   0%,
   100% {
-    opacity: 0.72;
-    transform: scale(0.92);
-    box-shadow: 0 0 8px currentColor;
+    opacity: 0.58;
+    transform: scale(0.82);
+    box-shadow: 0 0 5px currentColor;
   }
 
   50% {
     opacity: 1;
-    transform: scale(1);
-    box-shadow: 0 0 14px currentColor;
+    transform: scale(1.16);
+    box-shadow: 0 0 18px currentColor, 0 0 36px currentColor;
   }
 }
 
@@ -1506,15 +1535,17 @@
   100% {
     box-shadow:
       inset 0 0 0 1px rgba(0, 0, 0, 0.42),
-      0 18px 42px rgba(0, 0, 0, 0.24),
-      0 0 24px rgba(86, 255, 148, 0.06);
+      0 18px 42px rgba(0, 0, 0, 0.28),
+      0 0 28px rgba(86, 255, 148, 0.08);
+    border-color: rgba(132, 255, 160, 0.24);
   }
 
   50% {
     box-shadow:
       inset 0 0 0 1px rgba(0, 0, 0, 0.42),
-      0 18px 42px rgba(0, 0, 0, 0.24),
-      0 0 30px rgba(86, 255, 148, 0.12);
+      0 18px 42px rgba(0, 0, 0, 0.28),
+      0 0 60px rgba(86, 255, 148, 0.28);
+    border-color: rgba(132, 255, 160, 0.56);
   }
 }
 
