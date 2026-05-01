@@ -368,12 +368,26 @@
                     <ul id="filesGroupSuggestMenu" class="files-admin-requests-filter-menu files-group-suggest-menu" data-files-group-suggest-menu="true" role="listbox" hidden></ul>
                   </div>
                 </div>
+                <div class="files-upload-toggle-group">
+                  <label class="files-upload-toggle" for="filesOutdatedInput">
+                    <input id="filesOutdatedInput" type="checkbox" name="outdated" value="1" />
+                    <span id="filesUploadOutdatedLabel">Mark as outdated and block downloads</span>
+                  </label>
+                  <label class="files-upload-toggle files-upload-toggle-untested" for="filesUntestedInput">
+                    <input id="filesUntestedInput" type="checkbox" name="untested" value="1" />
+                    <span id="filesUploadUntestedLabel">Mark as untested and show a risk notice</span>
+                  </label>
+                  <label class="files-upload-toggle files-upload-toggle-caution" for="filesCautionInput">
+                    <input id="filesCautionInput" type="checkbox" name="caution" value="1" />
+                    <span id="filesUploadCautionLabel">Mark as warning and require download confirmation</span>
+                  </label>
+                </div>
               </section>
               <section class="files-upload-shell files-upload-shell-dossier" aria-labelledby="filesUploadDossierLabel">
                 <div class="files-upload-shell-head">
                   <p id="filesUploadDossierLabel" class="files-upload-shell-label">DOSSIER INPUT</p>
                   <p id="filesUploadDossierHint" class="files-upload-shell-hint">
-                    Write the note, preview the styling, and set release flags.
+                    Write the note and preview the styling in real time.
                   </p>
                 </div>
                 <div class="files-upload-field">
@@ -386,16 +400,6 @@
                     maxlength="900"
                     placeholder="Optional dossier note..."
                   ></textarea>
-                </div>
-                <div class="files-upload-toggle-group">
-                  <label class="files-upload-toggle" for="filesOutdatedInput">
-                    <input id="filesOutdatedInput" type="checkbox" name="outdated" value="1" />
-                    <span id="filesUploadOutdatedLabel">Mark as outdated and block downloads</span>
-                  </label>
-                  <label class="files-upload-toggle files-upload-toggle-caution" for="filesCautionInput">
-                    <input id="filesCautionInput" type="checkbox" name="caution" value="1" />
-                    <span id="filesUploadCautionLabel">Mark as warning and require download confirmation</span>
-                  </label>
                 </div>
               </section>
             </div>
@@ -430,6 +434,34 @@
           </div>
           <div id="filesEditModalBody" class="files-edit-modal-body"></div>
           <p id="filesEditFeedback" class="files-upload-feedback files-edit-feedback" aria-live="polite" hidden></p>
+        </article>
+      </div>
+    </div>
+    <div id="filesFunctionsOverlay" class="files-admin-modal-overlay" aria-hidden="true">
+      <div
+        class="files-admin-modal-core files-functions-modal-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesFunctionsModalTitle"
+      >
+        <article id="filesFunctionsPanel" class="panel files-functions-modal-panel" hidden>
+          <div class="files-functions-modal-hero">
+            <div class="files-functions-modal-hero-main">
+              <p id="filesFunctionsModalTitle" class="files-functions-modal-title">FUNCIONES</p>
+              <p id="filesFunctionsModalFileName" class="files-functions-modal-filename">--</p>
+            </div>
+            <div class="files-functions-modal-meta">
+              <p id="filesFunctionsModalCount" class="files-functions-modal-count" hidden>0</p>
+              <button
+                id="filesFunctionsModalCloseBtn"
+                class="files-btn files-admin-modal-close files-functions-modal-close"
+                type="button"
+              >
+                CERRAR
+              </button>
+            </div>
+          </div>
+          <div id="filesFunctionsModalBody" class="files-functions-modal-body"></div>
         </article>
       </div>
     </div>

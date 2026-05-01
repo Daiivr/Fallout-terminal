@@ -2524,6 +2524,13 @@ function setFilesGroupSuggestMenuOpen(dropdownElement, active) {
   menu.hidden = !shouldOpen;
 }
 
+function closeAllFilesEditPickers() {
+  const pickers = Array.from(document.querySelectorAll(".files-edit-picker-wrap.is-open"));
+  for (const node of pickers) {
+    node.classList.remove("is-open");
+  }
+}
+
 function closeAllFilesGroupSuggestMenus({ except = null } = {}) {
   const dropdowns = Array.from(document.querySelectorAll("[data-files-group-suggest-dropdown]"));
   for (const node of dropdowns) {
@@ -3406,6 +3413,7 @@ function normalizeFilesEntry(payload) {
     size: Math.max(0, Number(payload.size) || 0),
     downloadCount: Math.max(0, Number(payload.downloadCount || payload.download_count) || 0),
     outdated: normalizeFilesBooleanFlag(payload.outdated ?? payload.isOutdated),
+    untested: normalizeFilesBooleanFlag(payload.untested ?? payload.isUntested),
     caution: normalizeFilesBooleanFlag(payload.caution ?? payload.hasCaution),
     uploadedAt: String(payload.uploadedAt || payload.uploaded_at || "").trim(),
     updatedAt: String(payload.updatedAt || payload.updated_at || payload.uploadedAt || "").trim(),
@@ -3414,6 +3422,7 @@ function normalizeFilesEntry(payload) {
     ).trim(),
     description: String(payload.description || ""),
     descriptionPlain: extractFilesDescriptionPlainText(payload.description || ""),
+    functions: String(payload.functions || ""),
     group: normalizeFilesGroup(payload.group),
     uploader: String(payload.uploader || payload.uploaderDiscordId || "").trim(),
     imageUrl: String(payload.imageUrl || "").trim(),
@@ -3727,22 +3736,28 @@ function renderFilesEditModal({ force = false } = {}) {
     return;
   }
 
+  const focusField = String(state.files.editModal.focusField || "description");
+  const isFunctionsMode = focusField === "functions";
+
   if (elements.filesEditTitle) {
-    elements.filesEditTitle.textContent = t("files_edit_modal_title");
+    elements.filesEditTitle.textContent = isFunctionsMode
+      ? t("files_edit_modal_functions_title")
+      : t("files_edit_modal_title");
   }
   if (elements.filesEditHint) {
-    elements.filesEditHint.textContent = t("files_edit_modal_hint");
+    elements.filesEditHint.textContent = isFunctionsMode
+      ? t("files_edit_modal_functions_hint")
+      : t("files_edit_modal_hint");
   }
   if (elements.filesEditTargetName) {
     elements.filesEditTargetName.textContent = getFilesDisplayName(matchedFile);
   }
-
-  const renderKey = [state.lang, buildFilesDetailRenderKey(matchedFile, { isAdmin: true })].join("|");
+  const renderKey = [state.lang, focusField, buildFilesDetailRenderKey(matchedFile, { isAdmin: true })].join("|");
   const currentForm = elements.filesEditModalBody?.querySelector("[data-files-edit-modal-form]") || null;
   const needsRender = force || !(currentForm instanceof HTMLFormElement) || elements.filesEditPanel.dataset.renderKey !== renderKey;
 
   if (needsRender && elements.filesEditModalBody) {
-    const nextForm = createFilesAdminEditForm(matchedFile);
+    const nextForm = createFilesAdminEditForm(matchedFile, { focusField });
     elements.filesEditModalBody.replaceChildren();
     if (nextForm) {
       elements.filesEditModalBody.appendChild(nextForm);
@@ -3936,6 +3951,57 @@ function closeFilesAdminModal() {
   closeFilesBotAdminLeaveModal({ force: true });
   closeFilesBotAdminDiagnosticsModal({ render: false });
   setFilesAdminModalOpen("", { focus: false });
+}
+
+function openFilesFunctionsModal(fileId) {
+  const file = state.files.list.find((f) => String(f.id || "") === String(fileId || ""));
+  if (!file) {
+    return;
+  }
+  state.files.functionsModal.open = true;
+  state.files.functionsModal.fileName = getFilesDisplayName(file);
+  state.files.functionsModal.functions = String(file.functions || "");
+  renderFilesFunctionsModal();
+}
+
+function closeFilesFunctionsModal() {
+  state.files.functionsModal.open = false;
+  state.files.functionsModal.fileName = "";
+  state.files.functionsModal.functions = "";
+  renderFilesFunctionsModal();
+}
+
+function renderFilesFunctionsModal() {
+  const { open, fileName, functions } = state.files.functionsModal;
+
+  if (elements.filesFunctionsOverlay) {
+    elements.filesFunctionsOverlay.classList.toggle("is-active", open);
+    elements.filesFunctionsOverlay.setAttribute("aria-hidden", open ? "false" : "true");
+  }
+
+  document.body.classList.toggle("is-files-functions-modal-open", open);
+
+  if (!elements.filesFunctionsPanel) {
+    return;
+  }
+
+  elements.filesFunctionsPanel.hidden = !open;
+
+  if (!open) {
+    return;
+  }
+
+  if (elements.filesFunctionsModalFileName) {
+    elements.filesFunctionsModalFileName.textContent = fileName || t("files_unknown_value");
+  }
+
+  if (elements.filesFunctionsModalBody) {
+    const { itemCount = 0 } = renderFilesFunctionsContent(elements.filesFunctionsModalBody, functions);
+    if (elements.filesFunctionsModalCount) {
+      elements.filesFunctionsModalCount.hidden = itemCount < 1;
+      elements.filesFunctionsModalCount.textContent = `${itemCount} ${String(t("files_functions_label") || "").toUpperCase()}`;
+    }
+  }
 }
 
 function getFilesAdminRequestStatusLabel(status) {
@@ -4549,12 +4615,15 @@ function closeFilesDeleteModal({ force = false } = {}) {
 function renderFilesCautionModal() {
   const modalState = state.files.cautionModal;
   const isOpen = Boolean(modalState.open);
+  const modalKind = modalState.kind === "untested" ? "untested" : "caution";
+  const titleKey = modalKind === "untested" ? "files_untested_notice_title" : "files_caution_modal_title";
+  const bodyKey = modalKind === "untested" ? "files_untested_notice_body" : "files_caution_modal_body";
 
   if (elements.filesCautionTitle) {
-    elements.filesCautionTitle.textContent = t("files_caution_modal_title");
+    elements.filesCautionTitle.textContent = t(titleKey);
   }
   if (elements.filesCautionMessage) {
-    elements.filesCautionMessage.textContent = t("files_caution_modal_body");
+    elements.filesCautionMessage.textContent = t(bodyKey);
   }
   if (elements.filesCautionRejectBtn) {
     elements.filesCautionRejectBtn.textContent = t("files_caution_modal_reject");
@@ -4562,21 +4631,35 @@ function renderFilesCautionModal() {
   if (elements.filesCautionConfirmBtn) {
     elements.filesCautionConfirmBtn.textContent = t("files_caution_modal_confirm");
   }
+  const cautionCore = elements.filesCautionOverlay?.querySelector(".files-caution-core") || null;
+  if (cautionCore instanceof HTMLElement) {
+    cautionCore.classList.toggle("is-untested", modalKind === "untested");
+  }
   if (elements.filesCautionOverlay) {
     elements.filesCautionOverlay.classList.toggle("is-active", isOpen);
+    elements.filesCautionOverlay.classList.toggle("is-untested", modalKind === "untested");
     elements.filesCautionOverlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
   }
 }
 
-function openFilesCautionModal(fileId) {
+function openFilesCautionModal(fileId, { kind = "" } = {}) {
   const matchedFile = state.files.list.find((entry) => String(entry.id || "") === String(fileId || ""));
   if (!matchedFile) {
     return;
   }
 
+  const modalKind = kind === "untested"
+    ? "untested"
+    : normalizeFilesBooleanFlag(matchedFile.caution)
+      ? "caution"
+      : normalizeFilesBooleanFlag(matchedFile.untested)
+        ? "untested"
+        : "caution";
+
   state.files.cautionModal.open = true;
   state.files.cautionModal.fileId = String(fileId);
   state.files.cautionModal.fileName = getFilesDisplayName(matchedFile);
+  state.files.cautionModal.kind = modalKind;
   renderFilesCautionModal();
   setTimeout(() => {
     elements.filesCautionConfirmBtn?.focus();
@@ -4587,6 +4670,7 @@ function closeFilesCautionModal() {
   state.files.cautionModal.open = false;
   state.files.cautionModal.fileId = "";
   state.files.cautionModal.fileName = "";
+  state.files.cautionModal.kind = "";
   renderFilesCautionModal();
 }
 
@@ -4930,6 +5014,7 @@ function getFilteredFilesList(files = []) {
     const uploader = normalizeSearchText(file.uploader || file.uploaderDiscordId || "");
     const status = [
       normalizeFilesBooleanFlag(file.outdated) ? t("files_outdated_badge") : "",
+      normalizeFilesBooleanFlag(file.untested) ? t("files_untested_badge") : "",
       normalizeFilesBooleanFlag(file.caution) ? t("files_caution_badge") : ""
     ].filter(Boolean).map((value) => normalizeSearchText(value)).join(" ");
     const haystack = `${displayName} ${realName} ${type} ${group} ${description} ${uploader} ${status}`;
@@ -4957,7 +5042,7 @@ function openFilesDeleteModal(fileId) {
   }, 0);
 }
 
-function openFilesEditModal(fileId) {
+function openFilesEditModal(fileId, { focusField = "" } = {}) {
   if (!state.files.me?.isAdmin) {
     return;
   }
@@ -4968,6 +5053,7 @@ function openFilesEditModal(fileId) {
   }
 
   state.files.editModal.fileId = String(matchedFile.id || "");
+  state.files.editModal.focusField = focusField === "functions" ? "functions" : "description";
   state.files.editModal.message = "";
   state.files.editModal.messageKind = "";
   state.files.editModal.busy = false;
@@ -5036,6 +5122,8 @@ function createFilesDescriptionBlock({
   imageUrl = "",
   imageName = "",
   fileName = "",
+  fileId = "",
+  functions = "",
   editFileId = "",
   allowEdit = false
 } = {}) {
@@ -5050,15 +5138,61 @@ function createFilesDescriptionBlock({
   labelEl.textContent = t("files_description_label");
   head.appendChild(labelEl);
 
+  const headRight = document.createElement("div");
+  headRight.className = "files-description-head-right";
+
+  const normalizedFileId = String(fileId || "").trim();
+  const hasFunctions = Boolean(String(functions || "").trim());
+  if (normalizedFileId && hasFunctions) {
+    const functionsButton = document.createElement("button");
+    functionsButton.type = "button";
+    functionsButton.className = "files-btn files-detail-view-functions-btn";
+    functionsButton.setAttribute("data-files-action", "open-functions-modal");
+    functionsButton.setAttribute("data-file-id", normalizedFileId);
+    functionsButton.textContent = t("files_functions_show_button");
+    headRight.appendChild(functionsButton);
+  }
+
   const normalizedEditFileId = String(editFileId || "").trim();
   if (allowEdit && normalizedEditFileId) {
-    const editButton = document.createElement("button");
-    editButton.type = "button";
-    editButton.className = "files-card-action files-description-edit-btn";
-    editButton.setAttribute("data-files-action", "edit-metadata");
-    editButton.setAttribute("data-file-id", normalizedEditFileId);
-    decorateFilesActionIconButton(editButton, t("files_edit_open_button"), "edit");
-    head.appendChild(editButton);
+    const pickerWrap = document.createElement("div");
+    pickerWrap.className = "files-edit-picker-wrap";
+
+    const pickerToggle = document.createElement("button");
+    pickerToggle.type = "button";
+    pickerToggle.className = "files-card-action files-description-edit-btn";
+    pickerToggle.setAttribute("data-files-action", "toggle-edit-picker");
+    pickerToggle.setAttribute("data-file-id", normalizedEditFileId);
+    decorateFilesActionIconButton(pickerToggle, t("files_edit_open_button"), "edit");
+
+    const picker = document.createElement("div");
+    picker.className = "files-edit-picker";
+
+    const descOption = document.createElement("button");
+    descOption.type = "button";
+    descOption.className = "files-btn files-edit-picker-option";
+    descOption.setAttribute("data-files-action", "edit-metadata");
+    descOption.setAttribute("data-file-id", normalizedEditFileId);
+    descOption.setAttribute("data-edit-focus", "description");
+    descOption.textContent = t("files_edit_picker_description");
+
+    const fnOption = document.createElement("button");
+    fnOption.type = "button";
+    fnOption.className = "files-btn files-edit-picker-option";
+    fnOption.setAttribute("data-files-action", "edit-metadata");
+    fnOption.setAttribute("data-file-id", normalizedEditFileId);
+    fnOption.setAttribute("data-edit-focus", "functions");
+    fnOption.textContent = t("files_edit_picker_functions");
+
+    picker.appendChild(descOption);
+    picker.appendChild(fnOption);
+    pickerWrap.appendChild(pickerToggle);
+    pickerWrap.appendChild(picker);
+    headRight.appendChild(pickerWrap);
+  }
+
+  if (headRight.childElementCount) {
+    head.appendChild(headRight);
   }
 
   const valueEl = document.createElement("div");
@@ -5086,6 +5220,197 @@ function createFilesDescriptionBlock({
     wrap.appendChild(imageWrap);
   }
 
+  return wrap;
+}
+
+function renderFilesFunctionsContent(container, text) {
+  container.innerHTML = "";
+
+  const raw = String(text || "").trim();
+  if (!raw) {
+    const emptyEl = document.createElement("p");
+    emptyEl.className = "files-functions-empty";
+    emptyEl.textContent = t("files_functions_empty");
+    container.appendChild(emptyEl);
+    return { itemCount: 0 };
+  }
+
+  const lines = raw.split("\n");
+  const sections = [];
+  let pendingHeading = "";
+  let currentSection = null;
+  let itemCount = 0;
+
+  const getNextMeaningfulLine = (startIndex) => {
+    for (let i = startIndex + 1; i < lines.length; i += 1) {
+      const candidate = lines[i].trim();
+      if (candidate) {
+        return candidate;
+      }
+    }
+    return "";
+  };
+
+  const isPlainSectionHeading = (line, index) => {
+    const nextLine = getNextMeaningfulLine(index);
+    if (!nextLine.startsWith("* ")) {
+      return false;
+    }
+    if (line.length > 48 && !line.endsWith(":")) {
+      return false;
+    }
+    if (/[.!?]$/.test(line)) {
+      return false;
+    }
+    return true;
+  };
+
+  const startSection = ({ title = "", heading = "" } = {}) => {
+    currentSection = {
+      heading: heading || pendingHeading,
+      title: title.trim(),
+      items: [],
+      text: []
+    };
+    pendingHeading = "";
+    sections.push(currentSection);
+    return currentSection;
+  };
+
+  const ensureSection = () => {
+    if (currentSection) {
+      return currentSection;
+    }
+    return startSection();
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (!line) {
+      continue;
+    }
+
+    if (line.startsWith("### ")) {
+      pendingHeading = line.slice(4).trim();
+      currentSection = null;
+      continue;
+    }
+
+    if (/^\*\*(.+)\*\*$/.test(line)) {
+      startSection({ title: line.slice(2, -2).trim() });
+      continue;
+    }
+
+    if (line.startsWith("* ")) {
+      const section = ensureSection();
+      section.items.push(line.slice(2).trim());
+      itemCount += 1;
+      continue;
+    }
+
+    if (isPlainSectionHeading(line, index)) {
+      startSection({ title: line.replace(/:$/, "").trim() });
+      continue;
+    }
+
+    const section = ensureSection();
+    section.text.push(line);
+  }
+
+  for (const section of sections) {
+    const block = document.createElement("section");
+    block.className = "files-functions-group";
+
+    if (section.heading || section.title) {
+      const head = document.createElement("div");
+      head.className = "files-functions-group-head";
+
+      if (section.heading) {
+        const headingEl = document.createElement("p");
+        headingEl.className = "files-functions-heading";
+        headingEl.textContent = section.heading;
+        head.appendChild(headingEl);
+      }
+
+      if (section.title) {
+        const titleEl = document.createElement("p");
+        titleEl.className = "files-functions-section";
+        titleEl.textContent = section.title;
+        head.appendChild(titleEl);
+      }
+
+      block.appendChild(head);
+    }
+
+    if (section.text.length) {
+      const copy = document.createElement("div");
+      copy.className = "files-functions-copy";
+      for (const paragraph of section.text) {
+        const textEl = document.createElement("p");
+        textEl.className = "files-functions-text";
+        textEl.textContent = paragraph;
+        copy.appendChild(textEl);
+      }
+      block.appendChild(copy);
+    }
+
+    if (section.items.length) {
+      const list = document.createElement("ul");
+      list.className = "files-functions-list";
+      for (const entry of section.items) {
+        const li = document.createElement("li");
+        li.className = "files-functions-item";
+        li.textContent = entry;
+        list.appendChild(li);
+      }
+      block.appendChild(list);
+    }
+
+    container.appendChild(block);
+  }
+
+  return { itemCount };
+}
+
+function createFilesFunctionsBlock({ fileId = "", editFileId = "", allowEdit = false } = {}) {
+  const wrap = document.createElement("div");
+  wrap.className = "files-functions-block";
+
+  const head = document.createElement("div");
+  head.className = "files-functions-head";
+
+  const labelEl = document.createElement("span");
+  labelEl.className = "files-meta-label";
+  labelEl.textContent = t("files_functions_label");
+  head.appendChild(labelEl);
+
+  const headRight = document.createElement("div");
+  headRight.className = "files-functions-head-right";
+
+  const normalizedFileId = String(fileId || "").trim();
+  if (normalizedFileId) {
+    const openButton = document.createElement("button");
+    openButton.type = "button";
+    openButton.className = "files-btn files-functions-toggle";
+    openButton.setAttribute("data-files-action", "open-functions-modal");
+    openButton.setAttribute("data-file-id", normalizedFileId);
+    openButton.textContent = t("files_functions_show_button");
+    headRight.appendChild(openButton);
+  }
+
+  const normalizedEditFileId = String(editFileId || "").trim();
+  if (allowEdit && normalizedEditFileId) {
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "files-card-action files-description-edit-btn";
+    editButton.setAttribute("data-files-action", "edit-metadata");
+    editButton.setAttribute("data-file-id", normalizedEditFileId);
+    decorateFilesActionIconButton(editButton, t("files_edit_open_button"), "edit");
+    headRight.appendChild(editButton);
+  }
+
+  head.appendChild(headRight);
+  wrap.appendChild(head);
   return wrap;
 }
 
@@ -5123,6 +5448,23 @@ function createFilesCautionNotice() {
   return notice;
 }
 
+function createFilesUntestedNotice() {
+  const notice = document.createElement("div");
+  notice.className = "files-outdated-notice files-untested-notice";
+
+  const title = document.createElement("strong");
+  title.className = "files-outdated-notice-title";
+  title.textContent = t("files_untested_notice_title");
+
+  const body = document.createElement("span");
+  body.className = "files-outdated-notice-body";
+  body.textContent = t("files_untested_notice_body");
+
+  notice.appendChild(title);
+  notice.appendChild(body);
+  return notice;
+}
+
 function appendFilesOutdatedBadge(container, file) {
   if (!(container instanceof HTMLElement) || !normalizeFilesBooleanFlag(file?.outdated)) {
     return;
@@ -5145,6 +5487,17 @@ function appendFilesCautionBadge(container, file) {
   container.appendChild(cautionBadge);
 }
 
+function appendFilesUntestedBadge(container, file) {
+  if (!(container instanceof HTMLElement) || !normalizeFilesBooleanFlag(file?.untested)) {
+    return;
+  }
+
+  const untestedBadge = document.createElement("span");
+  untestedBadge.className = "files-file-badge is-untested";
+  untestedBadge.textContent = t("files_untested_badge");
+  container.appendChild(untestedBadge);
+}
+
 function buildFilesDetailRenderKey(file, { isAdmin = false } = {}) {
   const safeFile = file && typeof file === "object" ? file : {};
   return [
@@ -5161,11 +5514,13 @@ function buildFilesDetailRenderKey(file, { isAdmin = false } = {}) {
     normalizeFilesGroup(safeFile.group),
     String(safeFile.description || ""),
     normalizeFilesBooleanFlag(safeFile.outdated) ? "1" : "0",
+    normalizeFilesBooleanFlag(safeFile.untested) ? "1" : "0",
     normalizeFilesBooleanFlag(safeFile.caution) ? "1" : "0",
     String(safeFile.uploader || safeFile.uploaderDiscordId || ""),
     String(safeFile.imageUrl || ""),
     String(safeFile.imageName || ""),
-    safeFile.hasImage ? "1" : "0"
+    safeFile.hasImage ? "1" : "0",
+    String(safeFile.functions || "")
   ].join("|");
 }
 
@@ -5252,7 +5607,7 @@ function decorateFilesActionIconButton(button, label, kind, { busy = false } = {
   button.replaceChildren(createFilesActionIcon(kind));
 }
 
-function createFilesAdminEditForm(file) {
+function createFilesAdminEditForm(file, { focusField = "description" } = {}) {
   if (!state.files.me?.isAdmin) {
     return null;
   }
@@ -5263,6 +5618,7 @@ function createFilesAdminEditForm(file) {
   }
 
   const isBusy = Boolean(state.files.editModal.busy);
+  const isFunctionsMode = focusField === "functions";
 
   const form = document.createElement("form");
   form.className = "files-edit-modal-form";
@@ -5270,6 +5626,7 @@ function createFilesAdminEditForm(file) {
   form.setAttribute("data-files-edit-form", "true");
   form.setAttribute("data-files-edit-modal-form", "true");
   form.setAttribute("data-file-id", fileId);
+  form.setAttribute("data-edit-mode", isFunctionsMode ? "functions" : "description");
 
   const grid = document.createElement("div");
   grid.className = "files-upload-grid files-edit-grid";
@@ -5381,6 +5738,23 @@ function createFilesAdminEditForm(file) {
   outdatedWrap.appendChild(outdatedText);
   toggleGroup.appendChild(outdatedWrap);
 
+  const untestedWrap = document.createElement("label");
+  untestedWrap.className = "files-edit-toggle files-edit-toggle-untested";
+
+  const untestedInput = document.createElement("input");
+  untestedInput.type = "checkbox";
+  untestedInput.name = "untested";
+  untestedInput.value = "1";
+  untestedInput.checked = normalizeFilesBooleanFlag(file.untested);
+  untestedInput.disabled = isBusy;
+
+  const untestedText = document.createElement("span");
+  untestedText.textContent = t("files_edit_untested_label");
+
+  untestedWrap.appendChild(untestedInput);
+  untestedWrap.appendChild(untestedText);
+  toggleGroup.appendChild(untestedWrap);
+
   const cautionWrap = document.createElement("label");
   cautionWrap.className = "files-edit-toggle files-edit-toggle-caution";
 
@@ -5407,39 +5781,78 @@ function createFilesAdminEditForm(file) {
 
   const descriptionHeadLabel = document.createElement("p");
   descriptionHeadLabel.className = "files-upload-shell-label";
-  descriptionHeadLabel.textContent = t("files_edit_modal_description_label");
+  descriptionHeadLabel.textContent = isFunctionsMode
+    ? t("files_edit_modal_functions_label")
+    : t("files_edit_modal_description_label");
   descriptionHead.appendChild(descriptionHeadLabel);
 
   const descriptionHeadHint = document.createElement("p");
   descriptionHeadHint.className = "files-upload-shell-hint";
-  descriptionHeadHint.textContent = t("files_edit_modal_description_hint");
+  descriptionHeadHint.textContent = isFunctionsMode
+    ? t("files_edit_modal_functions_hint")
+    : t("files_edit_modal_description_hint");
   descriptionHead.appendChild(descriptionHeadHint);
 
   descriptionShell.appendChild(descriptionHead);
 
-  const descriptionField = document.createElement("div");
-  descriptionField.className = "files-upload-field";
+  if (!isFunctionsMode) {
+    const descriptionField = document.createElement("div");
+    descriptionField.className = "files-upload-field";
 
-  const descriptionFieldLabel = document.createElement("label");
-  descriptionFieldLabel.className = "files-edit-label";
-  descriptionFieldLabel.textContent = t("files_edit_description_label");
-  descriptionFieldLabel.setAttribute("for", `filesEditDescription-${fileId}`);
-  descriptionField.appendChild(descriptionFieldLabel);
+    const descriptionFieldLabel = document.createElement("label");
+    descriptionFieldLabel.className = "files-edit-label";
+    descriptionFieldLabel.textContent = t("files_edit_description_label");
+    descriptionFieldLabel.setAttribute("for", `filesEditDescription-${fileId}`);
+    descriptionField.appendChild(descriptionFieldLabel);
 
-  const descriptionInput = document.createElement("textarea");
-  descriptionInput.id = `filesEditDescription-${fileId}`;
-  descriptionInput.className = "files-upload-description files-edit-description";
-  descriptionInput.name = "description";
-  descriptionInput.rows = 4;
-  descriptionInput.maxLength = 900;
-  descriptionInput.value = String(file.description || "").trim();
-  descriptionInput.placeholder = t("files_upload_description_placeholder");
-  descriptionInput.disabled = isBusy;
-  descriptionField.appendChild(descriptionInput);
-  descriptionShell.appendChild(descriptionField);
+    const descriptionInput = document.createElement("textarea");
+    descriptionInput.id = `filesEditDescription-${fileId}`;
+    descriptionInput.className = "files-upload-description files-edit-description";
+    descriptionInput.name = "description";
+    descriptionInput.rows = 4;
+    descriptionInput.maxLength = 900;
+    descriptionInput.value = String(file.description || "").trim();
+    descriptionInput.placeholder = t("files_upload_description_placeholder");
+    descriptionInput.disabled = isBusy;
+    descriptionField.appendChild(descriptionInput);
+    descriptionShell.appendChild(descriptionField);
+  }
 
-  grid.appendChild(controlsShell);
-  grid.appendChild(descriptionShell);
+  if (isFunctionsMode) {
+    const functionsField = document.createElement("div");
+    functionsField.className = "files-upload-field";
+
+    const functionsFieldLabel = document.createElement("label");
+    functionsFieldLabel.className = "files-edit-label";
+    functionsFieldLabel.textContent = t("files_edit_functions_label");
+    functionsFieldLabel.setAttribute("for", `filesEditFunctions-${fileId}`);
+    functionsField.appendChild(functionsFieldLabel);
+
+    const functionsFieldHint = document.createElement("p");
+    functionsFieldHint.className = "files-upload-shell-hint files-edit-functions-hint";
+    functionsFieldHint.textContent = t("files_edit_functions_hint");
+    functionsField.appendChild(functionsFieldHint);
+
+    const functionsInput = document.createElement("textarea");
+    functionsInput.id = `filesEditFunctions-${fileId}`;
+    functionsInput.className = "files-upload-description files-edit-description files-edit-functions";
+    functionsInput.name = "functions";
+    functionsInput.rows = 12;
+    functionsInput.maxLength = 4000;
+    functionsInput.value = String(file.functions || "").trim();
+    functionsInput.placeholder = t("files_edit_functions_placeholder");
+    functionsInput.disabled = isBusy;
+    functionsField.appendChild(functionsInput);
+    descriptionShell.appendChild(functionsField);
+  }
+
+  if (isFunctionsMode) {
+    grid.className = "files-edit-grid-single";
+    grid.appendChild(descriptionShell);
+  } else {
+    grid.appendChild(controlsShell);
+    grid.appendChild(descriptionShell);
+  }
   form.appendChild(grid);
 
   const actions = document.createElement("div");
@@ -5467,6 +5880,7 @@ function renderFilesDetailCard(file) {
   const fileSize = formatFileSize(file.size);
   const timestampMeta = resolveFilesTimestampMeta(file);
   const description = String(file.description || "").trim();
+  const functions = String(file.functions || "").trim();
   const downloadCount = Math.max(0, Number(file.downloadCount) || 0);
   const group = getFilesGroupDisplayLabel(file);
   const uploader = String(file.uploader || file.uploaderDiscordId || t("files_unknown_value"));
@@ -5474,6 +5888,7 @@ function renderFilesDetailCard(file) {
   const imageName = String(file.imageName || "").trim();
   const isReplacing = String(state.files.replace.fileId || "") === fileId;
   const isOutdated = normalizeFilesBooleanFlag(file.outdated);
+  const isUntested = normalizeFilesBooleanFlag(file.untested);
   const hasCaution = normalizeFilesBooleanFlag(file.caution);
 
   const detailCard = document.createElement("article");
@@ -5515,6 +5930,8 @@ function renderFilesDetailCard(file) {
     imageUrl,
     imageName,
     fileName,
+    fileId,
+    functions,
     editFileId: fileId,
     allowEdit: Boolean(state.files.me?.isAdmin)
   });
@@ -5588,8 +6005,13 @@ function renderFilesDetailCard(file) {
   detailBody.appendChild(metadata);
   if (isOutdated) {
     detailBody.appendChild(createFilesOutdatedNotice());
-  } else if (hasCaution) {
-    detailBody.appendChild(createFilesCautionNotice());
+  } else {
+    if (isUntested) {
+      detailBody.appendChild(createFilesUntestedNotice());
+    }
+    if (hasCaution) {
+      detailBody.appendChild(createFilesCautionNotice());
+    }
   }
   detailBody.appendChild(descriptionBlock);
   detailBody.appendChild(actions);
@@ -6623,6 +7045,7 @@ function renderFilesList() {
         badges.appendChild(imageBadge);
       }
       appendFilesOutdatedBadge(badges, file);
+      appendFilesUntestedBadge(badges, file);
       appendFilesCautionBadge(badges, file);
 
       cardHead.appendChild(title);
@@ -6855,6 +7278,7 @@ function renderFilesList() {
           badges.appendChild(imageBadge);
         }
         appendFilesOutdatedBadge(badges, file);
+        appendFilesUntestedBadge(badges, file);
         appendFilesCautionBadge(badges, file);
 
         cardHead.appendChild(title);
@@ -9505,34 +9929,61 @@ async function handleFilesMetadataEdit(formElement) {
   }
 
   const descriptionInput = formElement.querySelector("textarea[name=\"description\"]");
+  const functionsInput = formElement.querySelector("textarea[name=\"functions\"]");
   const outdatedInput = formElement.querySelector("input[name=\"outdated\"]");
+  const untestedInput = formElement.querySelector("input[name=\"untested\"]");
   const cautionInput = formElement.querySelector("input[name=\"caution\"]");
   const groupInput = formElement.querySelector("input[name=\"group\"]");
   const imageInput = formElement.querySelector("input[name=\"image\"]");
   const removeImageInput = formElement.querySelector("input[name=\"removeImage\"]");
+  const hasDescriptionField = descriptionInput instanceof HTMLTextAreaElement;
+  const hasFunctionsField = functionsInput instanceof HTMLTextAreaElement;
+  const hasOutdatedField = outdatedInput instanceof HTMLInputElement;
+  const hasUntestedField = untestedInput instanceof HTMLInputElement;
+  const hasCautionField = cautionInput instanceof HTMLInputElement;
+  const hasGroupField = groupInput instanceof HTMLInputElement;
+  const hasRemoveImageField = removeImageInput instanceof HTMLInputElement;
 
-  const description = descriptionInput instanceof HTMLTextAreaElement
+  const description = hasDescriptionField
     ? String(descriptionInput.value || "").trim()
     : "";
-  const group = groupInput instanceof HTMLInputElement
+  const functions = hasFunctionsField
+    ? String(functionsInput.value || "").trim()
+    : "";
+  const group = hasGroupField
     ? normalizeFilesGroup(groupInput.value)
     : "";
   const imageFile = imageInput instanceof HTMLInputElement && imageInput.files?.length
     ? imageInput.files[0]
     : null;
-  const outdated = outdatedInput instanceof HTMLInputElement && outdatedInput.checked;
-  const caution = cautionInput instanceof HTMLInputElement && cautionInput.checked;
-  const removeImage = removeImageInput instanceof HTMLInputElement && removeImageInput.checked;
+  const outdated = hasOutdatedField && outdatedInput.checked;
+  const untested = hasUntestedField && untestedInput.checked;
+  const caution = hasCautionField && cautionInput.checked;
+  const removeImage = hasRemoveImageField && removeImageInput.checked;
 
   const formData = new FormData();
-  formData.append("description", description);
-  formData.append("outdated", outdated ? "1" : "0");
-  formData.append("caution", caution ? "1" : "0");
-  formData.append("group", group);
+  if (hasDescriptionField) {
+    formData.append("description", description);
+  }
+  if (hasFunctionsField) {
+    formData.append("functions", functions);
+  }
+  if (hasOutdatedField) {
+    formData.append("outdated", outdated ? "1" : "0");
+  }
+  if (hasUntestedField) {
+    formData.append("untested", untested ? "1" : "0");
+  }
+  if (hasCautionField) {
+    formData.append("caution", caution ? "1" : "0");
+  }
+  if (hasGroupField) {
+    formData.append("group", group);
+  }
   if (imageFile) {
     formData.append("image", imageFile);
   }
-  if (removeImage) {
+  if (hasRemoveImageField && removeImage) {
     formData.append("removeImage", "1");
   }
 
@@ -9552,13 +10003,26 @@ async function handleFilesMetadataEdit(formElement) {
       body: formData
     });
     const responseFile = normalizeFilesEntry(payload?.file);
-    mergeFilesListEntry(fileId, {
-      ...(responseFile || {}),
-      description,
-      group,
-      outdated,
-      caution
-    });
+    const fallbackPatch = {};
+    if (hasDescriptionField) {
+      fallbackPatch.description = description;
+    }
+    if (hasFunctionsField) {
+      fallbackPatch.functions = functions;
+    }
+    if (hasGroupField) {
+      fallbackPatch.group = group;
+    }
+    if (hasOutdatedField) {
+      fallbackPatch.outdated = outdated;
+    }
+    if (hasUntestedField) {
+      fallbackPatch.untested = untested;
+    }
+    if (hasCautionField) {
+      fallbackPatch.caution = caution;
+    }
+    mergeFilesListEntry(fileId, responseFile || fallbackPatch);
     if (isModalForm) {
       setFilesEditModalFeedback(t("files_edit_success"), "success");
     } else {
@@ -9612,6 +10076,7 @@ async function handleFilesUpload(event) {
   const group = normalizeFilesGroup(elements.filesGroupInput?.value || "");
   const description = String(elements.filesDescriptionInput?.value || "").trim();
   const outdated = Boolean(elements.filesOutdatedInput?.checked);
+  const untested = Boolean(elements.filesUntestedInput?.checked);
   const caution = Boolean(elements.filesCautionInput?.checked);
   const formData = new FormData();
   formData.append("file", selectedFile);
@@ -9625,6 +10090,7 @@ async function handleFilesUpload(event) {
     formData.append("description", description);
   }
   formData.append("outdated", outdated ? "1" : "0");
+  formData.append("untested", untested ? "1" : "0");
   formData.append("caution", caution ? "1" : "0");
 
   state.files.uploadBusy = true;
@@ -10050,7 +10516,11 @@ function handleFilesDownload(fileId) {
     return;
   }
   if (normalizeFilesBooleanFlag(matchedFile.caution)) {
-    openFilesCautionModal(normalizedFileId);
+    openFilesCautionModal(normalizedFileId, { kind: "caution" });
+    return;
+  }
+  if (normalizeFilesBooleanFlag(matchedFile.untested)) {
+    openFilesCautionModal(normalizedFileId, { kind: "untested" });
     return;
   }
 
@@ -10413,10 +10883,14 @@ function handleFilesListClick(event) {
 
   const actionTarget = target.closest("[data-files-action]");
   if (!(actionTarget instanceof HTMLElement)) {
+    closeAllFilesEditPickers();
     return;
   }
 
   const action = actionTarget.getAttribute("data-files-action") || "";
+  if (action !== "toggle-edit-picker" && !target.closest(".files-edit-picker")) {
+    closeAllFilesEditPickers();
+  }
   if (action === "toggle-group-suggest-menu") {
     const dropdown = actionTarget.closest("[data-files-group-suggest-dropdown]");
     if (!(dropdown instanceof HTMLElement)) {
@@ -10542,6 +11016,26 @@ function handleFilesListClick(event) {
     return;
   }
 
+  if (action === "open-functions-modal") {
+    const targetFileId = actionTarget.getAttribute("data-file-id") || "";
+    if (targetFileId) {
+      openFilesFunctionsModal(targetFileId);
+    }
+    return;
+  }
+
+  if (action === "toggle-edit-picker") {
+    const pickerWrap = actionTarget.closest(".files-edit-picker-wrap");
+    if (pickerWrap instanceof HTMLElement) {
+      const isOpen = pickerWrap.classList.contains("is-open");
+      closeAllFilesEditPickers();
+      if (!isOpen) {
+        pickerWrap.classList.add("is-open");
+      }
+    }
+    return;
+  }
+
   const fileId = actionTarget.getAttribute("data-file-id") || "";
   if (!fileId) {
     return;
@@ -10591,7 +11085,9 @@ function handleFilesListClick(event) {
   }
 
   if (action === "edit-metadata") {
-    openFilesEditModal(fileId);
+    closeAllFilesEditPickers();
+    const focusField = String(actionTarget.getAttribute("data-edit-focus") || "").trim();
+    openFilesEditModal(fileId, { focusField });
     return;
   }
 
@@ -15399,6 +15895,9 @@ function applyLanguage(lang, persist = true) {
   if (elements.filesUploadOutdatedLabel) {
     elements.filesUploadOutdatedLabel.textContent = t("files_upload_outdated_label");
   }
+  if (elements.filesUploadUntestedLabel) {
+    elements.filesUploadUntestedLabel.textContent = t("files_upload_untested_label");
+  }
   if (elements.filesUploadCautionLabel) {
     elements.filesUploadCautionLabel.textContent = t("files_upload_caution_label");
   }
@@ -15976,6 +16475,14 @@ function wireEvents() {
   elements.filesEditModalCloseBtn?.addEventListener("click", () => {
     closeFilesAdminModal();
   });
+  elements.filesFunctionsModalCloseBtn?.addEventListener("click", () => {
+    closeFilesFunctionsModal();
+  });
+  elements.filesFunctionsOverlay?.addEventListener("click", (e) => {
+    if (e.target === elements.filesFunctionsOverlay) {
+      closeFilesFunctionsModal();
+    }
+  });
   elements.filesAdminRequestsModalCloseBtn?.addEventListener("click", () => {
     closeFilesAdminModal();
   });
@@ -16327,6 +16834,11 @@ function wireEvents() {
 
     if (elements.dropsLangDropdown?.classList.contains("is-open")) {
       setDropsLangMenuOpen(false);
+      return;
+    }
+
+    if (elements.filesFunctionsOverlay?.classList.contains("is-active")) {
+      closeFilesFunctionsModal();
       return;
     }
 

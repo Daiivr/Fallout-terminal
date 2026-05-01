@@ -162,10 +162,12 @@ const state = {
     cautionModal: {
       open: false,
       fileId: "",
-      fileName: ""
+      fileName: "",
+      kind: ""
     },
     editModal: {
       fileId: "",
+      focusField: "",
       message: "",
       messageKind: "",
       busy: false
@@ -191,6 +193,11 @@ const state = {
     },
     adminModal: {
       active: ""
+    },
+    functionsModal: {
+      open: false,
+      fileName: "",
+      functions: ""
     },
     disclaimerModal: {
       open: false

@@ -173,6 +173,7 @@ const ACCESS_REQUEST_REAPPLY_COOLDOWN_MS = parsePositiveInteger(
 const ACCESS_REQUEST_REASON_MAX_CHARS = 1200;
 const FILES_DISCLAIMER_REEVALUATION_MAX_CHARS = ACCESS_REQUEST_REASON_MAX_CHARS;
 const FILE_DESCRIPTION_MAX_CHARS = 900;
+const FILE_FUNCTIONS_MAX_CHARS = 4000;
 const FILE_GROUP_MAX_CHARS = 80;
 const FILE_DISPLAY_NAME_MAX_CHARS = 180;
 const FILE_ID_PATTERN = /^[a-f0-9-]{36}$/i;
@@ -1153,6 +1154,14 @@ function sanitizeFileDescription(value) {
   return raw.slice(0, FILE_DESCRIPTION_MAX_CHARS);
 }
 
+function sanitizeFileFunctions(value) {
+  const raw = String(value || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  if (!raw) {
+    return "";
+  }
+  return raw.slice(0, FILE_FUNCTIONS_MAX_CHARS);
+}
+
 function sanitizeFileGroup(value) {
   const raw = String(value || "")
     .replace(/\r\n/g, " ")
@@ -1602,6 +1611,7 @@ function normalizeMetadataFileEntry(entry) {
   const imageName = hasImage ? (sanitizeDisplayFilename(entry.imageName || "image") || "image") : "";
   const imageSize = hasImage ? Math.max(0, Number(entry.imageSize) || 0) : 0;
   const outdated = parseBoolean(entry.outdated ?? entry.isOutdated, false);
+  const untested = parseBoolean(entry.untested ?? entry.isUntested, false);
   const caution = parseBoolean(entry.caution ?? entry.hasCaution, false);
 
   return {
@@ -1613,8 +1623,10 @@ function normalizeMetadataFileEntry(entry) {
     size: Number.isFinite(size) && size >= 0 ? size : 0,
     downloadCount: Number.isFinite(downloadCount) && downloadCount > 0 ? Math.floor(downloadCount) : 0,
     outdated,
+    untested,
     caution,
     description: sanitizeFileDescription(entry.description),
+    functions: sanitizeFileFunctions(entry.functions),
     group: sanitizeFileGroup(entry.group),
     uploadedAt: uploadedAt || new Date(0).toISOString(),
     updatedAt: updatedAt || uploadedAt || "",
@@ -1667,11 +1679,13 @@ function buildFileListEntry(entry) {
     size: normalized.size,
     downloadCount: normalized.downloadCount,
     outdated: normalized.outdated,
+    untested: normalized.untested,
     caution: normalized.caution,
     uploadedAt: normalized.uploadedAt,
     updatedAt: normalized.updatedAt || normalized.uploadedAt,
     contentUpdatedAt: normalized.contentUpdatedAt || normalized.uploadedAt,
     description: normalized.description,
+    functions: normalized.functions,
     group: normalized.group,
     uploader: normalized.uploader || normalized.uploaderDiscordId || "",
     imageUrl,
@@ -1847,7 +1861,7 @@ function buildSharedFileMetaTitle(entry) {
 
   const statusPrefix = normalized.outdated
     ? "[OUTDATED] "
-    : (normalized.caution ? "[WARNING] " : "");
+    : (normalized.caution ? "[WARNING] " : (normalized.untested ? "[UNTESTED] " : ""));
   const title = `${statusPrefix}${getFileShareDisplayName(normalized)} | Fallout Codex File`;
   return truncateMetaText(title, 120);
 }
@@ -6068,8 +6082,10 @@ app.post("/api/files/upload", requireAdmin, uploadFileWithOptionalImage, (req, r
   const safeOriginalName = sanitizeDisplayFilename(originalName);
   const displayName = sanitizeFileDisplayName(req.body.displayName);
   const description = sanitizeFileDescription(req.body.description);
+  const functions = sanitizeFileFunctions(req.body.functions);
   const group = sanitizeFileGroup(req.body.group);
   const outdated = parseBoolean(req.body.outdated, false);
+  const untested = parseBoolean(req.body.untested, false);
   const caution = parseBoolean(req.body.caution, false);
   const hasImageUpload = Boolean(uploadedImage);
   const safeImageName = hasImageUpload
@@ -6110,8 +6126,10 @@ app.post("/api/files/upload", requireAdmin, uploadFileWithOptionalImage, (req, r
     size: uploadedFile.size,
     downloadCount: 0,
     outdated,
+    untested,
     caution,
     description,
+    functions,
     group,
     uploadedAt: now,
     updatedAt: now,
@@ -6264,9 +6282,11 @@ app.patch("/api/files/:id", requireAdmin, uploadFileMetadataUpdate, (req, res) =
   }
 
   const hasDescription = Object.prototype.hasOwnProperty.call(req.body || {}, "description");
+  const hasFunctions = Object.prototype.hasOwnProperty.call(req.body || {}, "functions");
   const hasGroup = Object.prototype.hasOwnProperty.call(req.body || {}, "group");
   const hasDisplayName = Object.prototype.hasOwnProperty.call(req.body || {}, "displayName");
   const hasOutdated = Object.prototype.hasOwnProperty.call(req.body || {}, "outdated");
+  const hasUntested = Object.prototype.hasOwnProperty.call(req.body || {}, "untested");
   const hasCaution = Object.prototype.hasOwnProperty.call(req.body || {}, "caution");
   const removeImage = parseBoolean(req.body?.removeImage, false);
   const imageMimeType = uploadedImage
@@ -6305,6 +6325,9 @@ app.patch("/api/files/:id", requireAdmin, uploadFileMetadataUpdate, (req, res) =
     if (hasDescription) {
       nextEntry.description = sanitizeFileDescription(req.body.description);
     }
+    if (hasFunctions) {
+      nextEntry.functions = sanitizeFileFunctions(req.body.functions);
+    }
     if (hasGroup) {
       nextEntry.group = sanitizeFileGroup(req.body.group);
     }
@@ -6313,6 +6336,9 @@ app.patch("/api/files/:id", requireAdmin, uploadFileMetadataUpdate, (req, res) =
     }
     if (hasOutdated) {
       nextEntry.outdated = parseBoolean(req.body.outdated, false);
+    }
+    if (hasUntested) {
+      nextEntry.untested = parseBoolean(req.body.untested, false);
     }
     if (hasCaution) {
       nextEntry.caution = parseBoolean(req.body.caution, false);
