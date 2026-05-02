@@ -2228,6 +2228,51 @@ function getFilesDeclinedCooldownRemainingMs(profile = {}, nowMs = Date.now()) {
   return Math.max(0, reapplyAtMs - nowMs);
 }
 
+function getFilesAccessExpiryMs(decidedAtStr) {
+  const ms = Date.parse(String(decidedAtStr || "").trim());
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  return ms + FILES_ACCESS_APPROVED_DURATION_MS;
+}
+
+function formatFilesAccessCountdown(expiryMs) {
+  const remaining = expiryMs - Date.now();
+  if (remaining <= 0) return null;
+  const totalSec = Math.floor(remaining / 1000);
+  const d = Math.floor(totalSec / 86400);
+  const h = Math.floor((totalSec % 86400) / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const hh = String(h).padStart(2, "0");
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  return d > 0 ? `${d}D ${hh}H ${mm}M ${ss}S` : `${hh}H ${mm}M ${ss}S`;
+}
+
+function updateFilesAccessTimers() {
+  const timerEls = document.querySelectorAll("[data-files-access-timer]");
+  for (const el of timerEls) {
+    const expiryMs = Number(el.dataset.filesAccessTimer);
+    if (!expiryMs) continue;
+    const remaining = expiryMs - Date.now();
+    const container = el.closest(".files-session-timer-row, .files-admin-request-timer");
+    if (remaining <= 0) {
+      el.textContent = t("files_access_timer_expired");
+      container?.classList.add("is-expired");
+      container?.classList.remove("is-warning");
+      if (el.id === "filesSessionTimer" && !state.files.localAccessExpired) {
+        state.files.localAccessExpired = true;
+        renderFilesAccessView();
+      }
+    } else {
+      el.textContent = formatFilesAccessCountdown(expiryMs) || t("files_access_timer_expired");
+      if (container) {
+        container.classList.toggle("is-warning", remaining < 3 * 24 * 60 * 60 * 1000);
+        container.classList.remove("is-expired");
+      }
+    }
+  }
+}
+
 function isFilesDeclinedCooldownActive(profile = {}, nowMs = Date.now()) {
   const status = normalizeFilesAccessRequestStatus(profile.accessRequestStatus);
   if (status !== "declined") {
@@ -4268,8 +4313,32 @@ function renderFilesAdminRequestsPanel() {
       actions.appendChild(locked);
     }
 
+    let approvalTimerEl = null;
+    if (entry.status === "approved" && entry.decidedAt) {
+      const expiryMs = getFilesAccessExpiryMs(entry.decidedAt);
+      if (expiryMs) {
+        approvalTimerEl = document.createElement("div");
+        approvalTimerEl.className = "files-admin-request-timer";
+        const timerLabel = document.createElement("span");
+        timerLabel.textContent = t("files_admin_requests_meta_expires");
+        const timerValue = document.createElement("strong");
+        const remaining = expiryMs - Date.now();
+        if (remaining <= 0) {
+          timerValue.textContent = t("files_access_timer_expired");
+          approvalTimerEl.classList.add("is-expired");
+        } else {
+          timerValue.textContent = formatFilesAccessCountdown(expiryMs) || t("files_access_timer_expired");
+          timerValue.dataset.filesAccessTimer = String(expiryMs);
+          approvalTimerEl.classList.toggle("is-warning", remaining < 3 * 24 * 60 * 60 * 1000);
+        }
+        approvalTimerEl.appendChild(timerLabel);
+        approvalTimerEl.appendChild(timerValue);
+      }
+    }
+
     card.appendChild(top);
     card.appendChild(meta);
+    if (approvalTimerEl) card.appendChild(approvalTimerEl);
     card.appendChild(reason);
     if (declineReason) {
       card.appendChild(declineReason);
@@ -6062,7 +6131,7 @@ function setFilesSessionRankEffect(element, text, rank = "") {
   delete element.dataset.sessionText;
 }
 
-function renderFilesSessionProfile({ loggedIn, authorized, isAdmin, username, discordId, accessRequestStatus } = {}) {
+function renderFilesSessionProfile({ loggedIn, authorized, isAdmin, username, discordId, accessRequestStatus, accessRequestDecidedAt } = {}) {
   const unknown = t("files_unknown_value");
   const resolvedLoggedIn = Boolean(loggedIn);
   const resolvedAuthorized = Boolean(authorized) && resolvedLoggedIn;
@@ -6106,6 +6175,25 @@ function renderFilesSessionProfile({ loggedIn, authorized, isAdmin, username, di
   if (elements.filesSessionBadge) {
     elements.filesSessionBadge.textContent = badgeText;
     elements.filesSessionBadge.classList.toggle("is-admin", resolvedAdmin);
+  }
+  const timerRow = elements.filesSessionTimerRow;
+  const timerEl = elements.filesSessionTimer;
+  if (timerRow && timerEl) {
+    const expiryMs = resolvedAuthorized ? getFilesAccessExpiryMs(accessRequestDecidedAt) : null;
+    timerRow.hidden = !expiryMs;
+    if (expiryMs) {
+      timerEl.dataset.filesAccessTimer = String(expiryMs);
+      const remaining = expiryMs - Date.now();
+      if (remaining <= 0) {
+        timerEl.textContent = t("files_access_timer_expired");
+        timerRow.classList.add("is-expired");
+        timerRow.classList.remove("is-warning");
+      } else {
+        timerEl.textContent = formatFilesAccessCountdown(expiryMs) || t("files_access_timer_expired");
+        timerRow.classList.toggle("is-warning", remaining < 3 * 24 * 60 * 60 * 1000);
+        timerRow.classList.remove("is-expired");
+      }
+    }
   }
 }
 
@@ -7426,8 +7514,8 @@ function renderFilesAccessView() {
   const isFileProtocol = window.location.protocol === "file:";
   const me = normalizeFilesProfile(state.files.me);
   const loggedIn = me.loggedIn;
-  const authorized = me.isAuthorized;
-  const isAdmin = me.isAdmin;
+  const authorized = me.isAuthorized && !state.files.localAccessExpired;
+  const isAdmin = me.isAdmin && !state.files.localAccessExpired;
   const sharedTargetActive = hasFilesSharedTargetInLocation();
   const sharedGuestLanding = sharedTargetActive && !loggedIn;
   const sharedRestrictedLanding = sharedTargetActive && loggedIn && !authorized;
@@ -7543,7 +7631,8 @@ function renderFilesAccessView() {
       isAdmin: false,
       username: "",
       discordId: "",
-      accessRequestStatus: "none"
+      accessRequestStatus: "none",
+      accessRequestDecidedAt: ""
     });
     if (elements.filesUnauthorizedPanel) {
       elements.filesUnauthorizedPanel.hidden = false;
@@ -7686,7 +7775,8 @@ function renderFilesAccessView() {
     isAdmin,
     username: me.username,
     discordId: me.discordId,
-    accessRequestStatus: me.accessRequestStatus
+    accessRequestStatus: me.accessRequestStatus,
+    accessRequestDecidedAt: me.accessRequestDecidedAt
   });
   renderFilesDisclaimerGateView({
     loggedIn,
@@ -9402,6 +9492,12 @@ async function pollFilesIdentityLive({ force = false } = {}) {
     }
 
     state.files.me = nextProfile;
+    if (state.files.localAccessExpired && nextProfile.isAuthorized) {
+      const freshExpiryMs = getFilesAccessExpiryMs(nextProfile.accessRequestDecidedAt);
+      if (freshExpiryMs && freshExpiryMs > Date.now()) {
+        state.files.localAccessExpired = false;
+      }
+    }
     syncFilesDecisionNoticeFromProfile(nextProfile);
     syncDiscordBotInviteButton();
 
@@ -9631,6 +9727,12 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
   try {
     const payload = await requestJson("/api/me");
     state.files.me = normalizeFilesProfile(payload);
+    if (state.files.localAccessExpired && state.files.me.isAuthorized) {
+      const freshExpiryMs = getFilesAccessExpiryMs(state.files.me.accessRequestDecidedAt);
+      if (freshExpiryMs && freshExpiryMs > Date.now()) {
+        state.files.localAccessExpired = false;
+      }
+    }
     syncFilesDecisionNoticeFromProfile(state.files.me);
   } catch (error) {
     state.files.me = buildGuestFilesProfile();
@@ -9833,8 +9935,10 @@ async function handleFilesAccessRequest() {
         reason
       })
     });
+    state.files.localAccessExpired = false;
     state.files.me = {
       ...normalizeFilesProfile(state.files.me),
+      isAuthorized: false,
       accessRequestStatus: "pending",
       accessRequestRequestedAt: new Date().toISOString(),
       accessRequestDecidedAt: "",
@@ -16355,6 +16459,9 @@ function applyLanguage(lang, persist = true) {
   elements.filesSessionIdLabel.textContent = t("files_session_id_label");
   elements.filesSessionClearanceLabel.textContent = t("files_session_clearance_label");
   elements.filesSessionStateLabel.textContent = t("files_session_state_label");
+  if (elements.filesSessionTimerLabel) {
+    elements.filesSessionTimerLabel.textContent = t("files_session_access_expires_label");
+  }
   elements.filesSessionBadge.textContent = t("files_unknown_value");
   setFilesSessionRankEffect(elements.filesSessionUser, t("files_unknown_value"));
   elements.filesSessionId.textContent = t("files_unknown_value");
@@ -17702,6 +17809,7 @@ async function init() {
 
   updateClock();
   setInterval(updateClock, 1000);
+  setInterval(updateFilesAccessTimers, 1000);
   await refreshIntel();
 }
 

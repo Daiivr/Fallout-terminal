@@ -93,6 +93,7 @@ const state = {
   },
   files: {
     me: null,
+    localAccessExpired: false,
     list: [],
     loadingMe: false,
     loadingList: false,
