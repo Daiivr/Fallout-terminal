@@ -1679,7 +1679,7 @@ function startFilesBotAdminLivePolling() {
   stopFilesBotAdminLivePolling();
 
   const me = normalizeFilesProfile(state.files.me);
-  if (!me.isAuthorized || !me.isAdmin) {
+  if (!hasFilesAuthorizedAccess(me) || !me.isAdmin) {
     return;
   }
   if (normalizeFilesAdminModalType(state.files.adminModal.active) !== "bot") {
@@ -2166,6 +2166,42 @@ function markFilesDecisionNoticeSeen() {
   renderFilesDecisionTabBadge();
 }
 
+function isFilesAccessExpired(profile = null, nowMs = Date.now()) {
+  const me = normalizeFilesProfile(profile || state.files.me);
+  if (!me.loggedIn) {
+    return false;
+  }
+
+  if (normalizeFilesAccessRequestStatus(me.accessRequestStatus) !== "approved") {
+    return false;
+  }
+
+  const expiryMs = getFilesAccessExpiryMs(me.accessRequestDecidedAt);
+  return Boolean(expiryMs && expiryMs <= nowMs);
+}
+
+function syncFilesLocalAccessExpired(profile = null, nowMs = Date.now()) {
+  const expired = isFilesAccessExpired(profile, nowMs);
+  state.files.localAccessExpired = expired;
+  return expired;
+}
+
+function hasFilesAuthorizedAccess(profile = null, { allowExpired = false } = {}) {
+  const me = normalizeFilesProfile(profile || state.files.me);
+  if (!me.loggedIn) {
+    return false;
+  }
+
+  const approvedAccepted = normalizeFilesAccessRequestStatus(me.accessRequestStatus) === "approved"
+    && normalizeFilesDisclaimerDecision(me.accessDisclaimerDecision) === "accepted";
+  const authorized = Boolean(me.isAuthorized) || approvedAccepted;
+  if (!authorized) {
+    return false;
+  }
+
+  return allowExpired ? true : !isFilesAccessExpired(me);
+}
+
 function shouldShowFilesDisclaimerGate(profile = null) {
   const me = normalizeFilesProfile(profile || state.files.me);
   if (!me.loggedIn) {
@@ -2176,7 +2212,11 @@ function shouldShowFilesDisclaimerGate(profile = null) {
     return false;
   }
 
-  if (me.isAuthorized) {
+  if (isFilesAccessExpired(me)) {
+    return false;
+  }
+
+  if (hasFilesAuthorizedAccess(me)) {
     return false;
   }
 
@@ -2941,7 +2981,7 @@ function isFilesBotAdminMobileViewport() {
 
 function canUseFilesBotAdmin(profile, { requireDesktop = false } = {}) {
   const me = normalizeFilesProfile(profile);
-  const canUseBotAdmin = Boolean(me.loggedIn && me.isAuthorized && me.isAdmin);
+  const canUseBotAdmin = Boolean(me.loggedIn && hasFilesAuthorizedAccess(me) && me.isAdmin);
   if (!canUseBotAdmin) {
     return false;
   }
@@ -3002,7 +3042,7 @@ function scheduleFilesListPostMutationRefresh() {
 
 function renderFilesDisclaimerModal() {
   const me = normalizeFilesProfile(state.files.me);
-  const canShowDisclaimer = Boolean(me.isAuthorized);
+  const canShowDisclaimer = hasFilesAuthorizedAccess(me);
   const isOpen = canShowDisclaimer && Boolean(state.files.disclaimerModal.open);
   state.files.disclaimerModal.open = isOpen;
   document.body.classList.toggle("is-files-disclaimer-open", isOpen);
@@ -3021,7 +3061,7 @@ function renderFilesDisclaimerModal() {
 
 function openFilesDisclaimerModal() {
   const me = normalizeFilesProfile(state.files.me);
-  if (!me.isAuthorized) {
+  if (!hasFilesAuthorizedAccess(me)) {
     return;
   }
   state.files.disclaimerModal.open = true;
@@ -6131,11 +6171,24 @@ function setFilesSessionRankEffect(element, text, rank = "") {
   delete element.dataset.sessionText;
 }
 
-function renderFilesSessionProfile({ loggedIn, authorized, isAdmin, username, discordId, accessRequestStatus, accessRequestDecidedAt } = {}) {
+function renderFilesSessionProfile({
+  loggedIn,
+  authorized,
+  isAdmin,
+  username,
+  discordId,
+  accessRequestStatus,
+  accessRequestDecidedAt,
+  accessDisclaimerDecision,
+  disclaimerRequired
+} = {}) {
   const unknown = t("files_unknown_value");
   const resolvedLoggedIn = Boolean(loggedIn);
   const resolvedAuthorized = Boolean(authorized) && resolvedLoggedIn;
   const resolvedAdmin = Boolean(isAdmin) && resolvedAuthorized;
+  const resolvedRequestStatus = normalizeFilesAccessRequestStatus(accessRequestStatus);
+  const resolvedDisclaimerDecision = normalizeFilesDisclaimerDecision(accessDisclaimerDecision);
+  const requiresDisclaimer = Boolean(disclaimerRequired);
   const resolvedUsername = resolvedLoggedIn ? (String(username || "").trim() || unknown) : unknown;
   const resolvedDiscordId = resolvedLoggedIn ? (String(discordId || "").trim() || unknown) : unknown;
   const resolvedClearance = !resolvedLoggedIn
@@ -6179,9 +6232,15 @@ function renderFilesSessionProfile({ loggedIn, authorized, isAdmin, username, di
   const timerRow = elements.filesSessionTimerRow;
   const timerEl = elements.filesSessionTimer;
   if (timerRow && timerEl) {
-    const expiryMs = resolvedAuthorized ? getFilesAccessExpiryMs(accessRequestDecidedAt) : null;
-    timerRow.hidden = !expiryMs;
-    if (expiryMs) {
+    const approvalExpiryMs = resolvedRequestStatus === "approved"
+      ? getFilesAccessExpiryMs(accessRequestDecidedAt)
+      : null;
+    const hadAuthorizedAccessBefore = resolvedAuthorized || (
+      Boolean(approvalExpiryMs) && (!requiresDisclaimer || resolvedDisclaimerDecision === "accepted")
+    );
+    timerRow.hidden = !hadAuthorizedAccessBefore || !approvalExpiryMs;
+    if (hadAuthorizedAccessBefore && approvalExpiryMs) {
+      const expiryMs = approvalExpiryMs;
       timerEl.dataset.filesAccessTimer = String(expiryMs);
       const remaining = expiryMs - Date.now();
       if (remaining <= 0) {
@@ -6193,6 +6252,10 @@ function renderFilesSessionProfile({ loggedIn, authorized, isAdmin, username, di
         timerRow.classList.toggle("is-warning", remaining < 3 * 24 * 60 * 60 * 1000);
         timerRow.classList.remove("is-expired");
       }
+    } else {
+      delete timerEl.dataset.filesAccessTimer;
+      timerEl.textContent = "--";
+      timerRow.classList.remove("is-expired", "is-warning");
     }
   }
 }
@@ -6224,7 +6287,15 @@ function renderFilesRestrictedView({
 
   const resolvedLoggedIn = Boolean(loggedIn);
   const resolvedAuthorized = Boolean(authorized) && resolvedLoggedIn;
-  const sharedRestrictedLanding = hasFilesSharedTargetInLocation() && resolvedLoggedIn && !resolvedAuthorized;
+  const accessExpired = Boolean(state.files.localAccessExpired || isFilesAccessExpired({
+    loggedIn: resolvedLoggedIn,
+    accessRequestStatus,
+    accessRequestDecidedAt
+  }));
+  const sharedRestrictedLanding = hasFilesSharedTargetInLocation()
+    && resolvedLoggedIn
+    && !resolvedAuthorized
+    && !accessExpired;
   const cooldownActive = isFilesDeclinedCooldownActive({
     accessRequestStatus,
     accessRequestDecidedAt,
@@ -6232,7 +6303,8 @@ function renderFilesRestrictedView({
   });
   const resolvedRequestStatus = normalizeFilesAccessRequestStatus(accessRequestStatus);
   const resolvedDisclaimerDecision = normalizeFilesDisclaimerDecision(accessDisclaimerDecision);
-  const disclaimerGateActive = resolvedRequestStatus === "approved"
+  const disclaimerGateActive = !accessExpired
+    && resolvedRequestStatus === "approved"
     && !resolvedAuthorized
     && (resolvedDisclaimerDecision === "none" || resolvedDisclaimerDecision === "declined");
   const showRestricted = resolvedLoggedIn && !resolvedAuthorized && !cooldownActive && !disclaimerGateActive;
@@ -6272,22 +6344,28 @@ function renderFilesRestrictedView({
   if (elements.filesRestrictedBadge) {
     elements.filesRestrictedBadge.textContent = sharedRestrictedLanding
       ? t("files_share_restricted_badge")
-      : t("files_restricted_badge");
+      : accessExpired
+        ? t("files_restricted_badge_expired")
+        : t("files_restricted_badge");
   }
   if (elements.filesRestrictedTitle) {
     elements.filesRestrictedTitle.textContent = sharedRestrictedLanding
       ? t("files_share_restricted_title")
-      : t("files_restricted_title");
+      : accessExpired
+        ? t("files_restricted_title_expired")
+        : t("files_restricted_title");
   }
   if (elements.filesRestrictedSubtitle) {
     const showDeclinedReason = resolvedRequestStatus === "declined" && Boolean(declineReason);
-    elements.filesRestrictedSubtitle.textContent = showDeclinedReason
-      ? sharedRestrictedLanding
-        ? t("files_share_restricted_subtitle_declined_reason", { reason: declineReason })
-        : t("files_restricted_subtitle_declined_reason", { reason: declineReason })
-      : sharedRestrictedLanding
-        ? t("files_share_restricted_subtitle")
-        : t("files_restricted_subtitle");
+    elements.filesRestrictedSubtitle.textContent = accessExpired
+      ? t("files_restricted_subtitle_expired")
+      : showDeclinedReason
+        ? sharedRestrictedLanding
+          ? t("files_share_restricted_subtitle_declined_reason", { reason: declineReason })
+          : t("files_restricted_subtitle_declined_reason", { reason: declineReason })
+        : sharedRestrictedLanding
+          ? t("files_share_restricted_subtitle")
+          : t("files_restricted_subtitle");
   }
   if (elements.filesRestrictedIdentityValue) {
     elements.filesRestrictedIdentityValue.textContent = resolvedUsername;
@@ -6299,10 +6377,21 @@ function renderFilesRestrictedView({
     elements.filesRestrictedClearanceValue.textContent = t("files_session_clearance_unauthorized");
   }
   if (elements.filesRestrictedStatusValue) {
-    elements.filesRestrictedStatusValue.textContent = getFilesAccessRequestStatusLabel(resolvedRequestStatus);
+    elements.filesRestrictedStatusValue.textContent = accessExpired
+      ? t("files_restricted_status_expired")
+      : getFilesAccessRequestStatusLabel(resolvedRequestStatus);
+  }
+  if (elements.filesRestrictedTimeLabel) {
+    elements.filesRestrictedTimeLabel.textContent = accessExpired
+      ? t("files_restricted_time_label_expired")
+      : t("files_restricted_time_label");
   }
   if (elements.filesRestrictedTimeValue) {
-    const checkpointSource = String(accessRequestDecidedAt || accessRequestRequestedAt || "").trim();
+    let checkpointSource = String(accessRequestDecidedAt || accessRequestRequestedAt || "").trim();
+    if (accessExpired && accessRequestDecidedAt) {
+      const expiryMs = getFilesAccessExpiryMs(accessRequestDecidedAt);
+      if (expiryMs) checkpointSource = new Date(expiryMs).toISOString();
+    }
     const checkpointDate = checkpointSource ? new Date(checkpointSource) : new Date();
     const safeDate = Number.isNaN(checkpointDate.getTime()) ? new Date() : checkpointDate;
     elements.filesRestrictedTimeValue.textContent = safeDate.toLocaleString(locale, {
@@ -6317,22 +6406,31 @@ function renderFilesRestrictedView({
   if (elements.filesRestrictedDirectiveTitle) {
     elements.filesRestrictedDirectiveTitle.textContent = sharedRestrictedLanding
       ? t("files_share_restricted_directive_title")
-      : t("files_restricted_directive_title");
+      : accessExpired
+        ? t("files_restricted_directive_title_expired")
+        : t("files_restricted_directive_title");
   }
   if (elements.filesRestrictedDirectiveLine1) {
     elements.filesRestrictedDirectiveLine1.textContent = sharedRestrictedLanding
       ? t("files_share_restricted_directive_line_1")
-      : t("files_restricted_directive_line_1");
+      : accessExpired
+        ? t("files_restricted_directive_expired_line_1")
+        : t("files_restricted_directive_line_1");
   }
   if (elements.filesRestrictedDirectiveLine2) {
     elements.filesRestrictedDirectiveLine2.textContent = sharedRestrictedLanding
       ? t("files_share_restricted_directive_line_2")
-      : t("files_restricted_directive_line_2");
+      : accessExpired
+        ? t("files_restricted_directive_expired_line_2")
+        : t("files_restricted_directive_line_2");
   }
   if (elements.filesRestrictedDirectiveLine3) {
+    elements.filesRestrictedDirectiveLine3.hidden = accessExpired;
     elements.filesRestrictedDirectiveLine3.textContent = sharedRestrictedLanding
       ? t("files_share_restricted_directive_line_3")
-      : t("files_restricted_directive_line_3");
+      : accessExpired
+        ? ""
+        : t("files_restricted_directive_line_3");
   }
   if (elements.filesRestrictedRequestFeedback) {
     const hasMessage = Boolean(state.files.accessRequestMessage);
@@ -6519,6 +6617,7 @@ function renderFilesDisclaimerGateView({
   loggedIn,
   authorized,
   accessRequestStatus,
+  accessRequestDecidedAt,
   accessDisclaimerDecision
 } = {}) {
   if (!elements.filesDisclaimerGateView) {
@@ -6529,7 +6628,12 @@ function renderFilesDisclaimerGateView({
   const resolvedAuthorized = Boolean(authorized) && resolvedLoggedIn;
   const resolvedStatus = normalizeFilesAccessRequestStatus(accessRequestStatus);
   const resolvedDecision = normalizeFilesDisclaimerDecision(accessDisclaimerDecision);
-  const showGate = resolvedLoggedIn && !resolvedAuthorized && resolvedStatus === "approved";
+  const accessExpired = isFilesAccessExpired({
+    loggedIn: resolvedLoggedIn,
+    accessRequestStatus,
+    accessRequestDecidedAt
+  });
+  const showGate = resolvedLoggedIn && !resolvedAuthorized && !accessExpired && resolvedStatus === "approved";
   const showDeclinedState = showGate && resolvedDecision === "declined";
   const showContactView = showDeclinedState && Boolean(state.files.disclaimerGate.contactOpen);
   elements.filesDisclaimerGateView.hidden = !showGate;
@@ -6714,7 +6818,7 @@ async function submitFilesDisclaimerDecision(decision) {
   renderFilesAccessView();
 
   try {
-    await requestJson("/api/files/disclaimer-decision", {
+    const payload = await requestJson("/api/files/disclaimer-decision", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -6723,7 +6827,30 @@ async function submitFilesDisclaimerDecision(decision) {
         decision: normalizedDecision
       })
     });
-    await refreshFilesIdentity({ loadFiles: isAcceptDecision });
+    const nextProfile = payload?.me ? normalizeFilesProfile(payload.me) : null;
+    if (nextProfile) {
+      state.files.me = nextProfile;
+      syncFilesLocalAccessExpired(nextProfile);
+      syncFilesDecisionNoticeFromProfile(nextProfile);
+      syncDiscordBotInviteButton();
+      renderDropsAdminTabVisibility();
+    }
+
+    const hasActiveAuthorizedAccess = hasFilesAuthorizedAccess(state.files.me);
+    if (isAcceptDecision && nextProfile && hasActiveAuthorizedAccess) {
+      await refreshFilesList();
+      if (state.files.me.isAdmin) {
+        await refreshFilesAdminRequests({ silent: true });
+      } else {
+        clearFilesAdminRequestsState();
+        clearFilesBotAdminState({ preserveQuery: true });
+        renderFilesAccessView();
+        renderDropsPage();
+      }
+    } else {
+      await refreshFilesIdentity({ loadFiles: isAcceptDecision });
+    }
+
     if (isAcceptDecision) {
       const startedAt = Number(state.files.disclaimerGate.acceptTransitionStartedAt) || Date.now();
       const elapsedMs = Math.max(0, Date.now() - startedAt);
@@ -6752,7 +6879,7 @@ function renderFilesSearchResults() {
     return;
   }
 
-  if (!state.files.search.open || !state.files.me?.isAuthorized) {
+  if (!state.files.search.open || !hasFilesAuthorizedAccess(state.files.me)) {
     elements.filesSearchResults.innerHTML = "";
     elements.filesSearchResults.hidden = true;
     setFilesSearchCount("");
@@ -6869,7 +6996,8 @@ function renderFilesList() {
   }
 
   const me = normalizeFilesProfile(state.files.me);
-  const canReadFiles = Boolean(me.isAuthorized);
+  const accessExpired = Boolean(state.files.localAccessExpired || isFilesAccessExpired(me));
+  const canReadFiles = hasFilesAuthorizedAccess(me);
   const showRestrictedNotice = me.loggedIn && !canReadFiles && !shouldShowFilesDisclaimerGate(me);
   const pendingTransition = String(state.files.transition || "");
   const reuseManagerMode = Boolean(state.files.groupManager.open && me.isAdmin);
@@ -7513,12 +7641,13 @@ function renderFilesList() {
 function renderFilesAccessView() {
   const isFileProtocol = window.location.protocol === "file:";
   const me = normalizeFilesProfile(state.files.me);
+  const accessExpired = syncFilesLocalAccessExpired(me);
   const loggedIn = me.loggedIn;
-  const authorized = me.isAuthorized && !state.files.localAccessExpired;
-  const isAdmin = me.isAdmin && !state.files.localAccessExpired;
+  const authorized = hasFilesAuthorizedAccess(me);
+  const isAdmin = me.isAdmin && !accessExpired;
   const sharedTargetActive = hasFilesSharedTargetInLocation();
   const sharedGuestLanding = sharedTargetActive && !loggedIn;
-  const sharedRestrictedLanding = sharedTargetActive && loggedIn && !authorized;
+  const sharedRestrictedLanding = sharedTargetActive && loggedIn && !authorized && !accessExpired;
   const showDisclaimerGate = shouldShowFilesDisclaimerGate(me);
   const showRestrictedLayout = loggedIn && !authorized;
   const showAuthorizedLayout = authorized || showRestrictedLayout;
@@ -7608,9 +7737,11 @@ function renderFilesAccessView() {
       elements.filesBrowserTitle.textContent = t("files_disclaimer_gate_browser_title");
     } else {
       elements.filesBrowserTitle.textContent = showRestrictedLayout
-        ? sharedRestrictedLanding
-          ? t("files_share_restricted_browser_title")
-          : t("files_restricted_browser_title")
+        ? accessExpired
+          ? t("files_restricted_browser_title_expired")
+          : sharedRestrictedLanding
+            ? t("files_share_restricted_browser_title")
+            : t("files_restricted_browser_title")
         : t("files_file_index_title");
     }
   }
@@ -7632,7 +7763,9 @@ function renderFilesAccessView() {
       username: "",
       discordId: "",
       accessRequestStatus: "none",
-      accessRequestDecidedAt: ""
+      accessRequestDecidedAt: "",
+      accessDisclaimerDecision: "none",
+      disclaimerRequired: false
     });
     if (elements.filesUnauthorizedPanel) {
       elements.filesUnauthorizedPanel.hidden = false;
@@ -7776,12 +7909,15 @@ function renderFilesAccessView() {
     username: me.username,
     discordId: me.discordId,
     accessRequestStatus: me.accessRequestStatus,
-    accessRequestDecidedAt: me.accessRequestDecidedAt
+    accessRequestDecidedAt: me.accessRequestDecidedAt,
+    accessDisclaimerDecision: me.accessDisclaimerDecision,
+    disclaimerRequired: me.disclaimerRequired
   });
   renderFilesDisclaimerGateView({
     loggedIn,
     authorized,
     accessRequestStatus: me.accessRequestStatus,
+    accessRequestDecidedAt: me.accessRequestDecidedAt,
     accessDisclaimerDecision: me.accessDisclaimerDecision
   });
   renderFilesRestrictedView({
@@ -8654,7 +8790,8 @@ function renderDropsAdminTabVisibility() {
   if (!elements.tabDrops) {
     return;
   }
-  const isAdmin = Boolean(state.files.me?.isAdmin);
+  const me = normalizeFilesProfile(state.files.me);
+  const isAdmin = Boolean(me.loggedIn && hasFilesAuthorizedAccess(me) && me.isAdmin);
   elements.tabDrops.hidden = !isAdmin;
   elements.tabDrops.setAttribute("aria-hidden", isAdmin ? "false" : "true");
 }
@@ -8811,7 +8948,7 @@ function renderDropsPage() {
   }
 
   const me = normalizeFilesProfile(state.files.me);
-  const isAdmin = Boolean(me.loggedIn && me.isAuthorized && me.isAdmin);
+  const isAdmin = Boolean(me.loggedIn && hasFilesAuthorizedAccess(me) && me.isAdmin);
   const loadingIdentity = Boolean(state.files.loadingMe);
   const showGate = !isAdmin;
   const hasActiveShare = Array.isArray(state.drops.list) && state.drops.list.length > 0;
@@ -8977,7 +9114,7 @@ function startDropsVtAutoPoll() {
 
 async function refreshDrops({ silent = false } = {}) {
   const me = normalizeFilesProfile(state.files.me);
-  if (!me.isAuthorized || !me.isAdmin) {
+  if (!hasFilesAuthorizedAccess(me) || !me.isAdmin) {
     state.drops.list = [];
     state.drops.loading = false;
     state.drops.error = "";
@@ -9492,18 +9629,15 @@ async function pollFilesIdentityLive({ force = false } = {}) {
     }
 
     state.files.me = nextProfile;
-    if (state.files.localAccessExpired && nextProfile.isAuthorized) {
-      const freshExpiryMs = getFilesAccessExpiryMs(nextProfile.accessRequestDecidedAt);
-      if (freshExpiryMs && freshExpiryMs > Date.now()) {
-        state.files.localAccessExpired = false;
-      }
-    }
+    syncFilesLocalAccessExpired(nextProfile);
+    const nextAuthorized = hasFilesAuthorizedAccess(nextProfile);
+    const previousAuthorized = hasFilesAuthorizedAccess(previousProfile);
     syncFilesDecisionNoticeFromProfile(nextProfile);
     syncDiscordBotInviteButton();
 
-    if (nextProfile.isAuthorized) {
+    if (nextAuthorized) {
       const identityChanged = previousProfile.discordId !== nextProfile.discordId;
-      const becameAuthorized = !previousProfile.isAuthorized && nextProfile.isAuthorized;
+      const becameAuthorized = !previousAuthorized;
       if (identityChanged || becameAuthorized) {
         await refreshFilesList();
       } else {
@@ -9519,7 +9653,7 @@ async function pollFilesIdentityLive({ force = false } = {}) {
       return;
     }
 
-    if (previousProfile.isAuthorized || previousProfile.discordId !== nextProfile.discordId) {
+    if (previousAuthorized || previousProfile.discordId !== nextProfile.discordId) {
       state.files.list = [];
       state.files.activeGroupKey = "";
       state.files.rename.fileId = "";
@@ -9534,7 +9668,7 @@ async function pollFilesIdentityLive({ force = false } = {}) {
       state.files.transition = "";
       clearFilesAdminRequestsState();
     }
-    if (!nextProfile.loggedIn || nextProfile.isAuthorized) {
+    if (!nextProfile.loggedIn || nextAuthorized) {
       state.files.accessRequestBusy = false;
       setFilesRestrictedRequestFeedback("", "");
     }
@@ -9572,7 +9706,8 @@ function applyFilesSharedSelectionFromLocation() {
 }
 
 async function refreshFilesList() {
-  if (!state.files.me?.isAuthorized) {
+  const me = normalizeFilesProfile(state.files.me);
+  if (!hasFilesAuthorizedAccess(me)) {
     state.files.list = [];
     state.files.activeGroupKey = "";
     state.files.rename.fileId = "";
@@ -9584,7 +9719,7 @@ async function refreshFilesList() {
     state.files.selectedId = "";
     state.files.detailOrigin = "";
     state.files.transition = "";
-    if (!state.files.me?.isAdmin) {
+    if (!me.isAdmin) {
       clearFilesAdminRequestsState();
     }
     renderFilesAccessView();
@@ -9645,7 +9780,7 @@ async function refreshFilesList() {
 
 async function refreshFilesAdminRequests({ silent = false } = {}) {
   const me = normalizeFilesProfile(state.files.me);
-  if (!me.isAuthorized || !me.isAdmin) {
+  if (!hasFilesAuthorizedAccess(me) || !me.isAdmin) {
     clearFilesAdminRequestsState();
     renderFilesAccessView();
     return;
@@ -9680,7 +9815,7 @@ async function refreshFilesAdminRequests({ silent = false } = {}) {
 
 async function refreshFilesBotAdminOverview({ silent = false } = {}) {
   const me = normalizeFilesProfile(state.files.me);
-  if (!me.isAuthorized || !me.isAdmin) {
+  if (!hasFilesAuthorizedAccess(me) || !me.isAdmin) {
     clearFilesBotAdminState();
     renderFilesAccessView();
     return;
@@ -9727,15 +9862,11 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
   try {
     const payload = await requestJson("/api/me");
     state.files.me = normalizeFilesProfile(payload);
-    if (state.files.localAccessExpired && state.files.me.isAuthorized) {
-      const freshExpiryMs = getFilesAccessExpiryMs(state.files.me.accessRequestDecidedAt);
-      if (freshExpiryMs && freshExpiryMs > Date.now()) {
-        state.files.localAccessExpired = false;
-      }
-    }
+    syncFilesLocalAccessExpired(state.files.me);
     syncFilesDecisionNoticeFromProfile(state.files.me);
   } catch (error) {
     state.files.me = buildGuestFilesProfile();
+    syncFilesLocalAccessExpired(state.files.me);
     state.files.meError = String(error?.message || "");
     syncFilesDecisionNoticeFromProfile(state.files.me);
   } finally {
@@ -9745,8 +9876,11 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
   syncDiscordBotInviteButton();
   renderDropsAdminTabVisibility();
 
+  const hasActiveAuthorizedAccess = hasFilesAuthorizedAccess(state.files.me);
+  const hasActiveAdminAccess = hasActiveAuthorizedAccess && state.files.me.isAdmin;
+
   if (state.view === "drops" && document.body.classList.contains("is-drops")) {
-    if (state.files.me.isAdmin) {
+    if (hasActiveAdminAccess) {
       await refreshDrops();
       return;
     }
@@ -9754,9 +9888,9 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
     return;
   }
 
-  if (state.files.me.isAuthorized && loadFiles) {
+  if (hasActiveAuthorizedAccess && loadFiles) {
     await refreshFilesList();
-    if (state.files.me.isAdmin) {
+    if (hasActiveAdminAccess) {
       await refreshFilesAdminRequests({ silent: true });
     } else {
       clearFilesAdminRequestsState();
@@ -9765,7 +9899,7 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
     return;
   }
 
-  if (!state.files.me.isAuthorized) {
+  if (!hasActiveAuthorizedAccess) {
     state.files.list = [];
     state.files.activeGroupKey = "";
     state.files.rename.fileId = "";
@@ -9781,11 +9915,11 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
     clearFilesAdminRequestsState();
     clearFilesBotAdminState({ preserveQuery: true });
   }
-  if (state.files.me.isAuthorized && !state.files.me.isAdmin) {
+  if (hasActiveAuthorizedAccess && !hasActiveAdminAccess) {
     clearFilesAdminRequestsState();
     clearFilesBotAdminState({ preserveQuery: true });
   }
-  if (!state.files.me.loggedIn || state.files.me.isAuthorized) {
+  if (!state.files.me.loggedIn || hasActiveAuthorizedAccess) {
     state.files.accessRequestBusy = false;
     setFilesRestrictedRequestFeedback("", "");
   }
@@ -9798,14 +9932,16 @@ async function refreshFilesIdentityBadgeOnly() {
   try {
     const payload = await requestJson("/api/me");
     state.files.me = normalizeFilesProfile(payload);
+    syncFilesLocalAccessExpired(state.files.me);
   } catch {
     state.files.me = buildGuestFilesProfile();
+    syncFilesLocalAccessExpired(state.files.me);
   }
 
   syncFilesDecisionNoticeFromProfile(state.files.me);
   renderDropsAdminTabVisibility();
   if (state.view === "drops" && document.body.classList.contains("is-drops")) {
-    if (state.files.me.isAdmin) {
+    if (state.files.me.isAdmin && !state.files.localAccessExpired) {
       void refreshDrops();
     } else {
       showFilesPage({ updateHash: true });
@@ -9891,7 +10027,7 @@ async function handleFilesAccessRequest() {
     renderFilesAccessView();
     return;
   }
-  if (me.isAuthorized) {
+  if (hasFilesAuthorizedAccess(me)) {
     setFilesRestrictedRequestFeedback(t("files_restricted_request_already_authorized"), "error");
     renderFilesAccessView();
     return;
@@ -10292,7 +10428,7 @@ async function handleFilesReplace(fileId, inputElement) {
 
 async function handleFilesAdminRequestsAction(actionElement) {
   const me = normalizeFilesProfile(state.files.me);
-  if (!me.isAuthorized || !me.isAdmin) {
+  if (!hasFilesAuthorizedAccess(me) || !me.isAdmin) {
     return;
   }
   if (!(actionElement instanceof HTMLElement)) {
@@ -10474,7 +10610,7 @@ async function executeFilesBotAdminAction({ action = "", guildId = "", guildName
 
 async function handleFilesBotAdminAction(actionElement) {
   const me = normalizeFilesProfile(state.files.me);
-  if (!me.isAuthorized || !me.isAdmin) {
+  if (!hasFilesAuthorizedAccess(me) || !me.isAdmin) {
     return;
   }
   if (!(actionElement instanceof HTMLElement)) {
@@ -10578,7 +10714,7 @@ function scheduleFilesDownloadRefresh() {
 
   filesDownloadRefreshTimer = setTimeout(() => {
     filesDownloadRefreshTimer = null;
-    if (state.files.me?.isAuthorized) {
+    if (hasFilesAuthorizedAccess(state.files.me)) {
       void refreshFilesList();
     }
   }, 1400);

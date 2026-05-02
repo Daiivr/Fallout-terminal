@@ -170,6 +170,7 @@ const ACCESS_REQUEST_REAPPLY_COOLDOWN_MS = parsePositiveInteger(
   ACCESS_REQUEST_REAPPLY_COOLDOWN_MS_RAW,
   7 * 24 * 60 * 60 * 1000
 );
+const ACCESS_REQUEST_APPROVED_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 const ACCESS_REQUEST_REASON_MAX_CHARS = 1200;
 const FILES_DISCLAIMER_REEVALUATION_MAX_CHARS = ACCESS_REQUEST_REASON_MAX_CHARS;
 const FILE_DESCRIPTION_MAX_CHARS = 900;
@@ -598,6 +599,25 @@ function getAccessRequestReapplyRemainingMs(accessRequestState = null) {
   return Math.max(0, reapplyAtMs - Date.now());
 }
 
+function getAccessRequestApprovalExpiresAtMs(accessRequestState = null) {
+  const resolved = accessRequestState && typeof accessRequestState === "object" ? accessRequestState : null;
+  if (!resolved || normalizeAccessRequestStatus(resolved.status) !== ACCESS_REQUEST_STATUS.APPROVED) {
+    return 0;
+  }
+
+  const decidedAtMs = Date.parse(String(resolved.decidedAt || "").trim());
+  if (!Number.isFinite(decidedAtMs) || decidedAtMs <= 0) {
+    return 0;
+  }
+
+  return decidedAtMs + ACCESS_REQUEST_APPROVED_DURATION_MS;
+}
+
+function isAccessRequestApprovalExpired(accessRequestState = null, nowMs = Date.now()) {
+  const expiresAtMs = getAccessRequestApprovalExpiresAtMs(accessRequestState);
+  return Number.isFinite(expiresAtMs) && expiresAtMs > 0 && nowMs >= expiresAtMs;
+}
+
 function createPendingAccessRequestEntry(user, reason) {
   const profile = user && user.discordProfile && typeof user.discordProfile === "object" ? user.discordProfile : null;
   const nowIso = new Date().toISOString();
@@ -776,8 +796,10 @@ function clearDeclinedAccessRequestForReapply(discordId) {
   }
 
   if (declinedByDisclaimer) {
+    const nowIso = new Date().toISOString();
     const updatedEntry = sanitizeAccessRequestEntry({
       ...entry,
+      decidedAt: nowIso,
       disclaimerDecision: ACCESS_DISCLAIMER_DECISION.NONE,
       disclaimerDecidedAt: "",
       disclaimerReevaluationRequestedAt: ""
@@ -889,8 +911,10 @@ function applyAccessRequestReevaluationDecisionByDiscordId(discordId, action, { 
 
   let nextEntry = null;
   if (normalizedAction === "approve") {
+    const nowIso = new Date().toISOString();
     nextEntry = sanitizeAccessRequestEntry({
       ...entry,
+      decidedAt: nowIso,
       disclaimerDecision: ACCESS_DISCLAIMER_DECISION.NONE,
       disclaimerDecidedAt: "",
       disclaimerReevaluationRequestedAt: ""
@@ -4029,6 +4053,9 @@ function isDisclaimerAcceptanceRequired(user, accessRequestState = null) {
   if (status !== ACCESS_REQUEST_STATUS.APPROVED) {
     return false;
   }
+  if (isAccessRequestApprovalExpired(resolvedAccessState)) {
+    return false;
+  }
   return !isAccessRequestDisclaimerAccepted(resolvedAccessState);
 }
 
@@ -4043,6 +4070,9 @@ function isAuthorized(user, accessRequestState = null) {
   const resolvedAccessState = accessRequestState || getAccessRequestState(user.discordId);
   const status = normalizeAccessRequestStatus(resolvedAccessState.status);
   if (status !== ACCESS_REQUEST_STATUS.APPROVED) {
+    return false;
+  }
+  if (isAccessRequestApprovalExpired(resolvedAccessState)) {
     return false;
   }
   return isAccessRequestDisclaimerAccepted(resolvedAccessState);
@@ -5546,11 +5576,12 @@ app.post("/api/files/access-request", async (req, res) => {
   const reason = sanitizeAccessRequestReason(reasonRaw);
 
   const accessRequestState = getAccessRequestState(user.discordId);
+  const approvalExpired = isAccessRequestApprovalExpired(accessRequestState);
   if (isAuthorized(user, accessRequestState)) {
     res.status(409).json({ error: "Account is already authorized" });
     return;
   }
-  if (accessRequestState.status === ACCESS_REQUEST_STATUS.APPROVED) {
+  if (accessRequestState.status === ACCESS_REQUEST_STATUS.APPROVED && !approvalExpired) {
     res.status(409).json({ error: "Account is already approved" });
     return;
   }
@@ -5619,7 +5650,10 @@ app.post("/api/files/disclaimer-decision", (req, res) => {
   }
 
   const accessRequestState = getAccessRequestState(user.discordId);
-  if (normalizeAccessRequestStatus(accessRequestState.status) !== ACCESS_REQUEST_STATUS.APPROVED) {
+  if (
+    normalizeAccessRequestStatus(accessRequestState.status) !== ACCESS_REQUEST_STATUS.APPROVED
+    || isAccessRequestApprovalExpired(accessRequestState)
+  ) {
     res.status(409).json({ error: "Only approved applications can submit disclaimer decisions." });
     return;
   }
@@ -5666,7 +5700,10 @@ app.post("/api/files/disclaimer-reevaluation", async (req, res) => {
   }
 
   const accessRequestState = getAccessRequestState(user.discordId);
-  if (normalizeAccessRequestStatus(accessRequestState.status) !== ACCESS_REQUEST_STATUS.APPROVED) {
+  if (
+    normalizeAccessRequestStatus(accessRequestState.status) !== ACCESS_REQUEST_STATUS.APPROVED
+    || isAccessRequestApprovalExpired(accessRequestState)
+  ) {
     res.status(409).json({ error: "Only approved applications can submit reevaluation requests." });
     return;
   }
