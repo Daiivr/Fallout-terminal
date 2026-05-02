@@ -19,6 +19,11 @@ const SOURCE_URLS = {
   ]
 };
 const NUKACRYPT_GRAPHQL_URL = "https://api.nukacrypt.com/graphql";
+const STEAM_APP_ID = 1151340;
+const STEAM_CURRENT_PLAYERS_URL = `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${STEAM_APP_ID}`;
+const STEAMCHARTS_APP_URL = `https://steamcharts.com/app/${STEAM_APP_ID}`;
+const STEAMCHARTS_HISTORY_URL = `${STEAMCHARTS_APP_URL}/chart-data.json`;
+const PLAYER_COUNTS_CACHE_TTL_MS = 60 * 1000;
 const SILO_RESET_DAY_UTC = 4;
 const SILO_FINGERPRINT_VERSION = 3;
 
@@ -40,6 +45,11 @@ const MINERVA_LOCATION_MAP_BY_LOCATION = {
 const CYCLE_LOCATIONS = ["Foundation", "Crater", "Fort Atlas", "The Whitespring"];
 
 let cachedMinervaLists = null;
+let cachedPlayerCounts = {
+  value: null,
+  fetchedAt: 0,
+  promise: null
+};
 
 function proxied(url) {
   return `${PROXY_BASE}${encodeURIComponent(url)}`;
@@ -104,6 +114,20 @@ function parseOptionalPrice(value) {
 
   const price = Number(value);
   return Number.isFinite(price) ? price : null;
+}
+
+function parseIntegerText(value) {
+  const digits = String(value ?? "")
+    .replace(/,/g, "")
+    .replace(/[^\d-]/g, "")
+    .trim();
+
+  if (!digits) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(digits, 10);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function inferListNumber(items, lists) {
@@ -538,6 +562,156 @@ async function fetchTextFromCandidates(candidates, timeoutMs = 20000) {
   throw lastError;
 }
 
+async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 20000) {
+  const text = await fetchTextWithTimeout(url, options, timeoutMs);
+  return JSON.parse(String(text || "").replace(/^\uFEFF/, ""));
+}
+
+async function fetchOfficialSteamCurrentPlayers() {
+  const payload = await fetchJsonWithTimeout(
+    STEAM_CURRENT_PLAYERS_URL,
+    {
+      headers: {
+        accept: "application/json"
+      }
+    },
+    12000
+  );
+
+  const playerCount = parseIntegerText(payload?.response?.player_count);
+  if (playerCount == null) {
+    throw new Error("Steam player count response did not include a current player count.");
+  }
+
+  return playerCount;
+}
+
+function normalizeSteamChartsHistoryPoints(payload) {
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+
+  return payload
+    .map((point) => {
+      const timestampMs = Array.isArray(point) ? Number(point[0]) : NaN;
+      const playerCount = Array.isArray(point) ? parseIntegerText(point[1]) : null;
+      if (!Number.isFinite(timestampMs) || playerCount == null || playerCount < 0) {
+        return null;
+      }
+      return [Math.round(timestampMs), playerCount];
+    })
+    .filter(Boolean)
+    .sort((left, right) => left[0] - right[0]);
+}
+
+function buildSteamChartsHistorySummary(history = []) {
+  if (!Array.isArray(history) || !history.length) {
+    return {
+      playersNow: null,
+      peak24h: null,
+      peakAllTime: null,
+      capturedAt: null
+    };
+  }
+
+  const latestPoint = history[history.length - 1];
+  const latestTimestampMs = latestPoint[0];
+  const recentCutoffMs = latestTimestampMs - MS_DAY;
+  const last24h = history.filter((point) => point[0] >= recentCutoffMs);
+
+  return {
+    playersNow: latestPoint[1],
+    peak24h: (last24h.length ? last24h : history).reduce((maxValue, point) => Math.max(maxValue, point[1]), 0),
+    peakAllTime: history.reduce((maxValue, point) => Math.max(maxValue, point[1]), 0),
+    capturedAt: new Date(latestTimestampMs).toISOString()
+  };
+}
+
+async function fetchSteamChartsHistory() {
+  const payload = await fetchJsonWithTimeout(
+    STEAMCHARTS_HISTORY_URL,
+    {
+      headers: {
+        accept: "application/json,text/plain,*/*"
+      }
+    },
+    15000
+  );
+
+  const history = normalizeSteamChartsHistoryPoints(payload);
+  if (history.length < 2) {
+    throw new Error("SteamCharts history response did not contain enough telemetry points.");
+  }
+
+  return history;
+}
+
+function buildPlayerCountsResponse(payload, { includeHistory = false } = {}) {
+  if (includeHistory) {
+    return payload;
+  }
+
+  const response = { ...payload };
+  delete response.history;
+  return response;
+}
+
+async function fetchPlayerCounts({ force = false, includeHistory = false } = {}) {
+  const now = Date.now();
+  if (!force && cachedPlayerCounts.value && now - cachedPlayerCounts.fetchedAt < PLAYER_COUNTS_CACHE_TTL_MS) {
+    return buildPlayerCountsResponse(cachedPlayerCounts.value, { includeHistory });
+  }
+
+  if (cachedPlayerCounts.promise) {
+    return cachedPlayerCounts.promise.then((payload) => buildPlayerCountsResponse(payload, { includeHistory }));
+  }
+
+  cachedPlayerCounts.promise = (async () => {
+    const fetchedAt = new Date().toISOString();
+    const [officialCurrentResult, historyResult] = await Promise.allSettled([
+      fetchOfficialSteamCurrentPlayers(),
+      fetchSteamChartsHistory()
+    ]);
+
+    const officialCurrent = officialCurrentResult.status === "fulfilled"
+      ? officialCurrentResult.value
+      : null;
+    const history = historyResult.status === "fulfilled"
+      ? historyResult.value
+      : null;
+    const historySummary = history ? buildSteamChartsHistorySummary(history) : null;
+
+    if (officialCurrent == null && !historySummary) {
+      throw new Error("Unable to fetch Steam player telemetry right now.");
+    }
+
+    const payload = {
+      appId: STEAM_APP_ID,
+      scope: "steam_pc",
+      playersNow: officialCurrent ?? historySummary?.playersNow ?? null,
+      peak24h: historySummary?.peak24h ?? null,
+      peakAllTime: historySummary?.peakAllTime ?? null,
+      partial: !(officialCurrent != null && historySummary),
+      fetchedAt,
+      capturedAt: historySummary?.capturedAt || fetchedAt,
+      source: {
+        current: officialCurrent != null ? STEAM_CURRENT_PLAYERS_URL : "",
+        history: history ? STEAMCHARTS_HISTORY_URL : "",
+        peaks: history ? STEAMCHARTS_APP_URL : ""
+      },
+      history: history || []
+    };
+
+    cachedPlayerCounts.value = payload;
+    cachedPlayerCounts.fetchedAt = Date.now();
+    return payload;
+  })().finally(() => {
+    cachedPlayerCounts.promise = null;
+  });
+
+  return cachedPlayerCounts.promise.then((payload) => buildPlayerCountsResponse(payload, { includeHistory }));
+}
+
 async function fetchMinervaInfoData(lists = []) {
   const dateValue = new Date().toISOString().slice(0, 10);
   const directUrl = SOURCE_URLS.minervaInfoApi[0];
@@ -828,6 +1002,7 @@ async function fetchCurrentIntel(options = {}) {
 
 module.exports = {
   fetchMinervaIntel,
+  fetchPlayerCounts,
   fetchSiloIntel,
   fetchCurrentIntel,
   parseBethesdaRawDateTime

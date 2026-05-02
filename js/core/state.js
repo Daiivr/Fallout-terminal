@@ -79,6 +79,18 @@ const state = {
     data: null,
     requestId: 0
   },
+  classifiedPlayers: {
+    open: false,
+    loading: false,
+    error: "",
+    data: null,
+    history: [],
+    range: "48h",
+    chartPoints: [],
+    chartLayout: null,
+    hoverIndex: -1,
+    requestId: 0
+  },
   files: {
     me: null,
     list: [],

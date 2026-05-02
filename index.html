@@ -111,6 +111,87 @@
         </div>
       </div>
     </div>
+    <div id="classifiedPlayersOverlay" class="intel-bot-modal-overlay classified-player-modal-overlay" aria-hidden="true">
+      <div
+        id="classifiedPlayersCore"
+        class="intel-bot-modal-core classified-player-modal-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="classifiedPlayersTitle"
+        aria-describedby="classifiedPlayersBody"
+      >
+        <p id="classifiedPlayersBadge" class="intel-bot-modal-badge classified-player-modal-badge">STEAM TELEMETRY</p>
+        <h2 id="classifiedPlayersTitle" class="intel-bot-modal-title">FALLOUT 76 POPULATION SNAPSHOT</h2>
+        <p id="classifiedPlayersBody" class="intel-bot-modal-body">
+          Live Steam PC player telemetry for Fallout 76, formatted as a quick snapshot of current activity and peak concurrency.
+        </p>
+        <p id="classifiedPlayersMeta" class="classified-player-modal-meta">Last sync: --</p>
+        <p id="classifiedPlayersStatus" class="classified-player-modal-status" aria-live="polite">Syncing Steam telemetry...</p>
+        <section id="classifiedPlayersStats" class="classified-player-modal-stats" hidden>
+          <article class="classified-player-stat">
+            <p id="classifiedPlayersNowValue" class="classified-player-stat-value">--</p>
+            <p id="classifiedPlayersNowLabel" class="classified-player-stat-label">Players Right Now</p>
+          </article>
+          <article class="classified-player-stat">
+            <p id="classifiedPlayersPeak24hValue" class="classified-player-stat-value">--</p>
+            <p id="classifiedPlayersPeak24hLabel" class="classified-player-stat-label">24-Hour Peak</p>
+          </article>
+          <article class="classified-player-stat">
+            <p id="classifiedPlayersPeakAllTimeValue" class="classified-player-stat-value">--</p>
+            <p id="classifiedPlayersPeakAllTimeLabel" class="classified-player-stat-label">All-Time Peak</p>
+          </article>
+        </section>
+        <section id="classifiedPlayersChartPanel" class="classified-player-chart-panel" hidden>
+          <div class="classified-player-chart-top">
+            <p id="classifiedPlayersChartTitle" class="classified-player-chart-title">ACTIVITY TREND</p>
+            <div id="classifiedPlayersRangeControls" class="classified-player-range-controls" role="group" aria-label="Player history zoom">
+              <button class="classified-player-range-btn" type="button" data-player-range="48h">48H</button>
+              <button class="classified-player-range-btn" type="button" data-player-range="1w">1W</button>
+              <button class="classified-player-range-btn" type="button" data-player-range="1m">1M</button>
+              <button class="classified-player-range-btn" type="button" data-player-range="3m">3M</button>
+              <button class="classified-player-range-btn" type="button" data-player-range="6m">6M</button>
+              <button class="classified-player-range-btn" type="button" data-player-range="1y">1Y</button>
+              <button class="classified-player-range-btn" type="button" data-player-range="max">MAX</button>
+            </div>
+          </div>
+          <div id="classifiedPlayersChartFrame" class="classified-player-chart-frame">
+            <svg
+              id="classifiedPlayersChartSvg"
+              class="classified-player-chart-svg"
+              viewBox="0 0 640 250"
+              role="img"
+              aria-label="Fallout 76 Steam player history chart"
+              preserveAspectRatio="none"
+            ></svg>
+            <div id="classifiedPlayersChartInteractive" class="classified-player-chart-interactive" hidden aria-hidden="true">
+              <div id="classifiedPlayersChartCrosshair" class="classified-player-chart-crosshair" hidden></div>
+              <div id="classifiedPlayersChartMarker" class="classified-player-chart-marker" hidden></div>
+              <div id="classifiedPlayersChartTooltip" class="classified-player-chart-tooltip" hidden>
+                <p id="classifiedPlayersChartTooltipDate" class="classified-player-chart-tooltip-date"></p>
+                <p id="classifiedPlayersChartTooltipValue" class="classified-player-chart-tooltip-value"></p>
+              </div>
+            </div>
+            <p id="classifiedPlayersChartEmpty" class="classified-player-chart-empty" hidden>No chart data available.</p>
+          </div>
+        </section>
+        <p id="classifiedPlayersNote" class="classified-player-modal-note">
+          Steam PC counts only. Console and Microsoft Store populations are not included in this telemetry.
+        </p>
+        <div class="intel-bot-modal-actions classified-player-modal-actions">
+          <a
+            id="classifiedPlayersSourceLink"
+            class="files-btn intel-bot-modal-cancel"
+            href="https://steamcharts.com/app/1151340"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            OPEN SOURCE PAGE
+          </a>
+          <button id="classifiedPlayersRefreshBtn" class="files-btn classified-player-modal-refresh" type="button">REFRESH</button>
+          <button id="classifiedPlayersCloseBtn" class="files-btn intel-bot-modal-confirm" type="button">CLOSE</button>
+        </div>
+      </div>
+    </div>
     <div id="hackOverlay" class="hack-overlay" aria-hidden="true">
       <div class="hack-core">
         <div class="hack-frame">
@@ -1512,7 +1593,10 @@
             Unauthorized eyes detected. This archive is restricted to overseer-level clearances.
           </p>
         </div>
-        <button id="classifiedBackBtn" class="classified-back" type="button">RETURN TO INTEL</button>
+        <div class="classified-hero-actions">
+          <button id="classifiedBackBtn" class="classified-back" type="button">RETURN TO INTEL</button>
+          <button id="classifiedPlayersBtn" class="classified-back classified-back-secondary" type="button">LIVE PLAYERS</button>
+        </div>
       </div>
       <div class="classified-layout">
         <aside class="classified-sidebar">

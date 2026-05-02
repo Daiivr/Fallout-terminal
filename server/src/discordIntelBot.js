@@ -33,6 +33,7 @@ const WIKI_BASE = "https://fallout.fandom.com";
 const MINERVA_LISTS_FILE = "data/minerva-lists.json";
 const MINERVA_DETAIL_FALLBACK_FILE = "data/minerva-detail-fallback.json";
 const MINERVA_DETAIL_FALLBACK_IMAGE = "assets/images/minerva-plan-fallback.png";
+const SILO_EMBED_THUMBNAIL_IMAGE = "assets/images/silo-hacker.gif";
 const MINERVA_ITEM_SELECT_PREFIX = "minerva-item-select";
 const WELCOME_LANGUAGE_SELECT_ID = "welcome-language-select";
 const LANGUAGE_OPTIONS = new Set(["en", "es"]);
@@ -1597,6 +1598,7 @@ function createDiscordIntelBot(options = {}) {
   function buildSiloEmbed(data, lang) {
     const homeUrl = buildPageUrl(publicBaseUrl, "/");
     const dossierUrl = buildPageUrl(publicBaseUrl, "/silos/");
+    const thumbnailUrl = buildAssetUrl(publicBaseUrl, SILO_EMBED_THUMBNAIL_IMAGE);
     const resetTarget = data?.resetTargetUtc instanceof Date ? data.resetTargetUtc : null;
     const openTerminalValue = homeUrl
       ? `[${t(lang, "silo_open_terminal")}](${homeUrl})`
@@ -1644,6 +1646,9 @@ function createDiscordIntelBot(options = {}) {
 
     if (homeUrl) {
       embed.setURL(homeUrl);
+    }
+    if (thumbnailUrl) {
+      embed.setThumbnail(thumbnailUrl);
     }
 
     return embed;

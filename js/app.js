@@ -1021,6 +1021,7 @@ function hideDropsPage() {
 
 function closeClassifiedPageForNavigation() {
   showClassifiedLoadOverlay(false);
+  closeClassifiedPlayerCountsModal();
   document.body.classList.remove("is-classified");
   setClassifiedSearchOpen(false, { clearQuery: true });
   if (elements.classifiedPage) {
@@ -1364,6 +1365,20 @@ function formatFilesBotAdminNumber(value) {
     return new Intl.NumberFormat(locale).format(numericValue);
   } catch {
     return String(numericValue);
+  }
+}
+
+function formatTelemetryNumber(value, fallback = "--") {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return fallback;
+  }
+
+  try {
+    const locale = state.lang === "es" ? "es-ES" : "en-US";
+    return new Intl.NumberFormat(locale).format(Math.round(numericValue));
+  } catch {
+    return String(Math.round(numericValue));
   }
 }
 
@@ -13703,6 +13718,662 @@ async function ensureClassifiedMinervaArchive() {
   setClassifiedSearchOpen(state.classifiedSearch.open);
 }
 
+const CLASSIFIED_PLAYER_HISTORY_RANGES = [
+  { key: "48h", label: "48H", offsetUnit: "hour", offsetCount: 48 },
+  { key: "1w", label: "1W", offsetUnit: "day", offsetCount: 7 },
+  { key: "1m", label: "1M", offsetUnit: "month", offsetCount: 1 },
+  { key: "3m", label: "3M", offsetUnit: "month", offsetCount: 3 },
+  { key: "6m", label: "6M", offsetUnit: "month", offsetCount: 6 },
+  { key: "1y", label: "1Y", offsetUnit: "year", offsetCount: 1 },
+  { key: "max", label: "MAX", offsetUnit: null, offsetCount: 0 }
+];
+
+function normalizeClassifiedPlayerRange(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return CLASSIFIED_PLAYER_HISTORY_RANGES.some((range) => range.key === normalized)
+    ? normalized
+    : "48h";
+}
+
+function normalizeClassifiedPlayerCountsPayload(payload = {}) {
+  const parseCount = (value) => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) && numericValue >= 0 ? Math.round(numericValue) : null;
+  };
+  const source = payload && typeof payload.source === "object" ? payload.source : {};
+  const history = Array.isArray(payload.history)
+    ? payload.history
+      .map((point) => {
+        const timestampMs = Array.isArray(point) ? Number(point[0]) : NaN;
+        const playerCount = Array.isArray(point) ? parseCount(point[1]) : null;
+        if (!Number.isFinite(timestampMs) || playerCount == null) {
+          return null;
+        }
+        return [Math.round(timestampMs), playerCount];
+      })
+      .filter(Boolean)
+      .sort((left, right) => left[0] - right[0])
+    : [];
+
+  return {
+    playersNow: parseCount(payload.playersNow),
+    peak24h: parseCount(payload.peak24h),
+    peakAllTime: parseCount(payload.peakAllTime),
+    partial: Boolean(payload.partial),
+    fetchedAt: String(payload.fetchedAt || "").trim(),
+    capturedAt: String(payload.capturedAt || "").trim(),
+    sourceCurrent: String(source.current || "").trim(),
+    sourceHistory: String(source.history || "").trim(),
+    sourcePeaks: String(source.peaks || "").trim(),
+    history
+  };
+}
+
+function escapeSvgText(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function getClassifiedPlayerRangeConfig(rangeKey = state.classifiedPlayers.range) {
+  const normalized = normalizeClassifiedPlayerRange(rangeKey);
+  return CLASSIFIED_PLAYER_HISTORY_RANGES.find((range) => range.key === normalized) || CLASSIFIED_PLAYER_HISTORY_RANGES[0];
+}
+
+function subtractClassifiedPlayerRange(timestampMs, rangeKey = state.classifiedPlayers.range) {
+  const range = getClassifiedPlayerRangeConfig(rangeKey);
+  if (!range.offsetUnit || !range.offsetCount) {
+    return null;
+  }
+
+  const date = new Date(timestampMs);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  switch (range.offsetUnit) {
+    case "hour":
+      date.setHours(date.getHours() - range.offsetCount);
+      break;
+    case "day":
+      date.setDate(date.getDate() - range.offsetCount);
+      break;
+    case "month":
+      date.setMonth(date.getMonth() - range.offsetCount);
+      break;
+    case "year":
+      date.setFullYear(date.getFullYear() - range.offsetCount);
+      break;
+    default:
+      return null;
+  }
+
+  return date.getTime();
+}
+
+function getFilteredClassifiedPlayerHistory(history = [], rangeKey = state.classifiedPlayers.range) {
+  const safeHistory = Array.isArray(history) ? history : [];
+  if (safeHistory.length < 2) {
+    return [];
+  }
+
+  const latestTimestampMs = safeHistory[safeHistory.length - 1][0];
+  const cutoffMs = subtractClassifiedPlayerRange(latestTimestampMs, rangeKey);
+  if (!Number.isFinite(cutoffMs)) {
+    return safeHistory;
+  }
+
+  const filtered = safeHistory.filter((point) => point[0] >= cutoffMs);
+  if (filtered.length >= 2) {
+    return filtered;
+  }
+
+  return safeHistory.slice(Math.max(0, safeHistory.length - 48));
+}
+
+function downsampleClassifiedPlayerHistory(points = [], maxPoints = 220) {
+  const safePoints = Array.isArray(points) ? points : [];
+  if (safePoints.length <= 900) {
+    return safePoints;
+  }
+  if (safePoints.length <= maxPoints) {
+    return safePoints;
+  }
+
+  const sampled = [];
+  const step = (safePoints.length - 1) / (maxPoints - 1);
+  for (let index = 0; index < maxPoints; index += 1) {
+    const point = safePoints[Math.round(index * step)];
+    if (!point) {
+      continue;
+    }
+    const lastPoint = sampled[sampled.length - 1];
+    if (!lastPoint || lastPoint[0] !== point[0]) {
+      sampled.push(point);
+    }
+  }
+
+  const finalPoint = safePoints[safePoints.length - 1];
+  if (sampled[sampled.length - 1]?.[0] !== finalPoint?.[0]) {
+    sampled.push(finalPoint);
+  }
+  return sampled;
+}
+
+function getNiceChartMax(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue <= 0) {
+    return 10;
+  }
+
+  const roughInterval = numericValue / 4;
+  const magnitude = 10 ** Math.floor(Math.log10(roughInterval));
+  const normalized = roughInterval / magnitude;
+  const steps = [1, 2, 2.5, 5, 10];
+  const step = steps.find((candidate) => normalized <= candidate) || 10;
+  const interval = step * magnitude;
+  return Math.ceil(numericValue / interval) * interval;
+}
+
+function buildSmoothClassifiedPlayerPath(points = []) {
+  const safePoints = Array.isArray(points) ? points : [];
+  if (safePoints.length < 2) {
+    return "";
+  }
+  if (safePoints.length === 2) {
+    return safePoints
+      .map((point, index) => `${index ? "L" : "M"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+      .join(" ");
+  }
+
+  let path = `M ${safePoints[0].x.toFixed(2)} ${safePoints[0].y.toFixed(2)}`;
+  for (let index = 0; index < safePoints.length - 1; index += 1) {
+    const previous = safePoints[index - 1] || safePoints[index];
+    const current = safePoints[index];
+    const next = safePoints[index + 1];
+    const afterNext = safePoints[index + 2] || next;
+    const controlPoint1X = current.x + (next.x - previous.x) / 6;
+    const controlPoint1Y = current.y + (next.y - previous.y) / 6;
+    const controlPoint2X = next.x - (afterNext.x - current.x) / 6;
+    const controlPoint2Y = next.y - (afterNext.y - current.y) / 6;
+    path += ` C ${controlPoint1X.toFixed(2)} ${controlPoint1Y.toFixed(2)}, ${controlPoint2X.toFixed(2)} ${controlPoint2Y.toFixed(2)}, ${next.x.toFixed(2)} ${next.y.toFixed(2)}`;
+  }
+  return path;
+}
+
+function formatClassifiedPlayerChartTick(timestampMs, rangeKey = state.classifiedPlayers.range) {
+  const date = new Date(timestampMs);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const locale = state.lang === "es" ? "es-ES" : "en-US";
+  let options;
+  switch (normalizeClassifiedPlayerRange(rangeKey)) {
+    case "48h":
+      options = { day: "2-digit", month: "short", hour: "2-digit" };
+      break;
+    case "1w":
+    case "1m":
+    case "3m":
+      options = { day: "2-digit", month: "short" };
+      break;
+    case "6m":
+    case "1y":
+      options = { month: "short", year: "2-digit" };
+      break;
+    default:
+      options = { year: "numeric" };
+      break;
+  }
+
+  return new Intl.DateTimeFormat(locale, options).format(date).replace(/,/g, "");
+}
+
+function formatClassifiedPlayerTooltipTimestamp(timestampMs) {
+  const date = new Date(timestampMs);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const locale = state.lang === "es" ? "es-ES" : "en-US";
+  const rangeKey = normalizeClassifiedPlayerRange(state.classifiedPlayers.range);
+  const options = {
+    weekday: "long",
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  };
+
+  if (rangeKey === "6m" || rangeKey === "1y" || rangeKey === "max") {
+    options.year = "numeric";
+  }
+
+  return new Intl.DateTimeFormat(locale, options).format(date).replace(/,/g, "");
+}
+
+function buildClassifiedPlayerChartSvg(points = [], rangeKey = state.classifiedPlayers.range) {
+  const sampledPoints = downsampleClassifiedPlayerHistory(points, 220);
+  if (sampledPoints.length < 2) {
+    return {
+      svg: "",
+      points: [],
+      layout: null
+    };
+  }
+
+  const viewWidth = 640;
+  const viewHeight = 250;
+  const padTop = 16;
+  const padRight = 56;
+  const padBottom = 34;
+  const padLeft = 12;
+  const chartWidth = viewWidth - padLeft - padRight;
+  const chartHeight = viewHeight - padTop - padBottom;
+  const minTimestampMs = sampledPoints[0][0];
+  const maxTimestampMs = sampledPoints[sampledPoints.length - 1][0];
+  const domainMs = Math.max(1, maxTimestampMs - minTimestampMs);
+  const maxValue = Math.max(...sampledPoints.map((point) => point[1]), 1);
+  const yMax = getNiceChartMax(maxValue);
+  const tickCount = 5;
+
+  const scaleX = (timestampMs) => padLeft + ((timestampMs - minTimestampMs) / domainMs) * chartWidth;
+  const scaleY = (value) => padTop + chartHeight - (value / yMax) * chartHeight;
+
+  const chartPoints = sampledPoints.map((point) => ({
+    timestampMs: point[0],
+    value: point[1],
+    x: Number(scaleX(point[0]).toFixed(2)),
+    y: Number(scaleY(point[1]).toFixed(2))
+  }));
+
+  const linePath = buildSmoothClassifiedPlayerPath(chartPoints);
+  const firstPoint = chartPoints[0];
+  const lastPoint = chartPoints[chartPoints.length - 1];
+  const areaPath = `${linePath} L ${lastPoint.x.toFixed(2)} ${(padTop + chartHeight).toFixed(2)} L ${firstPoint.x.toFixed(2)} ${(padTop + chartHeight).toFixed(2)} Z`;
+
+  const horizontalGrid = Array.from({ length: tickCount }, (_unused, index) => {
+    const ratio = index / (tickCount - 1);
+    const y = padTop + chartHeight - ratio * chartHeight;
+    const value = Math.round(ratio * yMax);
+    return `
+      <line class="classified-player-chart-grid" x1="${padLeft}" y1="${y.toFixed(2)}" x2="${(padLeft + chartWidth).toFixed(2)}" y2="${y.toFixed(2)}"></line>
+      <text class="classified-player-chart-axis-label is-y" x="${(padLeft + chartWidth + 10).toFixed(2)}" y="${(y + 4).toFixed(2)}">${escapeSvgText(formatTelemetryNumber(value, "0"))}</text>
+    `;
+  }).join("");
+
+  const verticalGrid = Array.from({ length: tickCount }, (_unused, index) => {
+    const ratio = index / (tickCount - 1);
+    const timestampMs = minTimestampMs + ratio * domainMs;
+    const x = padLeft + ratio * chartWidth;
+    return `
+      <line class="classified-player-chart-grid is-vertical" x1="${x.toFixed(2)}" y1="${padTop}" x2="${x.toFixed(2)}" y2="${(padTop + chartHeight).toFixed(2)}"></line>
+      <text class="classified-player-chart-axis-label is-x" x="${x.toFixed(2)}" y="${(viewHeight - 8).toFixed(2)}">${escapeSvgText(formatClassifiedPlayerChartTick(timestampMs, rangeKey))}</text>
+    `;
+  }).join("");
+
+  return {
+    svg: `
+      <defs>
+        <linearGradient id="classifiedPlayersChartAreaGradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#c5ff2c" stop-opacity="0.28"></stop>
+          <stop offset="100%" stop-color="#c5ff2c" stop-opacity="0.02"></stop>
+        </linearGradient>
+        <filter id="classifiedPlayersChartGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2.6" result="blur"></feGaussianBlur>
+          <feMerge>
+            <feMergeNode in="blur"></feMergeNode>
+            <feMergeNode in="SourceGraphic"></feMergeNode>
+          </feMerge>
+        </filter>
+      </defs>
+      ${horizontalGrid}
+      ${verticalGrid}
+      <path class="classified-player-chart-area" d="${areaPath}"></path>
+      <path class="classified-player-chart-line-glow" d="${linePath}" filter="url(#classifiedPlayersChartGlow)"></path>
+      <path class="classified-player-chart-line" d="${linePath}"></path>
+      <circle class="classified-player-chart-point" cx="${lastPoint.x.toFixed(2)}" cy="${lastPoint.y.toFixed(2)}" r="4.2"></circle>
+    `,
+    points: chartPoints,
+    layout: {
+      viewWidth,
+      viewHeight,
+      padTop,
+      padRight,
+      padBottom,
+      padLeft,
+      chartWidth,
+      chartHeight
+    }
+  };
+}
+
+function hideClassifiedPlayerChartHover() {
+  state.classifiedPlayers.hoverIndex = -1;
+
+  if (elements.classifiedPlayersChartInteractive) {
+    elements.classifiedPlayersChartInteractive.hidden = true;
+    elements.classifiedPlayersChartInteractive.setAttribute("aria-hidden", "true");
+  }
+  if (elements.classifiedPlayersChartCrosshair) {
+    elements.classifiedPlayersChartCrosshair.hidden = true;
+  }
+  if (elements.classifiedPlayersChartMarker) {
+    elements.classifiedPlayersChartMarker.hidden = true;
+  }
+  if (elements.classifiedPlayersChartTooltip) {
+    elements.classifiedPlayersChartTooltip.hidden = true;
+  }
+}
+
+function renderClassifiedPlayerChartHover(index) {
+  const chartPoints = Array.isArray(state.classifiedPlayers.chartPoints)
+    ? state.classifiedPlayers.chartPoints
+    : [];
+  const chartLayout = state.classifiedPlayers.chartLayout;
+  const frame = elements.classifiedPlayersChartFrame;
+  const svg = elements.classifiedPlayersChartSvg;
+  const interactive = elements.classifiedPlayersChartInteractive;
+  const crosshair = elements.classifiedPlayersChartCrosshair;
+  const marker = elements.classifiedPlayersChartMarker;
+  const tooltip = elements.classifiedPlayersChartTooltip;
+
+  if (
+    !chartLayout
+    || !frame
+    || !svg
+    || !interactive
+    || !crosshair
+    || !marker
+    || !tooltip
+    || index < 0
+    || index >= chartPoints.length
+  ) {
+    hideClassifiedPlayerChartHover();
+    return;
+  }
+
+  const point = chartPoints[index];
+  const svgRect = svg.getBoundingClientRect();
+  const frameRect = frame.getBoundingClientRect();
+  if (svgRect.width <= 0 || svgRect.height <= 0 || frameRect.width <= 0 || frameRect.height <= 0) {
+    hideClassifiedPlayerChartHover();
+    return;
+  }
+
+  state.classifiedPlayers.hoverIndex = index;
+  interactive.hidden = false;
+  interactive.setAttribute("aria-hidden", "false");
+
+  const pointLeftPx = (point.x / chartLayout.viewWidth) * svgRect.width;
+  const pointTopPx = (point.y / chartLayout.viewHeight) * svgRect.height;
+  const plotTopPx = (chartLayout.padTop / chartLayout.viewHeight) * svgRect.height;
+  const plotHeightPx = (chartLayout.chartHeight / chartLayout.viewHeight) * svgRect.height;
+
+  crosshair.hidden = false;
+  crosshair.style.left = `${pointLeftPx}px`;
+  crosshair.style.top = `${plotTopPx}px`;
+  crosshair.style.height = `${plotHeightPx}px`;
+
+  marker.hidden = false;
+  marker.style.left = `${pointLeftPx}px`;
+  marker.style.top = `${pointTopPx}px`;
+
+  if (elements.classifiedPlayersChartTooltipDate) {
+    elements.classifiedPlayersChartTooltipDate.textContent = formatClassifiedPlayerTooltipTimestamp(point.timestampMs);
+  }
+  if (elements.classifiedPlayersChartTooltipValue) {
+    elements.classifiedPlayersChartTooltipValue.textContent = `${t("classified_players_tooltip_players")}: ${formatTelemetryNumber(point.value, "0")}`;
+  }
+
+  tooltip.hidden = false;
+  tooltip.style.left = "0px";
+  tooltip.style.top = "0px";
+
+  const gutterPx = 10;
+  const tooltipWidth = tooltip.offsetWidth;
+  const tooltipHeight = tooltip.offsetHeight;
+  let tooltipLeftPx = pointLeftPx + 16;
+  if (tooltipLeftPx + tooltipWidth > frameRect.width - gutterPx) {
+    tooltipLeftPx = pointLeftPx - tooltipWidth - 16;
+  }
+  tooltipLeftPx = Math.max(gutterPx, Math.min(tooltipLeftPx, frameRect.width - tooltipWidth - gutterPx));
+
+  let tooltipTopPx = pointTopPx - tooltipHeight - 16;
+  if (tooltipTopPx < gutterPx) {
+    tooltipTopPx = Math.min(frameRect.height - tooltipHeight - gutterPx, pointTopPx + 16);
+  }
+  tooltipTopPx = Math.max(gutterPx, tooltipTopPx);
+
+  tooltip.style.left = `${tooltipLeftPx}px`;
+  tooltip.style.top = `${tooltipTopPx}px`;
+}
+
+function updateClassifiedPlayerChartHover(clientX) {
+  const chartPoints = Array.isArray(state.classifiedPlayers.chartPoints)
+    ? state.classifiedPlayers.chartPoints
+    : [];
+  const chartLayout = state.classifiedPlayers.chartLayout;
+  const svg = elements.classifiedPlayersChartSvg;
+  if (!chartLayout || !svg || chartPoints.length < 2 || !Number.isFinite(clientX)) {
+    hideClassifiedPlayerChartHover();
+    return;
+  }
+
+  const svgRect = svg.getBoundingClientRect();
+  if (svgRect.width <= 0) {
+    hideClassifiedPlayerChartHover();
+    return;
+  }
+
+  const pointerOffsetPx = Math.max(0, Math.min(clientX - svgRect.left, svgRect.width));
+  const targetX = (pointerOffsetPx / svgRect.width) * chartLayout.viewWidth;
+  let nearestIndex = 0;
+  let nearestDistance = Infinity;
+  for (let index = 0; index < chartPoints.length; index += 1) {
+    const distance = Math.abs(chartPoints[index].x - targetX);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestIndex = index;
+    }
+  }
+
+  renderClassifiedPlayerChartHover(nearestIndex);
+}
+
+function renderClassifiedPlayerHistoryChart() {
+  const history = Array.isArray(state.classifiedPlayers.history) ? state.classifiedPlayers.history : [];
+  const filteredHistory = getFilteredClassifiedPlayerHistory(history, state.classifiedPlayers.range);
+  const hasHistory = filteredHistory.length >= 2;
+  const shouldShowPanel = hasHistory || Boolean(state.classifiedPlayers.error || state.classifiedPlayers.data);
+  let chartModel = {
+    svg: "",
+    points: [],
+    layout: null
+  };
+
+  if (hasHistory) {
+    chartModel = buildClassifiedPlayerChartSvg(filteredHistory, state.classifiedPlayers.range);
+  }
+
+  state.classifiedPlayers.chartPoints = chartModel.points;
+  state.classifiedPlayers.chartLayout = chartModel.layout;
+  hideClassifiedPlayerChartHover();
+
+  if (elements.classifiedPlayersChartTitle) {
+    elements.classifiedPlayersChartTitle.textContent = t("classified_players_chart_title");
+  }
+  if (elements.classifiedPlayersChartPanel) {
+    elements.classifiedPlayersChartPanel.hidden = !shouldShowPanel;
+  }
+  if (elements.classifiedPlayersChartEmpty) {
+    elements.classifiedPlayersChartEmpty.hidden = hasHistory;
+    elements.classifiedPlayersChartEmpty.textContent = t("classified_players_chart_empty");
+  }
+  if (elements.classifiedPlayersRangeButtons?.length) {
+    for (const button of elements.classifiedPlayersRangeButtons) {
+      const rangeKey = normalizeClassifiedPlayerRange(button.dataset.playerRange || "");
+      const isActive = rangeKey === normalizeClassifiedPlayerRange(state.classifiedPlayers.range);
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      button.disabled = !hasHistory;
+    }
+  }
+  if (elements.classifiedPlayersChartSvg) {
+    elements.classifiedPlayersChartSvg.innerHTML = chartModel.svg;
+  }
+}
+
+function renderClassifiedPlayerCountsModal() {
+  const modalState = state.classifiedPlayers;
+  const isOpen = Boolean(modalState.open);
+  const hasData = Boolean(modalState.data);
+  const sourceHref = modalState.data?.sourcePeaks
+    || modalState.data?.sourceHistory
+    || modalState.data?.sourceCurrent
+    || "https://steamcharts.com/app/1151340";
+
+  if (elements.classifiedPlayersBtn) {
+    elements.classifiedPlayersBtn.textContent = t("classified_players_button");
+  }
+
+  if (!elements.classifiedPlayersOverlay) {
+    state.classifiedPlayers.open = false;
+    return;
+  }
+
+  if (elements.classifiedPlayersBadge) {
+    elements.classifiedPlayersBadge.textContent = t("classified_players_badge");
+  }
+  if (elements.classifiedPlayersTitle) {
+    elements.classifiedPlayersTitle.textContent = t("classified_players_title");
+  }
+  if (elements.classifiedPlayersBody) {
+    elements.classifiedPlayersBody.textContent = t("classified_players_body");
+  }
+  if (elements.classifiedPlayersMeta) {
+    elements.classifiedPlayersMeta.textContent = hasData && modalState.data?.fetchedAt
+      ? t("classified_players_meta_updated", {
+        time: formatFileDateTime(modalState.data.fetchedAt)
+      })
+      : t("classified_players_meta_loading");
+  }
+  if (elements.classifiedPlayersNowValue) {
+    elements.classifiedPlayersNowValue.textContent = formatTelemetryNumber(modalState.data?.playersNow);
+  }
+  if (elements.classifiedPlayersPeak24hValue) {
+    elements.classifiedPlayersPeak24hValue.textContent = formatTelemetryNumber(modalState.data?.peak24h);
+  }
+  if (elements.classifiedPlayersPeakAllTimeValue) {
+    elements.classifiedPlayersPeakAllTimeValue.textContent = formatTelemetryNumber(modalState.data?.peakAllTime);
+  }
+  if (elements.classifiedPlayersNowLabel) {
+    elements.classifiedPlayersNowLabel.textContent = t("classified_players_now_label");
+  }
+  if (elements.classifiedPlayersPeak24hLabel) {
+    elements.classifiedPlayersPeak24hLabel.textContent = t("classified_players_peak_24h_label");
+  }
+  if (elements.classifiedPlayersPeakAllTimeLabel) {
+    elements.classifiedPlayersPeakAllTimeLabel.textContent = t("classified_players_peak_all_label");
+  }
+  if (elements.classifiedPlayersStats) {
+    elements.classifiedPlayersStats.hidden = !hasData;
+  }
+  renderClassifiedPlayerHistoryChart();
+  if (elements.classifiedPlayersNote) {
+    elements.classifiedPlayersNote.textContent = t("classified_players_note");
+  }
+  if (elements.classifiedPlayersSourceLink) {
+    elements.classifiedPlayersSourceLink.textContent = t("classified_players_source");
+    elements.classifiedPlayersSourceLink.href = sourceHref;
+  }
+  if (elements.classifiedPlayersRefreshBtn) {
+    elements.classifiedPlayersRefreshBtn.textContent = modalState.loading
+      ? t("classified_players_refreshing")
+      : t("classified_players_refresh");
+    elements.classifiedPlayersRefreshBtn.disabled = Boolean(modalState.loading);
+  }
+  if (elements.classifiedPlayersCloseBtn) {
+    elements.classifiedPlayersCloseBtn.textContent = t("classified_players_close");
+  }
+  if (elements.classifiedPlayersStatus) {
+    let statusText = "";
+    if (modalState.loading) {
+      statusText = t("classified_players_loading");
+    } else if (modalState.error) {
+      statusText = modalState.error;
+    } else if (hasData && modalState.data?.partial) {
+      statusText = t("classified_players_partial");
+    }
+
+    elements.classifiedPlayersStatus.hidden = !statusText;
+    elements.classifiedPlayersStatus.textContent = statusText || t("classified_players_loading");
+  }
+
+  elements.classifiedPlayersOverlay.classList.toggle("is-active", isOpen);
+  elements.classifiedPlayersOverlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
+}
+
+function closeClassifiedPlayerCountsModal() {
+  state.classifiedPlayers.open = false;
+  hideClassifiedPlayerChartHover();
+  renderClassifiedPlayerCountsModal();
+}
+
+async function fetchClassifiedPlayerCounts({ force = false } = {}) {
+  const requestId = state.classifiedPlayers.requestId + 1;
+  state.classifiedPlayers.requestId = requestId;
+  state.classifiedPlayers.loading = true;
+  state.classifiedPlayers.error = "";
+  renderClassifiedPlayerCountsModal();
+
+  try {
+    const params = new URLSearchParams({ history: "1" });
+    if (force) {
+      params.set("force", "1");
+    }
+    const requestUrl = `${PLAYER_COUNTS_API_URL}?${params.toString()}`;
+    const payload = await requestJson(requestUrl, {
+      method: "GET",
+      cache: "no-store"
+    });
+    if (state.classifiedPlayers.requestId !== requestId) {
+      return;
+    }
+
+    const normalized = normalizeClassifiedPlayerCountsPayload(payload);
+    if (normalized.playersNow == null && normalized.peak24h == null && normalized.peakAllTime == null) {
+      throw new Error("Missing player telemetry values.");
+    }
+
+    state.classifiedPlayers.data = normalized;
+    state.classifiedPlayers.history = normalized.history;
+    state.classifiedPlayers.range = normalizeClassifiedPlayerRange(state.classifiedPlayers.range);
+    state.classifiedPlayers.loading = false;
+    state.classifiedPlayers.error = "";
+    renderClassifiedPlayerCountsModal();
+  } catch (error) {
+    if (state.classifiedPlayers.requestId !== requestId) {
+      return;
+    }
+
+    state.classifiedPlayers.loading = false;
+    state.classifiedPlayers.error = t("classified_players_error");
+    if (force) {
+      state.classifiedPlayers.data = state.classifiedPlayers.data || null;
+    }
+    renderClassifiedPlayerCountsModal();
+  }
+}
+
+async function openClassifiedPlayerCountsModal() {
+  state.classifiedPlayers.open = true;
+  renderClassifiedPlayerCountsModal();
+  void fetchClassifiedPlayerCounts();
+}
+
 function showClassifiedPage({ updateHash = true } = {}) {
   closeIntelBotInviteModal();
   if (!state.easterEgg.unlocked && !state.easterEgg.hack?.solved) {
@@ -15541,6 +16212,7 @@ function applyLanguage(lang, persist = true) {
   elements.classifiedTitle.textContent = t("classified_title");
   elements.classifiedWarning.textContent = t("classified_warning");
   elements.classifiedBackBtn.textContent = t("classified_back");
+  elements.classifiedPlayersBtn.textContent = t("classified_players_button");
   elements.classifiedCard1Title.textContent = t("classified_card1_title");
   elements.classifiedCard1Body.textContent = t("classified_card1_body");
   elements.classifiedCard2Title.textContent = t("classified_card2_title");
@@ -15553,6 +16225,7 @@ function applyLanguage(lang, persist = true) {
   elements.classifiedSearchInput.placeholder = t("classified_search_placeholder");
   elements.classifiedSearchHint.textContent = t("classified_search_hint");
   setClassifiedSearchOpen(state.classifiedSearch.open);
+  renderClassifiedPlayerCountsModal();
   if (elements.classifiedInlineStatus && !state.classifiedDetail.open) {
     elements.classifiedInlineStatus.textContent = t("minerva_detail_loading");
   }
@@ -16107,6 +16780,7 @@ async function startBootSequence() {
 function wireEvents() {
   const hackInteractiveRoot = elements.hackOverlay?.querySelector(".hack-core") || null;
   const intelBotInviteRoot = elements.intelBotInviteCore || null;
+  const classifiedPlayersModalRoot = elements.classifiedPlayersCore || null;
   const filesBotAdminLeaveModalRoot = elements.filesBotAdminLeaveOverlay?.querySelector(".files-bot-admin-leave-core") || null;
   const filesBotAdminDiagnosticsModalRoot = elements.filesBotAdminDiagnosticsOverlay?.querySelector(".files-bot-admin-diagnostics-core") || null;
   const filesBotAdminServerModalRoot = elements.filesBotAdminServerOverlay?.querySelector(".files-bot-admin-server-core") || null;
@@ -16123,6 +16797,12 @@ function wireEvents() {
     }
     if (document.body.classList.contains("is-classified-loading") && elements.classifiedLoadOverlay?.classList.contains("is-active")) {
       return true;
+    }
+    if (elements.classifiedPlayersOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node) || !(classifiedPlayersModalRoot instanceof Node)) {
+        return true;
+      }
+      return !classifiedPlayersModalRoot.contains(target);
     }
     if (elements.intelBotInviteOverlay?.classList.contains("is-active")) {
       if (!(target instanceof Node) || !(intelBotInviteRoot instanceof Node)) {
@@ -16286,6 +16966,32 @@ function wireEvents() {
   elements.intelBotInviteOverlay?.addEventListener("click", (event) => {
     if (event.target === elements.intelBotInviteOverlay) {
       closeIntelBotInviteModal();
+    }
+  });
+  elements.classifiedPlayersBtn?.addEventListener("click", () => {
+    void openClassifiedPlayerCountsModal();
+  });
+  elements.classifiedPlayersRefreshBtn?.addEventListener("click", () => {
+    void fetchClassifiedPlayerCounts({ force: true });
+  });
+  elements.classifiedPlayersRangeButtons?.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.classifiedPlayers.range = normalizeClassifiedPlayerRange(button.dataset.playerRange || "");
+      renderClassifiedPlayerCountsModal();
+    });
+  });
+  elements.classifiedPlayersChartFrame?.addEventListener("mousemove", (event) => {
+    updateClassifiedPlayerChartHover(event.clientX);
+  });
+  elements.classifiedPlayersChartFrame?.addEventListener("mouseleave", () => {
+    hideClassifiedPlayerChartHover();
+  });
+  elements.classifiedPlayersCloseBtn?.addEventListener("click", () => {
+    closeClassifiedPlayerCountsModal();
+  });
+  elements.classifiedPlayersOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.classifiedPlayersOverlay) {
+      closeClassifiedPlayerCountsModal();
     }
   });
   elements.siloDossierCloseBtn?.addEventListener("click", () => {
@@ -16839,6 +17545,11 @@ function wireEvents() {
 
     if (elements.filesFunctionsOverlay?.classList.contains("is-active")) {
       closeFilesFunctionsModal();
+      return;
+    }
+
+    if (elements.classifiedPlayersOverlay?.classList.contains("is-active")) {
+      closeClassifiedPlayerCountsModal();
       return;
     }
 
