@@ -118,7 +118,7 @@ const STRINGS = Object.freeze({
     silo_reset_window: "Reset Window",
     silo_status: "Operational Status",
     silo_status_live: "Codes valid",
-    silo_status_expired: "Awaiting fresh codes",
+    silo_status_expired: "Codes expired",
     silo_site_name: "Fallout Codex",
     silo_open_terminal: "Open Terminal",
     silo_footer: "Fallout Codex | Appalachian Silo Monitor",
@@ -829,7 +829,9 @@ function normalizeSubscriptionEntry(entry) {
     createdAt: String(entry.createdAt || "").trim() || new Date().toISOString(),
     updatedAt: String(entry.updatedAt || "").trim() || new Date().toISOString(),
     createdById: String(entry.createdById || "").trim(),
-    createdByTag: String(entry.createdByTag || "").trim()
+    createdByTag: String(entry.createdByTag || "").trim(),
+    lastSiloMessageId: String(entry.lastSiloMessageId || "").trim(),
+    lastMinervaArrivalMessageId: String(entry.lastMinervaArrivalMessageId || "").trim()
   };
 }
 
@@ -1441,8 +1443,12 @@ function createDiscordIntelBot(options = {}) {
       if (!payload.embeds.length) {
         continue;
       }
-      if (await postEmbedsToSubscription(subscription, payload)) {
+      const sentMessage = await postEmbedsToSubscription(subscription, payload);
+      if (sentMessage) {
         postedChannelCount += 1;
+        if (sentMessage.id && subscription.feeds.includes("silos")) {
+          recordSiloMessageId(subscription.channelId, sentMessage.id);
+        }
       }
     }
 
@@ -2158,13 +2164,13 @@ function createDiscordIntelBot(options = {}) {
     const embeds = Array.isArray(payload?.embeds) ? payload.embeds : [];
     const components = Array.isArray(payload?.components) ? payload.components : [];
     if (!client || !embeds.length) {
-      return false;
+      return null;
     }
 
     try {
       const channel = await client.channels.fetch(subscription.channelId);
       if (!channel || !channel.isTextBased()) {
-        return false;
+        return null;
       }
 
       const messagePayload = { embeds };
@@ -2172,12 +2178,130 @@ function createDiscordIntelBot(options = {}) {
         messagePayload.components = components;
       }
 
-      await channel.send(messagePayload);
-      return true;
+      return await channel.send(messagePayload);
     } catch (error) {
       log.error(`[discord-bot] Failed to post intel embed to channel ${subscription.channelId}.`);
       log.error(error);
-      return false;
+      return null;
+    }
+  }
+
+  function getKnownSiloStatusFieldNames() {
+    const names = new Set();
+    for (const lang of Object.keys(STRINGS)) {
+      const value = STRINGS[lang]?.silo_status;
+      if (value) {
+        names.add(String(value));
+      }
+    }
+    return names;
+  }
+
+  async function markPreviousSiloEmbedExpired(subscription, lang) {
+    const messageId = String(subscription?.lastSiloMessageId || "").trim();
+    const channelId = String(subscription?.channelId || "").trim();
+    if (!client || !messageId || !channelId) {
+      return;
+    }
+
+    try {
+      const channel = await client.channels.fetch(channelId);
+      if (!channel || !channel.isTextBased()) {
+        return;
+      }
+      const message = await channel.messages.fetch(messageId);
+      if (!message || !Array.isArray(message.embeds) || !message.embeds.length) {
+        return;
+      }
+
+      const statusFieldNames = getKnownSiloStatusFieldNames();
+      const expiredValue = `\`${t(lang, "silo_status_expired")}\``;
+      let modified = false;
+      const nextEmbeds = message.embeds.map((embed) => {
+        const json = typeof embed.toJSON === "function" ? embed.toJSON() : { ...embed };
+        if (Array.isArray(json.fields)) {
+          json.fields = json.fields.map((field) => {
+            if (field && statusFieldNames.has(String(field.name || ""))) {
+              if (field.value !== expiredValue) {
+                modified = true;
+                return { ...field, value: expiredValue };
+              }
+            }
+            return field;
+          });
+        }
+        return json;
+      });
+
+      if (!modified) {
+        return;
+      }
+      await message.edit({ embeds: nextEmbeds });
+    } catch (error) {
+      log.error(`[discord-bot] Failed to mark previous silo embed expired in channel ${channelId}.`);
+      log.error(error);
+    }
+  }
+
+  function recordSiloMessageId(channelId, messageId) {
+    const cid = String(channelId || "").trim();
+    const mid = String(messageId || "").trim();
+    if (!cid) {
+      return;
+    }
+    const entries = readSubscriptions();
+    const index = entries.findIndex((entry) => entry.channelId === cid);
+    if (index < 0) {
+      return;
+    }
+    if (String(entries[index].lastSiloMessageId || "") === mid) {
+      return;
+    }
+    entries[index] = { ...entries[index], lastSiloMessageId: mid };
+    writeSubscriptions(entries);
+  }
+
+  function recordMinervaArrivalMessageId(channelId, messageId) {
+    const cid = String(channelId || "").trim();
+    const mid = String(messageId || "").trim();
+    if (!cid) {
+      return;
+    }
+    const entries = readSubscriptions();
+    const index = entries.findIndex((entry) => entry.channelId === cid);
+    if (index < 0) {
+      return;
+    }
+    if (String(entries[index].lastMinervaArrivalMessageId || "") === mid) {
+      return;
+    }
+    entries[index] = { ...entries[index], lastMinervaArrivalMessageId: mid };
+    writeSubscriptions(entries);
+  }
+
+  async function removePreviousMinervaArrivalComponents(subscription) {
+    const messageId = String(subscription?.lastMinervaArrivalMessageId || "").trim();
+    const channelId = String(subscription?.channelId || "").trim();
+    if (!client || !messageId || !channelId) {
+      return;
+    }
+
+    try {
+      const channel = await client.channels.fetch(channelId);
+      if (!channel || !channel.isTextBased()) {
+        return;
+      }
+      const message = await channel.messages.fetch(messageId);
+      if (!message) {
+        return;
+      }
+      if (Array.isArray(message.components) && !message.components.length) {
+        return;
+      }
+      await message.edit({ components: [] });
+    } catch (error) {
+      log.error(`[discord-bot] Failed to strip components from previous Minerva arrival message in channel ${channelId}.`);
+      log.error(error);
     }
   }
 
@@ -2195,19 +2319,51 @@ function createDiscordIntelBot(options = {}) {
       if (!payload.embeds.length) {
         continue;
       }
-      await postEmbedsToSubscription(subscription, payload);
+      if (feedType === "silos") {
+        await markPreviousSiloEmbedExpired(subscription, lang);
+      }
+      if (feedType === "minerva") {
+        await removePreviousMinervaArrivalComponents(subscription);
+      }
+      const sentMessage = await postEmbedsToSubscription(subscription, payload);
+      if (feedType === "silos" && sentMessage?.id) {
+        recordSiloMessageId(subscription.channelId, sentMessage.id);
+      }
+      if (feedType === "minerva" && sentMessage?.id) {
+        if (options.minervaEventType === "arrival") {
+          recordMinervaArrivalMessageId(subscription.channelId, sentMessage.id);
+        } else {
+          recordMinervaArrivalMessageId(subscription.channelId, "");
+        }
+      }
     }
   }
 
   async function postCurrentIntelToSubscription(subscription, feedList, lang) {
     const snapshot = await fetchCurrentIntel({ siteRoot });
+    const minervaEventType = resolveCurrentMinervaEmbedType(snapshot?.minerva);
     const payload = buildMessagePayload(snapshot, feedList, lang, {
-      minervaEventType: resolveCurrentMinervaEmbedType(snapshot?.minerva)
+      minervaEventType
     });
     if (!payload.embeds.length) {
-      return false;
+      return null;
     }
-    return postEmbedsToSubscription(subscription, payload);
+    const includesMinerva = Array.isArray(feedList) && feedList.includes("minerva");
+    if (includesMinerva) {
+      await removePreviousMinervaArrivalComponents(subscription);
+    }
+    const sentMessage = await postEmbedsToSubscription(subscription, payload);
+    if (sentMessage?.id && Array.isArray(feedList) && feedList.includes("silos")) {
+      recordSiloMessageId(subscription.channelId, sentMessage.id);
+    }
+    if (sentMessage?.id && includesMinerva) {
+      if (minervaEventType === "arrival") {
+        recordMinervaArrivalMessageId(subscription.channelId, sentMessage.id);
+      } else {
+        recordMinervaArrivalMessageId(subscription.channelId, "");
+      }
+    }
+    return sentMessage;
   }
 
   async function pollOnce({ hydrateOnly = false } = {}) {
@@ -2310,7 +2466,9 @@ function createDiscordIntelBot(options = {}) {
       createdAt: index >= 0 ? entries[index].createdAt : nowIso,
       updatedAt: nowIso,
       createdById: interaction.user.id,
-      createdByTag: interaction.user.tag || interaction.user.username || ""
+      createdByTag: interaction.user.tag || interaction.user.username || "",
+      lastSiloMessageId: index >= 0 ? String(entries[index]?.lastSiloMessageId || "").trim() : "",
+      lastMinervaArrivalMessageId: index >= 0 ? String(entries[index]?.lastMinervaArrivalMessageId || "").trim() : ""
     };
 
     if (index >= 0) {
