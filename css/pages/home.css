@@ -9410,9 +9410,11 @@ body.is-files-admin-modal-open .files-bot-admin-pill {
 /* File Index Overhaul */
 body.is-files .files-group-section {
   counter-increment: files-group-row;
+  flex: 0 0 96px;
   border: 1px solid rgba(139, 255, 139, 0.18);
   border-radius: 14px;
-  padding: 10px;
+  min-height: 96px;
+  padding: 10px 18px 6px 14px;
   background:
     linear-gradient(90deg, rgba(139, 255, 139, 0.07), rgba(255, 225, 122, 0.04) 34%, rgba(0, 0, 0, 0.18) 74%),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
@@ -9433,8 +9435,8 @@ body.is-files .files-group-section::after {
 
 body.is-files .files-group-section::before {
   content: counter(files-group-row, decimal-leading-zero);
-  left: 10px;
-  top: 10px;
+  left: 14px;
+  top: 14px;
   width: 28px;
   height: 28px;
   display: grid;
@@ -9458,6 +9460,7 @@ body.is-files .files-group-section::after {
 }
 
 body.is-files .files-group-section:hover {
+  z-index: 12;
   border-color: rgba(139, 255, 139, 0.28);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.42) inset,
@@ -9467,10 +9470,12 @@ body.is-files .files-group-section:hover {
 }
 
 body.is-files .files-group-section:focus-within {
-  overflow: visible;
+  overflow: hidden;
 }
 
 body.is-files .files-group-section.is-open {
+  flex-basis: auto;
+  min-height: 0;
   border-color: rgba(139, 255, 139, 0.26);
   background:
     linear-gradient(90deg, rgba(139, 255, 139, 0.1), rgba(255, 225, 122, 0.04) 30%, rgba(0, 0, 0, 0.18) 70%),
@@ -9480,6 +9485,11 @@ body.is-files .files-group-section.is-open {
     0 0 0 1px rgba(0, 0, 0, 0.42) inset,
     0 0 0 1px rgba(139, 255, 139, 0.08),
     0 12px 24px rgba(0, 0, 0, 0.22);
+  overflow: visible;
+}
+
+body.is-files .files-group-section:hover,
+body.is-files .files-group-section.is-open:hover {
   overflow: visible;
 }
 
@@ -9582,23 +9592,24 @@ body.is-files .files-group-manager-actions .files-card-action {
 
 body.is-files .files-group-head {
   padding: 0;
-  gap: 8px;
+  gap: 12px;
   position: relative;
   z-index: 1;
-  padding-left: 40px;
+  padding-left: 50px;
 }
 
 body.is-files .files-group-toggle {
-  min-height: 104px;
+  min-height: 72px;
   border: 0;
   border-radius: 0;
-  padding: 1px 0;
+  padding: 4px 4px 0 0;
   background: transparent;
   box-shadow: none;
   overflow: visible;
   position: relative;
-  align-items: center;
-  grid-template-columns: 142px minmax(0, 1fr) auto;
+  align-items: start;
+  grid-template-columns: minmax(158px, 0.28fr) minmax(0, 1fr) minmax(152px, max-content);
+  column-gap: 18px;
 }
 
 body.is-files .files-group-toggle::before,
@@ -9618,8 +9629,10 @@ body.is-files .files-group-folder {
   height: 92px;
   perspective: 900px;
   transform-style: preserve-3d;
-  align-self: center;
+  align-self: end;
   justify-self: start;
+  margin-left: 4px;
+  transform: translateY(16px);
   transition: transform 420ms cubic-bezier(0.23, 1, 0.32, 1);
   will-change: transform;
 }
@@ -9842,28 +9855,17 @@ body.is-files .files-group-folder-count strong {
 }
 
 body.is-files .files-group-folder-size {
-  position: absolute;
-  left: 15px;
-  bottom: 10px;
-  max-width: 58px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: rgba(235, 255, 210, 0.72);
-  font-size: 7px;
-  letter-spacing: 0.1em;
-  line-height: 1;
-  text-transform: uppercase;
+  display: none;
 }
 
 body.is-files .files-group-section:hover .files-group-folder,
-body.is-files .files-group-toggle:focus-visible .files-group-folder,
+body.is-files .files-group-toggle:hover .files-group-folder,
 body.is-files .files-group-section.is-open .files-group-folder {
-  transform: translateY(-1px);
+  transform: translateY(-6px);
 }
 
 body.is-files .files-group-section:hover .files-group-folder-front,
-body.is-files .files-group-toggle:focus-visible .files-group-folder-front,
+body.is-files .files-group-toggle:hover .files-group-folder-front,
 body.is-files .files-group-section.is-open .files-group-folder-front {
   border-color: rgba(197, 255, 44, 0.48);
   transform: rotateX(-48deg) translateY(6px);
@@ -9874,7 +9876,7 @@ body.is-files .files-group-section.is-open .files-group-folder-front {
 }
 
 body.is-files .files-group-section:hover .files-group-folder-file.is-1,
-body.is-files .files-group-toggle:focus-visible .files-group-folder-file.is-1,
+body.is-files .files-group-toggle:hover .files-group-folder-file.is-1,
 body.is-files .files-group-section.is-open .files-group-folder-file.is-1 {
   opacity: 0.92;
   transform: translateY(-36px) rotate(-7deg) translateX(-10px);
@@ -9882,7 +9884,7 @@ body.is-files .files-group-section.is-open .files-group-folder-file.is-1 {
 }
 
 body.is-files .files-group-section:hover .files-group-folder-file.is-2,
-body.is-files .files-group-toggle:focus-visible .files-group-folder-file.is-2,
+body.is-files .files-group-toggle:hover .files-group-folder-file.is-2,
 body.is-files .files-group-section.is-open .files-group-folder-file.is-2 {
   opacity: 0.94;
   transform: translateY(-27px) rotate(6deg) translateX(10px);
@@ -9890,7 +9892,7 @@ body.is-files .files-group-section.is-open .files-group-folder-file.is-2 {
 }
 
 body.is-files .files-group-section:hover .files-group-folder-file.is-3,
-body.is-files .files-group-toggle:focus-visible .files-group-folder-file.is-3,
+body.is-files .files-group-toggle:hover .files-group-folder-file.is-3,
 body.is-files .files-group-section.is-open .files-group-folder-file.is-3 {
   opacity: 0.96;
   transform: translateY(-17px) rotate(-3deg) translateX(-2px);
@@ -9902,28 +9904,28 @@ body.is-files .files-group-folder.has-1-preview .files-group-folder-file.is-1 {
 }
 
 body.is-files .files-group-section:hover .files-group-folder.has-1-preview .files-group-folder-file.is-1,
-body.is-files .files-group-toggle:focus-visible .files-group-folder.has-1-preview .files-group-folder-file.is-1,
+body.is-files .files-group-toggle:hover .files-group-folder.has-1-preview .files-group-folder-file.is-1,
 body.is-files .files-group-section.is-open .files-group-folder.has-1-preview .files-group-folder-file.is-1 {
   opacity: 0.94;
   transform: translateY(-22px) rotate(-3deg) translateX(0);
 }
 
 body.is-files .files-group-section:hover .files-group-folder.has-2-preview .files-group-folder-file.is-1,
-body.is-files .files-group-toggle:focus-visible .files-group-folder.has-2-preview .files-group-folder-file.is-1,
+body.is-files .files-group-toggle:hover .files-group-folder.has-2-preview .files-group-folder-file.is-1,
 body.is-files .files-group-section.is-open .files-group-folder.has-2-preview .files-group-folder-file.is-1 {
   opacity: 0.94;
   transform: translateY(-30px) rotate(-6deg) translateX(-8px);
 }
 
 body.is-files .files-group-section:hover .files-group-folder.has-2-preview .files-group-folder-file.is-2,
-body.is-files .files-group-toggle:focus-visible .files-group-folder.has-2-preview .files-group-folder-file.is-2,
+body.is-files .files-group-toggle:hover .files-group-folder.has-2-preview .files-group-folder-file.is-2,
 body.is-files .files-group-section.is-open .files-group-folder.has-2-preview .files-group-folder-file.is-2 {
   opacity: 0.96;
   transform: translateY(-20px) rotate(5deg) translateX(8px);
 }
 
 body.is-files .files-group-section:hover .files-group-folder-file::before,
-body.is-files .files-group-toggle:focus-visible .files-group-folder-file::before,
+body.is-files .files-group-toggle:hover .files-group-folder-file::before,
 body.is-files .files-group-section.is-open .files-group-folder-file::before {
   left: 120%;
   transition-delay: 120ms;
@@ -9931,8 +9933,8 @@ body.is-files .files-group-section.is-open .files-group-folder-file::before {
 
 body.is-files .files-group-section:hover .files-group-folder-file-name,
 body.is-files .files-group-section:hover .files-group-folder-file-tag,
-body.is-files .files-group-toggle:focus-visible .files-group-folder-file-name,
-body.is-files .files-group-toggle:focus-visible .files-group-folder-file-tag,
+body.is-files .files-group-toggle:hover .files-group-folder-file-name,
+body.is-files .files-group-toggle:hover .files-group-folder-file-tag,
 body.is-files .files-group-section.is-open .files-group-folder-file-name,
 body.is-files .files-group-section.is-open .files-group-folder-file-tag {
   opacity: 1;
@@ -9941,7 +9943,7 @@ body.is-files .files-group-section.is-open .files-group-folder-file-tag {
 }
 
 body.is-files .files-group-section:hover .files-group-folder-front::after,
-body.is-files .files-group-toggle:focus-visible .files-group-folder-front::after,
+body.is-files .files-group-toggle:hover .files-group-folder-front::after,
 body.is-files .files-group-section.is-open .files-group-folder-front::after {
   opacity: 1;
   transform: translateX(34%);
@@ -9975,7 +9977,9 @@ body.is-files .files-group-main {
   z-index: 1;
   min-width: 0;
   padding-left: 0;
+  padding-top: 5px;
   gap: 5px;
+  align-self: start;
 }
 
 body.is-files .files-group-title {
@@ -10015,8 +10019,12 @@ body.is-files .files-group-size {
 body.is-files .files-group-meta {
   position: relative;
   z-index: 1;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
+  align-self: start;
+  justify-content: flex-end;
+  padding-top: 3px;
+  padding-right: 4px;
 }
 
 body.is-files .files-group-rename-btn {
@@ -10157,6 +10165,9 @@ body.is-files .files-group-section.is-open .files-group-toggle {
 body.is-files .files-file-card {
   border-color: rgba(139, 255, 139, 0.22);
   border-radius: 14px;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-content: stretch;
   background:
     radial-gradient(120% 150% at 0% -30%, rgba(139, 255, 139, 0.12), rgba(139, 255, 139, 0) 42%),
     linear-gradient(to bottom, rgba(139, 255, 139, 0.07), rgba(0, 0, 0, 0.22)),
@@ -10176,6 +10187,11 @@ body.is-files .files-file-toggle {
   padding: 13px 14px 12px;
   display: grid;
   gap: 8px;
+  align-content: start;
+}
+
+body.is-files .files-file-card:has(.files-file-rename-wrap) {
+  min-height: 156px;
 }
 
 body.is-files .files-file-toggle-static {
@@ -10295,7 +10311,15 @@ body.is-files .files-file-footer-item {
 body.is-files .files-file-rename-wrap {
   border-top: 1px solid rgba(139, 255, 139, 0.16);
   margin-top: 1px;
-  padding: 9px 12px 10px;
+  padding: 8px 12px 10px;
+  display: flex;
+  align-items: center;
+  min-height: 50px;
+  opacity: 1;
+  visibility: visible;
+  background:
+    linear-gradient(to right, rgba(139, 255, 139, 0.055), rgba(0, 0, 0, 0) 64%),
+    rgba(0, 0, 0, 0.12);
 }
 
 body.is-files .files-file-group-manager-wrap {
@@ -10402,6 +10426,8 @@ body.is-files .files-file-group-select-input:disabled {
 
 body.is-files .files-file-rename-button {
   min-width: 120px;
+  width: min(100%, 132px);
+  min-height: 34px;
 }
 
 body.is-files .files-file-rename-form {
@@ -10896,21 +10922,22 @@ body.is-files .files-list {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  counter-reset: files-group-row;
+  gap: 12px;
+  align-content: start;
+  counter-reset: files-group-row files-index;
   margin-top: 8px;
   min-height: 0;
   max-height: none;
   flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-top: 3px;
+  padding-top: 44px;
   padding-right: 14px;
   padding-bottom: 78px;
-  scroll-padding-block: 12px;
+  scroll-padding-block: 44px 12px;
   scrollbar-gutter: stable both-edges;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  counter-reset: files-index;
 }
 
 body.is-files .files-file-card {
@@ -10918,6 +10945,9 @@ body.is-files .files-file-card {
   isolation: isolate;
   counter-increment: files-index;
   flex: 0 0 auto;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-content: stretch;
   border: 1px solid rgba(139, 255, 139, 0.28);
   border-radius: 14px;
   overflow: hidden;
@@ -10927,6 +10957,10 @@ body.is-files .files-file-card {
     rgba(0, 0, 0, 0.18);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45) inset;
   transition: transform 190ms ease, border-color 190ms ease, box-shadow 190ms ease;
+}
+
+body.is-files .files-file-card:has(.files-file-rename-wrap) {
+  min-height: 156px;
 }
 
 body.is-files .files-file-card::before {
@@ -10957,6 +10991,7 @@ body.is-files .files-file-toggle {
   color: var(--fg);
   display: grid;
   gap: 7px;
+  align-content: start;
   padding: 12px 14px 11px 56px;
   padding-right: 34px;
   transition: background 140ms ease, color 140ms ease;
@@ -11042,6 +11077,15 @@ body.is-files .files-file-details {
 body.is-files .files-file-rename-wrap {
   position: relative;
   z-index: 1;
+  align-self: end;
+  display: flex;
+  align-items: center;
+  min-height: 50px;
+  opacity: 1;
+  visibility: visible;
+  background:
+    linear-gradient(to right, rgba(139, 255, 139, 0.055), rgba(0, 0, 0, 0) 64%),
+    rgba(0, 0, 0, 0.12);
 }
 
 body.is-files .files-meta-grid {
@@ -13265,20 +13309,17 @@ body.is-classified .classified-layout {
   }
 
   body.is-files .files-group-section:hover .files-group-folder-file.is-1,
-  body.is-files .files-group-toggle:focus-visible .files-group-folder-file.is-1,
-  body.is-files .files-group-section.is-open .files-group-folder-file.is-1 {
+  body.is-files .files-group-toggle:hover .files-group-folder-file.is-1 {
     transform: translateY(-32px) rotate(-7deg) translateX(-8px);
   }
 
   body.is-files .files-group-section:hover .files-group-folder-file.is-2,
-  body.is-files .files-group-toggle:focus-visible .files-group-folder-file.is-2,
-  body.is-files .files-group-section.is-open .files-group-folder-file.is-2 {
+  body.is-files .files-group-toggle:hover .files-group-folder-file.is-2 {
     transform: translateY(-23px) rotate(5deg) translateX(8px);
   }
 
   body.is-files .files-group-section:hover .files-group-folder-file.is-3,
-  body.is-files .files-group-toggle:focus-visible .files-group-folder-file.is-3,
-  body.is-files .files-group-section.is-open .files-group-folder-file.is-3 {
+  body.is-files .files-group-toggle:hover .files-group-folder-file.is-3 {
     transform: translateY(-15px) rotate(-3deg);
   }
 
@@ -13963,38 +14004,32 @@ body.is-classified .classified-layout {
   }
 
   body.is-files .files-group-section:hover .files-group-folder-file.is-1,
-  body.is-files .files-group-toggle:focus-visible .files-group-folder-file.is-1,
-  body.is-files .files-group-section.is-open .files-group-folder-file.is-1 {
+  body.is-files .files-group-toggle:hover .files-group-folder-file.is-1 {
     transform: translateY(-21px) rotate(-5deg) translateX(-4px);
   }
 
   body.is-files .files-group-section:hover .files-group-folder-file.is-2,
-  body.is-files .files-group-toggle:focus-visible .files-group-folder-file.is-2,
-  body.is-files .files-group-section.is-open .files-group-folder-file.is-2 {
+  body.is-files .files-group-toggle:hover .files-group-folder-file.is-2 {
     transform: translateY(-15px) rotate(4deg) translateX(4px);
   }
 
   body.is-files .files-group-section:hover .files-group-folder-file.is-3,
-  body.is-files .files-group-toggle:focus-visible .files-group-folder-file.is-3,
-  body.is-files .files-group-section.is-open .files-group-folder-file.is-3 {
+  body.is-files .files-group-toggle:hover .files-group-folder-file.is-3 {
     transform: translateY(-9px) rotate(-2deg);
   }
 
   body.is-files .files-group-section:hover .files-group-folder.has-1-preview .files-group-folder-file.is-1,
-  body.is-files .files-group-toggle:focus-visible .files-group-folder.has-1-preview .files-group-folder-file.is-1,
-  body.is-files .files-group-section.is-open .files-group-folder.has-1-preview .files-group-folder-file.is-1 {
+  body.is-files .files-group-toggle:hover .files-group-folder.has-1-preview .files-group-folder-file.is-1 {
     transform: translateY(-8px) rotate(-2deg);
   }
 
   body.is-files .files-group-section:hover .files-group-folder.has-2-preview .files-group-folder-file.is-1,
-  body.is-files .files-group-toggle:focus-visible .files-group-folder.has-2-preview .files-group-folder-file.is-1,
-  body.is-files .files-group-section.is-open .files-group-folder.has-2-preview .files-group-folder-file.is-1 {
+  body.is-files .files-group-toggle:hover .files-group-folder.has-2-preview .files-group-folder-file.is-1 {
     transform: translateY(-13px) rotate(-4deg) translateX(-4px);
   }
 
   body.is-files .files-group-section:hover .files-group-folder.has-2-preview .files-group-folder-file.is-2,
-  body.is-files .files-group-toggle:focus-visible .files-group-folder.has-2-preview .files-group-folder-file.is-2,
-  body.is-files .files-group-section.is-open .files-group-folder.has-2-preview .files-group-folder-file.is-2 {
+  body.is-files .files-group-toggle:hover .files-group-folder.has-2-preview .files-group-folder-file.is-2 {
     transform: translateY(-7px) rotate(3deg) translateX(4px);
   }
 
