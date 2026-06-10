@@ -1404,15 +1404,18 @@
               <label id="filesSearchLabel" class="files-search-label" for="filesSearchInput">Search file</label>
               <span id="filesSearchCount" class="files-search-count" hidden></span>
             </div>
-            <input
-              id="filesSearchInput"
-              class="files-search-input"
-              type="search"
-              inputmode="search"
-              autocomplete="off"
-              spellcheck="false"
-              placeholder="Type file name..."
-            />
+            <div class="files-search-input-shell">
+              <span class="files-search-input-pulse" aria-hidden="true"></span>
+              <input
+                id="filesSearchInput"
+                class="files-search-input"
+                type="search"
+                inputmode="search"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Type file name..."
+              />
+            </div>
             <p id="filesSearchHint" class="files-search-hint">Filter files by name, type, description, or uploader.</p>
           </div>
           <div id="filesGroupManagerWrap" class="files-group-manager-wrap" hidden></div>

@@ -6915,32 +6915,35 @@ function renderFilesSearchResults() {
   state.files.search.query = query;
   elements.filesSearchResults.hidden = false;
 
-  const setSearchMessage = (message) => {
-    elements.filesSearchResults.innerHTML = `<p class="files-search-empty">${message}</p>`;
+  const setSearchMessage = (message, kind = "idle") => {
+    const empty = document.createElement("p");
+    empty.className = `files-search-empty is-${kind}`;
+    empty.textContent = message;
+    elements.filesSearchResults.replaceChildren(empty);
   };
 
   if (state.files.loadingList && !state.files.list.length) {
     setFilesSearchCount("");
-    setSearchMessage(t("files_loading_state"));
+    setSearchMessage(t("files_loading_state"), "loading");
     return;
   }
 
   if (state.files.listError) {
     setFilesSearchCount("");
-    setSearchMessage(state.files.listError);
+    setSearchMessage(state.files.listError, "error");
     return;
   }
 
   if (!query) {
     setFilesSearchCount("");
-    setSearchMessage(t("files_search_prompt"));
+    setSearchMessage(t("files_search_prompt"), "idle");
     return;
   }
 
   const matches = getFilteredFilesList(state.files.list);
   if (!matches.length) {
     setFilesSearchCount(t("files_search_results_count", { n: "0" }));
-    setSearchMessage(t("files_search_no_results"));
+    setSearchMessage(t("files_search_no_results"), "empty");
     return;
   }
 
@@ -6954,6 +6957,7 @@ function renderFilesSearchResults() {
     const fileName = getFilesDisplayName(file);
     const fileType = resolveFileTypeLabel(file);
     const fileSize = formatFileSize(file.size);
+    const groupName = getFilesGroupDisplayLabel(file);
     const timestampMeta = resolveFilesTimestampMeta(file);
 
     const row = document.createElement("article");
@@ -6968,6 +6972,11 @@ function renderFilesSearchResults() {
     itemValue.className = "files-search-v";
     itemValue.textContent = fileName;
     itemField.appendChild(itemValue);
+
+    const itemMeta = document.createElement("span");
+    itemMeta.className = "files-search-meta-line";
+    itemMeta.textContent = groupName;
+    itemField.appendChild(itemMeta);
 
     const typeField = document.createElement("div");
     typeField.className = "files-search-cell";
@@ -7419,6 +7428,52 @@ function renderFilesList() {
     groupToggle.setAttribute("aria-expanded", hasFocusedGroup ? "true" : "false");
     groupToggle.disabled = hasFocusedGroup;
 
+    const groupTotalBytes = groupEntry.files.reduce((acc, item) => acc + (Number(item?.size) || 0), 0);
+    const previewFiles = groupEntry.files.slice(0, 3);
+
+    const groupFolder = document.createElement("span");
+    groupFolder.className = `files-group-folder has-${previewFiles.length}-preview`;
+    groupFolder.setAttribute("aria-hidden", "true");
+
+    const groupFolderBack = document.createElement("span");
+    groupFolderBack.className = "files-group-folder-back";
+    groupFolder.appendChild(groupFolderBack);
+
+    previewFiles.forEach((previewFile, fileLayerIndex) => {
+      const groupFolderFile = document.createElement("span");
+      groupFolderFile.className = `files-group-folder-file is-${fileLayerIndex + 1}`;
+
+      const previewName = document.createElement("span");
+      previewName.className = "files-group-folder-file-name";
+      previewName.textContent = getFilesDisplayName(previewFile);
+
+      const previewTag = document.createElement("span");
+      previewTag.className = "files-group-folder-file-tag";
+      const previewType = getFilesTypeBadgeLabel(previewFile) || resolveFileTypeLabel(previewFile);
+      previewTag.textContent = `${previewType} | ${formatFileSize(previewFile?.size)}`;
+
+      groupFolderFile.appendChild(previewName);
+      groupFolderFile.appendChild(previewTag);
+      groupFolder.appendChild(groupFolderFile);
+    });
+
+    const groupFolderFront = document.createElement("span");
+    groupFolderFront.className = "files-group-folder-front";
+    const groupFolderCount = document.createElement("span");
+    groupFolderCount.className = "files-group-folder-count";
+    const groupFolderCountLabel = document.createElement("span");
+    groupFolderCountLabel.textContent = "FILES";
+    const groupFolderCountValue = document.createElement("strong");
+    groupFolderCountValue.textContent = String(Math.min(groupEntry.files.length, 99)).padStart(2, "0");
+    groupFolderCount.appendChild(groupFolderCountLabel);
+    groupFolderCount.appendChild(groupFolderCountValue);
+    groupFolderFront.appendChild(groupFolderCount);
+    const groupFolderSize = document.createElement("span");
+    groupFolderSize.className = "files-group-folder-size";
+    groupFolderSize.textContent = formatFileSize(groupTotalBytes);
+    groupFolderFront.appendChild(groupFolderSize);
+    groupFolder.appendChild(groupFolderFront);
+
     const groupMain = document.createElement("span");
     groupMain.className = "files-group-main";
 
@@ -7432,7 +7487,6 @@ function renderFilesList() {
     const groupMeta = document.createElement("span");
     groupMeta.className = "files-group-meta";
 
-    const groupTotalBytes = groupEntry.files.reduce((acc, item) => acc + (Number(item?.size) || 0), 0);
     const groupCount = document.createElement("span");
     groupCount.className = "files-group-count files-group-stat is-count";
     groupCount.textContent = formatFilesGroupCount(groupEntry.files.length);
@@ -7463,6 +7517,7 @@ function renderFilesList() {
     groupCaretWrap.appendChild(groupCaret);
     groupMeta.appendChild(groupCaretWrap);
 
+    groupToggle.appendChild(groupFolder);
     groupToggle.appendChild(groupMain);
     groupToggle.appendChild(groupMeta);
     groupHead.appendChild(groupToggle);
@@ -7503,6 +7558,7 @@ function renderFilesList() {
         const card = document.createElement("article");
         card.className = "panel files-file-card";
         card.style.setProperty("--files-item-index", String(Math.min(renderedIndex, 9)));
+        card.style.setProperty("--files-card-index", String(Math.min(index, 9)));
         renderedIndex += 1;
 
         const openButton = document.createElement("div");
