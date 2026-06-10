@@ -2,9 +2,21 @@
   box-sizing: border-box;
 }
 
+html {
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 html,
 body {
   min-height: 100%;
+}
+
+::selection {
+  background: rgba(139, 255, 139, 0.85);
+  color: #04130a;
+  text-shadow: none;
 }
 
 html,
@@ -36,6 +48,10 @@ body,
   background: linear-gradient(180deg, rgba(139, 255, 139, 0.76), rgba(139, 255, 139, 0.34));
 }
 
+*::-webkit-scrollbar-corner {
+  background: rgba(0, 0, 0, 0.34);
+}
+
 body {
   margin: 0;
   color: var(--fg);
@@ -43,4 +59,20 @@ body {
   font-family: var(--font-main);
   letter-spacing: 0.02em;
   overflow-x: hidden;
+  caret-color: var(--fg);
+  accent-color: var(--fg);
+}
+
+button,
+[role="button"],
+input,
+select,
+summary {
+  touch-action: manipulation;
+}
+
+/* Zero-specificity fallback so controls without a bespoke focus style stay keyboard-visible. */
+:where(button, [role="button"], input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 1px solid var(--line-hot);
+  outline-offset: 2px;
 }

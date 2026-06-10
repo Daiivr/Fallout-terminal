@@ -136,6 +136,8 @@ globalThis.FALLOUT_CODEX_LOCALES.en = {
     files_unauthorized_gate_value: "Biometric handshake required",
     files_unauthorized_trace_label: "Intrusion trace",
     files_unauthorized_trace_value: "Active monitoring",
+    files_auth_character_caption: "TERMINAL GUARD WAITING",
+    files_auth_console_status: "AWAITING TERMINAL IDENTITY",
     files_unauthorized_directive_title: "Recovery directives",
     files_unauthorized_directive_line_1: "Log in with Discord and submit an access application.",
     files_unauthorized_directive_line_2: "Your request will be reviewed and approved or declined by an admin.",

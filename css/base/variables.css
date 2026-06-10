@@ -19,4 +19,6 @@
   --map-parallax-y: 0px;
   --font-main: "Share Tech Mono", "VT323", "Overseer", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --font-mono: "Share Tech Mono", "VT323", "Overseer", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-display: "Overseer", "VT323", "Share Tech Mono", "Rajdhani", monospace;
+  --font-heading: "VT323", "Share Tech Mono", ui-monospace, monospace;
 }

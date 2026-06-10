@@ -11,7 +11,10 @@
   border-radius: var(--radius);
   overflow: hidden;
   background: rgba(0, 0, 0, 0.22);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55) inset, 0 18px 60px rgba(0, 0, 0, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55) inset,
+    inset 0 1px 0 rgba(139, 255, 139, 0.07),
+    0 18px 60px rgba(0, 0, 0, 0.55);
 }
 
 .panel {
@@ -25,22 +28,45 @@
 .classified-list-heading {
   margin: 0;
   color: var(--fg);
+  font-family: var(--font-heading);
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.09em;
   text-shadow: 0 0 18px var(--glow);
+  text-wrap: balance;
 }
 
 .panel h2 {
-  font-size: 14px;
+  font-size: 20px;
+  line-height: 1;
 }
 
 .panel h3,
 .classified-card h3,
 .classified-list-heading {
-  font-size: 13px;
+  font-size: 17px;
+  line-height: 1.05;
 }
 
-.panel > h2,
+.panel h2::before,
+.classified-card h3::before,
+.classified-list-heading::before {
+  content: "// ";
+  color: var(--fg-faint);
+  text-shadow: none;
+}
+
+.panel > h2 {
+  padding: 11px var(--panel-pad) 9px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(to bottom, rgba(139, 255, 139, 0.09), rgba(0, 0, 0, 0.16));
+}
+
+.panel > h3 {
+  padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(139, 255, 139, 0.22);
+}
+
 .panel > .hint,
 .panel > .expiry,
 .panel > .code-grid,
@@ -55,11 +81,15 @@
   margin-right: var(--panel-pad);
 }
 
-.panel > h2,
 .panel > .summary,
 .panel > h3,
 .classified-card > h3 {
   margin-top: var(--panel-pad);
+}
+
+.panel > h2 + .hint,
+.panel > h2 + .summary {
+  margin-top: 10px;
 }
 
 .panel > .source,
@@ -77,7 +107,9 @@
 #classifiedMinervaHint {
   color: var(--fg-faint);
   font-size: 12px;
-  line-height: 1.3;
+  line-height: 1.45;
+  text-wrap: pretty;
+  max-width: 72ch;
 }
 
 .hint {
@@ -99,6 +131,7 @@
   background: rgba(139, 255, 139, 0.06);
   color: var(--fg);
   font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .code-grid {
@@ -117,7 +150,10 @@
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px 12px 11px;
-  background: rgba(0, 0, 0, 0.25);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.24));
+  box-shadow:
+    inset 0 2px 10px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(139, 255, 139, 0.06);
 }
 
 .silo-panel {
@@ -155,8 +191,8 @@
 }
 
 .silo-panel .code {
-  font-size: clamp(2rem, 3.4vw, 2.55rem);
-  letter-spacing: 0.1em;
+  font-size: clamp(2.3rem, 3.9vw, 3rem);
+  letter-spacing: 0.12em;
   line-height: 1;
 }
 
@@ -164,14 +200,18 @@
 .site {
   color: var(--fg-faint);
   font-size: 11px;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
 }
 
 .code {
   margin-top: 4px;
-  color: var(--fg);
-  font-size: clamp(1.45rem, 2.2vw, 1.7rem);
-  letter-spacing: 0.08em;
+  color: var(--fg-bright);
+  font-family: var(--font-heading);
+  font-size: clamp(1.7rem, 2.6vw, 2rem);
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 16px rgba(139, 255, 139, 0.34);
 }
 
 .meta-grid {
@@ -187,7 +227,10 @@
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 9px 10px 8px;
-  background: rgba(0, 0, 0, 0.22);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.2));
+  box-shadow:
+    inset 0 1px 6px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(139, 255, 139, 0.05);
   display: grid;
   gap: 2px;
 }
@@ -195,6 +238,7 @@
 .meta-label {
   color: var(--fg-faint);
   font-size: 11px;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
 }
 
@@ -226,8 +270,8 @@ thead th {
   top: 0;
   z-index: 8;
   text-align: left;
-  font-size: 12px;
-  letter-spacing: 0.06em;
+  font-size: 11px;
+  letter-spacing: 0.12em;
   color: var(--fg-dim);
   text-transform: uppercase;
   padding: 10px 12px 9px;
@@ -244,10 +288,19 @@ tbody td {
   color: var(--fg);
   font-size: 13px;
   vertical-align: top;
+  transition: background 120ms ease;
+}
+
+tbody tr:nth-child(even) td {
+  background: rgba(139, 255, 139, 0.026);
 }
 
 tbody tr:hover td {
-  background: rgba(139, 255, 139, 0.05);
+  background: rgba(139, 255, 139, 0.06);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
 }
 
 tbody td:last-child,
@@ -260,6 +313,7 @@ a {
   color: var(--fg-bright);
   text-decoration: none;
   border-bottom: 1px dotted rgba(139, 255, 139, 0.4);
+  transition: color 140ms ease, border-color 140ms ease;
 }
 
 a:hover {

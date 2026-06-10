@@ -157,8 +157,10 @@ body.is-booting .pipboy-terminal {
 
 .boot-title {
   margin: 0;
-  font-size: clamp(1.28rem, 4.7vw, 2.72rem);
-  letter-spacing: 0.16em;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.42rem, 5.1vw, 3rem);
+  letter-spacing: 0.14em;
   line-height: 1;
   text-transform: uppercase;
   color: #e4ffd3;

@@ -550,5 +550,7 @@ globalThis.FALLOUT_CODEX_ELEMENTS = {
   filesVisitCounterMobileLabel: document.getElementById("filesVisitCounterMobileLabel"),
   filesVisitCounterMobileValue: document.getElementById("filesVisitCounterMobileValue"),
   filesVisitCounterMobileHint: document.getElementById("filesVisitCounterMobileHint"),
+  filesAuthCharacterCaption: document.getElementById("filesAuthCharacterCaption"),
+  filesAuthConsoleStatus: document.getElementById("filesAuthConsoleStatus"),
   footerText: document.getElementById("footerText")
 };

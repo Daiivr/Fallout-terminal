@@ -716,6 +716,8 @@ function syncVisitCounterEyeOffset(eye) {
   }
   eye.host.style.setProperty("--visit-eye-pupil-x", `${eye.currentX.toFixed(2)}px`);
   eye.host.style.setProperty("--visit-eye-pupil-y", `${eye.currentY.toFixed(2)}px`);
+  eye.host.style.setProperty("--visit-eye-shell-x", `${(eye.currentX * 0.36).toFixed(2)}px`);
+  eye.host.style.setProperty("--visit-eye-shell-y", `${(eye.currentY * 0.28).toFixed(2)}px`);
 }
 
 function queueVisitCounterEyeMotion() {
@@ -1130,7 +1132,7 @@ function applyViewFromHash() {
 
   if (hashView === "classified") {
     hideSiloDossier({ updateHash: false });
-    if (!state.easterEgg.unlocked && !state.easterEgg.hack?.solved) {
+    if (!canOpenClassifiedArchive()) {
       setHashView("intel", { replace: true });
       showIntelPage({ updateHash: false });
       return;
@@ -2200,6 +2202,29 @@ function hasFilesAuthorizedAccess(profile = null, { allowExpired = false } = {})
   }
 
   return allowExpired ? true : !isFilesAccessExpired(me);
+}
+
+function canBypassClassifiedHackAsAdmin(profile = null) {
+  const me = normalizeFilesProfile(profile || state.files.me);
+  return Boolean(me.loggedIn && me.isAdmin && hasFilesAuthorizedAccess(me));
+}
+
+function canOpenClassifiedArchive() {
+  return Boolean(
+    state.easterEgg.unlocked
+    || state.easterEgg.hack?.solved
+    || canBypassClassifiedHackAsAdmin()
+  );
+}
+
+function syncClassifiedAccessState() {
+  if (elements.hackOverlay?.classList.contains("is-active")) {
+    renderHackOverlay();
+  }
+
+  if (document.body.classList.contains("is-classified") && !canOpenClassifiedArchive()) {
+    hideClassifiedPage();
+  }
 }
 
 function shouldShowFilesDisclaimerGate(profile = null) {
@@ -7696,6 +7721,14 @@ function renderFilesAccessView() {
       : t("files_unauthorized_badge");
   }
 
+  if (elements.filesAuthCharacterCaption) {
+    elements.filesAuthCharacterCaption.textContent = t("files_auth_character_caption");
+  }
+
+  if (elements.filesAuthConsoleStatus) {
+    elements.filesAuthConsoleStatus.textContent = t("files_auth_console_status");
+  }
+
   if (elements.filesUnauthorizedTitle) {
     elements.filesUnauthorizedTitle.textContent = sharedGuestLanding
       ? t("files_share_unauthorized_title")
@@ -9634,6 +9667,7 @@ async function pollFilesIdentityLive({ force = false } = {}) {
     const previousAuthorized = hasFilesAuthorizedAccess(previousProfile);
     syncFilesDecisionNoticeFromProfile(nextProfile);
     syncDiscordBotInviteButton();
+    syncClassifiedAccessState();
 
     if (nextAuthorized) {
       const identityChanged = previousProfile.discordId !== nextProfile.discordId;
@@ -9875,6 +9909,7 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
 
   syncDiscordBotInviteButton();
   renderDropsAdminTabVisibility();
+  syncClassifiedAccessState();
 
   const hasActiveAuthorizedAccess = hasFilesAuthorizedAccess(state.files.me);
   const hasActiveAdminAccess = hasActiveAuthorizedAccess && state.files.me.isAdmin;
@@ -9940,6 +9975,7 @@ async function refreshFilesIdentityBadgeOnly() {
 
   syncFilesDecisionNoticeFromProfile(state.files.me);
   renderDropsAdminTabVisibility();
+  syncClassifiedAccessState();
   if (state.view === "drops" && document.body.classList.contains("is-drops")) {
     if (state.files.me.isAdmin && !state.files.localAccessExpired) {
       void refreshDrops();
@@ -9961,6 +9997,7 @@ async function handleFilesLogout() {
   }
 
   state.files.me = buildGuestFilesProfile();
+  syncClassifiedAccessState();
   state.files.list = [];
   state.files.activeGroupKey = "";
   state.files.rename.fileId = "";
@@ -12010,7 +12047,7 @@ function formatCompactWeekdayToken(rawWeekday) {
     const esMap = {
       lun: "LUN",
       mar: "MAR",
-      mie: "MIER",
+      mie: "MIE",
       jue: "JUE",
       vie: "VIE",
       sab: "SAB",
@@ -12020,6 +12057,42 @@ function formatCompactWeekdayToken(rawWeekday) {
   }
 
   return cleaned.toUpperCase();
+}
+
+function formatMinervaCompactTimeToken(date, timeZone) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "--";
+  }
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone
+  }).formatToParts(date);
+  const hour = parts.find((part) => part.type === "hour")?.value || "";
+  const minute = parts.find((part) => part.type === "minute")?.value || "";
+  const dayPeriod = parts.find((part) => part.type === "dayPeriod")?.value || "";
+  const period = dayPeriod.trim().slice(0, 1).toLowerCase();
+  const minutePart = minute && minute !== "00" ? `:${minute}` : "";
+  return `${hour}${minutePart}${period}`.trim();
+}
+
+function getMinervaCompactZoneLabel(timeZone) {
+  const normalizedZone = String(timeZone || "").toLowerCase();
+  if (normalizedZone.includes("new_york") || normalizedZone.includes("detroit") || normalizedZone.includes("indiana")) {
+    return "ET";
+  }
+  if (normalizedZone.includes("chicago") || normalizedZone.includes("winnipeg")) {
+    return "CT";
+  }
+  if (normalizedZone.includes("denver") || normalizedZone.includes("phoenix")) {
+    return "MT";
+  }
+  if (normalizedZone.includes("los_angeles") || normalizedZone.includes("vancouver")) {
+    return "PT";
+  }
+  return "";
 }
 
 function formatEtCompact(date) {
@@ -12068,15 +12141,8 @@ function formatMinervaLocalCompact(date) {
     ?.trim() || "";
   const weekdayPart = formatCompactWeekdayToken(weekdayRaw);
   const dayPart = dateParts.find((part) => part.type === "day")?.value || "";
-  let timePart = new Intl.DateTimeFormat(locale, {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: localTimeZone
-  }).format(date).replace(/\s+/g, " ").trim();
-  timePart = normalizeMeridiemText(timePart);
-
-  const zoneLabel = getLocalZoneLabel(date);
+  const timePart = formatMinervaCompactTimeToken(date, localTimeZone);
+  const zoneLabel = getMinervaCompactZoneLabel(localTimeZone);
   return `${weekdayPart} ${dayPart} ${timePart}${zoneLabel ? ` ${zoneLabel}` : ""}`.trim();
 }
 
@@ -12109,10 +12175,7 @@ function formatMinervaCountdown(ms) {
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  if (state.lang === "es") {
-    return `${days} ${days === 1 ? "dia" : "dias"} ${hours} horas ${minutes} min ${seconds} seg`;
-  }
-  return `${days} ${days === 1 ? "day" : "days"} ${hours} hours ${minutes} min ${seconds} sec`;
+  return `${days}d ${hours}h ${minutes}m ${seconds}s`;
 }
 
 function formatMinervaLocationDate(date, mode = "") {
@@ -13068,7 +13131,7 @@ function renderHackOverlay() {
     elements.hackRetryBtn.hidden = !session.locked;
   }
   if (elements.hackOpenClassifiedBtn) {
-    elements.hackOpenClassifiedBtn.hidden = !(session.solved || state.easterEgg.unlocked);
+    elements.hackOpenClassifiedBtn.hidden = !canOpenClassifiedArchive();
   }
 }
 
@@ -14616,11 +14679,14 @@ async function openClassifiedPlayerCountsModal() {
 
 function showClassifiedPage({ updateHash = true } = {}) {
   closeIntelBotInviteModal();
-  if (!state.easterEgg.unlocked && !state.easterEgg.hack?.solved) {
+  const adminBypass = canBypassClassifiedHackAsAdmin();
+  if (!canOpenClassifiedArchive()) {
     return;
   }
 
-  state.easterEgg.unlocked = true;
+  if (!adminBypass || state.easterEgg.hack?.solved) {
+    state.easterEgg.unlocked = true;
+  }
   hideSiloDossier({ updateHash: false });
   showClassifiedLoadOverlay(false);
   hideHackOverlay();
@@ -16473,6 +16539,8 @@ function applyLanguage(lang, persist = true) {
   elements.filesUnauthorizedTitle.textContent = t("files_unauthorized_title");
   elements.filesUnauthorizedSubtitle.textContent = t("files_unauthorized_subtitle");
   elements.filesUnauthorizedBadge.textContent = t("files_unauthorized_badge");
+  elements.filesAuthCharacterCaption.textContent = t("files_auth_character_caption");
+  elements.filesAuthConsoleStatus.textContent = t("files_auth_console_status");
   elements.filesUnauthorizedKicker.textContent = t("files_unauthorized_kicker");
   elements.filesUnauthorizedStateLabel.textContent = t("files_unauthorized_state_label");
   elements.filesUnauthorizedStateValue.textContent = t("files_unauthorized_state_value");

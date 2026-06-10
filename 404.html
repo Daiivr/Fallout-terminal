@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050a06" />
   <meta name="robots" content="noindex, nofollow" />
   <title>404 | Fallout Codex Terminal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -11,7 +12,7 @@
   <link href="https://fonts.cdnfonts.com/css/overseer" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/svg+xml" href="/assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="/css/styles.css?v=20260609-error-refit-1" />
 </head>
 <body class="is-ready error-page">
   <div class="screen-vignette" aria-hidden="true"></div>
@@ -35,39 +36,53 @@
 
     <section class="grid error-grid">
       <article class="panel error-panel error-panel-main">
-        <div class="error-radar" aria-hidden="true">
-          <span class="error-radar-ring"></span>
-          <span class="error-radar-ring"></span>
-          <span class="error-radar-ring"></span>
-          <span class="error-radar-sweep"></span>
+        <div class="error-main-copy">
+          <p id="errorBadge" class="error-badge">INCIDENT E-404</p>
+          <h2 id="errorCode">FILE NOT FOUND</h2>
+          <p id="errorSummary" class="summary">Requested terminal record could not be resolved.</p>
+          <div class="error-path-frame">
+            <p class="hint">Requested path</p>
+            <pre id="errorPath" class="error-path">/</pre>
+          </div>
+          <div class="error-actions">
+            <a class="refresh-btn error-action-primary" href="/">Return to terminal</a>
+            <button id="errorBackBtn" class="refresh-btn" type="button">Go back</button>
+          </div>
         </div>
-        <p id="errorBadge" class="error-badge">INCIDENT E-404</p>
-        <h2 id="errorCode">FILE NOT FOUND</h2>
-        <p id="errorSummary" class="summary">Requested terminal record could not be resolved.</p>
-        <p class="hint">Requested path</p>
-        <pre id="errorPath" class="error-path">/</pre>
-        <div class="error-actions">
-          <a class="refresh-btn error-action-primary" href="/">Return to terminal</a>
-          <button id="errorBackBtn" class="refresh-btn" type="button">Go back</button>
+        <div class="error-radar-module" aria-hidden="true">
+          <div class="error-radar">
+            <span class="error-radar-ring"></span>
+            <span class="error-radar-ring"></span>
+            <span class="error-radar-ring"></span>
+            <span class="error-radar-sweep"></span>
+          </div>
+          <div class="error-radar-readouts">
+            <span>SCAN HOLD</span>
+            <span>NODE LOCK</span>
+            <span>DIR OFFLINE</span>
+          </div>
         </div>
       </article>
 
       <aside class="panel error-panel error-panel-side" aria-label="Recovery diagnostics">
-        <h2 id="diagTitle">Recovery directives</h2>
+        <div class="error-side-head">
+          <h2 id="diagTitle">Recovery directives</h2>
+          <span class="error-side-stamp" aria-hidden="true">CHK-04</span>
+        </div>
         <p id="diagSummary" class="summary">Use a verified route, then resume archive navigation.</p>
         <div class="error-signal" aria-hidden="true">
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
+          <span class="error-signal-label">ROUTE TRACE</span>
+          <span class="error-signal-grid"></span>
+          <span class="error-signal-path is-ok"></span>
+          <span class="error-signal-path is-warn"></span>
+          <span class="error-signal-path is-blocked"></span>
+          <span class="error-signal-node is-home"></span>
+          <span class="error-signal-node is-route"></span>
+          <span class="error-signal-node is-lock"></span>
+          <span class="error-signal-node is-null"></span>
+          <span class="error-signal-arrow"></span>
+          <span class="error-signal-caption is-source">TERM</span>
+          <span class="error-signal-caption is-target">ASSET</span>
         </div>
         <dl class="error-diagnostics">
           <div class="error-diagnostics-row">

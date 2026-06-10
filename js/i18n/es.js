@@ -136,6 +136,8 @@ globalThis.FALLOUT_CODEX_LOCALES.es = {
     files_unauthorized_gate_value: "Se requiere enlace biometrico",
     files_unauthorized_trace_label: "Rastro de intrusion",
     files_unauthorized_trace_value: "Monitoreo activo",
+    files_auth_character_caption: "GUARDIA DEL TERMINAL EN ESPERA",
+    files_auth_console_status: "ESPERANDO IDENTIDAD DEL TERMINAL",
     files_unauthorized_directive_title: "Directivas de recuperacion",
     files_unauthorized_directive_line_1: "Inicia sesion con Discord y envia una solicitud de acceso.",
     files_unauthorized_directive_line_2: "Tu solicitud sera revisada por un admin y luego aprobada o rechazada.",

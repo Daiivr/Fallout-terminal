@@ -183,3 +183,30 @@ body.is-dossier-loading .dossier-page-shell {
     filter: none;
   }
 }
+
+/* Shared page polish for every dossier page that loads this stylesheet. */
+html {
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  caret-color: var(--accent, #79ff86);
+  accent-color: var(--accent, #79ff86);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent, #79ff86) 85%, white 0%);
+  color: #04130a;
+  text-shadow: none;
+}
+
+*::-webkit-scrollbar-corner {
+  background: rgba(0, 0, 0, 0.34);
+}
+
+:where(button, [role="button"], input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--accent, #79ff86) 54%, transparent);
+  outline-offset: 2px;
+}

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050a06" />
   <meta
     name="description"
     content="Fallout Codex is a Fallout 76 Pip-Boy style terminal with silo codes, Minerva intel, classified archives, and a hacking minigame."
@@ -38,9 +39,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="preload" as="image" href="assets/images/minerva-plan-fallback.png" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="css/styles.css?v=20260425-temp-shares-v8" />
+  <link rel="stylesheet" href="css/styles.css?v=20260609-minerva-peek-v2" />
 </head>
 <body class="is-booting">
+  <noscript>
+    <p style="margin: 24px auto; max-width: 60ch; padding: 14px 16px; border: 1px solid rgba(139, 255, 139, 0.38); border-radius: 12px; color: #8bff8b; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.04em; text-align: center;">
+      TERMINAL ERROR: JavaScript is required to operate this terminal.<br />
+      ERROR DE TERMINAL: se necesita JavaScript para operar este terminal.
+    </p>
+  </noscript>
   <div id="bootOverlay" class="boot-overlay">
     <div class="boot-core">
       <div class="boot-head">
@@ -120,6 +127,16 @@
         aria-labelledby="classifiedPlayersTitle"
         aria-describedby="classifiedPlayersBody"
       >
+        <span class="classified-player-modal-art" aria-hidden="true">
+          <img
+            src="assets/images/vault-boy-live-players-modal.png"
+            alt=""
+            class="classified-player-modal-art-image"
+            loading="eager"
+            decoding="async"
+            draggable="false"
+          />
+        </span>
         <p id="classifiedPlayersBadge" class="intel-bot-modal-badge classified-player-modal-badge">STEAM TELEMETRY</p>
         <h2 id="classifiedPlayersTitle" class="intel-bot-modal-title">FALLOUT 76 POPULATION SNAPSHOT</h2>
         <p id="classifiedPlayersBody" class="intel-bot-modal-body">
@@ -1027,68 +1044,83 @@
     </section>
     <section id="filesPage" class="files-page" hidden>
       <article id="filesUnauthorizedPanel" class="panel files-access-panel">
-        <div class="files-access-topline">
-          <p id="filesUnauthorizedBadge" class="files-unauth-badge">LOCKDOWN PROTOCOL</p>
-          <div class="files-unauth-signal" aria-hidden="true">
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
+        <div class="files-auth-stage">
+          <aside class="files-auth-character" aria-hidden="true">
+            <div class="files-auth-character-frame">
+              <img
+                src="assets/images/vault-boy-files-guard.png"
+                alt=""
+                class="files-auth-character-image"
+                loading="eager"
+                decoding="async"
+                draggable="false"
+              />
+            </div>
+            <p id="filesAuthCharacterCaption" class="files-auth-character-caption">TERMINAL GUARD WAITING</p>
+          </aside>
+
+          <div class="files-auth-console">
+            <span id="filesAuthConsoleStatus" class="files-auth-console-status">AWAITING TERMINAL IDENTITY</span>
+            <div class="files-access-topline">
+              <p id="filesUnauthorizedBadge" class="files-unauth-badge">LOCKDOWN PROTOCOL</p>
+              <div class="files-unauth-signal" aria-hidden="true">
+                <span class="files-unauth-signal-drawer"></span>
+                <span class="files-unauth-signal-folder is-folder-a"></span>
+                <span class="files-unauth-signal-folder is-folder-b"></span>
+                <span class="files-unauth-signal-folder is-folder-c"></span>
+                <span class="files-unauth-signal-folder is-folder-d"></span>
+                <span class="files-unauth-signal-folder is-folder-e"></span>
+                <span class="files-unauth-signal-scan"></span>
+                <span class="files-unauth-signal-seal"></span>
+              </div>
+            </div>
+            <div class="files-share-stop-hero is-unauthorized" aria-hidden="true">
+              <img
+                src="assets/images/StopVaultBoy.png"
+                alt=""
+                class="files-share-stop-image"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <h2 id="filesUnauthorizedTitle">UNAUTHORIZED ACCESS TO FILE SYSTEM</h2>
+            <p id="filesUnauthorizedSubtitle" class="files-access-subtitle">IDENTITY VERIFICATION REQUIRED</p>
+            <p id="filesUnauthorizedKicker" class="files-unauth-kicker">
+              Archive index remains sealed until terminal identity is validated.
+            </p>
+            <dl class="files-unauth-matrix">
+              <div class="files-unauth-row">
+                <dt id="filesUnauthorizedStateLabel">Identity state</dt>
+                <dd id="filesUnauthorizedStateValue">Unverified session</dd>
+              </div>
+              <div class="files-unauth-row">
+                <dt id="filesUnauthorizedGateLabel">Gate control</dt>
+                <dd id="filesUnauthorizedGateValue">Biometric handshake required</dd>
+              </div>
+              <div class="files-unauth-row">
+                <dt id="filesUnauthorizedTraceLabel">Intrusion trace</dt>
+                <dd id="filesUnauthorizedTraceValue">Active monitoring</dd>
+              </div>
+            </dl>
+            <section class="files-unauth-directive" aria-label="Recovery directives">
+              <p id="filesUnauthorizedDirectiveTitle" class="files-unauth-directive-title">Recovery directives</p>
+              <ul class="files-unauth-directive-list">
+                <li id="filesUnauthorizedDirectiveLine1">Log in with Discord and submit an access application.</li>
+                <li id="filesUnauthorizedDirectiveLine2">Your request will be reviewed and approved or declined by an admin.</li>
+                <li id="filesUnauthorizedDirectiveLine3">If declined, wait for cooldown expiry and apply again.</li>
+              </ul>
+            </section>
+            <p id="filesNotAuthorizedMessage" class="files-notice" hidden>
+              Sorry, you are not authorized to access the file system.
+            </p>
+            <div class="files-access-actions">
+              <form id="filesLoginForm" class="files-auth-form" method="post" action="/auth/discord">
+                <input id="filesLoginReturnTo" type="hidden" name="returnTo" value="/#files" />
+                <button id="filesLoginBtn" class="files-btn" type="submit">LOGIN WITH DISCORD</button>
+              </form>
+              <button id="filesLogoutBtn" class="files-btn" type="button" hidden>LOGOUT</button>
+            </div>
           </div>
-        </div>
-        <div class="files-share-stop-hero is-unauthorized" aria-hidden="true">
-          <img
-            src="assets/images/StopVaultBoy.png"
-            alt=""
-            class="files-share-stop-image"
-            loading="lazy"
-            decoding="async"
-          />
-        </div>
-        <h2 id="filesUnauthorizedTitle">UNAUTHORIZED ACCESS TO FILE SYSTEM</h2>
-        <p id="filesUnauthorizedSubtitle" class="files-access-subtitle">IDENTITY VERIFICATION REQUIRED</p>
-        <p id="filesUnauthorizedKicker" class="files-unauth-kicker">
-          Archive index remains sealed until terminal identity is validated.
-        </p>
-        <dl class="files-unauth-matrix">
-          <div class="files-unauth-row">
-            <dt id="filesUnauthorizedStateLabel">Identity state</dt>
-            <dd id="filesUnauthorizedStateValue">Unverified session</dd>
-          </div>
-          <div class="files-unauth-row">
-            <dt id="filesUnauthorizedGateLabel">Gate control</dt>
-            <dd id="filesUnauthorizedGateValue">Biometric handshake required</dd>
-          </div>
-          <div class="files-unauth-row">
-            <dt id="filesUnauthorizedTraceLabel">Intrusion trace</dt>
-            <dd id="filesUnauthorizedTraceValue">Active monitoring</dd>
-          </div>
-        </dl>
-        <section class="files-unauth-directive" aria-label="Recovery directives">
-          <p id="filesUnauthorizedDirectiveTitle" class="files-unauth-directive-title">Recovery directives</p>
-          <ul class="files-unauth-directive-list">
-            <li id="filesUnauthorizedDirectiveLine1">Log in with Discord and submit an access application.</li>
-            <li id="filesUnauthorizedDirectiveLine2">Your request will be reviewed and approved or declined by an admin.</li>
-            <li id="filesUnauthorizedDirectiveLine3">If declined, wait for cooldown expiry and apply again.</li>
-          </ul>
-        </section>
-        <p id="filesNotAuthorizedMessage" class="files-notice" hidden>
-          Sorry, you are not authorized to access the file system.
-        </p>
-        <div class="files-access-actions">
-          <form id="filesLoginForm" class="files-auth-form" method="post" action="/auth/discord">
-            <input id="filesLoginReturnTo" type="hidden" name="returnTo" value="/#files" />
-            <button id="filesLoginBtn" class="files-btn" type="submit">LOGIN WITH DISCORD</button>
-          </form>
-          <button id="filesLogoutBtn" class="files-btn" type="button" hidden>LOGOUT</button>
         </div>
       </article>
 
@@ -1709,8 +1741,20 @@
   >
     <span class="visit-counter-mobile-icon" aria-hidden="true">
       <svg class="visit-counter-mobile-icon-svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-        <path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z" />
-        <circle cx="12" cy="12" r="2.75" />
+        <g class="visit-counter-eye-face">
+          <g class="visit-counter-eye-lashes">
+            <path d="M6.6 8.2 5.6 6.4" />
+            <path d="M9.4 7.1 9 5" />
+            <path d="M12 6.7V4.4" />
+            <path d="M14.6 7.1 15 5" />
+            <path d="M17.4 8.2 18.4 6.4" />
+            <path d="M7.4 15.8 6.5 17.3" />
+            <path d="M12 17.3v1.8" />
+            <path d="M16.6 15.8 17.5 17.3" />
+          </g>
+          <path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z" />
+          <circle cx="12" cy="12" r="2.75" />
+        </g>
       </svg>
     </span>
     <span class="visit-counter-mobile-copy">
@@ -1750,6 +1794,17 @@
     </footer>
   </main>
 
+  <aside class="terminal-vaultboy-peek" aria-hidden="true">
+    <img
+      src="assets/images/minerva-terminal-peek.png"
+      alt=""
+      class="terminal-vaultboy-peek-image"
+      loading="eager"
+      decoding="async"
+      draggable="false"
+    />
+  </aside>
+
   <button
     id="filesBotAdminFloatingBtn"
     class="files-bot-admin-pill"
@@ -1786,10 +1841,42 @@
     aria-atomic="true"
     hidden
   >
+    <span class="visit-counter-files-art" aria-hidden="true">
+      <img
+        src="assets/images/vault-boy-files-views-card.png"
+        alt=""
+        class="visit-counter-files-art-image"
+        loading="eager"
+        decoding="async"
+        draggable="false"
+      />
+    </span>
+    <span class="visit-counter-data-art" aria-hidden="true">
+      <img
+        src="assets/images/vault-boy-data-visits-card.png"
+        alt=""
+        class="visit-counter-data-art-image"
+        loading="eager"
+        decoding="async"
+        draggable="false"
+      />
+    </span>
     <span class="visit-counter-icon" aria-hidden="true">
       <svg class="visit-counter-icon-svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-        <path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z" />
-        <circle cx="12" cy="12" r="2.75" />
+        <g class="visit-counter-eye-face">
+          <g class="visit-counter-eye-lashes">
+            <path d="M6.6 8.2 5.6 6.4" />
+            <path d="M9.4 7.1 9 5" />
+            <path d="M12 6.7V4.4" />
+            <path d="M14.6 7.1 15 5" />
+            <path d="M17.4 8.2 18.4 6.4" />
+            <path d="M7.4 15.8 6.5 17.3" />
+            <path d="M12 17.3v1.8" />
+            <path d="M16.6 15.8 17.5 17.3" />
+          </g>
+          <path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z" />
+          <circle cx="12" cy="12" r="2.75" />
+        </g>
       </svg>
     </span>
     <span class="visit-counter-copy">

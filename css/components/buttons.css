@@ -12,7 +12,7 @@
   padding: 9px 12px 8px;
   border-radius: 12px;
   cursor: pointer;
-  transition: transform 120ms ease, border-color 160ms ease, background 160ms ease;
+  transition: transform 120ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
@@ -29,6 +29,7 @@
   transform: translateY(-1px);
   border-color: var(--line-strong);
   background: rgba(139, 255, 139, 0.08);
+  box-shadow: 0 0 16px rgba(139, 255, 139, 0.1);
 }
 
 .refresh-btn:active,
@@ -36,7 +37,23 @@
 .classified-back:active,
 .files-btn:active,
 .files-card-action:active {
-  transform: translateY(0);
+  box-shadow: none;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: linear-gradient(to bottom, rgba(173, 255, 173, 0.92), rgba(110, 224, 110, 0.88));
+  border-color: rgba(183, 255, 183, 0.9);
+  color: #07130a;
+  text-shadow: none;
+  box-shadow: 0 0 22px rgba(139, 255, 139, 0.22);
+}
+
+.refresh-btn:active,
+.hack-btn:active,
+.classified-back:active,
+.files-btn:active,
+.files-card-action:active {
+  transform: translateY(0) scale(0.99);
 }
 
 .refresh-btn:disabled,
