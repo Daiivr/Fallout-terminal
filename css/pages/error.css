@@ -1,0 +1,672 @@
+/* Fallout Terminal — 404 page: Grahm & Chally's lost cargo manifest */
+
+body.error-page .screen-map {
+  opacity: 0.24;
+  animation-duration: 7.2s;
+}
+
+body.error-page .screen-grid {
+  opacity: 0.2;
+}
+
+body.error-page .screen-noise {
+  opacity: 0.1;
+}
+
+body.error-page .pipboy-terminal {
+  max-width: var(--max);
+  display: grid;
+  gap: 12px;
+  padding-top: clamp(14px, 2.4vw, 24px);
+}
+
+body.error-page.is-ready .e404-topbar {
+  animation: terminalRevealUp 460ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
+}
+
+body.error-page.is-ready .e404-panel-main {
+  animation: terminalRevealUp 500ms cubic-bezier(0.22, 1, 0.36, 1) 160ms both;
+}
+
+body.error-page.is-ready .e404-panel-side {
+  animation: terminalRevealUp 500ms cubic-bezier(0.22, 1, 0.36, 1) 260ms both;
+}
+
+body.error-page.is-ready .footer-note {
+  animation: terminalRevealUp 500ms cubic-bezier(0.22, 1, 0.36, 1) 360ms both;
+}
+
+/* Topbar */
+.e404-topbar {
+  position: relative;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 14px;
+  overflow: hidden;
+  isolation: isolate;
+  padding: clamp(16px, 2.4vw, 22px) 20px clamp(14px, 2vw, 18px);
+  border-color: rgba(255, 225, 122, 0.26);
+  background:
+    radial-gradient(620px 230px at 8% 12%, rgba(255, 225, 122, 0.12), transparent 64%),
+    linear-gradient(116deg, rgba(139, 255, 139, 0.11), rgba(0, 0, 0, 0) 56%),
+    rgba(0, 0, 0, 0.26);
+}
+
+.e404-topbar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(to right, rgba(255, 225, 122, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(139, 255, 139, 0.08) 1px, transparent 1px);
+  background-size: 38px 100%, 100% 26px;
+  opacity: 0.32;
+}
+
+.e404-topbar .topbar-right {
+  justify-items: end;
+  gap: 7px;
+}
+
+#e404Title {
+  margin: 10px 0 0;
+  max-width: 24ch;
+  color: #ffe68f;
+  font-family: var(--font-heading);
+  font-weight: 400;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 0.94;
+  letter-spacing: 0.065em;
+  text-wrap: balance;
+  text-shadow:
+    0 0 18px rgba(255, 225, 122, 0.24),
+    0 0 1px rgba(255, 239, 175, 0.76);
+}
+
+#e404Title::after {
+  content: "";
+  display: inline-block;
+  width: 0.52ch;
+  height: 0.78em;
+  margin-left: 0.24ch;
+  vertical-align: -0.04em;
+  background: currentColor;
+  box-shadow: 0 0 12px rgba(255, 225, 122, 0.4);
+  animation: titleCaretBlink 1.06s steps(1) infinite;
+}
+
+.e404-kicker {
+  margin: 12px 0 0;
+  max-width: 66ch;
+  color: rgba(139, 255, 139, 0.8);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.e404-chip {
+  margin: 0;
+  padding: 6px 11px 5px;
+  border: 1px solid rgba(255, 225, 122, 0.4);
+  border-radius: 8px;
+  background:
+    linear-gradient(to bottom, rgba(255, 225, 122, 0.14), rgba(0, 0, 0, 0.24)),
+    rgba(0, 0, 0, 0.56);
+  color: #ffefaf;
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.e404-clearance {
+  margin: 0;
+  color: var(--fg-faint);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: right;
+}
+
+.e404-clearance strong {
+  color: var(--fg-bright);
+  font-weight: 700;
+}
+
+/* Layout */
+.e404-grid {
+  margin-top: 0;
+  grid-template-columns: minmax(0, 1.6fr) minmax(300px, 0.74fr);
+  align-items: stretch;
+  gap: 12px;
+}
+
+.e404-panel {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(255, 225, 122, 0.24);
+  background:
+    radial-gradient(430px 220px at 10% 0%, rgba(255, 225, 122, 0.08), transparent 64%),
+    linear-gradient(to bottom right, rgba(139, 255, 139, 0.07), rgba(0, 0, 0, 0) 58%),
+    rgba(0, 0, 0, 0.28);
+}
+
+/* Main panel: copy left, Grahm & Chally right */
+.e404-panel-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(260px, 0.9fr);
+  gap: 18px;
+  padding: 18px;
+}
+
+.e404-panel-main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right, rgba(139, 255, 139, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 225, 122, 0.05) 1px, transparent 1px);
+  background-size: 42px 100%, 100% 28px;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.e404-copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.e404-badge {
+  margin: 0;
+  width: fit-content;
+  padding: 6px 11px 5px;
+  border: 1px solid rgba(255, 225, 122, 0.42);
+  border-radius: 7px;
+  background: rgba(255, 225, 122, 0.12);
+  color: #ffefaf;
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  text-shadow: 0 0 14px rgba(255, 225, 122, 0.24);
+}
+
+#e404Code {
+  margin: 0;
+  padding: 10px 0 9px;
+  border-block: 1px solid rgba(139, 255, 139, 0.28);
+  background: linear-gradient(to right, rgba(139, 255, 139, 0.08), transparent 78%);
+  color: var(--fg-bright);
+  font-size: clamp(1rem, 1.9vw, 1.3rem);
+  letter-spacing: 0.11em;
+  line-height: 1.12;
+}
+
+/* Grahm's dialogue log */
+.e404-dialogue {
+  margin: 0;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  padding: 12px 14px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(to bottom, rgba(139, 255, 139, 0.025) 0 2px, transparent 2px 4px),
+    rgba(0, 0, 0, 0.36);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.e404-line {
+  margin: 0;
+  min-height: 1.45em;
+  color: var(--fg);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+}
+
+.e404-line .e404-prompt {
+  color: var(--fg-faint);
+}
+
+.e404-line .e404-who {
+  color: #ffefaf;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 10px rgba(255, 225, 122, 0.2);
+}
+
+.e404-line.is-pending .e404-who {
+  visibility: hidden;
+}
+
+.e404-line.is-typing .e404-text::after {
+  content: "";
+  display: inline-block;
+  width: 0.55ch;
+  height: 0.95em;
+  margin-left: 0.12ch;
+  vertical-align: -0.12em;
+  background: currentColor;
+  box-shadow: 0 0 10px var(--glow);
+  animation: titleCaretBlink 0.8s steps(1) infinite;
+}
+
+/* Requested path */
+.e404-path-frame {
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 225, 122, 0.32);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(255, 225, 122, 0.1), rgba(0, 0, 0, 0) 56%),
+    rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
+}
+
+.e404-path-label {
+  margin: 0 0 7px;
+  color: rgba(255, 239, 175, 0.72);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.e404-path {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-bright);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Actions */
+.e404-actions {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.e404-actions .refresh-btn {
+  grid-column: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 178px;
+  text-decoration: none;
+}
+
+.e404-action-primary {
+  border-color: rgba(255, 225, 122, 0.5);
+  background:
+    linear-gradient(to bottom, rgba(255, 225, 122, 0.2), rgba(0, 0, 0, 0.24)),
+    rgba(0, 0, 0, 0.22);
+  color: #fff4cb;
+}
+
+/* Grahm & Chally photo stage */
+.e404-stage {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  min-width: 0;
+  display: grid;
+  align-content: end;
+  justify-items: center;
+  gap: 10px;
+}
+
+.e404-stage[hidden] {
+  display: none;
+}
+
+.e404-panel-main:has(.e404-stage[hidden]) {
+  grid-template-columns: 1fr;
+}
+
+.e404-stage::before {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 42px;
+  height: 30%;
+  border-radius: 50% 50% 0 0;
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(255, 225, 122, 0.13), transparent 66%),
+    radial-gradient(ellipse at 50% 100%, rgba(139, 255, 139, 0.09), transparent 72%);
+  filter: blur(12px);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.e404-art {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 460px;
+  height: auto;
+  object-fit: contain;
+  object-position: center bottom;
+  filter:
+    drop-shadow(14px 18px 26px rgba(0, 0, 0, 0.5))
+    drop-shadow(0 0 12px rgba(139, 255, 139, 0.1));
+  user-select: none;
+}
+
+.e404-caption {
+  position: relative;
+  width: min(100%, 380px);
+  padding: 7px 10px 6px;
+  border: 1px solid rgba(255, 225, 122, 0.26);
+  border-radius: 8px;
+  background:
+    linear-gradient(to right, rgba(255, 225, 122, 0.12), rgba(0, 0, 0, 0.36)),
+    rgba(0, 0, 0, 0.3);
+  color: rgba(255, 239, 175, 0.74);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  line-height: 1.4;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* Side panel: Chally's pack manifest */
+.e404-panel-side {
+  display: grid;
+  align-content: start;
+  gap: 11px;
+  padding: 16px 14px;
+}
+
+.e404-side-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 225, 122, 0.18);
+}
+
+#e404ManifestTitle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #ffefaf;
+  font-size: 1.02rem;
+  line-height: 1.05;
+}
+
+.e404-stamp {
+  padding: 4px 7px 3px;
+  border: 1px solid rgba(139, 255, 139, 0.26);
+  border-radius: 5px;
+  color: rgba(139, 255, 139, 0.66);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transform: rotate(2deg);
+}
+
+.e404-manifest {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.e404-manifest li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 10px 8px;
+  border: 1px solid rgba(255, 225, 122, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(to right, rgba(255, 225, 122, 0.06), transparent 58%),
+    rgba(0, 0, 0, 0.24);
+  animation: e404RowIn 340ms ease backwards;
+}
+
+.e404-manifest li:nth-child(1) { animation-delay: 120ms; }
+.e404-manifest li:nth-child(2) { animation-delay: 220ms; }
+.e404-manifest li:nth-child(3) { animation-delay: 320ms; }
+.e404-manifest li:nth-child(4) { animation-delay: 420ms; }
+.e404-manifest li:nth-child(5) { animation-delay: 520ms; }
+
+.e404-item {
+  color: var(--fg);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.e404-status {
+  flex-shrink: 0;
+  padding: 3px 7px 2px;
+  border: 1px solid rgba(139, 255, 139, 0.4);
+  border-radius: 5px;
+  background: rgba(139, 255, 139, 0.1);
+  color: var(--fg-bright);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.e404-manifest li.is-missing {
+  border-color: rgba(255, 111, 111, 0.4);
+  background:
+    linear-gradient(to right, rgba(255, 111, 111, 0.1), transparent 58%),
+    rgba(0, 0, 0, 0.28);
+}
+
+.e404-manifest li.is-missing .e404-item {
+  color: #ffb9b9;
+}
+
+.e404-manifest li.is-missing .e404-status {
+  border-color: rgba(255, 111, 111, 0.56);
+  background: rgba(255, 111, 111, 0.14);
+  color: #ffb9b9;
+  animation: e404StatusBlink 1.2s steps(1) infinite;
+}
+
+.e404-manifest li.is-restricted {
+  border-color: rgba(255, 225, 122, 0.46);
+  background:
+    linear-gradient(to right, rgba(255, 225, 122, 0.12), transparent 58%),
+    rgba(0, 0, 0, 0.28);
+}
+
+.e404-manifest li.is-restricted .e404-item {
+  color: #ffefaf;
+}
+
+.e404-manifest li.is-restricted .e404-status {
+  border-color: rgba(255, 225, 122, 0.56);
+  background: rgba(255, 225, 122, 0.14);
+  color: #ffefaf;
+  animation: e404StatusBlink 1.2s steps(1) infinite;
+}
+
+/* Chally vitals + manifest meta */
+.e404-vitals,
+.e404-meta {
+  margin: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.e404-meta {
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255, 225, 122, 0.22);
+}
+
+.e404-vitals-row,
+.e404-meta-row {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.e404-vitals-row dt,
+.e404-meta-row dt {
+  color: rgba(139, 255, 139, 0.62);
+  font-size: 10px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.e404-vitals-row dd,
+.e404-meta-row dd {
+  margin: 0;
+  color: #ffefaf;
+  font-family: var(--font-heading);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-align: right;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Footer */
+body.error-page .footer-note {
+  margin-top: 0;
+  padding-block: 9px 8px;
+  border-top: 1px dashed rgba(255, 225, 122, 0.28);
+  background:
+    linear-gradient(to right, rgba(255, 225, 122, 0.07), rgba(0, 0, 0, 0) 30%, rgba(255, 225, 122, 0.07)),
+    rgba(0, 0, 0, 0.22);
+  color: rgba(255, 239, 175, 0.66);
+  text-align: center;
+}
+
+/* Unauthorized asset-probe variant */
+body.error-page.is-unauthorized .e404-topbar,
+body.error-page.is-unauthorized .e404-panel,
+body.error-page.is-unauthorized .footer-note {
+  border-color: rgba(255, 225, 122, 0.36);
+}
+
+body.error-page.is-unauthorized #e404Code {
+  border-block-color: rgba(255, 225, 122, 0.38);
+  background: linear-gradient(to right, rgba(255, 225, 122, 0.12), transparent 78%);
+  color: #ffefaf;
+  text-shadow: 0 0 16px rgba(255, 225, 122, 0.28);
+}
+
+body.error-page.is-unauthorized .e404-path-frame {
+  border-color: rgba(255, 225, 122, 0.46);
+}
+
+body.error-page.is-unauthorized .e404-path {
+  color: #fff4cb;
+}
+
+/* Animations */
+@keyframes e404RowIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes e404StatusBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #e404Title::after,
+  .e404-line.is-typing .e404-text::after,
+  .e404-manifest li,
+  .e404-manifest li .e404-status,
+  body.error-page.is-ready .e404-topbar,
+  body.error-page.is-ready .e404-panel-main,
+  body.error-page.is-ready .e404-panel-side,
+  body.error-page.is-ready .footer-note {
+    animation: none !important;
+  }
+}
+
+/* Responsive */
+@media (max-width: 1020px) {
+  .e404-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .e404-panel-main {
+    grid-template-columns: 1fr;
+  }
+
+  .e404-stage {
+    order: -1;
+  }
+
+  .e404-art {
+    max-width: 380px;
+  }
+}
+
+@media (max-width: 680px) {
+  .e404-topbar {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .e404-topbar .topbar-right {
+    justify-items: start;
+  }
+
+  .e404-clearance {
+    text-align: left;
+  }
+
+  #e404Title {
+    max-width: 18ch;
+    font-size: clamp(1.5rem, 8.4vw, 2.3rem);
+  }
+
+  .e404-panel-main {
+    padding: 14px;
+  }
+
+  .e404-actions {
+    flex-direction: column;
+  }
+
+  .e404-actions .refresh-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .e404-art {
+    max-width: 300px;
+  }
+}

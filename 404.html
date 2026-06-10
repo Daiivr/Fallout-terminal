@@ -12,7 +12,7 @@
   <link href="https://fonts.cdnfonts.com/css/overseer" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/svg+xml" href="/assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="/css/styles.css?v=20260609-error-refit-1" />
+  <link rel="stylesheet" href="/css/styles.css?v=20260610-grahm-chally-1" />
 </head>
 <body class="is-ready error-page">
   <div class="screen-vignette" aria-hidden="true"></div>
@@ -21,87 +21,78 @@
   <div class="screen-scanlines" aria-hidden="true"></div>
   <div class="screen-noise" aria-hidden="true"></div>
 
-  <main class="pipboy-terminal error-terminal">
-    <header class="topbar error-topbar">
+  <main class="pipboy-terminal">
+    <header class="topbar e404-topbar">
       <div class="topbar-left">
-        <p class="micro">ROBCO SECURITY SUBSYSTEM</p>
-        <h1 id="errorTitle">404 // ARCHIVE NODE NOT FOUND</h1>
-        <p id="errorKicker" class="error-kicker">Signal lost while traversing archive sectors.</p>
+        <p class="micro" id="e404Micro">ROBCO TERMLINK // WASTELAND COURIER RELAY</p>
+        <h1 id="e404Title">404 // PAGE NOT IN PACK</h1>
+        <p id="e404Kicker" class="e404-kicker">Cargo audit in progress. Please do not feed pages to the brahmin.</p>
       </div>
       <div class="topbar-right">
-        <p class="error-chip">TERMLINK SECURITY</p>
-        <p class="error-clearance"><span id="clearanceLabel">Clearance</span>: <strong id="clearanceValue">Operator</strong></p>
+        <p class="e404-chip" id="e404Chip">GRAHM'S CARAVAN // EST. 2102</p>
+        <p class="e404-clearance"><span id="e404PackLabel">Pack unit</span>: <strong id="e404PackValue">Chally the Moo-Moo</strong></p>
       </div>
     </header>
 
-    <section class="grid error-grid">
-      <article class="panel error-panel error-panel-main">
-        <div class="error-main-copy">
-          <p id="errorBadge" class="error-badge">INCIDENT E-404</p>
-          <h2 id="errorCode">FILE NOT FOUND</h2>
-          <p id="errorSummary" class="summary">Requested terminal record could not be resolved.</p>
-          <div class="error-path-frame">
-            <p class="hint">Requested path</p>
-            <pre id="errorPath" class="error-path">/</pre>
+    <section class="grid e404-grid">
+      <article class="panel e404-panel e404-panel-main">
+        <div class="e404-copy">
+          <p id="e404Badge" class="e404-badge">INCIDENT E-404 // LOST CARGO</p>
+          <h2 id="e404Code">FILE NOT FOUND // PROBABLY EATEN</h2>
+          <div class="e404-dialogue" id="e404Dialogue" aria-live="polite">
+            <p class="e404-line"><span class="e404-prompt">&gt; </span><span class="e404-who">GRAHM: </span><span class="e404-text">Grahm dug through whole pack. Twice.</span></p>
+            <p class="e404-line"><span class="e404-prompt">&gt; </span><span class="e404-who">GRAHM: </span><span class="e404-text">No page here. Only cement, bicycle, and good smells.</span></p>
+            <p class="e404-line"><span class="e404-prompt">&gt; </span><span class="e404-who">GRAHM: </span><span class="e404-text">Maybe Chally ate it. Chally eats everything.</span></p>
+            <p class="e404-line"><span class="e404-prompt">&gt; </span><span class="e404-who">CHALLY: </span><span class="e404-text">Moo. Moo. (one moo per head)</span></p>
           </div>
-          <div class="error-actions">
-            <a class="refresh-btn error-action-primary" href="/">Return to terminal</a>
-            <button id="errorBackBtn" class="refresh-btn" type="button">Go back</button>
+          <div class="e404-path-frame">
+            <p class="e404-path-label" id="e404PathLabel">Missing cargo</p>
+            <pre id="e404Path" class="e404-path">/</pre>
           </div>
-        </div>
-        <div class="error-radar-module" aria-hidden="true">
-          <div class="error-radar">
-            <span class="error-radar-ring"></span>
-            <span class="error-radar-ring"></span>
-            <span class="error-radar-ring"></span>
-            <span class="error-radar-sweep"></span>
-          </div>
-          <div class="error-radar-readouts">
-            <span>SCAN HOLD</span>
-            <span>NODE LOCK</span>
-            <span>DIR OFFLINE</span>
+          <div class="e404-actions">
+            <a class="refresh-btn e404-action-primary" id="e404HomeBtn" href="/">Follow Chally home</a>
+            <button id="e404BackBtn" class="refresh-btn" type="button">Retrace your steps</button>
           </div>
         </div>
+        <figure class="e404-stage" id="e404Stage">
+          <img
+            src="/assets/images/grahm-chally-404.png"
+            alt="Grahm the super mutant trader pondering next to Chally the Moo-Moo, his two-headed pack brahmin stacked with wasteland cargo"
+            class="e404-art"
+            id="e404Art"
+            loading="eager"
+            decoding="async"
+            onerror="this.closest('.e404-stage').setAttribute('hidden', '')"
+          />
+          <figcaption class="e404-caption" id="e404Caption">LAST KNOWN PHOTO // GRAHM &amp; CHALLY THE MOO-MOO</figcaption>
+        </figure>
       </article>
 
-      <aside class="panel error-panel error-panel-side" aria-label="Recovery diagnostics">
-        <div class="error-side-head">
-          <h2 id="diagTitle">Recovery directives</h2>
-          <span class="error-side-stamp" aria-hidden="true">CHK-04</span>
+      <aside class="panel e404-panel e404-panel-side" aria-label="Pack manifest">
+        <div class="e404-side-head">
+          <h2 id="e404ManifestTitle">Pack manifest</h2>
+          <span class="e404-stamp" aria-hidden="true">CHK-76</span>
         </div>
-        <p id="diagSummary" class="summary">Use a verified route, then resume archive navigation.</p>
-        <div class="error-signal" aria-hidden="true">
-          <span class="error-signal-label">ROUTE TRACE</span>
-          <span class="error-signal-grid"></span>
-          <span class="error-signal-path is-ok"></span>
-          <span class="error-signal-path is-warn"></span>
-          <span class="error-signal-path is-blocked"></span>
-          <span class="error-signal-node is-home"></span>
-          <span class="error-signal-node is-route"></span>
-          <span class="error-signal-node is-lock"></span>
-          <span class="error-signal-node is-null"></span>
-          <span class="error-signal-arrow"></span>
-          <span class="error-signal-caption is-source">TERM</span>
-          <span class="error-signal-caption is-target">ASSET</span>
-        </div>
-        <dl class="error-diagnostics">
-          <div class="error-diagnostics-row">
-            <dt id="incidentLabel">Incident ID</dt>
-            <dd id="incidentValue">FCX-000000</dd>
-          </div>
-          <div class="error-diagnostics-row">
-            <dt id="statusLabel">Subsystem status</dt>
-            <dd id="statusValue">Link unstable</dd>
-          </div>
-          <div class="error-diagnostics-row">
-            <dt id="timeLabel">Timestamp</dt>
-            <dd id="timeValue">--</dd>
-          </div>
+        <ul class="e404-manifest" id="e404Manifest">
+          <li><span class="e404-item">Pre-war bicycle (wheels: mostly round)</span><span class="e404-status">SECURED</span></li>
+          <li><span class="e404-item">Cement x3 (Grahm likes cement)</span><span class="e404-status">SECURED</span></li>
+          <li><span class="e404-item">Trusty shovel</span><span class="e404-status">SECURED</span></li>
+          <li><span class="e404-item">Map to somewhere (lightly chewed)</span><span class="e404-status">SECURED</span></li>
+          <li class="is-missing"><span class="e404-item">The page you wanted</span><span class="e404-status">MISSING</span></li>
+        </ul>
+        <dl class="e404-vitals" id="e404Vitals">
+          <div class="e404-vitals-row"><dt>Heads</dt><dd>2 of 2 operational</dd></div>
+          <div class="e404-vitals-row"><dt>Mood</dt><dd>Confused but happy</dd></div>
+          <div class="e404-vitals-row"><dt>Cargo balance</dt><dd>Questionable</dd></div>
+        </dl>
+        <dl class="e404-meta">
+          <div class="e404-meta-row"><dt id="e404IncidentLabel">Manifest ID</dt><dd id="e404IncidentValue">FCX-000000</dd></div>
+          <div class="e404-meta-row"><dt id="e404TimeLabel">Logged</dt><dd id="e404TimeValue">--</dd></div>
         </dl>
       </aside>
     </section>
 
-    <p class="footer-note">Unauthorized probing may be logged by the terminal.</p>
+    <p class="footer-note" id="e404Footer">Grahm has best stuff. Grahm just not have this page.</p>
   </main>
 
   <script>
@@ -110,65 +101,113 @@
       const STRINGS = {
         en: {
           pageTitleDefault: "404 | Fallout Codex Terminal",
-          pageTitleUnauthorized: "404 // Unauthorized Access",
-          micro: "ROBCO SECURITY SUBSYSTEM",
-          chip: "TERMLINK SECURITY",
-        titleDefault: "404 // ARCHIVE NODE NOT FOUND",
-        titleUnauthorized: "404 // UNAUTHORIZED ACCESS DETECTED",
-        kickerDefault: "Signal lost while traversing archive sectors.",
-        kickerUnauthorized: "Restricted node intercepted by terminal security.",
-        codeDefault: "FILE NOT FOUND",
-        codeUnauthorized: "ACCESS DENIED",
-        badgeDefault: "INCIDENT E-404",
-        badgeUnauthorized: "INCIDENT E-SEC",
-        summaryDefault: "Requested terminal record could not be resolved.",
-        summaryUnauthorized: "This asset node is restricted. Directory probing is disabled.",
-        pathLabel: "Requested path",
-        clearanceLabel: "Clearance",
-        clearanceDefault: "Operator",
-        clearanceUnauthorized: "Security lock",
-        homeBtn: "Return to terminal",
-        backBtn: "Go back",
-        diagTitle: "Recovery directives",
-        diagSummary: "Use a verified route, then resume archive navigation.",
-        incidentLabel: "Incident ID",
-        statusLabel: "Subsystem status",
-        statusDefault: "Link unstable",
-        statusUnauthorized: "Containment active",
-        timeLabel: "Timestamp",
-        footer: "Unauthorized probing may be logged by the terminal."
-      },
-      es: {
-        pageTitleDefault: "404 | Terminal Fallout Codex",
-        pageTitleUnauthorized: "404 // Acceso no autorizado",
-        micro: "SUBSISTEMA DE SEGURIDAD ROBCO",
-        chip: "SEGURIDAD TERMLINK",
-        titleDefault: "404 // NODO DE ARCHIVO NO ENCONTRADO",
-        titleUnauthorized: "404 // ACCESO NO AUTORIZADO DETECTADO",
-        kickerDefault: "Senal perdida durante el recorrido de sectores del archivo.",
-        kickerUnauthorized: "Nodo restringido interceptado por la seguridad del terminal.",
-        codeDefault: "ARCHIVO NO ENCONTRADO",
-        codeUnauthorized: "ACCESO DENEGADO",
-        badgeDefault: "INCIDENTE E-404",
-        badgeUnauthorized: "INCIDENTE E-SEC",
-        summaryDefault: "No se pudo resolver el registro solicitado del terminal.",
-        summaryUnauthorized: "Este nodo de assets esta restringido. El escaneo de directorios esta deshabilitado.",
-        pathLabel: "Ruta solicitada",
-        clearanceLabel: "Credencial",
-        clearanceDefault: "Operador",
-        clearanceUnauthorized: "Bloqueo de seguridad",
-        homeBtn: "Volver al terminal",
-        backBtn: "Regresar",
-        diagTitle: "Directivas de recuperacion",
-        diagSummary: "Usa una ruta verificada y luego reanuda la navegacion del archivo.",
-        incidentLabel: "ID de incidente",
-        statusLabel: "Estado del subsistema",
-        statusDefault: "Enlace inestable",
-        statusUnauthorized: "Contencion activa",
-        timeLabel: "Marca temporal",
-        footer: "El sondeo no autorizado puede quedar registrado por el terminal."
-      }
-    };
+          pageTitleUnauthorized: "404 // Private Stock",
+          micro: "ROBCO TERMLINK // WASTELAND COURIER RELAY",
+          chip: "GRAHM'S CARAVAN // EST. 2102",
+          titleDefault: "404 // PAGE NOT IN PACK",
+          titleUnauthorized: "404 // GRAHM SAY NO PEEKING",
+          kickerDefault: "Cargo audit in progress. Please do not feed pages to the brahmin.",
+          kickerUnauthorized: "Private stock shelf. Grahm is watching. Chally too, with both heads.",
+          codeDefault: "FILE NOT FOUND // PROBABLY EATEN",
+          codeUnauthorized: "ACCESS DENIED // PRIVATE STOCK",
+          badgeDefault: "INCIDENT E-404 // LOST CARGO",
+          badgeUnauthorized: "INCIDENT E-SEC // NO TOUCHING",
+          dialogueDefault: [
+            { who: "GRAHM", text: "Grahm dug through whole pack. Twice." },
+            { who: "GRAHM", text: "No page here. Only cement, bicycle, and good smells." },
+            { who: "GRAHM", text: "Maybe Chally ate it. Chally eats everything." },
+            { who: "CHALLY", text: "Moo. Moo. (one moo per head)" }
+          ],
+          dialogueUnauthorized: [
+            { who: "GRAHM", text: "That not for trade. That Grahm's private stock." },
+            { who: "GRAHM", text: "Looking is free. THAT kind of looking is not." },
+            { who: "CHALLY", text: "Moo. (disapproving, in stereo)" }
+          ],
+          pathLabelDefault: "Missing cargo",
+          pathLabelUnauthorized: "Restricted item",
+          packLabel: "Pack unit",
+          packValue: "Chally the Moo-Moo",
+          homeBtn: "Follow Chally home",
+          backBtn: "Retrace your steps",
+          manifestTitle: "Pack manifest",
+          manifest: [
+            { item: "Pre-war bicycle (wheels: mostly round)", state: "ok" },
+            { item: "Cement x3 (Grahm likes cement)", state: "ok" },
+            { item: "Trusty shovel", state: "ok" },
+            { item: "Map to somewhere (lightly chewed)", state: "ok" },
+            { item: "The page you wanted", state: "missing" }
+          ],
+          manifestUnauthorizedLast: { item: "The thing you poked at", state: "restricted" },
+          statusOk: "SECURED",
+          statusMissing: "MISSING",
+          statusRestricted: "RESTRICTED",
+          vitals: [
+            ["Heads", "2 of 2 operational"],
+            ["Mood", "Confused but happy"],
+            ["Cargo balance", "Questionable"]
+          ],
+          incidentLabel: "Manifest ID",
+          timeLabel: "Logged",
+          caption: "LAST KNOWN PHOTO // GRAHM & CHALLY THE MOO-MOO",
+          artAlt: "Grahm the super mutant trader pondering next to Chally the Moo-Moo, his two-headed pack brahmin stacked with wasteland cargo",
+          footerDefault: "Grahm has best stuff. Grahm just not have this page.",
+          footerUnauthorized: "Grahm forgives you. Chally remembers."
+        },
+        es: {
+          pageTitleDefault: "404 | Terminal Fallout Codex",
+          pageTitleUnauthorized: "404 // Mercancia privada",
+          micro: "ROBCO TERMLINK // RED DE CARAVANAS DEL YERMO",
+          chip: "CARAVANA DE GRAHM // DESDE 2102",
+          titleDefault: "404 // LA PAGINA NO ESTA EN LA CARGA",
+          titleUnauthorized: "404 // GRAHM DICE NO MIRAR",
+          kickerDefault: "Auditoria de carga en curso. No de paginas de comer a la brahmin.",
+          kickerUnauthorized: "Estante de mercancia privada. Grahm vigila. Chally tambien, con las dos cabezas.",
+          codeDefault: "ARCHIVO NO ENCONTRADO // PROBABLEMENTE COMIDO",
+          codeUnauthorized: "ACCESO DENEGADO // MERCANCIA PRIVADA",
+          badgeDefault: "INCIDENTE E-404 // CARGA PERDIDA",
+          badgeUnauthorized: "INCIDENTE E-SEC // NO TOCAR",
+          dialogueDefault: [
+            { who: "GRAHM", text: "Grahm reviso toda la mochila. Dos veces." },
+            { who: "GRAHM", text: "Aqui no hay pagina. Solo cemento, bicicleta y buenos olores." },
+            { who: "GRAHM", text: "Quiza Chally se la comio. Chally come de todo." },
+            { who: "CHALLY", text: "Muu. Muu. (un muu por cabeza)" }
+          ],
+          dialogueUnauthorized: [
+            { who: "GRAHM", text: "Eso no se vende. Es mercancia privada de Grahm." },
+            { who: "GRAHM", text: "Mirar es gratis. ESE tipo de mirar, no." },
+            { who: "CHALLY", text: "Muu. (con desaprobacion, en estereo)" }
+          ],
+          pathLabelDefault: "Carga extraviada",
+          pathLabelUnauthorized: "Articulo restringido",
+          packLabel: "Unidad de carga",
+          packValue: "Chally la Muu-Muu",
+          homeBtn: "Sigue a Chally a casa",
+          backBtn: "Vuelve sobre tus pasos",
+          manifestTitle: "Manifiesto de carga",
+          manifest: [
+            { item: "Bicicleta de antes de la guerra (ruedas casi redondas)", state: "ok" },
+            { item: "Cemento x3 (a Grahm le gusta el cemento)", state: "ok" },
+            { item: "Pala de confianza", state: "ok" },
+            { item: "Mapa a alguna parte (algo mordisqueado)", state: "ok" },
+            { item: "La pagina que buscabas", state: "missing" }
+          ],
+          manifestUnauthorizedLast: { item: "Lo que intentabas tocar", state: "restricted" },
+          statusOk: "SEGURO",
+          statusMissing: "PERDIDA",
+          statusRestricted: "RESTRINGIDO",
+          vitals: [
+            ["Cabezas", "2 de 2 operativas"],
+            ["Animo", "Confundida pero feliz"],
+            ["Equilibrio de carga", "Cuestionable"]
+          ],
+          incidentLabel: "ID de manifiesto",
+          timeLabel: "Registrado",
+          caption: "ULTIMA FOTO CONOCIDA // GRAHM Y CHALLY LA MUU-MUU",
+          artAlt: "Grahm, el supermutante comerciante, pensativo junto a Chally la Muu-Muu, su brahmin de carga de dos cabezas repleta de trastos",
+          footerDefault: "Grahm tiene las mejores cosas. Esta pagina justamente no.",
+          footerUnauthorized: "Grahm te perdona. Chally lo recuerda."
+        }
+      };
 
       const detectLang = () => {
         try {
@@ -191,90 +230,82 @@
       const pathValue = `${pathName}${window.location.search || ""}`;
       const isAssetProbe = /^\/assets(?:\/|$)/i.test(pathName);
 
-      const microEl = document.querySelector(".micro");
-      const chipEl = document.querySelector(".error-chip");
-      const titleEl = document.getElementById("errorTitle");
-      const kickerEl = document.getElementById("errorKicker");
-      const codeEl = document.getElementById("errorCode");
-      const badgeEl = document.getElementById("errorBadge");
-      const summaryEl = document.getElementById("errorSummary");
-      const pathLabelEl = document.querySelector(".hint");
-      const pathEl = document.getElementById("errorPath");
-      const clearanceLabelEl = document.getElementById("clearanceLabel");
-      const clearanceValueEl = document.getElementById("clearanceValue");
-      const diagTitleEl = document.getElementById("diagTitle");
-      const diagSummaryEl = document.getElementById("diagSummary");
-      const incidentLabelEl = document.getElementById("incidentLabel");
-      const incidentValueEl = document.getElementById("incidentValue");
-      const statusLabelEl = document.getElementById("statusLabel");
-      const statusValueEl = document.getElementById("statusValue");
-      const timeLabelEl = document.getElementById("timeLabel");
-      const timeValueEl = document.getElementById("timeValue");
-      const homeBtn = document.querySelector(".error-actions a.refresh-btn");
-      const backBtn = document.getElementById("errorBackBtn");
-      const footerEl = document.querySelector(".footer-note");
+      const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.textContent = value;
+        }
+      };
 
-      if (microEl) {
-        microEl.textContent = tr.micro;
+      document.title = isAssetProbe ? tr.pageTitleUnauthorized : tr.pageTitleDefault;
+      if (isAssetProbe) {
+        document.body.classList.add("is-unauthorized");
       }
-      if (chipEl) {
-        chipEl.textContent = tr.chip;
-      }
-      if (titleEl) {
-        titleEl.textContent = tr.titleDefault;
-      }
-      if (kickerEl) {
-        kickerEl.textContent = tr.kickerDefault;
-      }
-      if (codeEl) {
-        codeEl.textContent = tr.codeDefault;
-      }
-      if (badgeEl) {
-        badgeEl.textContent = tr.badgeDefault;
-      }
-      if (summaryEl) {
-        summaryEl.textContent = tr.summaryDefault;
-      }
-      if (pathLabelEl) {
-        pathLabelEl.textContent = tr.pathLabel;
-      }
-      if (clearanceLabelEl) {
-        clearanceLabelEl.textContent = tr.clearanceLabel;
-      }
-      if (clearanceValueEl) {
-        clearanceValueEl.textContent = tr.clearanceDefault;
-      }
-      if (diagTitleEl) {
-        diagTitleEl.textContent = tr.diagTitle;
-      }
-      if (diagSummaryEl) {
-        diagSummaryEl.textContent = tr.diagSummary;
-      }
-      if (incidentLabelEl) {
-        incidentLabelEl.textContent = tr.incidentLabel;
-      }
-      if (statusLabelEl) {
-        statusLabelEl.textContent = tr.statusLabel;
-      }
-      if (statusValueEl) {
-        statusValueEl.textContent = tr.statusDefault;
-      }
-      if (timeLabelEl) {
-        timeLabelEl.textContent = tr.timeLabel;
-      }
-      if (homeBtn) {
-        homeBtn.textContent = tr.homeBtn;
-      }
-      if (backBtn) {
-        backBtn.textContent = tr.backBtn;
-      }
-      if (footerEl) {
-        footerEl.textContent = tr.footer;
-      }
-      document.title = tr.pageTitleDefault;
 
-      if (pathEl) {
-        pathEl.textContent = pathValue || "/";
+      setText("e404Micro", tr.micro);
+      setText("e404Chip", tr.chip);
+      setText("e404Title", isAssetProbe ? tr.titleUnauthorized : tr.titleDefault);
+      setText("e404Kicker", isAssetProbe ? tr.kickerUnauthorized : tr.kickerDefault);
+      setText("e404Code", isAssetProbe ? tr.codeUnauthorized : tr.codeDefault);
+      setText("e404Badge", isAssetProbe ? tr.badgeUnauthorized : tr.badgeDefault);
+      setText("e404PathLabel", isAssetProbe ? tr.pathLabelUnauthorized : tr.pathLabelDefault);
+      setText("e404PackLabel", tr.packLabel);
+      setText("e404PackValue", tr.packValue);
+      setText("e404HomeBtn", tr.homeBtn);
+      setText("e404BackBtn", tr.backBtn);
+      setText("e404ManifestTitle", tr.manifestTitle);
+      setText("e404IncidentLabel", tr.incidentLabel);
+      setText("e404TimeLabel", tr.timeLabel);
+      setText("e404Caption", tr.caption);
+      setText("e404Path", pathValue || "/");
+      setText("e404Footer", isAssetProbe ? tr.footerUnauthorized : tr.footerDefault);
+
+      const artEl = document.getElementById("e404Art");
+      if (artEl) {
+        artEl.alt = tr.artAlt;
+      }
+
+      const STATUS_LABELS = {
+        ok: tr.statusOk,
+        missing: tr.statusMissing,
+        restricted: tr.statusRestricted
+      };
+
+      const manifestEl = document.getElementById("e404Manifest");
+      if (manifestEl) {
+        const rows = tr.manifest.slice(0, -1).concat(isAssetProbe ? tr.manifestUnauthorizedLast : tr.manifest[tr.manifest.length - 1]);
+        manifestEl.innerHTML = "";
+        rows.forEach((row) => {
+          const li = document.createElement("li");
+          if (row.state === "missing") {
+            li.classList.add("is-missing");
+          } else if (row.state === "restricted") {
+            li.classList.add("is-restricted");
+          }
+          const item = document.createElement("span");
+          item.className = "e404-item";
+          item.textContent = row.item;
+          const status = document.createElement("span");
+          status.className = "e404-status";
+          status.textContent = STATUS_LABELS[row.state] || STATUS_LABELS.ok;
+          li.append(item, status);
+          manifestEl.appendChild(li);
+        });
+      }
+
+      const vitalsEl = document.getElementById("e404Vitals");
+      if (vitalsEl) {
+        vitalsEl.innerHTML = "";
+        tr.vitals.forEach(([label, value]) => {
+          const row = document.createElement("div");
+          row.className = "e404-vitals-row";
+          const dt = document.createElement("dt");
+          dt.textContent = label;
+          const dd = document.createElement("dd");
+          dd.textContent = value;
+          row.append(dt, dd);
+          vitalsEl.appendChild(row);
+        });
       }
 
       const hashPath = (input) => {
@@ -285,49 +316,73 @@
         return hash;
       };
 
-      if (incidentValueEl) {
-        const incidentCode = hashPath(pathValue || "/").toString(16).toUpperCase().padStart(8, "0").slice(-6);
-        incidentValueEl.textContent = `FCX-${incidentCode}`;
-      }
+      const incidentCode = hashPath(pathValue || "/").toString(16).toUpperCase().padStart(8, "0").slice(-6);
+      setText("e404IncidentValue", `FCX-${incidentCode}`);
 
-      if (timeValueEl) {
-        const locale = lang === "es" ? "es-ES" : "en-US";
-        timeValueEl.textContent = new Date().toLocaleString(locale, {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit"
+      const locale = lang === "es" ? "es-ES" : "en-US";
+      setText("e404TimeValue", new Date().toLocaleString(locale, {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      }));
+
+      const dialogueEl = document.getElementById("e404Dialogue");
+      if (dialogueEl) {
+        const lines = isAssetProbe ? tr.dialogueUnauthorized : tr.dialogueDefault;
+        dialogueEl.innerHTML = "";
+        const entries = lines.map((line) => {
+          const p = document.createElement("p");
+          p.className = "e404-line is-pending";
+          const prompt = document.createElement("span");
+          prompt.className = "e404-prompt";
+          prompt.textContent = "> ";
+          const who = document.createElement("span");
+          who.className = "e404-who";
+          who.textContent = `${line.who}: `;
+          const text = document.createElement("span");
+          text.className = "e404-text";
+          p.append(prompt, who, text);
+          dialogueEl.appendChild(p);
+          return { p, text, full: line.text };
         });
+
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (reducedMotion) {
+          entries.forEach((entry) => {
+            entry.p.classList.remove("is-pending");
+            entry.text.textContent = entry.full;
+          });
+        } else {
+          let lineIndex = 0;
+          const typeNextLine = () => {
+            if (lineIndex >= entries.length) {
+              return;
+            }
+            const entry = entries[lineIndex];
+            entry.p.classList.remove("is-pending");
+            entry.p.classList.add("is-typing");
+            let charIndex = 0;
+            const tick = () => {
+              charIndex += 1;
+              entry.text.textContent = entry.full.slice(0, charIndex);
+              if (charIndex < entry.full.length) {
+                setTimeout(tick, 14 + Math.random() * 24);
+              } else {
+                entry.p.classList.remove("is-typing");
+                lineIndex += 1;
+                setTimeout(typeNextLine, 320);
+              }
+            };
+            setTimeout(tick, 110);
+          };
+          setTimeout(typeNextLine, 420);
+        }
       }
 
-      if (isAssetProbe) {
-        document.body.classList.add("is-unauthorized");
-        document.title = tr.pageTitleUnauthorized;
-        if (titleEl) {
-          titleEl.textContent = tr.titleUnauthorized;
-        }
-        if (kickerEl) {
-          kickerEl.textContent = tr.kickerUnauthorized;
-        }
-        if (codeEl) {
-          codeEl.textContent = tr.codeUnauthorized;
-        }
-        if (badgeEl) {
-          badgeEl.textContent = tr.badgeUnauthorized;
-        }
-        if (summaryEl) {
-          summaryEl.textContent = tr.summaryUnauthorized;
-        }
-        if (clearanceValueEl) {
-          clearanceValueEl.textContent = tr.clearanceUnauthorized;
-        }
-        if (statusValueEl) {
-          statusValueEl.textContent = tr.statusUnauthorized;
-        }
-      }
-
+      const backBtn = document.getElementById("e404BackBtn");
       if (backBtn) {
         backBtn.addEventListener("click", () => {
           if (window.history.length > 1) {

@@ -147,6 +147,8 @@
 }
 
 .code-card {
+  position: relative;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px 12px 11px;
@@ -154,6 +156,235 @@
   box-shadow:
     inset 0 2px 10px rgba(0, 0, 0, 0.5),
     inset 0 0 0 1px rgba(139, 255, 139, 0.06);
+}
+
+button.code-card {
+  width: 100%;
+  appearance: none;
+  border-color: var(--line);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.code-card:disabled {
+  cursor: default;
+}
+
+.silo-code-copy-card:not(:disabled):focus-visible {
+  outline: 2px solid rgba(255, 225, 122, 0.78);
+  outline-offset: 3px;
+}
+
+.silo-code-copy-card:not(:disabled):active {
+  transform: translateY(0);
+}
+
+.silo-code-copy-card.is-copy-confirmed,
+.silo-code-copy-card.is-copy-error {
+  border-color: rgba(139, 255, 139, 0.64);
+  box-shadow:
+    inset 0 0 0 1px rgba(139, 255, 139, 0.12),
+    0 0 24px rgba(139, 255, 139, 0.12);
+}
+
+.silo-code-copy-card.is-copy-error {
+  border-color: rgba(255, 111, 111, 0.58);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 111, 111, 0.12),
+    0 0 22px rgba(255, 111, 111, 0.12);
+}
+
+.silo-code-copy-toast {
+  position: fixed;
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  min-width: 226px;
+  max-width: min(330px, calc(100vw - 20px));
+  padding: 8px 10px 8px 9px;
+  overflow: visible;
+  border: 1px solid rgba(139, 255, 139, 0.42);
+  border-radius: 10px;
+  background:
+    linear-gradient(to right, rgba(139, 255, 139, 0.12), rgba(139, 255, 139, 0) 34%),
+    linear-gradient(to bottom, rgba(139, 255, 139, 0.16), rgba(0, 0, 0, 0.46)),
+    rgba(2, 11, 5, 0.94);
+  color: var(--fg-bright);
+  font-family: var(--font-main);
+  line-height: 1.05;
+  text-align: left;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(139, 255, 139, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.52),
+    0 0 26px rgba(139, 255, 139, 0.14),
+    0 12px 24px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -14px 24px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px) scale(0.98);
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.silo-code-copy-toast::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.055) 0 1px, transparent 1px 4px),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.09), transparent 34%);
+  opacity: 0.36;
+}
+
+.silo-code-copy-toast::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 22px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.42;
+  box-shadow:
+    -7px 0 0 rgba(255, 255, 255, 0.08),
+    0 14px 0 rgba(255, 255, 255, 0.08);
+}
+
+.silo-code-copy-toast-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 0;
+  display: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  background:
+    linear-gradient(135deg, rgba(139, 255, 139, 0.18), rgba(0, 0, 0, 0.28)),
+    rgba(2, 11, 5, 0.96);
+  opacity: 0.95;
+  pointer-events: none;
+  transform: translateY(-50%) rotate(45deg);
+  box-shadow:
+    0 0 12px rgba(139, 255, 139, 0.12),
+    0 8px 16px rgba(0, 0, 0, 0.28);
+}
+
+.silo-code-copy-toast.is-desktop .silo-code-copy-toast-arrow {
+  display: block;
+}
+
+.silo-code-copy-toast.is-right-of-cursor .silo-code-copy-toast-arrow {
+  left: -7px;
+  border-top-color: transparent;
+  border-right-color: transparent;
+}
+
+.silo-code-copy-toast.is-left-of-cursor .silo-code-copy-toast-arrow {
+  right: -7px;
+  border-bottom-color: transparent;
+  border-left-color: transparent;
+}
+
+.silo-code-copy-toast-signal,
+.silo-code-copy-toast-copy {
+  position: relative;
+  z-index: 1;
+}
+
+.silo-code-copy-toast-signal {
+  width: 18px;
+  height: 18px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  background:
+    radial-gradient(circle at 50% 50%, currentColor 0 2px, transparent 3px),
+    rgba(0, 0, 0, 0.22);
+  box-shadow:
+    0 0 12px rgba(139, 255, 139, 0.28),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.42);
+  opacity: 0.92;
+}
+
+.silo-code-copy-toast-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.silo-code-copy-toast-status {
+  color: currentColor;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  opacity: 0.74;
+}
+
+.silo-code-copy-toast-message {
+  color: currentColor;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  line-height: 1.18;
+  text-wrap: balance;
+}
+
+.silo-code-copy-toast.is-desktop.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.silo-code-copy-toast.is-mobile {
+  left: 50%;
+  right: auto;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  min-width: min(330px, calc(100vw - 28px));
+  max-width: calc(100vw - 28px);
+  padding: 10px 14px 10px 12px;
+  border-radius: 999px;
+  transform: translate(-50%, 10px) scale(0.98);
+}
+
+.silo-code-copy-toast.is-mobile .silo-code-copy-toast-arrow {
+  display: none;
+}
+
+.silo-code-copy-toast.is-mobile .silo-code-copy-toast-signal {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+}
+
+.silo-code-copy-toast.is-mobile .silo-code-copy-toast-status {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+}
+
+.silo-code-copy-toast.is-mobile .silo-code-copy-toast-message {
+  font-size: 11px;
+  line-height: 1.16;
+}
+
+.silo-code-copy-toast.is-mobile.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.silo-code-copy-toast.is-error {
+  border-color: rgba(255, 111, 111, 0.48);
+  background:
+    linear-gradient(to bottom, rgba(255, 111, 111, 0.15), rgba(0, 0, 0, 0.45)),
+    rgba(18, 4, 4, 0.94);
+  color: #ffd8d8;
+  text-shadow: 0 0 10px rgba(255, 111, 111, 0.25);
 }
 
 .silo-panel {

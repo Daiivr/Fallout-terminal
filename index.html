@@ -39,7 +39,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="preload" as="image" href="assets/images/minerva-plan-fallback.png" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="css/styles.css?v=20260609-minerva-peek-v2" />
+  <link rel="stylesheet" href="css/styles.css?v=20260610-silo-copy-v4" />
 </head>
 <body class="is-booting">
   <noscript>
@@ -62,8 +62,11 @@
         <span id="bootPercent" class="boot-percent">0%</span>
       </div>
       <div id="bootLog" class="boot-log" aria-live="polite" aria-atomic="false"></div>
-      <div class="boot-progress"><span id="bootBar"></span></div>
-      <p id="bootHint" class="boot-hint">Initializing...</p>
+      <div class="loader-track boot-progress" aria-hidden="true"><span id="bootBar"></span></div>
+      <div class="boot-foot">
+        <p id="bootHint" class="boot-hint">Initializing...</p>
+        <p class="boot-diag" aria-hidden="true">MEM 64K OK &middot; RAD 0.2 mR/h &middot; CORE 31&deg;C</p>
+      </div>
       <div class="boot-lines-source" aria-hidden="true">
         <p id="bootLine1" class="boot-line">Initializing transceiver link...</p>
         <p id="bootLine2" class="boot-line">Loading Wasteland intelligence feed...</p>
@@ -83,13 +86,23 @@
     <div id="syncOverlay" class="sync-overlay" aria-hidden="true">
       <div class="sync-core">
         <p id="syncTitle" class="sync-title">SYNCING FIELD DATA...</p>
-        <div class="sync-bar"><span></span></div>
+        <div class="loader-track sync-bar" aria-hidden="true"><span></span></div>
+        <div class="loader-meta" aria-hidden="true">
+          <span class="loader-channel">REL-76 // VAULT-TEC UPLINK</span>
+          <span class="loader-meter"><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="loader-percent" data-loader-percent data-loader-rate="1.6">0%</span>
+        </div>
       </div>
     </div>
     <div id="classifiedLoadOverlay" class="classified-load-overlay" aria-hidden="true">
       <div class="classified-load-core">
         <p id="classifiedLoadTitle" class="classified-load-title">LOADING CLASSIFIED ARCHIVES...</p>
-        <div class="classified-load-bar"><span></span></div>
+        <div class="loader-track classified-load-bar" aria-hidden="true"><span></span></div>
+        <div class="loader-meta" aria-hidden="true">
+          <span class="loader-channel">ARCHIVE-2077 // DECRYPT KEY-76</span>
+          <span class="loader-meter"><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="loader-percent" data-loader-percent data-loader-rate="4.6">0%</span>
+        </div>
       </div>
     </div>
     <div id="intelBotInviteOverlay" class="intel-bot-modal-overlay" aria-hidden="true">
@@ -1899,6 +1912,6 @@
   <script src="js/dom/elements.js?v=20260425-temp-shares-v3"></script>
   <script src="js/core/config.js"></script>
   <script src="js/core/state.js"></script>
-  <script src="js/app.js?v=20260427-modular-refactor-v1"></script>
+  <script src="js/app.js?v=20260610-silo-copy-v4"></script>
 </body>
 </html>

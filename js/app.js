@@ -12600,6 +12600,43 @@ function setupBackgroundParallax() {
   schedule();
 }
 
+const loaderPercentTimers = new Map();
+
+function animateLoaderPercent(overlay, active) {
+  if (!overlay) {
+    return;
+  }
+
+  const readout = overlay.querySelector("[data-loader-percent]");
+  if (!readout) {
+    return;
+  }
+
+  const existingTimer = loaderPercentTimers.get(overlay);
+  if (existingTimer) {
+    clearInterval(existingTimer);
+    loaderPercentTimers.delete(overlay);
+  }
+
+  if (!active) {
+    readout.textContent = "0%";
+    return;
+  }
+
+  // Fake but honest-looking progress: fast start, asymptotic crawl to 99%.
+  const rate = Number.parseFloat(readout.dataset.loaderRate) || 1.6;
+  let value = 0;
+  let last = performance.now();
+  readout.textContent = "0%";
+  loaderPercentTimers.set(overlay, setInterval(() => {
+    const now = performance.now();
+    const dt = Math.min(0.4, (now - last) / 1000);
+    last = now;
+    value += (99 - value) * dt * rate;
+    readout.textContent = `${Math.min(99, Math.floor(value))}%`;
+  }, 80));
+}
+
 function showSyncOverlay(active) {
   if (!elements.syncOverlay) {
     return;
@@ -12611,6 +12648,7 @@ function showSyncOverlay(active) {
   }
   elements.syncOverlay.classList.toggle("is-active", active);
   elements.syncOverlay.setAttribute("aria-hidden", active ? "false" : "true");
+  animateLoaderPercent(elements.syncOverlay, active);
 }
 
 function showClassifiedLoadOverlay(active) {
@@ -12624,6 +12662,7 @@ function showClassifiedLoadOverlay(active) {
   document.body.classList.toggle("is-classified-loading", active);
   elements.classifiedLoadOverlay.classList.toggle("is-active", active);
   elements.classifiedLoadOverlay.setAttribute("aria-hidden", active ? "false" : "true");
+  animateLoaderPercent(elements.classifiedLoadOverlay, active);
 }
 
 function setLanguageMenuOpen(active) {
@@ -14938,6 +14977,169 @@ function formatSiloCodeForDisplay(code) {
   return `${match[1]} ${match[2]} ${match[3]}`;
 }
 
+function getSiloCodeClipboardValue(code) {
+  const digits = typeof code === "string" ? code.replace(/\D/g, "") : "";
+  return /^\d{8}$/.test(digits) ? digits : "";
+}
+
+function getSiloCodeCopyToast() {
+  let toast = document.getElementById("siloCodeCopyToast");
+  if (toast) {
+    return toast;
+  }
+
+  toast = document.createElement("div");
+  toast.id = "siloCodeCopyToast";
+  toast.className = "silo-code-copy-toast";
+  toast.setAttribute("role", "status");
+  toast.setAttribute("aria-live", "polite");
+  toast.setAttribute("aria-atomic", "true");
+  document.body.appendChild(toast);
+  return toast;
+}
+
+function isSiloCodeCopyMobileToast() {
+  if (window.matchMedia?.("(max-width: 720px), (hover: none), (pointer: coarse)")?.matches) {
+    return true;
+  }
+  return false;
+}
+
+function positionSiloCodeCopyToast(toast, card, point) {
+  if (!(toast instanceof HTMLElement)) {
+    return;
+  }
+
+  const useMobileToast = isSiloCodeCopyMobileToast();
+  toast.classList.toggle("is-mobile", useMobileToast);
+  toast.classList.toggle("is-desktop", !useMobileToast);
+  toast.classList.remove("is-right-of-cursor", "is-left-of-cursor");
+
+  if (useMobileToast) {
+    toast.style.left = "";
+    toast.style.top = "";
+    return;
+  }
+
+  const cardRect = card instanceof HTMLElement ? card.getBoundingClientRect() : null;
+  const pointX = Number(point?.clientX);
+  const pointY = Number(point?.clientY);
+  const hasPointerPoint = Number.isFinite(pointX) && Number.isFinite(pointY) && (pointX > 0 || pointY > 0);
+  const baseX = hasPointerPoint ? pointX : (cardRect ? cardRect.right : window.innerWidth / 2);
+  const baseY = hasPointerPoint ? pointY : (cardRect ? cardRect.top + cardRect.height / 2 : window.innerHeight / 2);
+  const gap = 26;
+  const margin = 10;
+
+  toast.style.left = "0px";
+  toast.style.top = "0px";
+  const width = toast.offsetWidth || 240;
+  const height = toast.offsetHeight || 36;
+  let left = baseX + gap;
+  let top = baseY - height / 2;
+  let opensRight = true;
+
+  if (left + width + margin > window.innerWidth) {
+    left = baseX - width - gap;
+    opensRight = false;
+  }
+  left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
+  top = Math.max(margin, Math.min(top, window.innerHeight - height - margin));
+
+  toast.classList.toggle("is-right-of-cursor", opensRight);
+  toast.classList.toggle("is-left-of-cursor", !opensRight);
+  toast.style.left = `${Math.round(left)}px`;
+  toast.style.top = `${Math.round(top)}px`;
+}
+
+function showSiloCodeCopyToast(card, message, kind, point) {
+  const toast = getSiloCodeCopyToast();
+  const ownerId = card?.dataset?.siloCopyId || "";
+  const isError = kind === "error";
+  const arrow = document.createElement("span");
+  arrow.className = "silo-code-copy-toast-arrow";
+  arrow.setAttribute("aria-hidden", "true");
+
+  const signal = document.createElement("span");
+  signal.className = "silo-code-copy-toast-signal";
+  signal.setAttribute("aria-hidden", "true");
+
+  const copy = document.createElement("span");
+  copy.className = "silo-code-copy-toast-copy";
+
+  const status = document.createElement("span");
+  status.className = "silo-code-copy-toast-status";
+  status.textContent = t(isError ? "silo_code_copy_status_error" : "silo_code_copy_status_success");
+
+  const body = document.createElement("span");
+  body.className = "silo-code-copy-toast-message";
+  body.textContent = message;
+
+  copy.append(status, body);
+  toast.dataset.ownerId = ownerId;
+  toast.replaceChildren(arrow, signal, copy);
+  toast.classList.toggle("is-error", isError);
+  toast.classList.toggle("is-success", !isError);
+  toast.classList.add("is-visible");
+  positionSiloCodeCopyToast(toast, card, point);
+}
+
+function resetSiloCodeCopyState(card) {
+  if (!(card instanceof HTMLElement)) {
+    return;
+  }
+
+  card.classList.remove("is-copy-confirmed", "is-copy-error");
+  const toast = document.getElementById("siloCodeCopyToast");
+  if (toast?.dataset?.ownerId === card.dataset.siloCopyId) {
+    toast.classList.remove("is-visible");
+    delete toast.dataset.ownerId;
+  }
+  delete card.dataset.copyResetTimer;
+}
+
+function flashSiloCodeCopyState(card, site, kind = "success", point = null) {
+  if (!(card instanceof HTMLElement)) {
+    return;
+  }
+
+  const previousTimerId = Number.parseInt(card.dataset.copyResetTimer || "", 10);
+  if (Number.isFinite(previousTimerId) && previousTimerId > 0) {
+    clearTimeout(previousTimerId);
+  }
+
+  const isError = kind === "error";
+  card.classList.toggle("is-copy-confirmed", !isError);
+  card.classList.toggle("is-copy-error", isError);
+
+  showSiloCodeCopyToast(
+    card,
+    t(isError ? "silo_code_copy_failed" : "silo_code_copied", { site }),
+    kind,
+    point
+  );
+
+  const timerId = window.setTimeout(() => {
+    if (card.isConnected) {
+      resetSiloCodeCopyState(card);
+    }
+  }, 1900);
+  card.dataset.copyResetTimer = String(timerId);
+}
+
+async function handleSiloCodeCopy(card, site, code, event = null) {
+  const clipboardValue = getSiloCodeClipboardValue(code);
+  if (!clipboardValue) {
+    return;
+  }
+
+  try {
+    await copyTextToClipboard(clipboardValue);
+    flashSiloCodeCopyState(card, site, "success", event);
+  } catch (_error) {
+    flashSiloCodeCopyState(card, site, "error", event);
+  }
+}
+
 function renderSiloFromState() {
   elements.siloCodes.innerHTML = "";
 
@@ -14957,8 +15159,15 @@ function renderSiloFromState() {
   const cards = [];
 
   for (const site of ["Alpha", "Bravo", "Charlie"]) {
-    const card = document.createElement("div");
-    card.className = "code-card";
+    const rawCode = codes[site];
+    const displayCode = formatSiloCodeForDisplay(rawCode);
+    const clipboardValue = getSiloCodeClipboardValue(rawCode);
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "code-card silo-code-copy-card";
+    card.dataset.siloCopyId = `silo-${site.toLowerCase()}`;
+    card.disabled = !clipboardValue;
+    card.setAttribute("aria-label", t("silo_code_copy_label", { site, code: displayCode }));
 
     const siteLabel = document.createElement("div");
     siteLabel.className = "site";
@@ -14968,10 +15177,13 @@ function renderSiloFromState() {
 
     const codeValue = document.createElement("div");
     codeValue.className = "code";
-    codeValue.textContent = formatSiloCodeForDisplay(codes[site]);
+    codeValue.textContent = displayCode;
 
     card.appendChild(siteLabel);
     card.appendChild(codeValue);
+    card.addEventListener("click", (event) => {
+      handleSiloCodeCopy(card, site, rawCode, event);
+    });
     elements.siloCodes.appendChild(card);
     cards.push(card);
   }
@@ -17085,8 +17297,8 @@ async function startBootSequence() {
 
   const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
   const timing = prefersReducedMotion
-    ? { pre: 20, bloom: 70, step: 90, ready: 110, post: 80, fade: 160 }
-    : { pre: 90, bloom: 180, step: 240, ready: 280, post: 220, fade: 380 };
+    ? { pre: 20, bloom: 70, step: 90, ready: 110, post: 80, fade: 160, type: 0 }
+    : { pre: 90, bloom: 180, step: 150, ready: 260, post: 240, fade: 380, type: 8 };
 
   const bootSteps = [
     { text: elements.bootLine1?.textContent || t("boot_line_1"), progress: 32 },
@@ -17113,25 +17325,59 @@ async function startBootSequence() {
   await sleep(timing.bloom);
   elements.bootOverlay.classList.add("is-boot-running");
 
-  for (const step of bootSteps) {
-    if (elements.bootLog) {
-      const line = document.createElement("div");
-      line.className = `boot-log-line${step.ready ? " is-ready" : ""}`;
-      line.textContent = step.ready
-        ? `[OK ${step.progress}%] ${step.text}`
-        : `[${String(step.progress).padStart(2, "0")}%] ${step.text}`;
-      elements.bootLog.appendChild(line);
-      elements.bootLog.scrollTop = elements.bootLog.scrollHeight;
-    }
+  const setBootProgress = (value) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(value)));
     if (elements.bootBar) {
-      elements.bootBar.style.width = `${step.progress}%`;
+      elements.bootBar.style.width = `${clamped}%`;
     }
     if (elements.bootPercent) {
-      elements.bootPercent.textContent = `${step.progress}%`;
+      elements.bootPercent.textContent = `${clamped}%`;
     }
+  };
+
+  let bootProgressShown = 0;
+  for (const step of bootSteps) {
     if (elements.bootHint) {
       elements.bootHint.textContent = step.text;
     }
+
+    if (elements.bootLog) {
+      const line = document.createElement("div");
+      line.className = `boot-log-line is-typing${step.ready ? " is-ready" : ""}`;
+      const text = document.createElement("span");
+      text.className = "boot-log-text";
+      text.setAttribute("aria-hidden", "true");
+      const srText = document.createElement("span");
+      srText.className = "boot-sr";
+      srText.textContent = step.text;
+      const leader = document.createElement("span");
+      leader.className = "boot-log-leader";
+      const status = document.createElement("span");
+      status.className = "boot-log-status";
+      status.textContent = step.ready ? "READY" : "OK";
+      line.append(text, srText, leader, status);
+      elements.bootLog.appendChild(line);
+      elements.bootLog.scrollTop = elements.bootLog.scrollHeight;
+
+      if (timing.type > 0) {
+        for (let i = 1; i <= step.text.length; i += 1) {
+          text.textContent = step.text.slice(0, i);
+          setBootProgress(bootProgressShown + ((step.progress - bootProgressShown) * i) / step.text.length);
+          await sleep(timing.type);
+        }
+      } else {
+        text.textContent = step.text;
+        setBootProgress(step.progress);
+      }
+
+      line.classList.remove("is-typing");
+      line.classList.add("is-done");
+      elements.bootLog.scrollTop = elements.bootLog.scrollHeight;
+    } else {
+      setBootProgress(step.progress);
+    }
+
+    bootProgressShown = step.progress;
     await sleep(step.ready ? timing.ready : timing.step);
   }
 

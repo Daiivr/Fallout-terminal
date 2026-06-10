@@ -173,6 +173,26 @@ body.is-booting .pipboy-terminal {
   animation: bootTitleIgnite 0.42s ease-out forwards;
 }
 
+.boot-title::after {
+  content: "";
+  display: inline-block;
+  width: 0.5ch;
+  height: 0.76em;
+  margin-left: 0.22ch;
+  vertical-align: -0.04em;
+  background: currentColor;
+  box-shadow: 0 0 14px rgba(139, 255, 139, 0.4);
+  animation: titleCaretBlink 1.06s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-title::after,
+  .boot-log-line.is-typing .boot-log-text::after,
+  .boot-log-line.is-done .boot-log-status {
+    animation: none !important;
+  }
+}
+
 .boot-subtitle {
   margin: 0;
   color: rgba(214, 255, 214, 0.74);
@@ -286,6 +306,9 @@ body.is-booting .pipboy-terminal {
 }
 
 .boot-log-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   color: var(--fg-dim);
   font-size: 13px;
   line-height: 1.36;
@@ -294,9 +317,81 @@ body.is-booting .pipboy-terminal {
   border-left: 1px solid rgba(139, 255, 139, 0.2);
   transform: translateY(3px);
   opacity: 0;
+  animation: bootLineIn 0.24s ease forwards;
+}
+
+.boot-log-line::before {
+  content: ">";
+  flex: 0 0 auto;
+  color: rgba(139, 255, 139, 0.46);
+}
+
+.boot-log-text {
   white-space: pre-wrap;
   word-break: break-word;
-  animation: bootLineIn 0.24s ease forwards;
+}
+
+.boot-log-text[aria-hidden="true"] {
+  speak: never;
+}
+
+.boot-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.boot-log-line.is-typing .boot-log-text::after {
+  content: "";
+  display: inline-block;
+  width: 0.55ch;
+  height: 0.92em;
+  margin-left: 0.14ch;
+  vertical-align: -0.1em;
+  background: currentColor;
+  box-shadow: 0 0 10px rgba(139, 255, 139, 0.4);
+  animation: titleCaretBlink 0.7s steps(1) infinite;
+}
+
+.boot-log-leader {
+  flex: 1 1 14px;
+  min-width: 14px;
+  align-self: flex-end;
+  margin-bottom: 0.34em;
+  border-bottom: 1px dotted rgba(139, 255, 139, 0.26);
+  opacity: 0;
+}
+
+.boot-log-status {
+  flex: 0 0 auto;
+  color: #d9ffd9;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  opacity: 0;
+}
+
+.boot-log-status::before {
+  content: "[ ";
+  color: rgba(139, 255, 139, 0.5);
+}
+
+.boot-log-status::after {
+  content: " ]";
+  color: rgba(139, 255, 139, 0.5);
+}
+
+.boot-log-line.is-done .boot-log-leader {
+  opacity: 1;
+  transition: opacity 180ms ease;
+}
+
+.boot-log-line.is-done .boot-log-status {
+  opacity: 1;
+  animation: bootStatusPop 0.24s ease-out;
 }
 
 .boot-log-line.is-ready {
@@ -308,80 +403,60 @@ body.is-booting .pipboy-terminal {
   animation: bootLineIn 0.24s ease forwards, bootReadyPulse 1.12s ease-out 1;
 }
 
-.boot-progress {
+.boot-log-line.is-ready .boot-log-status {
+  color: #ffefaf;
+  text-shadow: 0 0 12px rgba(255, 225, 122, 0.3);
+}
+
+/* Boot reuses the segmented loader track, but driven by real progress width. */
+.loader-track.boot-progress {
+  --ldr-cell: 10px;
+  --ldr-gap: 2px;
+  z-index: 1;
+  height: 16px;
+  margin: 0 0 0 24px;
+  border-radius: 4px;
+}
+
+.loader-track.boot-progress::after {
+  display: none;
+}
+
+.loader-track.boot-progress span {
+  width: 0;
+  border-right: 2px solid rgba(var(--ldr-bright), 0.85);
+  box-shadow:
+    0 0 18px rgba(var(--ldr-a), 0.3),
+    inset -10px 0 16px -8px rgba(var(--ldr-bright), 0.5);
+  clip-path: none;
+  animation: none;
+  transition: width 160ms linear;
+}
+
+.boot-foot {
   position: relative;
   z-index: 1;
-  margin: 0 0 0 24px;
-  height: 10px;
-  border-radius: 2px;
-  border: 1px solid rgba(139, 255, 139, 0.3);
-  overflow: hidden;
-  background:
-    linear-gradient(to right, rgba(255, 225, 122, 0.12), rgba(255, 225, 122, 0) 56%),
-    rgba(0, 0, 0, 0.44);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.44);
+  margin-left: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.boot-progress::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0.16;
-  pointer-events: none;
-  background-image: repeating-linear-gradient(
-    90deg,
-    rgba(139, 255, 139, 0.28) 0,
-    rgba(139, 255, 139, 0.28) 1px,
-    rgba(0, 0, 0, 0) 1px,
-    rgba(0, 0, 0, 0) 11px
-  );
-}
-
-.boot-progress::after {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  pointer-events: none;
-  opacity: 0.18;
-  background: linear-gradient(90deg, rgba(255, 225, 122, 0), rgba(255, 225, 122, 0.34), rgba(255, 225, 122, 0));
-  transform: translateX(-120%);
-  animation: bootMeterSweep 2.8s linear infinite;
-}
-
-#bootBar {
-  position: relative;
-  display: block;
-  height: 100%;
-  width: 0;
-  background: linear-gradient(
-    90deg,
-    rgba(139, 255, 139, 0.24),
-    rgba(139, 255, 139, 0.8) 58%,
-    rgba(255, 225, 122, 0.54)
-  );
-  box-shadow:
-    0 0 16px rgba(139, 255, 139, 0.24),
-    0 0 12px rgba(255, 225, 122, 0.18);
-  transition: width 220ms cubic-bezier(0.28, 0.72, 0.2, 1);
-}
-
-#bootBar::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0.24;
-  background: repeating-linear-gradient(
-    120deg,
-    rgba(255, 255, 255, 0.22) 0 5px,
-    rgba(255, 255, 255, 0) 5px 13px
-  );
-  animation: bootBarFlow 1.2s linear infinite;
+.boot-diag {
+  margin: 0;
+  color: rgba(139, 255, 139, 0.52);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .boot-hint {
   position: relative;
   z-index: 1;
-  margin: 0 0 0 24px;
+  margin: 0;
   display: flex;
   align-items: center;
   gap: 7px;

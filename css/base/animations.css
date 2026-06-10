@@ -394,20 +394,76 @@
   }
 }
 
-@keyframes syncSweep {
+@keyframes loaderCellsFill {
   0% {
-    width: 0%;
-    transform: translateX(0);
+    clip-path: inset(0 100% 0 0);
+    opacity: 1;
+    filter: brightness(1);
+    animation-timing-function: steps(26, jump-none);
   }
 
-  50% {
-    width: 100%;
-    transform: translateX(0);
+  72% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+    filter: brightness(1);
+    animation-timing-function: ease-out;
+  }
+
+  78% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+    filter: brightness(1.55) saturate(1.1);
+    animation-timing-function: ease;
+  }
+
+  88% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+    filter: brightness(1.05);
+    animation-timing-function: ease-in;
   }
 
   100% {
-    width: 100%;
-    transform: translateX(100%);
+    clip-path: inset(0 0 0 0);
+    opacity: 0;
+    filter: brightness(1);
+  }
+}
+
+@keyframes loaderHeadTravel {
+  0% {
+    left: 0%;
+    opacity: 1;
+    animation-timing-function: steps(26, jump-none);
+  }
+
+  72% {
+    left: calc(100% - 3px);
+    opacity: 1;
+    animation-timing-function: ease;
+  }
+
+  82% {
+    left: calc(100% - 3px);
+    opacity: 1;
+  }
+
+  100% {
+    left: calc(100% - 3px);
+    opacity: 0;
+  }
+}
+
+@keyframes loaderMeterPulse {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
   }
 }
 
@@ -463,36 +519,6 @@
   }
 }
 
-@keyframes syncBarFlow {
-  from {
-    background-position: 0 0;
-  }
-
-  to {
-    background-position: 16px 0;
-  }
-}
-
-@keyframes syncPacketTravel {
-  0% {
-    transform: translateX(-140%);
-    opacity: 0;
-  }
-
-  16% {
-    opacity: 1;
-  }
-
-  78% {
-    opacity: 1;
-  }
-
-  100% {
-    transform: translateX(240%);
-    opacity: 0;
-  }
-}
-
 @keyframes classifiedOverlayGrid {
   from {
     background-position: 0 0, 0 0;
@@ -532,36 +558,6 @@
   39%,
   100% {
     opacity: 0.34;
-  }
-}
-
-@keyframes classifiedBarFlow {
-  from {
-    background-position: 0 0;
-  }
-
-  to {
-    background-position: 16px 0;
-  }
-}
-
-@keyframes classifiedPacketTravel {
-  0% {
-    transform: translateX(-138%);
-    opacity: 0;
-  }
-
-  15% {
-    opacity: 1;
-  }
-
-  80% {
-    opacity: 1;
-  }
-
-  100% {
-    transform: translateX(238%);
-    opacity: 0;
   }
 }
 
@@ -678,13 +674,15 @@
   }
 }
 
-@keyframes bootBarFlow {
+@keyframes bootStatusPop {
   from {
-    transform: translateX(0);
+    opacity: 0;
+    transform: translateX(5px);
   }
 
   to {
-    transform: translateX(18px);
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
@@ -708,16 +706,6 @@
 
   to {
     transform: translateY(320%);
-  }
-}
-
-@keyframes bootMeterSweep {
-  from {
-    transform: translateX(-120%);
-  }
-
-  to {
-    transform: translateX(120%);
   }
 }
 
@@ -847,42 +835,6 @@
   50% {
     transform: translate(-50%, -50%) scale(1.26);
     opacity: 0.78;
-  }
-}
-
-@keyframes errorRadarSweep {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes errorRadarPulse {
-  0%,
-  100% {
-    opacity: 0.46;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 0.92;
-    transform: scale(1.06);
-  }
-}
-
-@keyframes errorSignalWave {
-  0%,
-  100% {
-    opacity: 0.58;
-    transform: scaleY(0.55);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scaleY(1);
   }
 }
 
