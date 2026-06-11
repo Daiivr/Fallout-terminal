@@ -1,16 +1,3 @@
-:root {
-  --panel: rgba(24, 16, 6, 0.84);
-  --panel-strong: rgba(28, 18, 7, 0.94);
-  --line: rgba(247, 201, 72, 0.22);
-  --line-strong: rgba(247, 201, 72, 0.4);
-  --fg: #ffeeb7;
-  --fg-bright: #fff8d8;
-  --fg-dim: rgba(255, 238, 183, 0.82);
-  --accent: #f7c948;
-  --accent-soft: #ffb347;
-  --shadow: rgba(0, 0, 0, 0.72);
-}
-
 @font-face {
   font-family: "Fallout76IconTags";
   src: url("../assets/fonts/Fallout76IconTags_v10.3.ttf") format("truetype");
@@ -19,8 +6,38 @@
   font-display: block;
 }
 
+:root {
+  --bg: #050a06;
+  --panel: rgba(0, 0, 0, 0.22);
+  --panel-strong: rgba(0, 0, 0, 0.3);
+  --line: rgba(139, 255, 139, 0.22);
+  --line-strong: rgba(139, 255, 139, 0.38);
+  --fg: #8bff8b;
+  --fg-bright: #b7ffb7;
+  --fg-dim: rgba(139, 255, 139, 0.74);
+  --fg-faint: rgba(139, 255, 139, 0.48);
+  --glow: rgba(139, 255, 139, 0.34);
+  --accent: #8bff8b;
+  --accent-strong: #b7ffb7;
+  --warn: #ffe17a;
+  --bad: #ff6f6f;
+  --radius: 14px;
+  --radius-sm: 12px;
+  --panel-pad: 14px;
+  --shadow: rgba(0, 0, 0, 0.76);
+  --font-main: "Share Tech Mono", "VT323", "Overseer", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-display: "Overseer", "VT323", "Share Tech Mono", "Rajdhani", monospace;
+  --font-heading: "VT323", "Share Tech Mono", ui-monospace, monospace;
+}
+
 * {
   box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  min-height: 100%;
+  background: var(--bg);
 }
 
 html,
@@ -28,125 +45,232 @@ body {
   min-height: 100%;
 }
 
+::selection {
+  background: rgba(139, 255, 139, 0.85);
+  color: #04130a;
+  text-shadow: none;
+}
+
 body {
   margin: 0;
+  height: auto;
   min-height: 100dvh;
   color: var(--fg);
-  font-family: "Rajdhani", sans-serif;
+  font-family: var(--font-main);
+  letter-spacing: 0.02em;
   background:
-    radial-gradient(1200px 620px at 100% 0%, rgba(247, 201, 72, 0.12), rgba(247, 201, 72, 0) 48%),
-    radial-gradient(900px 560px at 0% 100%, rgba(255, 179, 71, 0.08), rgba(255, 179, 71, 0) 52%),
-    linear-gradient(180deg, #090502 0%, #120904 32%, #1a1107 62%, #080401 100%);
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-  background-color: #080401;
+    radial-gradient(1100px 620px at 50% 0%, rgba(139, 255, 139, 0.08), rgba(139, 255, 139, 0) 58%),
+    radial-gradient(900px 560px at 88% 100%, rgba(255, 225, 122, 0.055), rgba(255, 225, 122, 0) 56%),
+    var(--bg);
   overflow-x: hidden;
   overflow-y: auto;
+  background-attachment: fixed;
 }
 
-html,
-body,
-.minerva-page-inventory-list {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(247, 201, 72, 0.56) rgba(0, 0, 0, 0.38);
-}
-
-body::-webkit-scrollbar,
-.minerva-page-inventory-list::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-body::-webkit-scrollbar-track,
-.minerva-page-inventory-list::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.34);
-  border: 1px solid rgba(247, 201, 72, 0.16);
-}
-
-body::-webkit-scrollbar-thumb,
-.minerva-page-inventory-list::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(247, 201, 72, 0.64), rgba(247, 201, 72, 0.24));
-  border: 1px solid rgba(247, 201, 72, 0.72);
-}
-
-body::-webkit-scrollbar-thumb:hover,
-.minerva-page-inventory-list::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(255, 179, 71, 0.76), rgba(255, 179, 71, 0.34));
-}
-
-body::before,
-body::after {
+body::before {
   content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.02);
+  opacity: 0;
+  animation: flicker 5.5s infinite;
+}
+
+.screen-vignette,
+.screen-map,
+.screen-grid,
+.screen-scanlines,
+.screen-noise {
   position: fixed;
   inset: 0;
   pointer-events: none;
 }
 
-body::before {
-  opacity: 0.12;
-  background-image:
-    linear-gradient(to right, rgba(247, 201, 72, 0.1) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(247, 201, 72, 0.05) 1px, transparent 1px),
-    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.015) 0 1px, transparent 1px 4px);
-  background-size: 44px 100%, 100% 22px, 100% 4px;
+.screen-vignette {
+  z-index: 1;
+  background:
+    radial-gradient(140% 100% at 50% 45%, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.56) 90%),
+    radial-gradient(1200px 700px at 50% 30%, rgba(139, 255, 139, 0.12), rgba(0, 0, 0, 0) 55%);
+  mix-blend-mode: screen;
+  opacity: 0.86;
 }
 
-body::after {
-  opacity: 0.18;
-  background:
-    radial-gradient(circle at 14% 20%, rgba(247, 201, 72, 0.1), transparent 32%),
-    radial-gradient(circle at 82% 70%, rgba(255, 179, 71, 0.08), transparent 28%);
+.screen-map {
+  z-index: 0;
+  opacity: 0.15;
+  mix-blend-mode: screen;
+  background-image:
+    radial-gradient(100% 85% at 52% 46%, rgba(139, 255, 139, 0.14), rgba(0, 0, 0, 0) 72%),
+    linear-gradient(118deg, rgba(139, 255, 139, 0.05), rgba(0, 0, 0, 0) 34% 100%),
+    linear-gradient(to bottom, rgba(7, 19, 12, 0.35), rgba(0, 0, 0, 0.12));
+  background-position: center center;
+  background-size: 120% 120%, 100% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  transform: scale(1.06);
+  animation: mapGlow 10s ease-in-out infinite;
+}
+
+.screen-grid {
+  z-index: 1;
+  opacity: 0.16;
+  mix-blend-mode: screen;
+  background-image:
+    linear-gradient(to right, rgba(139, 255, 139, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(139, 255, 139, 0.05) 1px, transparent 1px),
+    radial-gradient(1000px 620px at 52% 35%, rgba(139, 255, 139, 0.12), rgba(0, 0, 0, 0) 65%);
+  background-size: 38px 100%, 100% 26px, 100% 100%;
+  animation: gridPulse 8.5s ease-in-out infinite;
+}
+
+.screen-scanlines {
+  z-index: 2;
+  opacity: 0.5;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.2) 3px,
+    rgba(0, 0, 0, 0.2) 4px
+  );
+  animation: scanPulse 7s linear infinite;
+}
+
+.screen-scanlines::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -40%;
+  height: 40%;
+  opacity: 0.12;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0),
+    rgba(139, 255, 139, 0.26),
+    rgba(0, 0, 0, 0)
+  );
+  animation: scanSweep 11s linear infinite;
+}
+
+.screen-noise {
+  z-index: 3;
+  opacity: 0.08;
+  mix-blend-mode: screen;
+  background-image:
+    radial-gradient(circle at 18% 28%, rgba(139, 255, 139, 0.09) 0 1px, transparent 1.35px),
+    radial-gradient(circle at 64% 72%, rgba(139, 255, 139, 0.08) 0 1px, transparent 1.45px),
+    radial-gradient(circle at 50% 48%, rgba(139, 255, 139, 0.06) 0 1px, transparent 1.6px);
+  background-size: 3px 3px, 4px 4px, 5px 5px;
+  animation: noiseShift 0.45s steps(2) infinite;
 }
 
 .minerva-page-shell {
   position: relative;
-  z-index: 1;
-  width: min(1320px, calc(100% - 24px));
+  z-index: 5;
+  width: min(1180px, calc(100% - 24px));
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 12px 0 18px;
+  padding: 14px 0;
   display: grid;
-  grid-template-rows: auto auto;
-  gap: 12px;
+  grid-template-rows: auto auto auto;
+  gap: 14px;
 }
 
 .minerva-page-header,
-.minerva-page-stage,
-.minerva-meta-card,
+.minerva-page-portrait-panel,
 .minerva-page-map-panel,
 .minerva-page-briefing-panel,
 .minerva-page-inventory-panel,
+.minerva-meta-card,
 .minerva-page-route-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   background:
-    linear-gradient(to right, rgba(255, 179, 71, 0.06), rgba(255, 179, 71, 0) 35%),
-    linear-gradient(to bottom, rgba(247, 201, 72, 0.08), rgba(247, 201, 72, 0.01) 42%, rgba(0, 0, 0, 0.3)),
+    radial-gradient(120% 140% at 0% 0%, rgba(139, 255, 139, 0.08), rgba(139, 255, 139, 0) 44%),
+    linear-gradient(to bottom, rgba(139, 255, 139, 0.06), rgba(139, 255, 139, 0.015) 52%, rgba(0, 0, 0, 0.24)),
     var(--panel);
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.48) inset,
-    0 24px 70px var(--shadow);
+    0 0 0 1px rgba(0, 0, 0, 0.55) inset,
+    inset 0 1px 0 rgba(139, 255, 139, 0.07),
+    0 8px 22px rgba(0, 0, 0, 0.22);
 }
 
-.minerva-page-header {
-  border-radius: 22px;
-  padding: 18px 22px;
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(250px, 320px);
-  gap: 24px;
+.minerva-page-header::before,
+.minerva-page-portrait-panel::before,
+.minerva-page-map-panel::before,
+.minerva-page-briefing-panel::before,
+.minerva-page-inventory-panel::before,
+.minerva-meta-card::before,
+.minerva-page-route-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.1;
+  background-image: linear-gradient(to bottom, rgba(139, 255, 139, 0.14) 1px, transparent 1px);
+  background-size: 100% 5px;
 }
 
-.minerva-page-copy,
-.minerva-page-side,
-.minerva-page-stage {
+.minerva-page-header > *,
+.minerva-page-portrait-panel > *,
+.minerva-page-map-panel > *,
+.minerva-page-briefing-panel > *,
+.minerva-page-inventory-panel > *,
+.minerva-meta-card > *,
+.minerva-page-route-card > * {
   position: relative;
   z-index: 1;
 }
 
-.minerva-page-copy {
+.minerva-page-header {
   display: grid;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 300px);
+  gap: 18px;
+  padding: var(--panel-pad) calc(var(--panel-pad) + 4px) calc(var(--panel-pad) + 2px);
+}
+
+.minerva-page-header::after {
+  content: "";
+  position: absolute;
+  right: -8%;
+  top: -30%;
+  width: 340px;
+  height: 300px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(139, 255, 139, 0.1), rgba(139, 255, 139, 0) 58%),
+    radial-gradient(circle, rgba(255, 225, 122, 0.07), rgba(255, 225, 122, 0) 70%);
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+.minerva-page-copy {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+}
+
+.minerva-page-side {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+}
+
+.minerva-page-robco {
+  margin: 0;
+  color: var(--fg-faint);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
 }
 
 .minerva-page-eyebrow,
@@ -156,181 +280,231 @@ body::after {
 .minerva-page-briefing-kicker,
 .minerva-page-inventory-title {
   margin: 0;
-  color: rgba(255, 216, 107, 0.92);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.32em;
+  color: rgba(255, 225, 122, 0.82);
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  line-height: 1;
   text-transform: uppercase;
 }
 
 .minerva-page-title {
   margin: 0;
-  color: var(--accent);
-  font-family: "Overseer", "Rajdhani", sans-serif;
-  font-size: clamp(2.8rem, 5.2vw, 4.8rem);
-  line-height: 0.86;
-  letter-spacing: 0.06em;
+  color: var(--fg-bright);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.5rem, 3.4vw, 2.45rem);
+  letter-spacing: 0.07em;
+  line-height: 1;
   text-transform: uppercase;
-  text-shadow: 0 0 18px rgba(247, 201, 72, 0.16);
+  text-shadow: 0 0 18px var(--glow);
+  text-wrap: balance;
 }
 
-.minerva-page-summary,
-.minerva-page-briefing {
-  margin: 0;
-  color: var(--fg);
-  font-size: clamp(1rem, 1.36vw, 1.2rem);
-  line-height: 1.42;
+.minerva-page-title::after {
+  content: "";
+  display: inline-block;
+  width: 0.52ch;
+  height: 0.82em;
+  margin-left: 0.24ch;
+  vertical-align: -0.04em;
+  background: currentColor;
+  box-shadow: 0 0 12px var(--glow);
+  animation: titleCaretBlink 1.06s steps(1) infinite;
+}
+
+.minerva-page-summary {
+  margin: 2px 0 0;
+  max-width: 62ch;
+  color: var(--fg-dim);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.minerva-page-status-pill,
+.minerva-page-chip,
+.minerva-page-briefing-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 10px 3px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.minerva-page-status-pill {
+  gap: 7px;
+  min-height: 30px;
+  border: 1px solid rgba(139, 255, 139, 0.4);
+  color: var(--fg-bright);
+  background:
+    linear-gradient(180deg, rgba(139, 255, 139, 0.13), rgba(139, 255, 139, 0.03)),
+    rgba(0, 0, 0, 0.26);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.4) inset,
+    0 0 14px rgba(139, 255, 139, 0.1);
+}
+
+.minerva-page-status-pill::before,
+.minerva-page-briefing-badge::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: minervaBadgeDot 2.4s ease-in-out infinite;
 }
 
 .minerva-page-chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-}
-
-.minerva-page-chip,
-.minerva-page-status-pill,
-.minerva-page-briefing-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.78rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  gap: 8px;
 }
 
 .minerva-page-chip {
-  border: 1px solid rgba(255, 179, 71, 0.22);
-  color: #fff3ce;
+  flex: 1 1 auto;
+  border: 1px solid rgba(255, 225, 122, 0.3);
+  color: #ffefaf;
   background:
-    linear-gradient(to right, rgba(255, 179, 71, 0.14), rgba(255, 179, 71, 0.04) 54%, rgba(0, 0, 0, 0.14)),
-    rgba(22, 14, 6, 0.74);
-}
-
-.minerva-page-status-pill {
-  border: 1px solid rgba(247, 201, 72, 0.28);
-  color: var(--fg-bright);
-  background:
-    linear-gradient(to right, rgba(247, 201, 72, 0.16), rgba(247, 201, 72, 0.05) 54%, rgba(0, 0, 0, 0.14)),
-    rgba(22, 14, 6, 0.74);
-}
-
-.minerva-page-side {
-  display: grid;
-  align-content: space-between;
-  gap: 14px;
+    linear-gradient(180deg, rgba(255, 225, 122, 0.12), rgba(255, 225, 122, 0.03)),
+    rgba(0, 0, 0, 0.26);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4) inset;
 }
 
 .minerva-page-route-card {
-  border-radius: 16px;
-  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .minerva-page-side-value,
 .minerva-page-map-location {
   color: var(--fg-bright);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 1rem;
-  letter-spacing: 0.1em;
+  font-size: 13px;
+  line-height: 1.3;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  word-break: break-word;
 }
 
 .minerva-page-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 50px;
-  padding: 12px 18px;
-  border: 1px solid rgba(247, 201, 72, 0.34);
-  border-radius: 16px;
-  color: var(--fg-bright);
+  min-height: 42px;
+  padding: 10px 14px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
   text-decoration: none;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.95rem;
-  background:
-    linear-gradient(to right, rgba(247, 201, 72, 0.14), rgba(247, 201, 72, 0.03) 48%, rgba(0, 0, 0, 0.18)),
-    var(--panel-strong);
+  letter-spacing: 0.08em;
+  font-size: 13px;
+  background: rgba(0, 0, 0, 0.3);
+  transition: transform 120ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 
 .minerva-page-button:hover,
 .minerva-page-button:focus-visible {
   outline: none;
   transform: translateY(-1px);
-  border-color: rgba(255, 179, 71, 0.56);
-  background:
-    linear-gradient(to right, rgba(255, 179, 71, 0.18), rgba(255, 179, 71, 0.05) 48%, rgba(0, 0, 0, 0.22)),
-    var(--panel-strong);
+  border-color: var(--line-strong);
+  color: var(--fg-bright);
+  background: rgba(139, 255, 139, 0.08);
+  box-shadow: 0 0 16px rgba(139, 255, 139, 0.1);
 }
 
 .minerva-page-stage {
-  border-radius: 24px;
-  padding: 12px;
   display: grid;
+  grid-template-rows: auto minmax(340px, auto);
   gap: 12px;
-}
-
-.minerva-page-map-panel,
-.minerva-page-portrait-panel,
-.minerva-page-briefing-panel,
-.minerva-page-inventory-panel,
-.minerva-meta-card {
-  border-radius: 18px;
 }
 
 .minerva-page-main-grid {
   display: grid;
-  grid-template-columns: minmax(240px, 0.68fr) minmax(420px, 1.14fr) minmax(320px, 0.98fr);
-  gap: 12px;
-  align-items: start;
+  grid-template-columns: minmax(230px, 0.74fr) minmax(0, 1.28fr) minmax(280px, 0.95fr);
+  gap: 14px;
+  align-items: stretch;
 }
 
 .minerva-page-left-stack,
 .minerva-page-sidebar {
+  min-height: 0;
   display: grid;
   gap: 12px;
 }
 
+.minerva-page-left-stack {
+  grid-template-rows: auto auto;
+}
+
 .minerva-page-sidebar {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-content: start;
+  grid-template-rows: auto auto auto minmax(210px, 1fr);
+  align-content: stretch;
+}
+
+.minerva-page-portrait-panel,
+.minerva-page-map-panel,
+.minerva-page-briefing-panel,
+.minerva-page-inventory-panel,
+.minerva-meta-card {
+  border-radius: var(--radius);
 }
 
 .minerva-page-portrait-panel,
 .minerva-page-map-panel {
-  padding: 14px 16px;
+  padding: var(--panel-pad);
   display: grid;
   gap: 10px;
 }
 
 .minerva-page-portrait-panel {
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto;
+  gap: 8px;
+  padding: 12px;
 }
 
-.minerva-page-map-head {
-  display: grid;
-  gap: 6px;
+.minerva-page-map-panel {
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
-.minerva-page-portrait-head {
+.minerva-page-portrait-head,
+.minerva-page-map-head,
+.minerva-page-briefing-head,
+.minerva-page-inventory-head {
+  position: relative;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  padding-bottom: 9px;
+}
+
+.minerva-page-portrait-head::after,
+.minerva-page-map-head::after,
+.minerva-page-briefing-head::after,
+.minerva-page-inventory-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(139, 255, 139, 0.55), rgba(139, 255, 139, 0.16) 58%, rgba(139, 255, 139, 0));
 }
 
 .minerva-page-portrait-status {
   color: var(--fg-bright);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.76rem;
-  letter-spacing: 0.16em;
+  font-size: 10px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -338,18 +512,47 @@ body::after {
 .minerva-page-map-wrap {
   position: relative;
   min-height: 0;
-  border: 1px solid rgba(247, 201, 72, 0.2);
-  border-radius: 14px;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(120% 120% at 50% 0%, rgba(139, 255, 139, 0.1), rgba(139, 255, 139, 0.02) 45%, rgba(0, 0, 0, 0.36)),
+    rgba(3, 12, 6, 0.86);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.4) inset,
+    0 0 28px rgba(139, 255, 139, 0.06);
+}
+
+.minerva-page-portrait-wrap::after,
+.minerva-page-map-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  pointer-events: none;
+  opacity: 0.8;
+  background:
+    linear-gradient(rgba(139, 255, 139, 0.4), rgba(139, 255, 139, 0.4)) left top / 12px 1px,
+    linear-gradient(rgba(139, 255, 139, 0.4), rgba(139, 255, 139, 0.4)) left top / 1px 12px,
+    linear-gradient(rgba(139, 255, 139, 0.4), rgba(139, 255, 139, 0.4)) right bottom / 12px 1px,
+    linear-gradient(rgba(139, 255, 139, 0.4), rgba(139, 255, 139, 0.4)) right bottom / 1px 12px;
+  background-repeat: no-repeat;
 }
 
 .minerva-page-portrait-wrap {
-  min-height: 260px;
+  aspect-ratio: 218 / 252;
+  height: auto;
+  min-height: 0;
+  display: grid;
+  place-items: end center;
+  padding: 0;
   background:
-    radial-gradient(circle at 50% 0%, rgba(247, 201, 72, 0.12), transparent 48%),
-    linear-gradient(180deg, rgba(255, 179, 71, 0.08), rgba(0, 0, 0, 0.38)),
-    rgba(0, 0, 0, 0.24);
+    radial-gradient(120% 86% at 50% 12%, rgba(139, 255, 139, 0.13), rgba(139, 255, 139, 0.025) 50%, rgba(0, 0, 0, 0.36)),
+    linear-gradient(180deg, rgba(139, 255, 139, 0.045), rgba(0, 0, 0, 0.2)),
+    rgba(3, 12, 6, 0.88);
+}
+
+.minerva-page-map-wrap {
+  display: grid;
 }
 
 .minerva-page-portrait-image,
@@ -360,39 +563,40 @@ body::after {
 }
 
 .minerva-page-portrait-image {
-  min-height: 260px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   object-position: center top;
+  filter: sepia(0.12) saturate(0.9) brightness(0.88) hue-rotate(50deg);
+  mix-blend-mode: screen;
 }
 
 .minerva-page-map-image {
-  min-height: 500px;
+  min-height: 100%;
   object-fit: cover;
-  transition:
-    opacity 220ms ease,
-    transform 320ms ease,
-    filter 220ms ease;
+  transition: opacity 220ms ease, transform 320ms ease, filter 220ms ease;
   transform: scale(1);
-  opacity: 1;
-  filter: blur(0);
+  opacity: 0.92;
+  filter: saturate(0.86) brightness(0.82) hue-rotate(38deg);
   will-change: opacity, transform, filter;
 }
 
 .minerva-page-map-image.is-switching {
   opacity: 0.18;
   transform: scale(1.025);
-  filter: blur(6px);
+  filter: blur(6px) saturate(0.75) brightness(0.78) hue-rotate(38deg);
 }
 
 .minerva-page-map-controls {
   position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 14px;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   pointer-events: none;
 }
 
@@ -402,39 +606,35 @@ body::after {
 }
 
 .minerva-page-map-nav {
-  width: 42px;
-  min-width: 42px;
-  height: 42px;
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
   padding: 0;
-  border: 1px solid rgba(247, 201, 72, 0.36);
-  border-radius: 50%;
+  border: 1px solid var(--line);
+  border-radius: 999px;
   color: var(--fg-bright);
   background:
-    radial-gradient(circle at 50% 36%, rgba(247, 201, 72, 0.16), rgba(247, 201, 72, 0.02) 64%),
-    rgba(20, 12, 4, 0.86);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 1.15rem;
+    radial-gradient(circle at 50% 36%, rgba(139, 255, 139, 0.18), rgba(139, 255, 139, 0.02) 64%),
+    rgba(3, 12, 6, 0.88);
+  font-family: var(--font-main);
+  font-size: 1rem;
   line-height: 1;
   cursor: pointer;
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.36) inset,
     0 10px 18px rgba(0, 0, 0, 0.26);
-  transition:
-    transform 140ms ease,
-    border-color 140ms ease,
-    opacity 140ms ease,
-    box-shadow 140ms ease,
-    background 140ms ease;
+  transition: transform 140ms ease, border-color 140ms ease, opacity 140ms ease, box-shadow 140ms ease, background 140ms ease;
 }
 
 .minerva-page-map-nav:hover,
 .minerva-page-map-nav:focus-visible {
   outline: none;
   transform: translateY(-1px);
-  border-color: rgba(255, 179, 71, 0.56);
+  border-color: rgba(255, 225, 122, 0.56);
+  color: #ffefaf;
   box-shadow:
-    0 0 0 1px rgba(247, 201, 72, 0.22) inset,
-    0 0 18px rgba(247, 201, 72, 0.18);
+    inset 0 0 0 1px rgba(255, 225, 122, 0.14),
+    0 0 18px rgba(255, 225, 122, 0.18);
 }
 
 .minerva-page-map-nav:disabled {
@@ -447,77 +647,128 @@ body::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
-  padding: 8px 16px;
-  border: 1px solid rgba(247, 201, 72, 0.24);
+  min-height: 34px;
+  padding: 7px 14px 6px;
+  border: 1px solid rgba(139, 255, 139, 0.3);
   border-radius: 999px;
   color: var(--fg-bright);
   background:
-    linear-gradient(to right, rgba(247, 201, 72, 0.08), rgba(247, 201, 72, 0.02) 58%, rgba(0, 0, 0, 0.26)),
-    rgba(14, 8, 3, 0.82);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.74rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+    linear-gradient(180deg, rgba(139, 255, 139, 0.13), rgba(139, 255, 139, 0.03)),
+    rgba(0, 0, 0, 0.42);
+  font-size: 10px;
+  letter-spacing: 0.16em;
   text-align: center;
-  backdrop-filter: blur(6px);
+  text-transform: uppercase;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.28) inset;
 }
 
 .minerva-page-portrait-caption {
   margin: 0;
+  padding: 8px 10px 9px;
+  border: 1px solid rgba(139, 255, 139, 0.18);
+  border-radius: 10px;
   color: var(--fg-dim);
-  font-size: 0.98rem;
-  line-height: 1.42;
+  font-size: 11.5px;
+  line-height: 1.4;
+  background:
+    linear-gradient(90deg, rgba(139, 255, 139, 0.055), rgba(139, 255, 139, 0.015) 62%, rgba(0, 0, 0, 0.12)),
+    rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 1px 0 rgba(139, 255, 139, 0.06);
+}
+
+.minerva-page-portrait-caption::before {
+  content: "> ";
+  color: rgba(255, 225, 122, 0.7);
 }
 
 .minerva-page-availability {
+  position: relative;
+  overflow: hidden;
   display: grid;
-  gap: 4px;
-  padding: 2px 2px 0;
+  gap: 3px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 225, 122, 0.3);
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(130% 150% at 0% 0%, rgba(255, 225, 122, 0.1), rgba(0, 0, 0, 0) 52%),
+    linear-gradient(to bottom, rgba(139, 255, 139, 0.05), rgba(0, 0, 0, 0.26)),
+    rgba(0, 0, 0, 0.26);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4) inset;
+}
+
+.minerva-page-availability::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  opacity: 0.8;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255, 225, 122, 0.55), rgba(255, 225, 122, 0.55)) left top / 12px 1px,
+    linear-gradient(rgba(255, 225, 122, 0.55), rgba(255, 225, 122, 0.55)) left top / 1px 12px,
+    linear-gradient(rgba(255, 225, 122, 0.55), rgba(255, 225, 122, 0.55)) right bottom / 12px 1px,
+    linear-gradient(rgba(255, 225, 122, 0.55), rgba(255, 225, 122, 0.55)) right bottom / 1px 12px;
+  background-repeat: no-repeat;
+}
+
+.minerva-page-availability-label,
+.minerva-page-availability-meta {
+  position: relative;
+  z-index: 1;
 }
 
 .minerva-page-availability-label {
-  color: rgba(255, 216, 107, 0.9);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.24em;
+  color: rgba(255, 225, 122, 0.82);
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
 }
 
 .minerva-page-availability-value {
-  color: var(--accent);
-  font-family: "Overseer", "Rajdhani", sans-serif;
-  font-size: clamp(1.6rem, 2.5vw, 2.3rem);
-  letter-spacing: 0.08em;
+  position: relative;
+  z-index: 1;
+  color: #ffefaf;
+  font-family: var(--font-heading);
+  font-size: clamp(1.42rem, 2vw, 1.75rem);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  line-height: 1;
   text-transform: uppercase;
-  line-height: 0.98;
+  text-shadow: 0 0 14px rgba(255, 225, 122, 0.22);
 }
 
 .minerva-page-availability-meta {
   color: var(--fg-dim);
-  font-size: 0.96rem;
+  font-size: 12px;
   line-height: 1.35;
 }
 
 .minerva-meta-card {
-  min-height: 108px;
-  padding: 14px 16px;
+  min-height: 72px;
+  padding: 10px 12px;
   display: grid;
   align-content: start;
-  gap: 8px;
+  gap: 6px;
 }
 
 .minerva-card-list {
   grid-column: 1 / -1;
 }
 
+.minerva-meta-label::before,
+.minerva-page-inventory-title::before,
+.minerva-page-map-kicker::before,
+.minerva-page-briefing-kicker::before {
+  content: "// ";
+  color: var(--fg-faint);
+  letter-spacing: 0.08em;
+}
+
 .minerva-meta-value {
   margin: 0;
   color: var(--fg-bright);
-  font-family: "Share Tech Mono", monospace;
-  font-size: clamp(1rem, 1.28vw, 1.18rem);
-  line-height: 1.36;
+  font-size: 13px;
+  line-height: 1.35;
+  letter-spacing: 0.04em;
   white-space: pre-line;
   word-break: break-word;
 }
@@ -527,29 +778,27 @@ body::after {
   gap: 6px;
 }
 
-.minerva-bullion-line {
+.minerva-bullion-line,
+.minerva-page-price {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  color: #ffefaf;
 }
 
 .minerva-meta-stat-number {
   color: var(--fg-bright);
-  font-size: clamp(1.32rem, 1.88vw, 1.74rem);
+  font-family: var(--font-heading);
+  font-size: clamp(1.4rem, 2vw, 1.82rem);
   line-height: 1;
+  letter-spacing: 0.08em;
 }
 
 .minerva-meta-inline-label {
-  color: rgba(255, 216, 107, 0.9);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.22em;
+  color: rgba(255, 225, 122, 0.76);
+  font-size: 10px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-}
-
-.minerva-bullion-line {
-  color: var(--accent);
-  font-size: 1.02em;
 }
 
 .fo76-icon {
@@ -557,10 +806,11 @@ body::after {
   align-items: center;
   justify-content: center;
   min-width: 1em;
-  font-family: "Fallout76IconTags", "Segoe UI Symbol", monospace;
+  color: var(--warn);
+  font-family: "Fallout76IconTags", var(--font-main);
   font-size: 1.04em;
   line-height: 1;
-  color: var(--accent);
+  transform: translateY(0.04em);
 }
 
 .fo76-icon:empty {
@@ -569,149 +819,316 @@ body::after {
 
 .minerva-page-briefing-panel {
   grid-column: 1 / -1;
-  min-height: 152px;
-  padding: 16px 18px;
+  min-height: 100%;
+  padding: 12px 16px 14px;
   display: grid;
-  align-content: space-between;
+  grid-template-rows: auto auto auto minmax(44px, 1fr);
+  align-content: stretch;
   gap: 12px;
+  border-color: rgba(255, 225, 122, 0.3);
   background:
-    linear-gradient(135deg, rgba(255, 179, 71, 0.1), rgba(255, 179, 71, 0) 38%),
-    linear-gradient(to bottom, rgba(247, 201, 72, 0.08), rgba(247, 201, 72, 0.01) 42%, rgba(0, 0, 0, 0.32)),
-    rgba(24, 16, 6, 0.9);
+    linear-gradient(135deg, rgba(255, 225, 122, 0.09), rgba(255, 225, 122, 0) 34%),
+    radial-gradient(130% 150% at 0% 0%, rgba(255, 225, 122, 0.1), rgba(0, 0, 0, 0) 52%),
+    radial-gradient(120% 130% at 100% 100%, rgba(139, 255, 139, 0.08), rgba(0, 0, 0, 0) 54%),
+    linear-gradient(to bottom, rgba(139, 255, 139, 0.05), rgba(0, 0, 0, 0.26)),
+    rgba(0, 0, 0, 0.26);
 }
 
-.minerva-page-briefing-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+.minerva-page-briefing-panel::after {
+  content: "";
+  position: absolute;
+  right: -42px;
+  bottom: -54px;
+  width: 190px;
+  height: 190px;
+  pointer-events: none;
+  opacity: 0.2;
+  background:
+    radial-gradient(circle, rgba(139, 255, 139, 0) 0 26%, rgba(139, 255, 139, 0.45) 27% 28%, rgba(139, 255, 139, 0) 29% 44%, rgba(139, 255, 139, 0.32) 45% 46%, rgba(139, 255, 139, 0) 47%),
+    conic-gradient(from 20deg, rgba(139, 255, 139, 0.42), rgba(139, 255, 139, 0) 48deg, rgba(139, 255, 139, 0) 360deg);
+  filter: blur(0.2px);
 }
 
 .minerva-page-briefing-badge {
-  border: 1px solid rgba(247, 201, 72, 0.26);
+  gap: 6px;
+  min-height: 24px;
+  padding: 3px 9px 2px;
+  border: 1px solid rgba(139, 255, 139, 0.44);
   color: var(--fg-bright);
-  background: rgba(247, 201, 72, 0.1);
+  font-weight: 700;
+  background:
+    linear-gradient(180deg, rgba(139, 255, 139, 0.14), rgba(139, 255, 139, 0.04)),
+    rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 10px rgba(139, 255, 139, 0.12);
+}
+
+.minerva-page-briefing {
+  margin: 0;
+  color: var(--fg-dim);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.minerva-page-briefing::before {
+  content: "> ";
+  color: rgba(255, 225, 122, 0.7);
+}
+
+.minerva-page-briefing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.minerva-page-briefing-cell {
+  min-width: 0;
+  min-height: 56px;
+  padding: 8px 9px;
+  border: 1px solid rgba(139, 255, 139, 0.17);
+  border-radius: 9px;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  background:
+    linear-gradient(90deg, rgba(139, 255, 139, 0.05), rgba(139, 255, 139, 0.012)),
+    rgba(0, 0, 0, 0.16);
+}
+
+.minerva-page-briefing-cell em {
+  color: rgba(255, 225, 122, 0.72);
+  font-size: 9px;
+  font-style: normal;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.minerva-page-briefing-cell strong {
+  color: var(--fg-bright);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+
+.minerva-page-briefing-route {
+  align-self: end;
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: auto minmax(42px, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding-top: 4px;
+}
+
+.minerva-page-briefing-route span {
+  color: rgba(255, 225, 122, 0.78);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.minerva-page-briefing-route i {
+  position: relative;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(139, 255, 139, 0.18), rgba(255, 225, 122, 0.65), rgba(139, 255, 139, 0.18));
+  box-shadow: 0 0 10px rgba(255, 225, 122, 0.16);
+}
+
+.minerva-page-briefing-route i::before,
+.minerva-page-briefing-route i::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgba(255, 225, 122, 0.68);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  transform: translateY(-50%);
+}
+
+.minerva-page-briefing-route i::before {
+  left: 0;
+}
+
+.minerva-page-briefing-route i::after {
+  right: 0;
 }
 
 .minerva-page-inventory-panel {
-  padding: 14px 16px;
+  min-height: 340px;
+  padding: var(--panel-pad) calc(var(--panel-pad) + 4px) calc(var(--panel-pad) + 2px);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 10px;
-  min-height: 320px;
-}
-
-.minerva-page-inventory-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55) inset,
+    inset 0 1px 0 rgba(139, 255, 139, 0.07),
+    0 10px 28px rgba(0, 0, 0, 0.22);
 }
 
 .minerva-page-inventory-scroll {
+  min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  min-height: 0;
-  max-height: min(42dvh, 420px);
-  border: 1px solid rgba(247, 201, 72, 0.18);
-  border-radius: 14px;
-  padding: 0;
-  background:
-    linear-gradient(to bottom, rgba(247, 201, 72, 0.05), rgba(247, 201, 72, 0) 18%),
-    rgba(0, 0, 0, 0.18);
   overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(to bottom, rgba(139, 255, 139, 0.06), rgba(0, 0, 0, 0.08) 46%, rgba(0, 0, 0, 0.2)),
+    var(--panel-strong);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.32) inset,
+    inset 0 1px 0 rgba(139, 255, 139, 0.08);
 }
 
 .minerva-page-inventory-header {
-  position: sticky;
-  top: 0;
-  z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(132px, 168px);
+  grid-template-columns: minmax(0, 1fr) minmax(116px, 150px);
   align-items: center;
   gap: 16px;
   width: 100%;
-  padding: 12px 16px 10px 16px;
-  margin-bottom: 6px;
-  border-bottom: 1px solid rgba(247, 201, 72, 0.28);
-  border-radius: 12px 12px 0 0;
+  padding: 9px 16px 8px;
+  border-bottom: 1px solid rgba(139, 255, 139, 0.22);
   background:
-    linear-gradient(to right, rgba(247, 201, 72, 0.08), rgba(247, 201, 72, 0.03) 38%, rgba(0, 0, 0, 0) 72%),
-    linear-gradient(to bottom, rgba(247, 201, 72, 0.12), rgba(247, 201, 72, 0.02) 54%, rgba(0, 0, 0, 0));
-  box-shadow: inset 0 -1px 0 rgba(255, 225, 122, 0.14);
-  overflow: hidden;
+    linear-gradient(90deg, rgba(139, 255, 139, 0.08), rgba(139, 255, 139, 0.02) 52%, rgba(0, 0, 0, 0)),
+    rgba(0, 0, 0, 0.18);
 }
 
 .minerva-page-inventory-header-label {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  color: rgba(255, 239, 175, 0.9);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.76rem;
-  letter-spacing: 0.24em;
+  color: rgba(255, 225, 122, 0.84);
+  font-size: 10px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  text-shadow: 0 0 10px rgba(247, 201, 72, 0.12);
-}
-
-.minerva-page-inventory-header-label:first-child::before {
-  content: "";
-  width: 10px;
-  height: 1px;
-  margin-right: 10px;
-  background: rgba(247, 201, 72, 0.58);
-  box-shadow: 0 0 10px rgba(247, 201, 72, 0.18);
 }
 
 .minerva-page-inventory-header-label:last-child {
-  text-align: right;
   justify-self: end;
+  text-align: right;
 }
 
 .minerva-page-inventory-list {
-  list-style: none;
+  min-height: 0;
   margin: 0;
-  padding: 0 10px 0 16px;
+  padding: 0 8px 0 16px;
+  list-style: none;
   overflow: auto;
-  display: grid;
-  gap: 0;
-  max-height: min(42dvh, 400px);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 255, 139, 0.45) rgba(0, 0, 0, 0.28);
 }
 
-.minerva-page-inventory-list li {
+.minerva-page-inventory-list::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.minerva-page-inventory-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.26);
+}
+
+.minerva-page-inventory-list::-webkit-scrollbar-thumb {
+  border: 1px solid rgba(139, 255, 139, 0.35);
+  background: rgba(139, 255, 139, 0.18);
+}
+
+.minerva-page-inventory-list > li {
+  position: relative;
   color: var(--fg-dim);
-  line-height: 1.28;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(132px, 168px);
-  align-items: start;
-  gap: 16px;
-  padding: 12px 6px 12px 0;
-  border-bottom: 1px solid rgba(247, 201, 72, 0.12);
-  transition: background 140ms ease, border-color 140ms ease;
+  display: block;
+  padding: 0;
+  border-bottom: 1px dashed rgba(139, 255, 139, 0.14);
+  line-height: 1.32;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
-.minerva-page-inventory-list li:last-child {
+.minerva-page-inventory-list > li:last-child {
   border-bottom: 0;
 }
 
-.minerva-page-inventory-list li:hover {
+.minerva-page-inventory-list > li:hover,
+.minerva-page-inventory-list > li.is-expanded {
+  color: var(--fg-bright);
+  border-bottom-color: rgba(255, 225, 122, 0.25);
   background:
-    linear-gradient(to right, rgba(247, 201, 72, 0.08), rgba(247, 201, 72, 0.02) 42%, rgba(0, 0, 0, 0));
-  border-bottom-color: rgba(247, 201, 72, 0.2);
+    linear-gradient(90deg, rgba(255, 225, 122, 0.09), rgba(139, 255, 139, 0.04) 42%, rgba(0, 0, 0, 0));
+}
+
+.minerva-page-inventory-empty {
+  padding: 11px 8px 11px 0 !important;
+}
+
+.minerva-page-inventory-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(116px, 150px);
+  align-items: start;
+  gap: 16px;
+  padding: 8px 8px 8px 0;
+}
+
+.minerva-page-inventory-toggle {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.minerva-page-inventory-toggle:hover,
+.minerva-page-inventory-toggle:focus-visible {
+  outline: none;
+  color: #ffefaf;
+}
+
+.minerva-page-inventory-toggle:focus-visible .minerva-page-inventory-link {
+  text-shadow: 0 0 10px rgba(255, 225, 122, 0.28);
+}
+
+.minerva-page-inventory-action {
+  align-self: center;
+  padding: 2px 7px 1px;
+  border: 1px solid rgba(139, 255, 139, 0.22);
+  border-radius: 999px;
+  color: var(--fg-faint);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.22);
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+}
+
+.minerva-page-inventory-toggle:hover .minerva-page-inventory-action,
+.minerva-page-inventory-toggle:focus-visible .minerva-page-inventory-action,
+.minerva-page-inventory-item.is-expanded .minerva-page-inventory-action {
+  border-color: rgba(255, 225, 122, 0.44);
+  color: #ffefaf;
+  background: rgba(255, 225, 122, 0.07);
+  box-shadow: 0 0 10px rgba(255, 225, 122, 0.1);
 }
 
 .minerva-page-inventory-link {
-  color: var(--fg-bright);
-  text-decoration: none;
   min-width: 0;
-  flex: 1;
+  color: inherit;
+  text-decoration: none;
 }
 
 .minerva-page-inventory-link:hover,
 .minerva-page-inventory-link:focus-visible {
-  text-decoration: underline;
+  outline: none;
+  color: #ffefaf;
+  text-shadow: 0 0 10px rgba(255, 225, 122, 0.2);
 }
 
 .minerva-page-item-name {
@@ -719,7 +1136,6 @@ body::after {
   align-items: flex-start;
   gap: 10px;
   min-width: 0;
-  flex: 1;
 }
 
 .minerva-page-item-name .fo76-icon {
@@ -728,16 +1144,416 @@ body::after {
 }
 
 .minerva-page-price {
-  color: var(--accent);
-  font-family: "Share Tech Mono", monospace;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  flex-shrink: 0;
   padding-top: 1px;
   text-align: right;
+  white-space: nowrap;
+}
+
+.minerva-item-dossier {
+  position: relative;
+  overflow: hidden;
+  margin: 0 8px 13px 0;
+  padding: 11px;
+  border: 1px solid rgba(255, 225, 122, 0.3);
+  border-radius: var(--radius-sm);
+  display: grid;
+  grid-template-columns: minmax(220px, 0.28fr) minmax(0, 1fr);
+  gap: 12px;
+  background:
+    linear-gradient(90deg, rgba(255, 225, 122, 0.075), rgba(255, 225, 122, 0) 30%),
+    radial-gradient(110% 100% at 0% 0%, rgba(255, 225, 122, 0.12), rgba(255, 225, 122, 0) 46%),
+    linear-gradient(180deg, rgba(139, 255, 139, 0.07), rgba(0, 0, 0, 0.14)),
+    rgba(0, 0, 0, 0.24);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 225, 122, 0.1),
+    0 16px 32px rgba(0, 0, 0, 0.22);
+}
+
+.minerva-item-dossier::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 0;
+  width: min(260px, 32%);
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 225, 122, 0.64), rgba(255, 225, 122, 0));
+  box-shadow: 0 0 12px rgba(255, 225, 122, 0.16);
+}
+
+.minerva-item-dossier-asset {
+  position: relative;
+  min-height: 188px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(139, 255, 139, 0.22);
+  border-radius: 10px;
+  background:
+    radial-gradient(80% 80% at 50% 44%, rgba(139, 255, 139, 0.13), rgba(139, 255, 139, 0) 62%),
+    repeating-linear-gradient(to bottom, rgba(139, 255, 139, 0.055) 0 1px, transparent 1px 5px),
+    rgba(0, 0, 0, 0.24);
+}
+
+.minerva-item-dossier-asset::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(139, 255, 139, 0.44), rgba(139, 255, 139, 0.44)) left top / 10px 1px,
+    linear-gradient(rgba(139, 255, 139, 0.44), rgba(139, 255, 139, 0.44)) left top / 1px 10px,
+    linear-gradient(rgba(139, 255, 139, 0.44), rgba(139, 255, 139, 0.44)) right bottom / 10px 1px,
+    linear-gradient(rgba(139, 255, 139, 0.44), rgba(139, 255, 139, 0.44)) right bottom / 1px 10px;
+  background-repeat: no-repeat;
+}
+
+.minerva-item-dossier-image {
+  width: min(100%, 190px);
+  max-height: 176px;
+  object-fit: contain;
+  opacity: 0.9;
+  filter: sepia(0.12) saturate(0.9) brightness(0.92) hue-rotate(44deg) drop-shadow(0 0 16px rgba(139, 255, 139, 0.08));
+}
+
+.minerva-item-dossier-asset-label {
+  position: absolute;
+  left: 10px;
+  bottom: 9px;
+  padding: 2px 7px 1px;
+  border: 1px solid rgba(255, 225, 122, 0.3);
+  border-radius: 4px;
+  color: #ffefaf;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.minerva-item-dossier-body {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.minerva-item-dossier-header {
+  grid-column: 1 / -1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px 12px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid rgba(139, 255, 139, 0.18);
+}
+
+.minerva-item-dossier-kicker {
+  grid-column: 1 / -1;
+  color: rgba(255, 225, 122, 0.78);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.minerva-item-dossier-title {
+  min-width: 0;
+  color: var(--fg-bright);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+}
+
+.minerva-item-dossier-source {
+  align-self: start;
+  padding: 3px 8px 2px;
+  border: 1px solid rgba(139, 255, 139, 0.28);
+  border-radius: 999px;
+  color: #ffefaf;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  line-height: 1.4;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.24);
+  transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+}
+
+.minerva-item-dossier-source:hover,
+.minerva-item-dossier-source:focus-visible {
+  outline: none;
+  border-color: rgba(255, 225, 122, 0.52);
+  background: rgba(255, 225, 122, 0.08);
+  box-shadow: 0 0 12px rgba(255, 225, 122, 0.12);
+}
+
+.minerva-item-dossier-meta {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.minerva-item-dossier-meta-chip {
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid rgba(139, 255, 139, 0.15);
+  border-radius: 9px;
+  display: grid;
+  gap: 3px;
+  background:
+    linear-gradient(90deg, rgba(139, 255, 139, 0.045), rgba(139, 255, 139, 0.01)),
+    rgba(0, 0, 0, 0.18);
+}
+
+.minerva-item-dossier-meta-chip em {
+  color: rgba(255, 225, 122, 0.68);
+  font-size: 8.5px;
+  font-style: normal;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.minerva-item-dossier-meta-chip strong {
+  color: var(--fg-bright);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.minerva-item-dossier-block {
+  grid-column: span 6;
+  min-width: 0;
+  min-height: 116px;
+  padding: 10px 11px 11px;
+  border: 1px solid rgba(139, 255, 139, 0.2);
+  border-radius: 10px;
+  background:
+    radial-gradient(90% 90% at 100% 0%, rgba(139, 255, 139, 0.055), rgba(139, 255, 139, 0) 58%),
+    linear-gradient(90deg, rgba(139, 255, 139, 0.055), rgba(139, 255, 139, 0.012)),
+    rgba(0, 0, 0, 0.16);
+}
+
+.minerva-item-dossier-block-title {
+  margin: 0 0 7px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(139, 255, 139, 0.16);
+  color: var(--fg-bright);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.minerva-item-dossier-block-title::before {
+  content: "// ";
+  color: var(--fg-faint);
+}
+
+.minerva-item-dossier-lines,
+.minerva-item-dossier-copy {
+  margin: 0;
+  color: var(--fg-dim);
+  font-size: 12px;
+  line-height: 1.42;
+}
+
+.minerva-item-dossier-lines {
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.minerva-item-dossier-lines li {
+  padding: 0 0 0 13px;
+  border: 0;
+  background: transparent;
+}
+
+.minerva-item-dossier-copy {
+  padding-left: 13px;
+}
+
+.minerva-item-dossier-lines li::before,
+.minerva-item-dossier-copy::before {
+  content: "> ";
+  margin-left: -13px;
+  color: rgba(255, 225, 122, 0.72);
+}
+
+.minerva-page-footer {
+  padding: 10px 4px 2px;
+  border-top: 1px dashed rgba(139, 255, 139, 0.24);
+}
+
+.minerva-page-footer-note {
+  margin: 0;
+  color: var(--fg-faint);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@keyframes minervaBadgeDot {
+  0%,
+  100% {
+    opacity: 0.5;
+    box-shadow: 0 0 3px currentColor;
+  }
+
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 8px currentColor;
+  }
+}
+
+@keyframes titleCaretBlink {
+  0%,
+  54% {
+    opacity: 1;
+  }
+
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes flicker {
+  0%,
+  100% {
+    opacity: 0.02;
+  }
+
+  20% {
+    opacity: 0.035;
+  }
+
+  21% {
+    opacity: 0.01;
+  }
+
+  32% {
+    opacity: 0.03;
+  }
+
+  33% {
+    opacity: 0.01;
+  }
+
+  50% {
+    opacity: 0.032;
+  }
+
+  51% {
+    opacity: 0.012;
+  }
+
+  70% {
+    opacity: 0.03;
+  }
+
+  71% {
+    opacity: 0.016;
+  }
+}
+
+@keyframes scanPulse {
+  0%,
+  100% {
+    opacity: 0.48;
+  }
+
+  50% {
+    opacity: 0.58;
+  }
+}
+
+@keyframes scanSweep {
+  0% {
+    transform: translateY(-200%);
+  }
+
+  100% {
+    transform: translateY(340%);
+  }
+}
+
+@keyframes gridPulse {
+  0%,
+  100% {
+    opacity: 0.14;
+    transform: translateY(0);
+  }
+
+  50% {
+    opacity: 0.2;
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes mapGlow {
+  0%,
+  100% {
+    filter: brightness(0.95) saturate(0.94);
+  }
+
+  50% {
+    filter: brightness(1.03) saturate(1.04);
+  }
+}
+
+@keyframes noiseShift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  25% {
+    transform: translate3d(-1.2%, 0.8%, 0);
+  }
+
+  50% {
+    transform: translate3d(0.9%, -0.7%, 0);
+  }
+
+  75% {
+    transform: translate3d(-0.7%, -0.5%, 0);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  .screen-map,
+  .screen-grid,
+  .screen-scanlines,
+  .screen-scanlines::before,
+  .screen-noise,
+  .minerva-page-title::after,
+  .minerva-page-status-pill::before,
+  .minerva-page-briefing-badge::before {
+    animation: none;
+  }
+
+  .minerva-page-button,
+  .minerva-page-map-nav,
+  .minerva-page-map-image,
+  .minerva-page-inventory-list > li,
+  .minerva-page-inventory-action,
+  .minerva-item-dossier-source {
+    transition: none;
+  }
 }
 
 @media (max-width: 1040px) {
@@ -746,14 +1562,24 @@ body::after {
   }
 
   .minerva-page-shell {
-    width: min(100% - 18px, 1320px);
+    width: min(100% - 18px, 1180px);
+    height: auto;
     min-height: 100dvh;
-    padding: 10px 0 18px;
+    padding: 10px 0 16px;
+    grid-template-rows: none;
   }
 
   .minerva-page-header,
   .minerva-page-main-grid {
     grid-template-columns: 1fr;
+  }
+
+  .minerva-page-stage {
+    grid-template-rows: none;
+  }
+
+  .minerva-page-left-stack {
+    grid-template-rows: none;
   }
 
   .minerva-page-sidebar {
@@ -766,7 +1592,122 @@ body::after {
     grid-column: auto;
   }
 
+  .minerva-page-map-wrap {
+    min-height: 420px;
+  }
+
+  .minerva-page-inventory-panel {
+    min-height: 360px;
+  }
+
   .minerva-page-button {
     width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .minerva-page-inventory-header,
+  .minerva-page-inventory-row {
+    grid-template-columns: minmax(0, 1fr) minmax(88px, 112px);
+    gap: 10px;
+  }
+
+  .minerva-page-inventory-toggle {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .minerva-page-inventory-action {
+    justify-self: start;
+  }
+
+  .minerva-item-dossier {
+    grid-template-columns: 1fr;
+  }
+
+  .minerva-item-dossier-body,
+  .minerva-item-dossier-header {
+    grid-template-columns: 1fr;
+  }
+
+  .minerva-item-dossier-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .minerva-item-dossier-block {
+    grid-column: 1 / -1;
+  }
+
+  .minerva-item-dossier-source {
+    justify-self: start;
+  }
+
+  .minerva-page-briefing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .minerva-page-briefing-route {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .minerva-page-briefing-route i {
+    display: none;
+  }
+
+  .minerva-page-price {
+    white-space: normal;
+  }
+
+  .minerva-page-map-controls {
+    left: 10px;
+    right: 10px;
+  }
+
+  .minerva-page-map-slide-label {
+    max-width: 56%;
+    white-space: normal;
+  }
+}
+
+@media (max-height: 860px) and (min-width: 1041px) {
+  .minerva-page-shell {
+    padding: 8px 0 10px;
+    gap: 10px;
+  }
+
+  .minerva-page-header {
+    padding: 11px calc(var(--panel-pad) + 2px) 12px;
+  }
+
+  .minerva-page-title {
+    font-size: clamp(1.35rem, 2.9vw, 2.05rem);
+  }
+
+  .minerva-page-stage,
+  .minerva-page-main-grid,
+  .minerva-page-left-stack,
+  .minerva-page-sidebar {
+    gap: 10px;
+  }
+
+  .minerva-page-portrait-panel,
+  .minerva-page-map-panel,
+  .minerva-page-inventory-panel {
+    padding: 12px 14px;
+  }
+
+  .minerva-meta-card {
+    min-height: 80px;
+    padding: 10px 12px;
+  }
+
+  .minerva-page-portrait-wrap {
+    min-height: 168px;
+  }
+
+  .minerva-page-briefing-panel {
+    min-height: 112px;
+    padding: 10px 14px 12px;
   }
 }

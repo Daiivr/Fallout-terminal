@@ -106,6 +106,19 @@
   }
 }
 
+@keyframes filesSessionBadgeDot {
+  0%,
+  100% {
+    opacity: 0.5;
+    box-shadow: 0 0 3px currentColor;
+  }
+
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 8px currentColor;
+  }
+}
+
 @keyframes filesSessionAdminPulse {
   0%,
   100% {

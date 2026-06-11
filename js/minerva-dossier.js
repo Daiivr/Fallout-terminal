@@ -63,6 +63,22 @@
       inventoryTitle: "INVENTORY CATALOG",
       inventoryNameHeader: "PLAN / ITEM",
       inventoryPriceHeader: "GOLD BULLION",
+      inventoryOpenDetail: "OPEN DOSSIER",
+      inventoryCloseDetail: "CLOSE DOSSIER",
+      inventoryDetailKicker: "ITEM DOSSIER",
+      inventoryDetailAsset: "ASSET SCAN",
+      inventoryDetailSource: "OPEN SOURCE",
+      inventoryDetailPrice: "PRICE",
+      inventoryDetailType: "TYPE",
+      inventoryDetailArchive: "ARCHIVE",
+      inventoryDetailArchived: "LOCAL HIT",
+      inventoryDetailFallback: "FALLBACK",
+      inventoryDetailPlan: "PLAN",
+      inventoryDetailItem: "ITEM",
+      inventoryDetailWhere: "WHERE ELSE TO GET IT",
+      inventoryDetailUnlocks: "WHAT THIS PLAN UNLOCKS",
+      inventoryDetailNoWhere: "No alternate source found in the local relay archive.",
+      inventoryDetailNoUnlocks: "Unlock intel is not available in the local relay archive.",
       mapSlideRoute: "ROUTE INTEL",
       mapSlideStore: "STORE LOCATION",
       mapPrev: "<",
@@ -73,6 +89,16 @@
       briefingBadgeActive: "SALE LIVE",
       briefingBadgeTransit: "NEXT DEPLOYMENT",
       briefingBadgeError: "SIGNAL DEGRADED",
+      briefingMetricRoute: "ROUTE",
+      briefingMetricWindow: "WINDOW",
+      briefingMetricManifest: "MANIFEST",
+      briefingMetricRelay: "RELAY",
+      briefingWindowOpens: "OPENS",
+      briefingWindowEnds: "ENDS",
+      briefingRelayLive: "LIVE",
+      briefingRelayLocal: "LOCAL LIST",
+      briefingStepCurrent: "CONVOY LOCK",
+      briefingStepNext: "SALE WINDOW",
       briefingLoading: "Awaiting merchant telemetry...",
       briefingActive: "Current sale is live at {current}. After rollover, Minerva is expected at {next} on {date}.",
       briefingTransit: "Minerva is moving toward {next}. The next sale window opens {date}.",
@@ -120,6 +146,22 @@
       inventoryTitle: "CATALOGO DE INVENTARIO",
       inventoryNameHeader: "PLANO / ITEM",
       inventoryPriceHeader: "ORO EN LINGOTES",
+      inventoryOpenDetail: "ABRIR DOSSIER",
+      inventoryCloseDetail: "CERRAR DOSSIER",
+      inventoryDetailKicker: "DOSSIER DE ITEM",
+      inventoryDetailAsset: "ESCANEO DE ACTIVO",
+      inventoryDetailSource: "ABRIR FUENTE",
+      inventoryDetailPrice: "PRECIO",
+      inventoryDetailType: "TIPO",
+      inventoryDetailArchive: "ARCHIVO",
+      inventoryDetailArchived: "CACHE LOCAL",
+      inventoryDetailFallback: "RESPALDO",
+      inventoryDetailPlan: "PLANO",
+      inventoryDetailItem: "ITEM",
+      inventoryDetailWhere: "DONDE CONSEGUIRLO ADEMAS",
+      inventoryDetailUnlocks: "QUE DESBLOQUEA ESTE PLANO",
+      inventoryDetailNoWhere: "No hay otra fuente registrada en el archivo local del relay.",
+      inventoryDetailNoUnlocks: "El intel de desbloqueo no esta disponible en el archivo local del relay.",
       mapSlideRoute: "INTEL DE RUTA",
       mapSlideStore: "UBICACION DE TIENDA",
       mapPrev: "<",
@@ -130,6 +172,16 @@
       briefingBadgeActive: "VENTA ACTIVA",
       briefingBadgeTransit: "SIGUIENTE PARADA",
       briefingBadgeError: "SENAL DEGRADADA",
+      briefingMetricRoute: "RUTA",
+      briefingMetricWindow: "VENTANA",
+      briefingMetricManifest: "MANIFIESTO",
+      briefingMetricRelay: "RELAY",
+      briefingWindowOpens: "ABRE",
+      briefingWindowEnds: "CIERRA",
+      briefingRelayLive: "EN VIVO",
+      briefingRelayLocal: "LISTA LOCAL",
+      briefingStepCurrent: "CONVOY FIJADO",
+      briefingStepNext: "VENTANA DE VENTA",
       briefingLoading: "Esperando telemetria de la mercader...",
       briefingActive: "La venta actual sigue activa en {current}. Despues del reinicio, Minerva deberia aparecer en {next} el {date}.",
       briefingTransit: "Minerva se dirige a {next}. La siguiente ventana de venta abre el {date}.",
@@ -156,7 +208,8 @@
     mapSlides: [],
     mapSlideIndex: 0,
     mapSlideKey: "",
-    mapTransitionToken: 0
+    mapTransitionToken: 0,
+    expandedInventoryKey: ""
   };
 
   const elements = {
@@ -195,6 +248,16 @@
     minervaBriefingKicker: document.getElementById("minervaBriefingKicker"),
     minervaBriefingBadge: document.getElementById("minervaBriefingBadge"),
     minervaBriefing: document.getElementById("minervaBriefing"),
+    minervaBriefingRouteLabel: document.getElementById("minervaBriefingRouteLabel"),
+    minervaBriefingRouteValue: document.getElementById("minervaBriefingRouteValue"),
+    minervaBriefingWindowLabel: document.getElementById("minervaBriefingWindowLabel"),
+    minervaBriefingWindowValue: document.getElementById("minervaBriefingWindowValue"),
+    minervaBriefingManifestLabel: document.getElementById("minervaBriefingManifestLabel"),
+    minervaBriefingManifestValue: document.getElementById("minervaBriefingManifestValue"),
+    minervaBriefingRelayLabel: document.getElementById("minervaBriefingRelayLabel"),
+    minervaBriefingRelayValue: document.getElementById("minervaBriefingRelayValue"),
+    minervaBriefingStepCurrent: document.getElementById("minervaBriefingStepCurrent"),
+    minervaBriefingStepNext: document.getElementById("minervaBriefingStepNext"),
     minervaInventoryTitle: document.getElementById("minervaInventoryTitle"),
     minervaInventoryNameHeader: document.getElementById("minervaInventoryNameHeader"),
     minervaInventoryPriceHeader: document.getElementById("minervaInventoryPriceHeader"),
@@ -368,6 +431,89 @@
       .replace(/\s+/g, " ")
       .trim()
       .toLowerCase();
+  }
+
+  function normalizeDetailLookupValue(value) {
+    return String(value || "")
+      .trim()
+      .replace(/%3a/gi, ":")
+      .replace(/%20/gi, "_")
+      .replace(/\s+/g, "_")
+      .toLowerCase();
+  }
+
+  function sanitizeDetailText(value) {
+    return String(value || "")
+      .replace(/\s+/g, " ")
+      .replace(/\s+([.,;:!?])/g, "$1")
+      .trim();
+  }
+
+  function resolveLocalAssetUrl(value) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^(?:https?:)?\/\//i.test(raw) || raw.startsWith("/")) {
+      return raw;
+    }
+    return `/${raw.replace(/^\/+/, "")}`;
+  }
+
+  function getMinervaDetailFallback() {
+    const payload = window.MINERVA_DETAIL_FALLBACK;
+    return payload && typeof payload === "object" ? payload : null;
+  }
+
+  function getInventoryItemKey(entry, index) {
+    const urlKey = normalizeDetailLookupValue(normalizeWikiUrl(entry?.url || ""));
+    if (urlKey) {
+      return urlKey;
+    }
+    return `${normalizeDetailLookupValue(entry?.name || "item") || "item"}-${index}`;
+  }
+
+  function findInventoryDetail(entry) {
+    const payload = getMinervaDetailFallback();
+    const byKey = payload?.byKey && typeof payload.byKey === "object" ? payload.byKey : {};
+    const normalizedUrl = normalizeDetailLookupValue(normalizeWikiUrl(entry?.url || ""));
+
+    if (normalizedUrl && byKey[normalizedUrl]) {
+      return byKey[normalizedUrl];
+    }
+
+    const decodedUrl = normalizeDetailLookupValue(decodeURIComponent(normalizeWikiUrl(entry?.url || "")));
+    if (decodedUrl && byKey[decodedUrl]) {
+      return byKey[decodedUrl];
+    }
+
+    const entryName = normalizePlanName(entry?.name);
+    if (!entryName) {
+      return null;
+    }
+
+    return Object.values(byKey).find((detail) => {
+      return normalizePlanName(detail?.name) === entryName;
+    }) || null;
+  }
+
+  function resolveInventoryDetail(entry) {
+    const payload = getMinervaDetailFallback();
+    const detail = findInventoryDetail(entry);
+    const localized = detail?.[state.lang] || detail?.en || {};
+    const whereElse = Array.isArray(localized.whereElse)
+      ? localized.whereElse.map((line) => sanitizeDetailText(line)).filter(Boolean)
+      : [];
+
+    return {
+      imageUrl: resolveLocalAssetUrl(detail?.imageUrl || payload?.defaultImageUrl || "assets/images/minerva-plan-fallback.png"),
+      sourceUrl: state.lang === "es"
+        ? (detail?.wikiUrlEs || detail?.wikiUrlEn || entry?.url || "")
+        : (detail?.wikiUrlEn || detail?.wikiUrlEs || entry?.url || ""),
+      whereElse,
+      unlocks: sanitizeDetailText(localized.unlocks),
+      hasDetail: Boolean(detail)
+    };
   }
 
   function createIconTag(glyph) {
@@ -742,6 +888,31 @@
     });
   }
 
+  function renderBriefingTelemetry(data = state.data) {
+    if (!elements.minervaBriefingRouteValue || !elements.minervaBriefingWindowValue) {
+      return;
+    }
+
+    const items = Array.isArray(data?.items) ? data.items : [];
+    const totalBullion = sumBullion(items);
+    const windowDate = data?.active ? data?.eventEnd : data?.eventStart;
+    const windowPrefix = data?.active ? t("briefingWindowEnds") : t("briefingWindowOpens");
+    const relayValue = data?.archiveSource === "fallback" || data?.archiveSource === "local_lists"
+      ? t("briefingRelayLocal")
+      : t("briefingRelayLive");
+
+    elements.minervaBriefingRouteValue.textContent = data?.location || t("unknown");
+    elements.minervaBriefingWindowValue.textContent = windowDate instanceof Date && !Number.isNaN(windowDate.getTime())
+      ? `${windowPrefix} ${formatLocalDateTime(windowDate)}`
+      : t("unknown");
+    elements.minervaBriefingManifestValue.textContent = items.length
+      ? `${formatNumber(items.length)} / ${formatNumber(totalBullion)}`
+      : t("unknown");
+    elements.minervaBriefingRelayValue.textContent = data ? relayValue : t("unknown");
+    elements.minervaBriefingStepCurrent.textContent = data?.active ? t("briefingBadgeActive") : t("briefingStepCurrent");
+    elements.minervaBriefingStepNext.textContent = t("briefingStepNext");
+  }
+
   function resolveBriefingMessage(data) {
     if (!data) {
       return {
@@ -847,6 +1018,10 @@
     elements.minervaLeavesLabel.textContent = t("leavesLabel");
     elements.minervaBriefingKicker.textContent = t("briefingKicker");
     elements.minervaBriefingBadge.textContent = t("briefingBadgeTransit");
+    elements.minervaBriefingRouteLabel.textContent = t("briefingMetricRoute");
+    elements.minervaBriefingWindowLabel.textContent = t("briefingMetricWindow");
+    elements.minervaBriefingManifestLabel.textContent = t("briefingMetricManifest");
+    elements.minervaBriefingRelayLabel.textContent = t("briefingMetricRelay");
     elements.minervaInventoryTitle.textContent = t("inventoryTitle");
     elements.minervaInventoryNameHeader.textContent = t("inventoryNameHeader");
     elements.minervaInventoryPriceHeader.textContent = t("inventoryPriceHeader");
@@ -860,51 +1035,184 @@
 
   function renderInventoryList(items = []) {
     elements.minervaInventoryList.innerHTML = "";
+    elements.minervaInventoryList.classList.toggle("is-empty", !items.length);
 
     if (!items.length) {
       const item = document.createElement("li");
+      item.className = "minerva-page-inventory-empty";
       item.textContent = t("itemsEmpty");
       elements.minervaInventoryList.appendChild(item);
       return;
     }
 
-    for (const entry of items) {
+    for (const [index, entry] of items.entries()) {
+      const itemKey = getInventoryItemKey(entry, index);
+      const isExpanded = state.expandedInventoryKey === itemKey;
       const item = document.createElement("li");
+      item.className = "minerva-page-inventory-item";
+      item.classList.toggle("is-expanded", isExpanded);
       const itemName = normalizeItemName(entry.name);
-      const nameWrap = document.createElement("div");
+      const row = document.createElement("div");
+      row.className = "minerva-page-inventory-row";
+      const toggle = document.createElement("button");
+      toggle.className = "minerva-page-inventory-toggle";
+      toggle.type = "button";
+      toggle.dataset.inventoryKey = itemKey;
+      toggle.setAttribute("aria-expanded", String(isExpanded));
+      toggle.setAttribute("aria-label", `${isExpanded ? t("inventoryCloseDetail") : t("inventoryOpenDetail")}: ${itemName}`);
+      const nameWrap = document.createElement("span");
       nameWrap.className = "minerva-page-item-name";
 
       if (isPlanOrPlanoItem(itemName)) {
         nameWrap.appendChild(createIconTag(PLAN_ITEM_GLYPH));
       }
 
-      if (entry.url) {
-        const link = document.createElement("a");
-        link.className = "minerva-page-inventory-link";
-        link.href = entry.url;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        link.textContent = itemName;
-        nameWrap.appendChild(link);
-      } else {
-        const label = document.createElement("span");
-        label.className = "minerva-page-inventory-link";
-        label.textContent = itemName;
-        nameWrap.appendChild(label);
-      }
+      const label = document.createElement("span");
+      label.className = "minerva-page-inventory-link";
+      label.textContent = itemName;
+      nameWrap.appendChild(label);
+      toggle.appendChild(nameWrap);
 
-      item.appendChild(nameWrap);
+      const action = document.createElement("span");
+      action.className = "minerva-page-inventory-action";
+      action.textContent = isExpanded ? t("inventoryCloseDetail") : t("inventoryOpenDetail");
+      toggle.appendChild(action);
+      row.appendChild(toggle);
 
       if (Number.isFinite(entry.price)) {
         const price = document.createElement("span");
         price.className = "minerva-page-price";
         price.appendChild(createIconTag(GOLD_BULLION_GLYPH));
         price.append(document.createTextNode(formatNumber(entry.price)));
-        item.appendChild(price);
+        row.appendChild(price);
+      }
+
+      item.appendChild(row);
+
+      if (isExpanded) {
+        item.appendChild(renderInventoryDetailPanel(entry, itemName));
       }
 
       elements.minervaInventoryList.appendChild(item);
     }
+  }
+
+  function renderInventoryDetailPanel(entry, itemName) {
+    const detail = resolveInventoryDetail(entry);
+    const panel = document.createElement("article");
+    panel.className = "minerva-item-dossier";
+
+    const asset = document.createElement("div");
+    asset.className = "minerva-item-dossier-asset";
+    const image = document.createElement("img");
+    image.className = "minerva-item-dossier-image";
+    image.src = detail.imageUrl;
+    image.alt = `${itemName} asset scan`;
+    image.loading = "lazy";
+    image.decoding = "async";
+    asset.appendChild(image);
+
+    const assetLabel = document.createElement("span");
+    assetLabel.className = "minerva-item-dossier-asset-label";
+    assetLabel.textContent = t("inventoryDetailAsset");
+    asset.appendChild(assetLabel);
+    panel.appendChild(asset);
+
+    const body = document.createElement("div");
+    body.className = "minerva-item-dossier-body";
+
+    const header = document.createElement("div");
+    header.className = "minerva-item-dossier-header";
+    const kicker = document.createElement("span");
+    kicker.className = "minerva-item-dossier-kicker";
+    kicker.textContent = t("inventoryDetailKicker");
+    const title = document.createElement("strong");
+    title.className = "minerva-item-dossier-title";
+    title.textContent = itemName;
+    header.append(kicker, title);
+
+    if (detail.sourceUrl) {
+      const source = document.createElement("a");
+      source.className = "minerva-item-dossier-source";
+      source.href = detail.sourceUrl;
+      source.target = "_blank";
+      source.rel = "noopener noreferrer";
+      source.textContent = t("inventoryDetailSource");
+      header.appendChild(source);
+    }
+
+    body.appendChild(header);
+    body.appendChild(renderInventoryDetailMeta(entry, itemName, detail));
+    body.appendChild(renderInventoryDetailBlock(
+      t("inventoryDetailWhere"),
+      detail.whereElse.length ? detail.whereElse : [t("inventoryDetailNoWhere")],
+      true
+    ));
+    body.appendChild(renderInventoryDetailBlock(
+      t("inventoryDetailUnlocks"),
+      detail.unlocks || t("inventoryDetailNoUnlocks"),
+      false
+    ));
+    panel.appendChild(body);
+
+    return panel;
+  }
+
+  function renderInventoryDetailMeta(entry, itemName, detail) {
+    const meta = document.createElement("div");
+    meta.className = "minerva-item-dossier-meta";
+    meta.appendChild(renderInventoryMetaChip(
+      t("inventoryDetailPrice"),
+      Number.isFinite(entry?.price) ? `${formatNumber(entry.price)} ${t("inventoryPriceHeader")}` : t("unknown")
+    ));
+    meta.appendChild(renderInventoryMetaChip(
+      t("inventoryDetailType"),
+      isPlanOrPlanoItem(itemName) ? t("inventoryDetailPlan") : t("inventoryDetailItem")
+    ));
+    meta.appendChild(renderInventoryMetaChip(
+      t("inventoryDetailArchive"),
+      detail.hasDetail ? t("inventoryDetailArchived") : t("inventoryDetailFallback")
+    ));
+    return meta;
+  }
+
+  function renderInventoryMetaChip(labelText, valueText) {
+    const chip = document.createElement("span");
+    chip.className = "minerva-item-dossier-meta-chip";
+    const label = document.createElement("em");
+    label.textContent = labelText;
+    const value = document.createElement("strong");
+    value.textContent = valueText;
+    chip.append(label, value);
+    return chip;
+  }
+
+  function renderInventoryDetailBlock(titleText, content, isList) {
+    const block = document.createElement("section");
+    block.className = "minerva-item-dossier-block";
+
+    const title = document.createElement("h3");
+    title.className = "minerva-item-dossier-block-title";
+    title.textContent = titleText;
+    block.appendChild(title);
+
+    if (isList) {
+      const list = document.createElement("ul");
+      list.className = "minerva-item-dossier-lines";
+      for (const line of content) {
+        const item = document.createElement("li");
+        item.textContent = line;
+        list.appendChild(item);
+      }
+      block.appendChild(list);
+      return block;
+    }
+
+    const text = document.createElement("p");
+    text.className = "minerva-item-dossier-copy";
+    text.textContent = content;
+    block.appendChild(text);
+    return block;
   }
 
   function render() {
@@ -927,6 +1235,7 @@
       ? `Minerva portrait near ${data.location}`
       : "Minerva portrait";
     renderAvailability(data);
+    renderBriefingTelemetry(data);
     renderMapSlide(data);
 
     renderInventoryList(data?.items || []);
@@ -1024,6 +1333,15 @@
       }
       state.mapSlideIndex = (state.mapSlideIndex + 1) % state.mapSlides.length;
       renderMapSlide(state.data);
+    });
+    elements.minervaInventoryList?.addEventListener("click", (event) => {
+      const toggle = event.target.closest("[data-inventory-key]");
+      if (!toggle) {
+        return;
+      }
+      const key = toggle.dataset.inventoryKey || "";
+      state.expandedInventoryKey = state.expandedInventoryKey === key ? "" : key;
+      renderInventoryList(state.data?.items || []);
     });
     window.setInterval(() => {
       renderAvailability(state.data);

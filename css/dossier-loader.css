@@ -36,6 +36,7 @@ body.is-dossier-loading .dossier-page-shell {
   padding: 24px;
   background: var(--dossier-loader-backdrop);
   transition: opacity 420ms ease, visibility 420ms ease;
+  overflow: hidden;
 }
 
 .dossier-loader.is-hidden {
@@ -53,47 +54,73 @@ body.is-dossier-loading .dossier-page-shell {
 }
 
 .dossier-loader::before {
-  opacity: 0.14;
+  opacity: 0.18;
   background-image:
     linear-gradient(to right, color-mix(in srgb, var(--accent, #79ff86) 10%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--accent, #79ff86) 7%, transparent) 1px, transparent 1px);
-  background-size: 42px 100%, 100% 21px;
+    linear-gradient(to bottom, color-mix(in srgb, var(--accent, #79ff86) 7%, transparent) 1px, transparent 1px),
+    repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0) 0 2px, rgba(0, 0, 0, 0.2) 3px 4px);
+  background-size: 42px 100%, 100% 21px, 100% 4px;
 }
 
 .dossier-loader::after {
-  opacity: 0.18;
+  opacity: 0.2;
   background:
-    radial-gradient(circle at 18% 24%, color-mix(in srgb, var(--accent, #79ff86) 18%, transparent), transparent 28%),
-    radial-gradient(circle at 82% 76%, color-mix(in srgb, var(--accent-warm, var(--accent, #f7c948)) 16%, transparent), transparent 32%);
+    radial-gradient(420px 260px at 18% 24%, color-mix(in srgb, var(--accent, #79ff86) 18%, transparent), transparent 72%),
+    radial-gradient(460px 280px at 82% 76%, color-mix(in srgb, var(--accent-warm, var(--accent, #f7c948)) 16%, transparent), transparent 74%),
+    linear-gradient(115deg, transparent 0 43%, color-mix(in srgb, var(--accent, #79ff86) 9%, transparent) 44% 45%, transparent 46% 100%);
 }
 
 .dossier-loader-core {
   position: relative;
   z-index: 1;
-  width: min(520px, 100%);
-  padding: 22px 22px 20px;
-  border: 1px solid color-mix(in srgb, var(--accent, #79ff86) 32%, transparent);
-  border-radius: 22px;
+  width: min(560px, 100%);
+  padding: 22px 22px 18px;
+  border: 1px solid color-mix(in srgb, var(--accent, #79ff86) 38%, transparent);
+  border-radius: 18px;
   background:
+    radial-gradient(130% 160% at 0% 0%, color-mix(in srgb, var(--accent, #79ff86) 12%, transparent), transparent 48%),
     linear-gradient(to right, color-mix(in srgb, var(--accent-warm, var(--accent, #f7c948)) 8%, transparent), transparent 34%),
-    linear-gradient(to bottom, color-mix(in srgb, var(--accent, #79ff86) 8%, transparent), rgba(0, 0, 0, 0.16) 46%, rgba(0, 0, 0, 0.42)),
+    linear-gradient(to bottom, color-mix(in srgb, var(--accent, #79ff86) 9%, transparent), rgba(0, 0, 0, 0.16) 46%, rgba(0, 0, 0, 0.42)),
     color-mix(in srgb, var(--panel-strong, rgba(7, 18, 10, 0.95)) 92%, black 8%);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.44) inset,
-    0 26px 64px rgba(0, 0, 0, 0.44);
+    inset 0 1px 0 color-mix(in srgb, var(--accent, #79ff86) 10%, transparent),
+    0 26px 64px rgba(0, 0, 0, 0.5),
+    0 0 42px color-mix(in srgb, var(--accent, #79ff86) 8%, transparent);
   overflow: hidden;
 }
 
 .dossier-loader-core::before {
   content: "";
   position: absolute;
-  inset: 0;
-  opacity: 0.14;
+  inset: 8px;
+  opacity: 0.72;
   background-image:
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(to right, color-mix(in srgb, var(--accent, #79ff86) 8%, transparent) 1px, transparent 1px);
-  background-size: 100% 4px, 36px 100%;
+    linear-gradient(color-mix(in srgb, var(--accent, #79ff86) 55%, transparent), color-mix(in srgb, var(--accent, #79ff86) 55%, transparent)) left top / 18px 1px,
+    linear-gradient(color-mix(in srgb, var(--accent, #79ff86) 55%, transparent), color-mix(in srgb, var(--accent, #79ff86) 55%, transparent)) left top / 1px 18px,
+    linear-gradient(color-mix(in srgb, var(--accent, #79ff86) 55%, transparent), color-mix(in srgb, var(--accent, #79ff86) 55%, transparent)) right bottom / 18px 1px,
+    linear-gradient(color-mix(in srgb, var(--accent, #79ff86) 55%, transparent), color-mix(in srgb, var(--accent, #79ff86) 55%, transparent)) right bottom / 1px 18px,
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to right, color-mix(in srgb, var(--accent, #79ff86) 7%, transparent) 1px, transparent 1px);
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat;
+  background-size: 18px 1px, 1px 18px, 18px 1px, 1px 18px, 100% 4px, 36px 100%;
   pointer-events: none;
+}
+
+.dossier-loader-core::after {
+  content: "PACKET BUFFER // LINK STABLE";
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed color-mix(in srgb, var(--accent, #79ff86) 18%, transparent);
+  color: color-mix(in srgb, var(--accent, #79ff86) 58%, transparent);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
 }
 
 .dossier-loader-kicker,
@@ -107,39 +134,71 @@ body.is-dossier-loading .dossier-page-shell {
   color: color-mix(in srgb, var(--accent-warm, var(--accent, #f7c948)) 86%, white 5%);
   font-family: "Share Tech Mono", monospace;
   font-size: 0.74rem;
-  letter-spacing: 0.3em;
+  letter-spacing: 0.34em;
   text-transform: uppercase;
 }
 
 .dossier-loader-title {
   position: relative;
   z-index: 1;
-  margin: 10px 0 12px;
+  margin: 12px 0 13px;
   color: var(--accent, #79ff86);
   font-family: "Overseer", "Rajdhani", sans-serif;
-  font-size: clamp(2rem, 5vw, 3rem);
-  line-height: 0.9;
-  letter-spacing: 0.08em;
+  font-size: clamp(2.2rem, 6vw, 3.35rem);
+  line-height: 0.86;
+  letter-spacing: 0.075em;
   text-transform: uppercase;
-  text-shadow: 0 0 18px color-mix(in srgb, var(--accent, #79ff86) 20%, transparent);
+  text-shadow:
+    0 0 18px color-mix(in srgb, var(--accent, #79ff86) 24%, transparent),
+    0 0 2px color-mix(in srgb, var(--accent, #79ff86) 35%, transparent);
 }
 
 .dossier-loader-bar {
   position: relative;
   z-index: 1;
-  height: 12px;
+  height: 15px;
   margin: 0 0 14px;
-  border: 1px solid color-mix(in srgb, var(--accent, #79ff86) 28%, transparent);
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid color-mix(in srgb, var(--accent, #79ff86) 34%, transparent);
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0) 0 25px, color-mix(in srgb, var(--accent, #79ff86) 11%, transparent) 25px 26px),
+    rgba(0, 0, 0, 0.34);
   overflow: hidden;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.34),
+    0 0 14px color-mix(in srgb, var(--accent, #79ff86) 9%, transparent);
+}
+
+.dossier-loader-bar::before,
+.dossier-loader-bar::after {
+  content: "";
+  position: absolute;
+  inset: 3px auto 3px 4px;
+  z-index: 2;
+  width: 1px;
+  background: color-mix(in srgb, var(--accent-warm, var(--accent, #f7c948)) 54%, transparent);
+  box-shadow: 118px 0 0 color-mix(in srgb, var(--accent-warm, var(--accent, #f7c948)) 34%, transparent),
+    236px 0 0 color-mix(in srgb, var(--accent-warm, var(--accent, #f7c948)) 34%, transparent),
+    354px 0 0 color-mix(in srgb, var(--accent-warm, var(--accent, #f7c948)) 34%, transparent),
+    472px 0 0 color-mix(in srgb, var(--accent-warm, var(--accent, #f7c948)) 34%, transparent);
+}
+
+.dossier-loader-bar::after {
+  inset: 0;
+  z-index: 3;
+  width: auto;
+  opacity: 0.26;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+  transform: translateX(-110%);
+  box-shadow: none;
+  animation: dossierLoaderHead 1.35s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .dossier-loader-bar span {
   display: block;
-  width: 42%;
+  width: 44%;
   height: 100%;
-  border-radius: inherit;
+  border-radius: 3px;
   background:
     linear-gradient(90deg,
       color-mix(in srgb, var(--accent, #79ff86) 32%, transparent) 0%,
@@ -153,8 +212,15 @@ body.is-dossier-loading .dossier-page-shell {
 
 .dossier-loader-copy {
   color: color-mix(in srgb, var(--fg, #d7f8c9) 86%, white 4%);
+  max-width: 44ch;
   font-size: 1rem;
-  line-height: 1.46;
+  line-height: 1.52;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent, #79ff86) 14%, transparent);
+}
+
+.dossier-loader-copy::before {
+  content: "> ";
+  color: color-mix(in srgb, var(--accent-warm, var(--accent, #f7c948)) 78%, transparent);
 }
 
 @keyframes dossierLoaderSweep {
@@ -169,10 +235,42 @@ body.is-dossier-loading .dossier-page-shell {
   }
 }
 
+@keyframes dossierLoaderHead {
+  0% {
+    transform: translateX(-110%);
+  }
+  50% {
+    transform: translateX(18%);
+  }
+  100% {
+    transform: translateX(110%);
+  }
+}
+
+@media (max-width: 640px) {
+  .dossier-loader {
+    padding: 18px;
+  }
+
+  .dossier-loader-core {
+    width: min(100%, 520px);
+    padding: 20px 18px 16px;
+  }
+
+  .dossier-loader-title {
+    font-size: clamp(2rem, 12vw, 3rem);
+  }
+
+  .dossier-loader-kicker {
+    letter-spacing: 0.24em;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dossier-page-shell,
   .dossier-loader,
-  .dossier-loader-bar span {
+  .dossier-loader-bar span,
+  .dossier-loader-bar::after {
     transition: none;
     animation: none;
   }

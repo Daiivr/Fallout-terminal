@@ -10,12 +10,17 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://fonts.cdnfonts.com">
   <link href="https://fonts.cdnfonts.com/css/overseer" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="/assets/icons/terminal-favicon.svg">
-  <link rel="stylesheet" href="/css/minerva-dossier.css?v=20260308-minerva-split-stats">
-  <link rel="stylesheet" href="/css/dossier-loader.css?v=20260609-ui-polish-1">
+    <link rel="stylesheet" href="/css/minerva-dossier.css?v=20260611-background-seam-fix-1">
+  <link rel="stylesheet" href="/css/dossier-loader.css?v=20260611-relay-loader-polish-1">
 </head>
 <body class="is-dossier-loading">
+  <div class="screen-vignette" aria-hidden="true"></div>
+  <div class="screen-map" aria-hidden="true"></div>
+  <div class="screen-grid" aria-hidden="true"></div>
+  <div class="screen-scanlines" aria-hidden="true"></div>
+  <div class="screen-noise" aria-hidden="true"></div>
   <div id="dossierLoader" class="dossier-loader" aria-hidden="true">
     <div class="dossier-loader-core">
       <p id="dossierLoaderKicker" class="dossier-loader-kicker">FALLOUT CODEX // RELAY SYNC</p>
@@ -27,17 +32,18 @@
   <main class="minerva-page-shell dossier-page-shell">
     <header class="minerva-page-header">
       <div class="minerva-page-copy">
+        <p class="minerva-page-robco" aria-hidden="true">ROBCO INDUSTRIES (TM) TERMLINK V2.6</p>
         <p id="minervaEyebrow" class="minerva-page-eyebrow">WASTELAND MERCHANT INTEL</p>
         <h1 id="minervaTitle" class="minerva-page-title">MINERVA INTEL</h1>
         <p id="minervaSummary" class="minerva-page-summary" aria-live="polite">Loading Minerva routing intel...</p>
-        <div class="minerva-page-chip-row">
-          <span id="minervaChipVendor" class="minerva-page-chip">GOLD BULLION VENDOR</span>
-          <span id="minervaChipRoute" class="minerva-page-chip">CARAVAN NETWORK</span>
-          <span id="minervaStatusPill" class="minerva-page-status-pill">TRACKING</span>
-        </div>
       </div>
       <aside class="minerva-page-side">
-        <div class="minerva-page-route-card">
+        <span id="minervaStatusPill" class="minerva-page-status-pill">TRACKING</span>
+        <div class="minerva-page-chip-row" aria-label="Intel highlights">
+          <span id="minervaChipVendor" class="minerva-page-chip">GOLD BULLION VENDOR</span>
+          <span id="minervaChipRoute" class="minerva-page-chip">CARAVAN NETWORK</span>
+        </div>
+        <div class="minerva-page-route-card" aria-live="polite">
           <span id="minervaRouteLabel" class="minerva-page-side-label">CURRENT ROUTE</span>
           <span id="minervaRouteValue" class="minerva-page-side-value">--</span>
         </div>
@@ -114,6 +120,29 @@
               <span id="minervaBriefingBadge" class="minerva-page-briefing-badge">BROADCAST LIVE</span>
             </div>
             <p id="minervaBriefing" class="minerva-page-briefing">Awaiting merchant telemetry...</p>
+            <div class="minerva-page-briefing-grid" aria-label="Merchant signal telemetry">
+              <span class="minerva-page-briefing-cell">
+                <em id="minervaBriefingRouteLabel">ROUTE</em>
+                <strong id="minervaBriefingRouteValue">--</strong>
+              </span>
+              <span class="minerva-page-briefing-cell">
+                <em id="minervaBriefingWindowLabel">WINDOW</em>
+                <strong id="minervaBriefingWindowValue">--</strong>
+              </span>
+              <span class="minerva-page-briefing-cell">
+                <em id="minervaBriefingManifestLabel">MANIFEST</em>
+                <strong id="minervaBriefingManifestValue">--</strong>
+              </span>
+              <span class="minerva-page-briefing-cell">
+                <em id="minervaBriefingRelayLabel">RELAY</em>
+                <strong id="minervaBriefingRelayValue">--</strong>
+              </span>
+            </div>
+            <div class="minerva-page-briefing-route" aria-hidden="true">
+              <span id="minervaBriefingStepCurrent">TRACKING</span>
+              <i></i>
+              <span id="minervaBriefingStepNext">NEXT SALE</span>
+            </div>
           </section>
         </div>
       </div>
@@ -131,9 +160,14 @@
         </div>
       </section>
     </section>
+
+    <footer class="minerva-page-footer">
+      <p class="minerva-page-footer-note">COMMUNITY DATA ONLY. NOT AFFILIATED WITH BETHESDA.</p>
+    </footer>
   </main>
 
   <script src="/js/dossier-loader.js?v=20260309-dossier-loader-lang-2"></script>
-  <script src="/js/minerva-dossier.js?v=20260309-dossier-loader-lang-2"></script>
+  <script src="/data/minerva-detail-fallback.js?v=20260408-minerva-mod-workshop-v5"></script>
+  <script src="/js/minerva-dossier.js?v=20260611-briefing-dossier-polish-1"></script>
 </body>
 </html>

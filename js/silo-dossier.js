@@ -36,6 +36,9 @@
       chipGrid: "APPALACHIA GRID",
       sideLabel: "TACTICAL READOUT",
       sideValue: "ALPHA / BRAVO / CHARLIE",
+      keysHeading: "LAUNCH KEYCODES",
+      telemetryHeading: "RESET TELEMETRY",
+      footerNote: "COMMUNITY DATA ONLY. NOT AFFILIATED WITH BETHESDA.",
       briefingKicker: "TACTICAL BRIEFING",
       briefingBadge: "LIVE INTEL",
       statusLoading: "SYNCING",
@@ -47,6 +50,12 @@
       relayLoading: "FALLOUT CODEX SYNCING",
       sourceFallback: "NUKACRYPT",
       updatedPending: "PENDING",
+      siloCodeCopyLabel: "Copy {site} silo code {code}",
+      siloCodeCopyTooltip: "CLICK TO COPY",
+      siloCodeCopyStatusSuccess: "COPY CONFIRMED",
+      siloCodeCopyStatusError: "COPY FAILED",
+      siloCodeCopied: "{site} Silo Code copied to clipboard",
+      siloCodeCopyFailed: "Unable to copy {site} Silo Code",
       unknown: "--"
     },
     es: {
@@ -76,6 +85,9 @@
       chipGrid: "RED APPALACHIA",
       sideLabel: "LECTURA TACTICA",
       sideValue: "ALPHA / BRAVO / CHARLIE",
+      keysHeading: "CLAVES DE LANZAMIENTO",
+      telemetryHeading: "TELEMETRIA DE REINICIO",
+      footerNote: "SOLO DATOS DE LA COMUNIDAD. NO AFILIADO CON BETHESDA.",
       briefingKicker: "BRIEFING TACTICO",
       briefingBadge: "INTEL EN VIVO",
       statusLoading: "SINCRONIZANDO",
@@ -87,6 +99,12 @@
       relayLoading: "FALLOUT CODEX SINCRONIZANDO",
       sourceFallback: "NUKACRYPT",
       updatedPending: "PENDIENTE",
+      siloCodeCopyLabel: "Copiar codigo de silo {site}: {code}",
+      siloCodeCopyTooltip: "CLICK PARA COPIAR",
+      siloCodeCopyStatusSuccess: "COPIA CONFIRMADA",
+      siloCodeCopyStatusError: "FALLO LA COPIA",
+      siloCodeCopied: "Codigo de Silo {site} copiado al portapapeles",
+      siloCodeCopyFailed: "No se pudo copiar el Codigo de Silo {site}",
       unknown: "--"
     }
   };
@@ -125,7 +143,10 @@
     dossierUpdatedValue: document.getElementById("dossierUpdatedValue"),
     dossierBriefingKicker: document.getElementById("dossierBriefingKicker"),
     dossierBriefingBadge: document.getElementById("dossierBriefingBadge"),
-    dossierBriefing: document.getElementById("dossierBriefing")
+    dossierBriefing: document.getElementById("dossierBriefing"),
+    dossierKeysTitle: document.getElementById("dossierKeysTitle"),
+    dossierTelemetryTitle: document.getElementById("dossierTelemetryTitle"),
+    dossierFooterNote: document.getElementById("dossierFooterNote")
   };
 
   function normalizeLanguage(value) {
@@ -145,15 +166,49 @@
     }
   }
 
-  function t(key) {
+  function t(key, vars = {}) {
     const dictionary = STRINGS[state.lang] || STRINGS.en;
-    return dictionary[key] || STRINGS.en[key] || key;
+    const template = dictionary[key] || STRINGS.en[key] || key;
+    return String(template).replace(/\{(\w+)\}/g, (_match, token) => {
+      return Object.prototype.hasOwnProperty.call(vars, token) ? String(vars[token]) : `{${token}}`;
+    });
   }
 
   function formatCode(code) {
     const digits = String(code || "").replace(/\D/g, "");
     const match = digits.match(/^(\d{3})(\d{2})(\d{3})$/);
     return match ? `${match[1]} ${match[2]} ${match[3]}` : "--- -- ---";
+  }
+
+  function getSiloCodeClipboardValue(code) {
+    const digits = String(code || "").replace(/\D/g, "");
+    return /^\d{8}$/.test(digits) ? digits : "";
+  }
+
+  async function copyTextToClipboard(text) {
+    const value = String(text || "");
+    if (!value) {
+      throw new Error("Missing clipboard text");
+    }
+
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = value;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    textarea.style.top = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    if (!copied) {
+      throw new Error("Clipboard copy failed");
+    }
   }
 
   function nextResetUtc(now = new Date()) {
@@ -279,6 +334,201 @@
     elements.dossierBriefingKicker.textContent = t("briefingKicker");
     elements.dossierBriefingBadge.textContent = t("briefingBadge");
     elements.dossierBackTop.textContent = t("back");
+    elements.dossierKeysTitle.textContent = t("keysHeading");
+    elements.dossierTelemetryTitle.textContent = t("telemetryHeading");
+    elements.dossierFooterNote.textContent = t("footerNote");
+  }
+
+  function setIntelState(statusState, relayState) {
+    elements.dossierStatusValue.dataset.state = statusState;
+    elements.dossierRelayValue.dataset.state = relayState;
+  }
+
+  function getSiloCodeRows() {
+    return [
+      { site: "Alpha", label: elements.dossierAlphaLabel, code: elements.dossierCodeAlpha },
+      { site: "Bravo", label: elements.dossierBravoLabel, code: elements.dossierCodeBravo },
+      { site: "Charlie", label: elements.dossierCharlieLabel, code: elements.dossierCodeCharlie }
+    ].map((entry) => ({
+      ...entry,
+      row: entry.code?.closest(".silo-key-row")
+    })).filter((entry) => entry.row);
+  }
+
+  function getSiloCodeCopyToast() {
+    let toast = document.getElementById("siloCodeCopyToast");
+    if (toast) {
+      return toast;
+    }
+
+    toast = document.createElement("div");
+    toast.id = "siloCodeCopyToast";
+    toast.className = "silo-code-copy-toast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    toast.setAttribute("aria-atomic", "true");
+    document.body.appendChild(toast);
+    return toast;
+  }
+
+  function isSiloCodeCopyMobileToast() {
+    return Boolean(window.matchMedia?.("(max-width: 720px), (hover: none), (pointer: coarse)")?.matches);
+  }
+
+  function positionSiloCodeCopyToast(toast, row, point) {
+    if (!(toast instanceof HTMLElement)) {
+      return;
+    }
+
+    const useMobileToast = isSiloCodeCopyMobileToast();
+    toast.classList.toggle("is-mobile", useMobileToast);
+    toast.classList.toggle("is-desktop", !useMobileToast);
+    toast.classList.remove("is-right-of-cursor", "is-left-of-cursor");
+
+    if (useMobileToast) {
+      toast.style.left = "";
+      toast.style.top = "";
+      return;
+    }
+
+    const rowRect = row instanceof HTMLElement ? row.getBoundingClientRect() : null;
+    const pointX = Number(point?.clientX);
+    const pointY = Number(point?.clientY);
+    const hasPointerPoint = Number.isFinite(pointX) && Number.isFinite(pointY) && (pointX > 0 || pointY > 0);
+    const baseX = hasPointerPoint ? pointX : (rowRect ? rowRect.right : window.innerWidth / 2);
+    const baseY = hasPointerPoint ? pointY : (rowRect ? rowRect.top + rowRect.height / 2 : window.innerHeight / 2);
+    const gap = 26;
+    const margin = 10;
+
+    toast.style.left = "0px";
+    toast.style.top = "0px";
+    const width = toast.offsetWidth || 240;
+    const height = toast.offsetHeight || 36;
+    let left = baseX + gap;
+    let top = baseY - height / 2;
+    let opensRight = true;
+
+    if (left + width + margin > window.innerWidth) {
+      left = baseX - width - gap;
+      opensRight = false;
+    }
+    left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
+    top = Math.max(margin, Math.min(top, window.innerHeight - height - margin));
+
+    toast.classList.toggle("is-right-of-cursor", opensRight);
+    toast.classList.toggle("is-left-of-cursor", !opensRight);
+    toast.style.left = `${Math.round(left)}px`;
+    toast.style.top = `${Math.round(top)}px`;
+  }
+
+  function showSiloCodeCopyToast(row, message, kind, point) {
+    const toast = getSiloCodeCopyToast();
+    const isError = kind === "error";
+    const arrow = document.createElement("span");
+    arrow.className = "silo-code-copy-toast-arrow";
+    arrow.setAttribute("aria-hidden", "true");
+
+    const signal = document.createElement("span");
+    signal.className = "silo-code-copy-toast-signal";
+    signal.setAttribute("aria-hidden", "true");
+
+    const copy = document.createElement("span");
+    copy.className = "silo-code-copy-toast-copy";
+
+    const status = document.createElement("span");
+    status.className = "silo-code-copy-toast-status";
+    status.textContent = t(isError ? "siloCodeCopyStatusError" : "siloCodeCopyStatusSuccess");
+
+    const body = document.createElement("span");
+    body.className = "silo-code-copy-toast-message";
+    body.textContent = message;
+
+    copy.append(status, body);
+    toast.dataset.ownerId = row?.dataset?.siloCopyId || "";
+    toast.replaceChildren(arrow, signal, copy);
+    toast.classList.toggle("is-error", isError);
+    toast.classList.toggle("is-success", !isError);
+    toast.classList.add("is-visible");
+    positionSiloCodeCopyToast(toast, row, point);
+  }
+
+  function resetSiloCodeCopyState(row) {
+    if (!(row instanceof HTMLElement)) {
+      return;
+    }
+
+    row.classList.remove("is-copy-confirmed", "is-copy-error");
+    const toast = document.getElementById("siloCodeCopyToast");
+    if (toast?.dataset?.ownerId === row.dataset.siloCopyId) {
+      toast.classList.remove("is-visible");
+      delete toast.dataset.ownerId;
+    }
+    delete row.dataset.copyResetTimer;
+  }
+
+  function flashSiloCodeCopyState(row, site, kind = "success", point = null) {
+    if (!(row instanceof HTMLElement)) {
+      return;
+    }
+
+    const previousTimerId = Number.parseInt(row.dataset.copyResetTimer || "", 10);
+    if (Number.isFinite(previousTimerId) && previousTimerId > 0) {
+      clearTimeout(previousTimerId);
+    }
+
+    const isError = kind === "error";
+    row.classList.toggle("is-copy-confirmed", !isError);
+    row.classList.toggle("is-copy-error", isError);
+    showSiloCodeCopyToast(
+      row,
+      t(isError ? "siloCodeCopyFailed" : "siloCodeCopied", { site }),
+      kind,
+      point
+    );
+
+    const timerId = window.setTimeout(() => {
+      if (row.isConnected) {
+        resetSiloCodeCopyState(row);
+      }
+    }, 1900);
+    row.dataset.copyResetTimer = String(timerId);
+  }
+
+  async function handleSiloCodeCopy(row, site, code, event = null) {
+    const clipboardValue = getSiloCodeClipboardValue(code);
+    if (!clipboardValue) {
+      return;
+    }
+
+    try {
+      await copyTextToClipboard(clipboardValue);
+      flashSiloCodeCopyState(row, site, "success", event);
+    } catch (_error) {
+      flashSiloCodeCopyState(row, site, "error", event);
+    }
+  }
+
+  function syncSiloCodeCopyRows() {
+    const codes = state.data?.codes || {};
+    for (const entry of getSiloCodeRows()) {
+      const rawCode = codes[entry.site];
+      const displayCode = formatCode(rawCode);
+      const clipboardValue = getSiloCodeClipboardValue(rawCode);
+      entry.row.dataset.siloSite = entry.site;
+      entry.row.dataset.siloCode = rawCode || "";
+      entry.row.dataset.siloCopyId = `dossier-silo-${entry.site.toLowerCase()}`;
+      entry.row.dataset.tooltip = clipboardValue ? t("siloCodeCopyTooltip") : "";
+      entry.row.classList.toggle("is-copy-disabled", !clipboardValue);
+      if (clipboardValue) {
+        entry.row.setAttribute("role", "button");
+        entry.row.setAttribute("tabindex", "0");
+        entry.row.setAttribute("aria-label", t("siloCodeCopyLabel", { site: entry.site, code: displayCode }));
+      } else {
+        entry.row.removeAttribute("role");
+        entry.row.removeAttribute("tabindex");
+        entry.row.removeAttribute("aria-label");
+      }
+    }
   }
 
   function render() {
@@ -289,6 +539,7 @@
     elements.dossierCodeAlpha.textContent = formatCode(data?.codes?.Alpha);
     elements.dossierCodeBravo.textContent = formatCode(data?.codes?.Bravo);
     elements.dossierCodeCharlie.textContent = formatCode(data?.codes?.Charlie);
+    syncSiloCodeCopyRows();
     elements.dossierResetValue.textContent = formatAbsoluteUtc(resetTarget);
     elements.dossierCountdownValue.textContent = formatCountdown(resetTarget);
     elements.dossierUpdatedValue.textContent = formatLocalTimestamp(state.lastRelayAt);
@@ -298,6 +549,7 @@
       elements.dossierBriefing.textContent = t("briefingLoading");
       elements.dossierStatusValue.textContent = t("statusLoading");
       elements.dossierRelayValue.textContent = t("relayLoading");
+      setIntelState("loading", "loading");
       return;
     }
 
@@ -306,6 +558,7 @@
       elements.dossierBriefing.textContent = t("briefingError");
       elements.dossierStatusValue.textContent = t("statusError");
       elements.dossierRelayValue.textContent = t("relayPartial");
+      setIntelState("error", "error");
       return;
     }
 
@@ -314,6 +567,7 @@
       elements.dossierBriefing.textContent = t("briefingExpired");
       elements.dossierStatusValue.textContent = t("statusExpired");
       elements.dossierRelayValue.textContent = t("relayOnline");
+      setIntelState("expired", "online");
       return;
     }
 
@@ -321,6 +575,7 @@
     elements.dossierBriefing.textContent = t("briefingLive");
     elements.dossierStatusValue.textContent = t("statusLive");
     elements.dossierRelayValue.textContent = t("relayOnline");
+    setIntelState("live", "online");
   }
 
   async function loadIntel() {
@@ -366,6 +621,18 @@
   window.addEventListener("DOMContentLoaded", () => {
     render();
     void loadIntel();
+    for (const entry of getSiloCodeRows()) {
+      entry.row.addEventListener("click", (event) => {
+        void handleSiloCodeCopy(entry.row, entry.row.dataset.siloSite || entry.site, entry.row.dataset.siloCode || "", event);
+      });
+      entry.row.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+        event.preventDefault();
+        void handleSiloCodeCopy(entry.row, entry.row.dataset.siloSite || entry.site, entry.row.dataset.siloCode || "", event);
+      });
+    }
     window.setInterval(() => {
       render();
     }, TICK_INTERVAL_MS);
