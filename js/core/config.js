@@ -1,6 +1,7 @@
 const PROXY_BASE = "https://api.codetabs.com/v1/proxy/?quest=";
 const SILO_API_URL = "/api/intel/silo";
 const PLAYER_COUNTS_API_URL = "/api/intel/player-counts";
+const NUKAKNIGHTS_INTEL_API_URL = "/api/intel/nukaknights";
 const SILO_RESET_DAY_UTC = 4;
 const SOURCE_URLS = {
   silo: [

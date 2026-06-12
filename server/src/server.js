@@ -9,7 +9,7 @@ const { createClient } = require("redis");
 const { RedisStore } = require("connect-redis");
 const multer = require("multer");
 const nodemailer = require("nodemailer");
-const { fetchMinervaIntel, fetchPlayerCounts, fetchSiloIntel } = require("./intel");
+const { fetchMinervaIntel, fetchNukaKnightsIntel, fetchPlayerCounts, fetchSiloIntel } = require("./intel");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -6772,6 +6772,22 @@ app.get("/api/intel/player-counts", async (req, res) => {
     console.error(error);
     res.status(502).json({
       error: "Unable to fetch Steam player telemetry"
+    });
+  }
+});
+
+app.get("/api/intel/nukaknights", async (req, res) => {
+  try {
+    const payload = await fetchNukaKnightsIntel({
+      force: String(req.query.force || "").trim() === "1"
+    });
+    res.setHeader("Cache-Control", "no-store");
+    res.json(payload);
+  } catch (error) {
+    console.error("[intel] Failed to fetch NukaKnights daily intel for web client.");
+    console.error(error);
+    res.status(502).json({
+      error: "Unable to fetch NukaKnights daily intel"
     });
   }
 });

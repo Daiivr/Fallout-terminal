@@ -91,6 +91,16 @@ const state = {
     hoverIndex: -1,
     requestId: 0
   },
+  classifiedNukaIntel: {
+    open: false,
+    loading: false,
+    error: "",
+    activeKey: "dailyOps",
+    data: null,
+    fingerprint: "",
+    checkedAt: 0,
+    requestId: 0
+  },
   files: {
     me: null,
     localAccessExpired: false,

@@ -241,6 +241,32 @@
         </div>
       </div>
     </div>
+    <div id="classifiedIntelOverlay" class="intel-bot-modal-overlay classified-intel-modal-overlay" aria-hidden="true">
+      <div
+        id="classifiedIntelCore"
+        class="intel-bot-modal-core classified-intel-modal-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="classifiedIntelTitle"
+        aria-describedby="classifiedIntelBody"
+      >
+        <div class="classified-intel-modal-head">
+          <p id="classifiedIntelBadge" class="intel-bot-modal-badge classified-intel-modal-badge">NUKAKNIGHTS FEED</p>
+          <button id="classifiedIntelCloseIconBtn" class="classified-intel-modal-x" type="button" aria-label="Close intel modal">&times;</button>
+        </div>
+        <h2 id="classifiedIntelTitle" class="intel-bot-modal-title classified-intel-modal-title">DAILY OPS</h2>
+        <p id="classifiedIntelBody" class="intel-bot-modal-body classified-intel-modal-body">
+          Live Fallout 76 daily rotation relayed from NukaKnights.
+        </p>
+        <div id="classifiedIntelMeta" class="classified-intel-modal-meta">Last sync: --</div>
+        <p id="classifiedIntelStatus" class="classified-intel-modal-status" aria-live="polite">Fetching information...</p>
+        <div id="classifiedIntelContent" class="classified-intel-modal-content" hidden></div>
+        <div class="intel-bot-modal-actions classified-intel-modal-actions">
+          <button id="classifiedIntelRefreshBtn" class="files-btn classified-player-modal-refresh" type="button">REFRESH</button>
+          <button id="classifiedIntelCloseBtn" class="files-btn intel-bot-modal-confirm" type="button">CLOSE</button>
+        </div>
+      </div>
+    </div>
     <div id="hackOverlay" class="hack-overlay" aria-hidden="true">
       <div class="hack-core">
         <div class="hack-frame">
@@ -1686,24 +1712,27 @@
       </div>
       <div class="classified-layout">
         <aside class="classified-sidebar">
-          <article class="classified-card">
+          <button id="classifiedDailyOpsBtn" class="classified-card classified-intel-button" type="button" data-classified-intel="dailyOps">
             <h3 id="classifiedCard1Title">FILE: OPERATION CINDER TRACE</h3>
             <p id="classifiedCard1Body">
               Satellite telemetry indicates repeated launch prep drills near Appalachian silos. Civilian chatter appears unsuspicious.
             </p>
-          </article>
-          <article class="classified-card">
+            <span id="classifiedCard1Action" class="classified-intel-button-action">OPEN DOSSIER</span>
+          </button>
+          <button id="classifiedDailyChallengesBtn" class="classified-card classified-intel-button" type="button" data-classified-intel="dailyChallenges">
             <h3 id="classifiedCard2Title">FILE: MINERVA CONTACT CHAIN</h3>
             <p id="classifiedCard2Body">
               Merchant route traffic intersects former responder relay nodes. Trade schedule may hide encrypted dead drops.
             </p>
-          </article>
-          <article class="classified-card">
+            <span id="classifiedCard2Action" class="classified-intel-button-action">OPEN DOSSIER</span>
+          </button>
+          <button id="classifiedWeeklyChallengesBtn" class="classified-card classified-intel-button" type="button" data-classified-intel="weeklyChallenges">
             <h3 id="classifiedCard3Title">FILE: VAULT-TEC BLACKLIST</h3>
             <p id="classifiedCard3Body">
               Access key fragments recovered from deprecated Pip-Boy firmware. Any complete key grants archive-level command injection.
             </p>
-          </article>
+            <span id="classifiedCard3Action" class="classified-intel-button-action">OPEN DOSSIER</span>
+          </button>
         </aside>
         <section class="classified-main">
           <article class="classified-card classified-card-archive">

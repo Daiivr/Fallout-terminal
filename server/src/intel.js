@@ -23,7 +23,23 @@ const STEAM_APP_ID = 1151340;
 const STEAM_CURRENT_PLAYERS_URL = `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${STEAM_APP_ID}`;
 const STEAMCHARTS_APP_URL = `https://steamcharts.com/app/${STEAM_APP_ID}`;
 const STEAMCHARTS_HISTORY_URL = `${STEAMCHARTS_APP_URL}/chart-data.json`;
+const NUKAKNIGHTS_HOME_URL = "https://nukaknights.com/en/";
+const NUKAKNIGHTS_AJAX_HOME_URL = "https://nukaknights.com/ajax/home.html";
+const NUKAKNIGHTS_CACHE_PATH = process.env.NUKAKNIGHTS_CACHE_PATH
+  ? path.resolve(String(process.env.NUKAKNIGHTS_CACHE_PATH))
+  : path.resolve(__dirname, "..", "storage", "nukaknights-intel-cache.json");
+const NUKAKNIGHTS_READABLE_URLS = [
+  "https://r.jina.ai/https://nukaknights.com/ajax/home.html",
+  "https://r.jina.ai/https://nukaknights.com/en/"
+];
 const PLAYER_COUNTS_CACHE_TTL_MS = 60 * 1000;
+const NUKAKNIGHTS_CACHE_TTL_MS = 5 * 60 * 1000;
+const NUKAKNIGHTS_FAILURE_COOLDOWN_MS = 60 * 1000;
+const NUKAKNIGHTS_STALE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const NUKAKNIGHTS_REFRESH_WAIT_BUDGET_MS = 1400;
+const NUKAKNIGHTS_SOURCE_TIMEOUT_MS = 4500;
+// Readable mirrors render the page remotely and routinely take ~20s to respond.
+const NUKAKNIGHTS_MIRROR_TIMEOUT_MS = 25000;
 const SILO_RESET_DAY_UTC = 4;
 const SILO_FINGERPRINT_VERSION = 3;
 
@@ -49,6 +65,12 @@ let cachedPlayerCounts = {
   value: null,
   fetchedAt: 0,
   promise: null
+};
+let cachedNukaKnightsIntel = {
+  value: null,
+  fetchedAt: 0,
+  promise: null,
+  lastFailureAt: 0
 };
 
 function proxied(url) {
@@ -128,6 +150,309 @@ function parseIntegerText(value) {
 
   const parsed = Number.parseInt(digits, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function decodeHtmlEntities(value) {
+  return String(value || "")
+    .replace(/&#(\d+);/g, (_match, code) => {
+      const parsed = Number(code);
+      return Number.isFinite(parsed) ? String.fromCodePoint(parsed) : "";
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (_match, code) => {
+      const parsed = Number.parseInt(code, 16);
+      return Number.isFinite(parsed) ? String.fromCodePoint(parsed) : "";
+    })
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, "\"")
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+}
+
+function htmlToReadableLines(html) {
+  const text = String(html || "")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "\n")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(?:p|div|section|article|header|footer|h[1-6]|li|ul|ol|tr|td|th)>/gi, "\n")
+    .replace(/<li\b[^>]*>/gi, "\n* ")
+    .replace(/<[^>]+>/g, " ");
+
+  return decodeHtmlEntities(text)
+    .replace(/\u00A0/g, " ")
+    .split(/\r?\n/)
+    .map((line) => line
+      .replace(/\*\*/g, "")
+      .replace(/^#{1,6}\s+/, "")
+      .replace(/\s+/g, " ")
+      .trim())
+    .filter(Boolean);
+}
+
+function cleanNukaChallengeName(value) {
+  return String(value || "")
+    .replace(/1ˢᵗ/g, "1st")
+    .replace(/\s+Tips\b.*$/i, "")
+    .replace(/\s+#{1,6}\s+.*$/i, "")
+    .replace(/\s+\(\s*/g, " (")
+    .replace(/\s*\)\s*/g, ")")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseNukaChallengeItems(sectionLines = []) {
+  const items = [];
+  const scorePattern = /^(?:100|250|300|500|1000|1500|2000)$/;
+
+  for (let index = 0; index < sectionLines.length; index += 1) {
+    const line = String(sectionLines[index] || "").trim();
+    const isStandaloneBullet = line === "*";
+    const isInlineBullet = /^\*\s+/.test(line);
+    if (!isStandaloneBullet && !isInlineBullet) {
+      continue;
+    }
+
+    const nameLine = isStandaloneBullet
+      ? String(sectionLines[index + 1] || "").trim()
+      : line.replace(/^\*\s+/, "").trim();
+    if (!nameLine || nameLine === "*" || /^Tips$/i.test(nameLine)) {
+      continue;
+    }
+
+    const segment = [];
+    const nextStartIndex = isStandaloneBullet ? index + 2 : index + 1;
+    for (let nextIndex = nextStartIndex; nextIndex < sectionLines.length; nextIndex += 1) {
+      const nextLine = String(sectionLines[nextIndex] || "").trim();
+      if (nextLine === "*" || /^\*\s+/.test(nextLine)) {
+        break;
+      }
+      segment.push(nextLine);
+    }
+
+    const scoreCandidates = [nameLine, ...segment]
+      .map((candidate) => candidate.replace(/,/g, "").trim())
+      .flatMap((candidate) => candidate.match(/\b(?:100|250|300|500|1000|1500|2000)\b/g) || [])
+      .filter((candidate) => scorePattern.test(candidate));
+    const score = scoreCandidates.length
+      ? Number(scoreCandidates[scoreCandidates.length - 1])
+      : null;
+
+    items.push({
+      name: cleanNukaChallengeName(nameLine.replace(/\s+\b(?:100|250|300|500|1000|1500|2000)\b\s*$/i, "")),
+      score,
+      hasTips: /\bTips\b/i.test(nameLine) || segment.some((candidate) => /^Tips$/i.test(candidate))
+    });
+  }
+
+  return items.filter((item) => item.name);
+}
+
+function parseNukaChallengeSection(lines, startIndex, endIndex) {
+  if (startIndex < 0 || endIndex <= startIndex) {
+    return {
+      endsIn: "",
+      provider: "",
+      items: []
+    };
+  }
+
+  const sectionLines = lines.slice(startIndex + 1, endIndex);
+  const navIndex = sectionLines.findIndex((line) => /\b(Zurück|Weiter)\b|\[(Back|Next)\]/i.test(line));
+  const usefulLines = navIndex >= 0 ? sectionLines.slice(0, navIndex) : sectionLines;
+  const endsIn = usefulLines.find((line) => /^Ends in\b/i.test(line)) || "";
+  const providerLine = usefulLines.find((line) => /^Provided by\b/i.test(line)) || "";
+
+  return {
+    endsIn,
+    provider: providerLine.replace(/^Provided by\s*/i, "").trim(),
+    items: parseNukaChallengeItems(usefulLines)
+  };
+}
+
+function parseNukaDailyOps(lines, startIndex, endIndex) {
+  if (startIndex < 0 || endIndex <= startIndex) {
+    return {
+      since: "",
+      timezone: "",
+      mode: "",
+      mutation: "",
+      groupMutation: "",
+      location: "",
+      enemy: "",
+      rewardsUrl: "https://nukaknights.com/articles/all-about-the-daily-ops.html"
+    };
+  }
+
+  const sectionLines = lines.slice(startIndex + 1, endIndex);
+  const sinceLine = sectionLines.find((line) => /^since\b/i.test(line)) || "";
+  const timezoneLine = sectionLines.find((line) => /America\/New_York/i.test(line)) || "";
+  const details = sectionLines.filter((line) => (
+    line
+    && !/^Daily Ops$/i.test(line)
+    && !/^since\b/i.test(line)
+    && !/America\/New_York/i.test(line)
+    && !/Daily Ops:\s*All Rewards/i.test(line)
+    && !/^\[?Daily Ops:\s*All Rewards/i.test(line)
+    && !/current daily ops details will be available here soon/i.test(line)
+  ));
+  const hasSecondaryMutation = /^\+\s*/.test(details[3] || "");
+  const groupMutation = hasSecondaryMutation
+    ? `${details[2] || ""} ${details[3] || ""}`.trim()
+    : details[2] || "";
+  const locationIndex = hasSecondaryMutation ? 4 : 3;
+
+  return {
+    since: sinceLine.replace(/\s*America\/New_York\s*$/i, "").trim(),
+    timezone: timezoneLine.match(/America\/New_York/i)?.[0] || sinceLine.match(/America\/New_York/i)?.[0] || "",
+    mode: details[0] || "",
+    mutation: details[1] || "",
+    groupMutation,
+    location: details[locationIndex] || "",
+    enemy: details[locationIndex + 1] || "",
+    rewardsUrl: "https://nukaknights.com/articles/all-about-the-daily-ops.html"
+  };
+}
+
+function hasNukaDailyOpsDetails(dailyOps = {}) {
+  return Boolean(
+    String(dailyOps.mode || "").trim()
+    || String(dailyOps.mutation || "").trim()
+    || String(dailyOps.groupMutation || "").trim()
+    || String(dailyOps.location || "").trim()
+    || String(dailyOps.enemy || "").trim()
+  );
+}
+
+function countNukaChallengeItems(section = {}) {
+  return Array.isArray(section.items) ? section.items.length : 0;
+}
+
+function scoreNukaKnightsIntelPayload(payload = {}) {
+  const dailyCount = countNukaChallengeItems(payload.dailyChallenges);
+  const weeklyCount = countNukaChallengeItems(payload.weeklyChallenges);
+  return (
+    (hasNukaDailyOpsDetails(payload.dailyOps) ? 1000 : 0)
+    + (dailyCount * 40)
+    + (weeklyCount * 30)
+    + (payload.dailyChallenges?.endsIn ? 8 : 0)
+    + (payload.weeklyChallenges?.endsIn ? 8 : 0)
+    + (payload.dailyOps?.since ? 4 : 0)
+  );
+}
+
+function hasUsableNukaKnightsIntelPayload(payload = {}) {
+  return Boolean(
+    hasNukaDailyOpsDetails(payload.dailyOps)
+    || countNukaChallengeItems(payload.dailyChallenges) > 0
+    || countNukaChallengeItems(payload.weeklyChallenges) > 0
+  );
+}
+
+function setCachedNukaKnightsIntel(payload = {}, fetchedAt = Date.now()) {
+  if (!hasUsableNukaKnightsIntelPayload(payload)) {
+    return;
+  }
+  cachedNukaKnightsIntel.value = payload;
+  cachedNukaKnightsIntel.fetchedAt = fetchedAt;
+}
+
+function readCachedNukaKnightsIntelFromDisk() {
+  try {
+    if (!fs.existsSync(NUKAKNIGHTS_CACHE_PATH)) {
+      return null;
+    }
+    const cached = JSON.parse(fs.readFileSync(NUKAKNIGHTS_CACHE_PATH, "utf8"));
+    const fetchedAt = Number(cached?.fetchedAt || 0);
+    if (!Number.isFinite(fetchedAt) || Date.now() - fetchedAt > NUKAKNIGHTS_STALE_CACHE_TTL_MS) {
+      return null;
+    }
+    const payload = cached?.payload && typeof cached.payload === "object" ? cached.payload : null;
+    if (!hasUsableNukaKnightsIntelPayload(payload)) {
+      return null;
+    }
+    setCachedNukaKnightsIntel(payload, fetchedAt);
+    return { payload, fetchedAt };
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedNukaKnightsIntelToDisk(payload = {}, fetchedAt = Date.now()) {
+  try {
+    if (!hasUsableNukaKnightsIntelPayload(payload)) {
+      return;
+    }
+    fs.mkdirSync(path.dirname(NUKAKNIGHTS_CACHE_PATH), { recursive: true });
+    fs.writeFileSync(
+      NUKAKNIGHTS_CACHE_PATH,
+      JSON.stringify({ fetchedAt, payload }, null, 2),
+      "utf8"
+    );
+  } catch {
+    // Disk cache is an optimization; failing to write it should not break intel.
+  }
+}
+
+function getCachedNukaKnightsIntel() {
+  if (cachedNukaKnightsIntel.value) {
+    return {
+      payload: cachedNukaKnightsIntel.value,
+      fetchedAt: cachedNukaKnightsIntel.fetchedAt
+    };
+  }
+  return readCachedNukaKnightsIntelFromDisk();
+}
+
+function parseNukaKnightsIntel(html) {
+  const lines = htmlToReadableLines(html);
+  const dailyOpsIndex = (() => {
+    let foundIndex = -1;
+    for (let index = 0; index < lines.length; index += 1) {
+      if (
+        String(lines[index] || "").trim().toLowerCase() === "daily ops"
+        && /^since\b/i.test(lines[index + 1] || "")
+      ) {
+        foundIndex = index;
+      }
+    }
+    return foundIndex;
+  })();
+  const dailyChallengesIndex = lines.findIndex((line, index) => (
+    index > dailyOpsIndex && line === "Daily Challenges"
+  ));
+  const weeklyChallengesIndex = lines.findIndex((line, index) => (
+    index > Math.max(dailyChallengesIndex, dailyOpsIndex) && line === "Weekly Challenges"
+  ));
+  const dailyOpsEndIndex = dailyChallengesIndex >= 0
+    ? dailyChallengesIndex
+    : (weeklyChallengesIndex >= 0 ? weeklyChallengesIndex : lines.length);
+  const weeklyEndIndex = (() => {
+    if (weeklyChallengesIndex < 0) {
+      return lines.length;
+    }
+    const navIndex = lines.findIndex((line, index) => (
+      index > weeklyChallengesIndex && /\b(Zurück|Weiter)\b|\[(Back|Next)\]/i.test(line)
+    ));
+    return navIndex >= 0 ? navIndex + 1 : lines.length;
+  })();
+
+  const parsed = {
+    fetchedAt: new Date().toISOString(),
+    source: NUKAKNIGHTS_HOME_URL,
+    dailyOps: parseNukaDailyOps(lines, dailyOpsIndex, dailyOpsEndIndex),
+    dailyChallenges: parseNukaChallengeSection(lines, dailyChallengesIndex, weeklyChallengesIndex),
+    weeklyChallenges: parseNukaChallengeSection(lines, weeklyChallengesIndex, weeklyEndIndex)
+  };
+
+  const hasOps = hasNukaDailyOpsDetails(parsed.dailyOps);
+  const hasDaily = parsed.dailyChallenges.items.length > 0;
+  const hasWeekly = parsed.weeklyChallenges.items.length > 0;
+  if (!hasOps && !hasDaily && !hasWeekly) {
+    throw new Error("Unable to parse NukaKnights daily intel.");
+  }
+
+  return parsed;
 }
 
 function inferListNumber(items, lists) {
@@ -712,6 +1037,129 @@ async function fetchPlayerCounts({ force = false, includeHistory = false } = {})
   return cachedPlayerCounts.promise.then((payload) => buildPlayerCountsResponse(payload, { includeHistory }));
 }
 
+function isNukaKnightsIntelComplete(payload = {}) {
+  return Boolean(
+    hasNukaDailyOpsDetails(payload.dailyOps)
+    && countNukaChallengeItems(payload.dailyChallenges) > 0
+    && countNukaChallengeItems(payload.weeklyChallenges) > 0
+  );
+}
+
+async function fetchNukaKnightsCandidate(url, timeoutMs = NUKAKNIGHTS_SOURCE_TIMEOUT_MS) {
+  const html = await fetchTextWithTimeout(
+    url,
+    {
+      headers: {
+        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7",
+        "accept-language": "en-US,en;q=0.9",
+        "cache-control": "no-cache",
+        pragma: "no-cache",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+      }
+    },
+    timeoutMs
+  );
+  const parsed = parseNukaKnightsIntel(html);
+  parsed.source = url;
+  return parsed;
+}
+
+async function refreshNukaKnightsIntel() {
+  // The AJAX fragment carries all three sections, so one request usually suffices;
+  // the full page and readable mirrors are only hit when it fails or comes back partial.
+  const candidateTiers = [
+    [{ url: NUKAKNIGHTS_AJAX_HOME_URL, timeoutMs: NUKAKNIGHTS_SOURCE_TIMEOUT_MS }],
+    [
+      { url: NUKAKNIGHTS_HOME_URL, timeoutMs: NUKAKNIGHTS_SOURCE_TIMEOUT_MS },
+      ...NUKAKNIGHTS_READABLE_URLS.map((url) => ({ url, timeoutMs: NUKAKNIGHTS_MIRROR_TIMEOUT_MS }))
+    ]
+  ];
+  let lastError = new Error("No NukaKnights source candidates configured.");
+  let bestPayload = null;
+  let bestScore = -1;
+
+  for (const tier of candidateTiers) {
+    const settled = await Promise.allSettled(tier.map((candidate) => fetchNukaKnightsCandidate(candidate.url, candidate.timeoutMs)));
+
+    for (const result of settled) {
+      if (result.status !== "fulfilled") {
+        lastError = result.reason || lastError;
+        continue;
+      }
+
+      const score = scoreNukaKnightsIntelPayload(result.value);
+      if (score > bestScore) {
+        bestPayload = result.value;
+        bestScore = score;
+      }
+    }
+
+    if (bestPayload && isNukaKnightsIntelComplete(bestPayload)) {
+      break;
+    }
+  }
+
+  if (!bestPayload) {
+    cachedNukaKnightsIntel.lastFailureAt = Date.now();
+    throw lastError;
+  }
+
+  const fetchedAt = Date.now();
+  cachedNukaKnightsIntel.lastFailureAt = 0;
+  setCachedNukaKnightsIntel(bestPayload, fetchedAt);
+  writeCachedNukaKnightsIntelToDisk(bestPayload, fetchedAt);
+  return bestPayload;
+}
+
+function withTimeout(promise, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Timed out waiting for fresh NukaKnights intel.")), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
+async function fetchNukaKnightsIntel({ force = false } = {}) {
+  const now = Date.now();
+  const cached = getCachedNukaKnightsIntel();
+  if (!force && cached && now - cached.fetchedAt < NUKAKNIGHTS_CACHE_TTL_MS) {
+    return cached.payload;
+  }
+
+  if (!cachedNukaKnightsIntel.promise) {
+    const coolingDown = !force
+      && cachedNukaKnightsIntel.lastFailureAt
+      && now - cachedNukaKnightsIntel.lastFailureAt < NUKAKNIGHTS_FAILURE_COOLDOWN_MS;
+    if (coolingDown) {
+      if (cached) {
+        return cached.payload;
+      }
+      throw new Error("NukaKnights intel sources are unavailable; retrying shortly.");
+    }
+    cachedNukaKnightsIntel.promise = refreshNukaKnightsIntel().finally(() => {
+      cachedNukaKnightsIntel.promise = null;
+    });
+  }
+
+  if (cached) {
+    try {
+      return await withTimeout(cachedNukaKnightsIntel.promise, NUKAKNIGHTS_REFRESH_WAIT_BUDGET_MS);
+    } catch {
+      return cached.payload;
+    }
+  }
+
+  return cachedNukaKnightsIntel.promise;
+}
+
 async function fetchMinervaInfoData(lists = []) {
   const dateValue = new Date().toISOString().slice(0, 10);
   const directUrl = SOURCE_URLS.minervaInfoApi[0];
@@ -1002,8 +1450,10 @@ async function fetchCurrentIntel(options = {}) {
 
 module.exports = {
   fetchMinervaIntel,
+  fetchNukaKnightsIntel,
   fetchPlayerCounts,
   fetchSiloIntel,
   fetchCurrentIntel,
+  parseNukaKnightsIntel,
   parseBethesdaRawDateTime
 };
