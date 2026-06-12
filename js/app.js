@@ -1,5 +1,8 @@
 // app.js — main application logic
 // Depends on: js/core/config.js, js/core/state.js loaded before this file
+const CLASSIFIED_SEARCH_RENDER_DEBOUNCE_MS = 180;
+
+let classifiedSearchRenderTimer = 0;
 
 function t(key, vars = {}) {
   const dictionary = STRINGS[state.lang] || STRINGS.en;
@@ -3381,6 +3384,9 @@ function refreshFilesDescriptionEditors() {
     }
 
     editor.toolbar.setAttribute("aria-label", t("files_description_toolbar_label"));
+    if (editor.toolbarLabel instanceof HTMLElement) {
+      editor.toolbarLabel.textContent = t("files_description_toolbar_label");
+    }
     if (editor.hint instanceof HTMLElement) {
       editor.hint.textContent = t("files_description_format_hint");
     }
@@ -3447,6 +3453,19 @@ function mountFilesDescriptionEditor(textarea) {
   const wrapper = document.createElement("div");
   wrapper.className = "files-description-editor";
 
+  const toolbarHead = document.createElement("div");
+  toolbarHead.className = "files-description-toolbar-head";
+
+  const toolbarLabel = document.createElement("p");
+  toolbarLabel.className = "files-description-toolbar-label";
+  toolbarHead.appendChild(toolbarLabel);
+
+  const hint = document.createElement("p");
+  hint.className = "files-description-toolbar-hint";
+  toolbarHead.appendChild(hint);
+
+  wrapper.appendChild(toolbarHead);
+
   const toolbar = document.createElement("div");
   toolbar.className = "files-description-toolbar";
   toolbar.setAttribute("role", "toolbar");
@@ -3471,10 +3490,6 @@ function mountFilesDescriptionEditor(textarea) {
     };
   });
 
-  const hint = document.createElement("p");
-  hint.className = "files-description-toolbar-hint";
-  wrapper.appendChild(hint);
-
   const currentParent = textarea.parentNode;
   if (currentParent) {
     currentParent.insertBefore(wrapper, textarea);
@@ -3497,6 +3512,7 @@ function mountFilesDescriptionEditor(textarea) {
   const editor = {
     textarea,
     toolbar,
+    toolbarLabel,
     hint,
     previewLabel,
     preview,
@@ -13550,6 +13566,27 @@ function setClassifiedSearchCount(text = "") {
   elements.classifiedSearchCount.textContent = hasText ? text : "";
 }
 
+function clearClassifiedSearchRenderSchedule() {
+  if (!classifiedSearchRenderTimer) {
+    return;
+  }
+  clearTimeout(classifiedSearchRenderTimer);
+  classifiedSearchRenderTimer = 0;
+}
+
+function scheduleClassifiedMinervaSearchResultsRender() {
+  if (!state.classifiedSearch.open) {
+    clearClassifiedSearchRenderSchedule();
+    return;
+  }
+
+  clearClassifiedSearchRenderSchedule();
+  classifiedSearchRenderTimer = window.setTimeout(() => {
+    classifiedSearchRenderTimer = 0;
+    renderClassifiedMinervaSearchResults();
+  }, CLASSIFIED_SEARCH_RENDER_DEBOUNCE_MS);
+}
+
 function syncClassifiedArchiveVisibility() {
   const detailOpen = Boolean(state.classifiedDetail.open && state.classifiedDetail.item);
   const searchOpen = Boolean(state.classifiedSearch.open);
@@ -13622,6 +13659,7 @@ function setClassifiedSearchOpen(active, { focusInput = false, clearQuery = fals
   syncClassifiedArchiveVisibility();
 
   if (!open) {
+    clearClassifiedSearchRenderSchedule();
     setClassifiedSearchCount("");
     if (wasOpen) {
       unlockClassifiedArchiveCardSize();
@@ -13658,6 +13696,8 @@ function setClassifiedSearchOpen(active, { focusInput = false, clearQuery = fals
 }
 
 function renderClassifiedMinervaSearchResults() {
+  clearClassifiedSearchRenderSchedule();
+
   if (!elements.classifiedSearchResults || !elements.classifiedSearchInput) {
     return;
   }
@@ -13681,6 +13721,17 @@ function renderClassifiedMinervaSearchResults() {
   const queryRaw = normalizeSearchText(query);
   const entries = Array.isArray(state.classifiedSearch.entries) ? state.classifiedSearch.entries : [];
   const now = new Date();
+  const availabilityByList = new Map();
+  const getAvailability = (listNumber) => {
+    const listKey = Number(listNumber);
+    if (!Number.isFinite(listKey)) {
+      return null;
+    }
+    if (!availabilityByList.has(listKey)) {
+      availabilityByList.set(listKey, nextAvailabilityForList(listKey, now));
+    }
+    return availabilityByList.get(listKey);
+  };
 
   const bestMatchByItem = new Map();
   for (const entry of entries) {
@@ -13689,7 +13740,7 @@ function renderClassifiedMinervaSearchResults() {
       continue;
     }
 
-    const availability = nextAvailabilityForList(entry.listNumber, now);
+    const availability = getAvailability(entry.listNumber);
     if (!availability) {
       continue;
     }
@@ -13739,92 +13790,56 @@ function renderClassifiedMinervaSearchResults() {
     return a.name.localeCompare(b.name);
   });
 
-  const limited = matches.slice(0, 40);
-  const fragment = document.createDocumentFragment();
+  const limited = matches.slice(0, 24);
   setClassifiedSearchCount(t("classified_search_results_count", { n: String(matches.length) }));
 
-  for (const match of limited) {
-    const row = document.createElement("article");
-    row.className = "classified-search-row";
-
-    const itemField = document.createElement("div");
-    itemField.className = "classified-search-cell classified-search-item";
-
-    const itemLabel = document.createElement("span");
-    itemLabel.className = "classified-search-k";
-    itemLabel.textContent = t("classified_search_item");
-    itemField.appendChild(itemLabel);
-
-    const itemValue = document.createElement("span");
-    itemValue.className = "classified-search-v";
-    if (isPlanOrPlanoItem(match.name)) {
-      itemValue.appendChild(createIconTag(PLAN_ITEM_GLYPH));
-    }
-    if (match.wikiUrl) {
-      const trigger = document.createElement("button");
-      trigger.type = "button";
-      trigger.className = "minerva-item-trigger classified-item-trigger";
-      trigger.textContent = match.name;
-      trigger.addEventListener("click", (event) => {
-        event.preventDefault();
-        void openClassifiedInlineDetail({
-          name: match.name,
-          price: match.price,
-          wikiUrl: match.wikiUrl
-        });
-      });
-      itemValue.appendChild(trigger);
-    } else {
-      itemValue.append(match.name);
-    }
-    itemField.appendChild(itemValue);
-    row.appendChild(itemField);
-
-    const priceField = document.createElement("div");
-    priceField.className = "classified-search-cell";
-    priceField.innerHTML = `<span class="classified-search-k">${t("classified_search_price")}</span>`;
-    const priceValue = document.createElement("span");
-    priceValue.className = "classified-search-v";
-    priceValue.appendChild(createIconTag(GOLD_BULLION_GLYPH));
-    priceValue.append(match.price != null ? Number(match.price).toLocaleString() : "--");
-    priceField.appendChild(priceValue);
-    row.appendChild(priceField);
-
-    const saleField = document.createElement("div");
-    saleField.className = "classified-search-cell";
-    saleField.innerHTML = `<span class="classified-search-k">${t("classified_search_sale")}</span>`;
-    const saleValue = document.createElement("span");
-    saleValue.className = "classified-search-v";
-    saleValue.textContent = `${t("list_value", { n: String(match.listNumber).padStart(2, "0") })} - ${t(match.availability.saleKey)} - ${localizeLocation(match.availability.location)}`;
-    saleField.appendChild(saleValue);
-    row.appendChild(saleField);
-
-    const availableField = document.createElement("div");
-    availableField.className = "classified-search-cell";
-    availableField.innerHTML = `<span class="classified-search-k">${t("classified_search_available")}</span>`;
-    const availableValue = document.createElement("span");
-    availableValue.className = "classified-search-v";
+  const itemLabel = escapeHtml(t("classified_search_item"));
+  const priceLabel = escapeHtml(t("classified_search_price"));
+  const saleLabel = escapeHtml(t("classified_search_sale"));
+  const availableLabel = escapeHtml(t("classified_search_available"));
+  const daysLabel = escapeHtml(t("classified_search_days"));
+  const rows = limited.map((match) => {
+    const planIcon = isPlanOrPlanoItem(match.name)
+      ? `<span class="fo76-icon" aria-hidden="true">${escapeHtml(PLAN_ITEM_GLYPH)}</span>`
+      : "";
+    const itemMarkup = match.wikiUrl
+      ? `<button type="button" class="minerva-item-trigger classified-item-trigger" data-classified-search-detail="true" data-name="${escapeHtml(match.name)}" data-price="${escapeHtml(match.price ?? "")}" data-wiki-url="${escapeHtml(match.wikiUrl)}">${escapeHtml(match.name)}</button>`
+      : escapeHtml(match.name);
+    const priceText = match.price != null ? Number(match.price).toLocaleString() : "--";
+    const saleText = `${t("list_value", { n: String(match.listNumber).padStart(2, "0") })} - ${t(match.availability.saleKey)} - ${localizeLocation(match.availability.location)}`;
     const availableStamp = formatStamp(match.availability.eventStart);
-    availableValue.textContent = match.availability.isActive
+    const availableText = match.availability.isActive
       ? `${availableStamp} (${t("classified_search_now")})`
       : availableStamp;
-    availableField.appendChild(availableValue);
-    row.appendChild(availableField);
+    const daysText = t("classified_days_value", { n: match.availability.daysUntil });
 
-    const daysField = document.createElement("div");
-    daysField.className = "classified-search-cell";
-    daysField.innerHTML = `<span class="classified-search-k">${t("classified_search_days")}</span>`;
-    const daysValue = document.createElement("span");
-    daysValue.className = "classified-search-v";
-    daysValue.textContent = t("classified_days_value", { n: match.availability.daysUntil });
-    daysField.appendChild(daysValue);
-    row.appendChild(daysField);
+    return `
+      <article class="classified-search-row">
+        <div class="classified-search-cell classified-search-item">
+          <span class="classified-search-k">${itemLabel}</span>
+          <span class="classified-search-v">${planIcon}${itemMarkup}</span>
+        </div>
+        <div class="classified-search-cell">
+          <span class="classified-search-k">${priceLabel}</span>
+          <span class="classified-search-v"><span class="fo76-icon" aria-hidden="true">${escapeHtml(GOLD_BULLION_GLYPH)}</span>${escapeHtml(priceText)}</span>
+        </div>
+        <div class="classified-search-cell">
+          <span class="classified-search-k">${saleLabel}</span>
+          <span class="classified-search-v">${escapeHtml(saleText)}</span>
+        </div>
+        <div class="classified-search-cell">
+          <span class="classified-search-k">${availableLabel}</span>
+          <span class="classified-search-v">${escapeHtml(availableText)}</span>
+        </div>
+        <div class="classified-search-cell">
+          <span class="classified-search-k">${daysLabel}</span>
+          <span class="classified-search-v">${escapeHtml(daysText)}</span>
+        </div>
+      </article>
+    `;
+  });
 
-    fragment.appendChild(row);
-  }
-
-  elements.classifiedSearchResults.innerHTML = "";
-  elements.classifiedSearchResults.appendChild(fragment);
+  elements.classifiedSearchResults.innerHTML = rows.join("");
 }
 
 function renderClassifiedInlineDetail() {
@@ -15283,6 +15298,15 @@ function createIconTag(glyph) {
   icon.setAttribute("aria-hidden", "true");
   icon.textContent = glyph;
   return icon;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function escapeRegExp(value) {
@@ -16794,7 +16818,9 @@ function applyLanguage(lang, persist = true) {
   elements.classifiedCard3Title.textContent = t("classified_card3_title");
   elements.classifiedCard3Body.textContent = t("classified_card3_body");
   elements.classifiedMinervaTitle.textContent = t("classified_minerva_title");
-  elements.classifiedMinervaHint.textContent = t("classified_minerva_hint");
+  if (elements.classifiedMinervaHint) {
+    elements.classifiedMinervaHint.textContent = t("classified_minerva_hint");
+  }
   elements.classifiedSearchLabel.textContent = t("classified_search_label");
   elements.classifiedSearchInput.placeholder = t("classified_search_placeholder");
   elements.classifiedSearchHint.textContent = t("classified_search_hint");
@@ -17309,6 +17335,7 @@ async function startBootSequence() {
 
   if (elements.bootLog) {
     elements.bootLog.replaceChildren();
+    elements.bootLog.scrollTop = 0;
   }
   if (elements.bootBar) {
     elements.bootBar.style.width = "0%";
@@ -17357,7 +17384,6 @@ async function startBootSequence() {
       status.textContent = step.ready ? "READY" : "OK";
       line.append(text, srText, leader, status);
       elements.bootLog.appendChild(line);
-      elements.bootLog.scrollTop = elements.bootLog.scrollHeight;
 
       if (timing.type > 0) {
         for (let i = 1; i <= step.text.length; i += 1) {
@@ -17372,7 +17398,6 @@ async function startBootSequence() {
 
       line.classList.remove("is-typing");
       line.classList.add("is-done");
-      elements.bootLog.scrollTop = elements.bootLog.scrollHeight;
     } else {
       setBootProgress(step.progress);
     }
@@ -18061,7 +18086,22 @@ function wireEvents() {
     syncMinervaLocationMapPins(state.minerva.data?.location || "--");
   });
   elements.classifiedSearchInput.addEventListener("input", () => {
-    renderClassifiedMinervaSearchResults();
+    scheduleClassifiedMinervaSearchResultsRender();
+  });
+  elements.classifiedSearchResults?.addEventListener("click", (event) => {
+    const trigger = event.target instanceof Element
+      ? event.target.closest("[data-classified-search-detail]")
+      : null;
+    if (!trigger || !elements.classifiedSearchResults.contains(trigger)) {
+      return;
+    }
+
+    event.preventDefault();
+    void openClassifiedInlineDetail({
+      name: trigger.dataset.name || "",
+      price: trigger.dataset.price || "",
+      wikiUrl: trigger.dataset.wikiUrl || ""
+    });
   });
   elements.classifiedSearchToggleBtn?.addEventListener("click", () => {
     const nextOpen = !state.classifiedSearch.open;

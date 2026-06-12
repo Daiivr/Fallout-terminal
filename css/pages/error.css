@@ -156,6 +156,7 @@ body.error-page.is-ready .footer-note {
 .e404-panel-main {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(260px, 0.9fr);
+  align-items: stretch;
   gap: 18px;
   padding: 18px;
 }
@@ -176,6 +177,7 @@ body.error-page.is-ready .footer-note {
   position: relative;
   z-index: 1;
   min-width: 0;
+  min-height: 0;
   display: grid;
   align-content: start;
   gap: 12px;
@@ -212,6 +214,8 @@ body.error-page.is-ready .footer-note {
   display: grid;
   align-content: start;
   gap: 7px;
+  max-height: clamp(136px, 23vh, 190px);
+  overflow-y: auto;
   padding: 12px 14px 11px;
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -219,6 +223,23 @@ body.error-page.is-ready .footer-note {
     repeating-linear-gradient(to bottom, rgba(139, 255, 139, 0.025) 0 2px, transparent 2px 4px),
     rgba(0, 0, 0, 0.36);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 225, 122, 0.42) rgba(0, 0, 0, 0.2);
+}
+
+.e404-dialogue::-webkit-scrollbar {
+  width: 8px;
+}
+
+.e404-dialogue::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 999px;
+}
+
+.e404-dialogue::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(0, 0, 0, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 225, 122, 0.45);
 }
 
 .e404-line {
@@ -320,8 +341,11 @@ body.error-page.is-ready .footer-note {
   z-index: 1;
   margin: 0;
   min-width: 0;
+  min-height: clamp(318px, 38vh, 430px);
   display: grid;
-  align-content: end;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-self: stretch;
+  align-items: center;
   justify-items: center;
   gap: 10px;
 }
@@ -352,12 +376,14 @@ body.error-page.is-ready .footer-note {
 
 .e404-art {
   position: relative;
+  align-self: center;
   display: block;
   width: 100%;
   max-width: 460px;
+  max-height: min(390px, calc(100% - 54px));
   height: auto;
   object-fit: contain;
-  object-position: center bottom;
+  object-position: center center;
   filter:
     drop-shadow(14px 18px 26px rgba(0, 0, 0, 0.5))
     drop-shadow(0 0 12px rgba(139, 255, 139, 0.1));
@@ -366,6 +392,7 @@ body.error-page.is-ready .footer-note {
 
 .e404-caption {
   position: relative;
+  align-self: end;
   width: min(100%, 380px);
   padding: 7px 10px 6px;
   border: 1px solid rgba(255, 225, 122, 0.26);
@@ -627,10 +654,12 @@ body.error-page.is-unauthorized .e404-path {
 
   .e404-stage {
     order: -1;
+    min-height: 300px;
   }
 
   .e404-art {
     max-width: 380px;
+    max-height: 300px;
   }
 }
 
@@ -657,6 +686,14 @@ body.error-page.is-unauthorized .e404-path {
     padding: 14px;
   }
 
+  .e404-dialogue {
+    max-height: 164px;
+  }
+
+  .e404-stage {
+    min-height: 244px;
+  }
+
   .e404-actions {
     flex-direction: column;
   }
@@ -668,5 +705,6 @@ body.error-page.is-unauthorized .e404-path {
 
   .e404-art {
     max-width: 300px;
+    max-height: 238px;
   }
 }

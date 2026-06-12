@@ -12,13 +12,13 @@ body.is-booting .pipboy-terminal {
   z-index: 1300;
   display: grid;
   place-items: center;
-  padding: clamp(10px, 2.2vw, 22px);
+  padding: clamp(14px, 2.4vw, 28px);
   overflow: hidden;
   isolation: isolate;
   background:
-    radial-gradient(1400px 760px at 100% 0%, rgba(255, 225, 122, 0.14), rgba(255, 225, 122, 0) 56%),
-    radial-gradient(1200px 880px at 0% 100%, rgba(139, 255, 139, 0.14), rgba(139, 255, 139, 0) 66%),
-    linear-gradient(to bottom, rgba(5, 20, 11, 0.94), rgba(2, 10, 5, 0.98));
+    radial-gradient(1300px 760px at 84% 0%, rgba(139, 255, 139, 0.1), rgba(139, 255, 139, 0) 58%),
+    radial-gradient(1200px 820px at 8% 100%, rgba(139, 255, 139, 0.12), rgba(139, 255, 139, 0) 66%),
+    linear-gradient(to bottom, rgba(2, 12, 6, 0.97), rgba(1, 7, 4, 0.99));
   backdrop-filter: blur(1.1px) saturate(1.06);
 }
 
@@ -27,17 +27,17 @@ body.is-booting .pipboy-terminal {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.2;
+  opacity: 0.26;
   background-image:
-    linear-gradient(to right, rgba(139, 255, 139, 0.1) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(139, 255, 139, 0.07) 1px, transparent 1px),
+    linear-gradient(to right, rgba(139, 255, 139, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(139, 255, 139, 0.05) 1px, transparent 1px),
     linear-gradient(
       118deg,
       rgba(255, 225, 122, 0) 0 45%,
-      rgba(255, 225, 122, 0.1) 50%,
+      rgba(139, 255, 139, 0.08) 50%,
       rgba(255, 225, 122, 0) 55% 100%
     );
-  background-size: 54px 100%, 100% 34px, 220% 220%;
+  background-size: 44px 100%, 100% 26px, 220% 220%;
   animation: bootGridDrift 20s linear infinite;
 }
 
@@ -69,32 +69,43 @@ body.is-booting .pipboy-terminal {
 
 .boot-core {
   position: relative;
-  width: min(920px, 100%);
-  max-height: calc(100dvh - 22px);
+  width: min(980px, 100%);
+  min-width: 0;
+  max-height: calc(100dvh - 28px);
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto auto;
-  gap: 10px;
-  border: 1px solid rgba(139, 255, 139, 0.3);
+  gap: clamp(9px, 1vw, 13px);
+  border: 1px solid rgba(122, 255, 122, 0.58);
   border-radius: 0;
-  padding: clamp(12px, 2.2vw, 18px);
+  padding: clamp(18px, 2.1vw, 28px) clamp(20px, 2.8vw, 34px);
   clip-path: polygon(
-    0 14px,
-    14px 0,
-    calc(100% - 14px) 0,
-    100% 14px,
-    100% calc(100% - 14px),
-    calc(100% - 14px) 100%,
-    14px 100%,
-    0 calc(100% - 14px)
+    0 42px,
+    24px 18px,
+    44px 18px,
+    54px 10px,
+    calc(100% - 54px) 10px,
+    calc(100% - 44px) 18px,
+    calc(100% - 24px) 18px,
+    100% 42px,
+    100% calc(100% - 42px),
+    calc(100% - 24px) calc(100% - 18px),
+    calc(100% - 44px) calc(100% - 18px),
+    calc(100% - 54px) calc(100% - 10px),
+    54px calc(100% - 10px),
+    44px calc(100% - 18px),
+    24px calc(100% - 18px),
+    0 calc(100% - 42px)
   );
   background:
-    radial-gradient(130% 170% at 100% -20%, rgba(255, 225, 122, 0.12), rgba(255, 225, 122, 0) 42%),
-    linear-gradient(to bottom, rgba(139, 255, 139, 0.08), rgba(0, 0, 0, 0.42) 62%),
-    rgba(2, 12, 6, 0.92);
+    radial-gradient(900px 260px at 82% 0%, rgba(139, 255, 139, 0.14), transparent 72%),
+    linear-gradient(to bottom, rgba(139, 255, 139, 0.055), rgba(0, 0, 0, 0.42) 68%),
+    repeating-linear-gradient(to bottom, rgba(139, 255, 139, 0.035) 0 1px, transparent 1px 5px),
+    rgba(2, 13, 7, 0.94);
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.7) inset,
-    0 0 0 1px rgba(139, 255, 139, 0.08),
-    0 28px 86px rgba(0, 0, 0, 0.74);
+    0 0 0 2px rgba(5, 16, 8, 0.96) inset,
+    0 0 0 1px rgba(122, 255, 122, 0.32),
+    0 0 36px rgba(122, 255, 122, 0.13),
+    0 30px 92px rgba(0, 0, 0, 0.78);
   overflow: hidden;
   opacity: 0;
   transform: translateY(8px) scale(0.994);
@@ -108,37 +119,40 @@ body.is-booting .pipboy-terminal {
 }
 
 .boot-core::before {
-  inset: 10px;
-  border: 1px solid rgba(139, 255, 139, 0.22);
+  inset: 9px;
+  border: 1px solid rgba(122, 255, 122, 0.42);
   border-radius: 0;
   clip-path: polygon(
-    0 10px,
-    10px 0,
-    calc(100% - 10px) 0,
-    100% 10px,
-    100% calc(100% - 10px),
-    calc(100% - 10px) 100%,
-    10px 100%,
-    0 calc(100% - 10px)
+    0 34px,
+    20px 14px,
+    38px 14px,
+    46px 7px,
+    calc(100% - 46px) 7px,
+    calc(100% - 38px) 14px,
+    calc(100% - 20px) 14px,
+    100% 34px,
+    100% calc(100% - 34px),
+    calc(100% - 20px) calc(100% - 14px),
+    calc(100% - 38px) calc(100% - 14px),
+    calc(100% - 46px) calc(100% - 7px),
+    46px calc(100% - 7px),
+    38px calc(100% - 14px),
+    20px calc(100% - 14px),
+    0 calc(100% - 34px)
   );
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.34);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.42),
+    0 0 18px rgba(122, 255, 122, 0.14);
 }
 
 .boot-core::after {
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 30px;
-  opacity: 0.88;
-  border-right: 1px solid rgba(139, 255, 139, 0.24);
+  inset: 0;
+  opacity: 0.12;
   background:
-    linear-gradient(to bottom, rgba(255, 225, 122, 0.24), rgba(255, 225, 122, 0) 30%),
-    repeating-linear-gradient(
-      to bottom,
-      rgba(139, 255, 139, 0.3) 0 2px,
-      rgba(0, 0, 0, 0) 2px 8px
-    ),
-    linear-gradient(to right, rgba(139, 255, 139, 0.16), rgba(0, 0, 0, 0));
+    linear-gradient(to right, rgba(122, 255, 122, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(122, 255, 122, 0.07) 1px, transparent 1px);
+  background-size: 38px 100%, 100% 24px;
+  mix-blend-mode: screen;
 }
 
 .boot-overlay.is-boot-running .boot-core {
@@ -149,24 +163,28 @@ body.is-booting .pipboy-terminal {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 6px;
-  margin-left: 24px;
-  padding: 2px 0 8px;
-  border-bottom: 1px solid rgba(139, 255, 139, 0.18);
+  grid-template-columns: minmax(0, 1fr) minmax(96px, 128px);
+  align-items: start;
+  gap: clamp(14px, 2.4vw, 26px);
+  padding: 2px clamp(8px, 1.4vw, 14px) 5px;
+}
+
+.boot-head-copy {
+  min-width: 0;
 }
 
 .boot-title {
   margin: 0;
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: clamp(1.42rem, 5.1vw, 3rem);
-  letter-spacing: 0.14em;
+  font-size: clamp(1.8rem, 4vw, 3.25rem);
+  letter-spacing: 0.13em;
   line-height: 1;
   text-transform: uppercase;
-  color: #e4ffd3;
+  color: #b8ff9a;
   text-shadow:
-    0 0 22px rgba(139, 255, 139, 0.2),
-    0 0 12px rgba(255, 225, 122, 0.18);
+    0 0 28px rgba(122, 255, 122, 0.32),
+    0 0 10px rgba(122, 255, 122, 0.28);
 }
 
 .boot-overlay.is-boot-running .boot-title {
@@ -194,38 +212,58 @@ body.is-booting .pipboy-terminal {
 }
 
 .boot-subtitle {
-  margin: 0;
-  color: rgba(214, 255, 214, 0.74);
-  font-size: 11px;
-  letter-spacing: 0.13em;
+  margin: 8px 0 0;
+  color: rgba(139, 255, 139, 0.86);
+  font-size: clamp(0.62rem, 0.86vw, 0.76rem);
+  letter-spacing: 0.095em;
   line-height: 1.3;
   text-transform: uppercase;
+}
+
+.boot-vault-mark {
+  justify-self: end;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: min(100%, 124px);
+  margin-top: 0;
+  filter:
+    drop-shadow(0 0 16px rgba(122, 255, 122, 0.28))
+    drop-shadow(0 0 4px rgba(122, 255, 122, 0.26));
+}
+
+.boot-vault-mark-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  opacity: 0.92;
 }
 
 .boot-trace-meta {
   position: relative;
   z-index: 1;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 13px) minmax(0, 1fr) auto;
   align-items: center;
-  gap: 7px;
+  gap: 9px;
   min-width: 0;
-  margin-left: 24px;
-  border: 1px solid rgba(139, 255, 139, 0.28);
+  border: 1px solid rgba(122, 255, 122, 0.5);
   border-radius: 3px;
   background:
-    linear-gradient(to right, rgba(255, 225, 122, 0.1), rgba(0, 0, 0, 0) 50%),
-    linear-gradient(to bottom, rgba(139, 255, 139, 0.08), rgba(0, 0, 0, 0.24)),
-    rgba(0, 0, 0, 0.4);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.34);
-  padding: 7px 11px;
+    linear-gradient(to right, rgba(122, 255, 122, 0.1), rgba(0, 0, 0, 0) 36%),
+    rgba(0, 0, 0, 0.34);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.34),
+    0 0 15px rgba(122, 255, 122, 0.09);
+  padding: 8px clamp(10px, 1.5vw, 16px);
 }
 
 .boot-trace-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 1px;
-  background: rgba(139, 255, 139, 0.66);
-  box-shadow: 0 0 8px rgba(139, 255, 139, 0.4);
+  width: 13px;
+  height: 13px;
+  border-radius: 0;
+  background: rgba(122, 255, 122, 0.88);
+  box-shadow: 0 0 12px rgba(122, 255, 122, 0.42);
   animation: bootDotPulse 1.45s steps(2, end) infinite;
 }
 
@@ -240,37 +278,37 @@ body.is-booting .pipboy-terminal {
 }
 
 .boot-trace-label {
-  color: var(--fg-dim);
-  font-size: 11px;
-  letter-spacing: 0.1em;
+  color: rgba(139, 255, 139, 0.82);
+  font-size: clamp(0.68rem, 1vw, 0.82rem);
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
 .boot-percent {
-  margin-left: auto;
-  min-width: 3.4ch;
-  color: #fff3c7;
-  font-size: 12px;
+  min-width: 4ch;
+  color: #bdff9f;
+  font-size: clamp(0.72rem, 1vw, 0.88rem);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-align: right;
-  text-shadow: 0 0 14px rgba(255, 225, 122, 0.24);
+  text-shadow: 0 0 14px rgba(122, 255, 122, 0.32);
 }
 
 .boot-log {
   position: relative;
   z-index: 1;
-  margin: 0 0 0 24px;
-  border: 1px solid rgba(139, 255, 139, 0.3);
+  border: 1px solid rgba(122, 255, 122, 0.48);
   border-radius: 5px;
   background:
-    linear-gradient(to bottom, rgba(139, 255, 139, 0.1), rgba(0, 0, 0, 0.34)),
-    rgba(0, 0, 0, 0.46);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.36);
-  padding: 11px 12px 12px;
-  min-height: 140px;
-  max-height: clamp(168px, 33vh, 256px);
-  overflow: auto;
+    linear-gradient(to bottom, rgba(122, 255, 122, 0.075), rgba(0, 0, 0, 0.26)),
+    rgba(0, 0, 0, 0.36);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.38),
+    0 0 16px rgba(122, 255, 122, 0.08);
+  padding: clamp(10px, 1.1vw, 14px) clamp(12px, 1.7vw, 20px);
+  min-height: clamp(118px, 18vh, 168px);
+  max-height: clamp(132px, 26vh, 220px);
+  overflow: hidden;
   line-height: 1.36;
 }
 
@@ -306,15 +344,19 @@ body.is-booting .pipboy-terminal {
 }
 
 .boot-log-line {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, max-content) minmax(18px, 1fr) auto;
   align-items: baseline;
-  gap: 8px;
-  color: var(--fg-dim);
-  font-size: 13px;
+  gap: clamp(8px, 1vw, 12px);
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: #91ff91;
+  font-size: clamp(0.78rem, 1.35vw, 1.04rem);
   line-height: 1.36;
-  letter-spacing: 0.03em;
-  padding: 3px 0 2px 8px;
-  border-left: 1px solid rgba(139, 255, 139, 0.2);
+  letter-spacing: 0.08em;
+  padding: 3px 0;
+  border-left: 0;
   transform: translateY(3px);
   opacity: 0;
   animation: bootLineIn 0.24s ease forwards;
@@ -323,10 +365,11 @@ body.is-booting .pipboy-terminal {
 .boot-log-line::before {
   content: ">";
   flex: 0 0 auto;
-  color: rgba(139, 255, 139, 0.46);
+  color: rgba(122, 255, 122, 0.82);
 }
 
 .boot-log-text {
+  min-width: 0;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -358,19 +401,17 @@ body.is-booting .pipboy-terminal {
 }
 
 .boot-log-leader {
-  flex: 1 1 14px;
-  min-width: 14px;
   align-self: flex-end;
-  margin-bottom: 0.34em;
-  border-bottom: 1px dotted rgba(139, 255, 139, 0.26);
+  margin-bottom: 0.42em;
+  border-bottom: 2px dotted rgba(122, 255, 122, 0.3);
   opacity: 0;
 }
 
 .boot-log-status {
-  flex: 0 0 auto;
-  color: #d9ffd9;
-  font-size: 12px;
-  letter-spacing: 0.1em;
+  min-width: max-content;
+  color: #bdff9f;
+  font-size: clamp(0.72rem, 1.15vw, 0.94rem);
+  letter-spacing: 0.12em;
   opacity: 0;
 }
 
@@ -411,11 +452,12 @@ body.is-booting .pipboy-terminal {
 /* Boot reuses the segmented loader track, but driven by real progress width. */
 .loader-track.boot-progress {
   --ldr-cell: 10px;
-  --ldr-gap: 2px;
+  --ldr-gap: 4px;
   z-index: 1;
-  height: 16px;
-  margin: 0 0 0 24px;
+  height: clamp(12px, 1.55vw, 18px);
+  margin: 0;
   border-radius: 4px;
+  border-color: rgba(122, 255, 122, 0.52);
 }
 
 .loader-track.boot-progress::after {
@@ -436,20 +478,20 @@ body.is-booting .pipboy-terminal {
 .boot-foot {
   position: relative;
   z-index: 1;
-  margin-left: 24px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(160px, 0.72fr) minmax(0, 1fr) minmax(110px, 0.32fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: clamp(9px, 1.5vw, 18px);
 }
 
 .boot-diag {
   margin: 0;
-  color: rgba(139, 255, 139, 0.52);
-  font-size: 10px;
+  justify-self: center;
+  color: rgba(139, 255, 139, 0.7);
+  font-size: clamp(0.56rem, 0.86vw, 0.72rem);
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -459,36 +501,48 @@ body.is-booting .pipboy-terminal {
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 7px;
-  color: rgba(241, 255, 241, 0.82);
-  font-size: 12px;
-  letter-spacing: 0.11em;
+  gap: 9px;
+  color: rgba(241, 255, 241, 0.9);
+  font-size: clamp(0.62rem, 0.92vw, 0.78rem);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  border: 1px solid rgba(255, 225, 122, 0.26);
+  border: 1px solid rgba(122, 255, 122, 0.46);
   border-radius: 3px;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
-  padding: 5px 10px 4px;
+  min-height: 38px;
+  padding: 7px 12px;
   background:
-    linear-gradient(to right, rgba(255, 225, 122, 0.1), rgba(0, 0, 0, 0) 54%),
-    rgba(0, 0, 0, 0.32);
+    linear-gradient(to right, rgba(122, 255, 122, 0.1), rgba(0, 0, 0, 0) 60%),
+    rgba(0, 0, 0, 0.3);
 }
 
 .boot-hint::before {
   content: "";
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: rgba(255, 225, 122, 0.82);
-  box-shadow: 0 0 8px rgba(255, 225, 122, 0.5);
+  background: rgba(122, 255, 122, 0.88);
+  box-shadow: 0 0 12px rgba(122, 255, 122, 0.52);
 }
 
 .boot-hint::after {
   content: "_";
   margin-left: 3px;
-  color: rgba(255, 225, 122, 0.9);
+  color: rgba(122, 255, 122, 0.9);
   animation: cursorBlink 1s steps(1, end) infinite;
+}
+
+.boot-robco-mark {
+  justify-self: end;
+  display: block;
+  width: min(100%, 138px);
+  height: auto;
+  opacity: 0.88;
+  filter:
+    drop-shadow(0 0 12px rgba(122, 255, 122, 0.22))
+    drop-shadow(0 0 3px rgba(122, 255, 122, 0.28));
 }
 
 .boot-lines-source {

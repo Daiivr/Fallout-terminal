@@ -39,7 +39,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="preload" as="image" href="assets/images/minerva-plan-fallback.png" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="css/styles.css?v=20260610-silo-copy-v4" />
+  <link rel="stylesheet" href="css/styles.css?v=20260612-boot-loader-v5" />
 </head>
 <body class="is-booting">
   <noscript>
@@ -51,14 +51,25 @@
   <div id="bootOverlay" class="boot-overlay">
     <div class="boot-core">
       <div class="boot-head">
-        <p id="bootTitle" class="boot-title">PIP-BOY 3000 MK IV</p>
-        <p id="bootSubtitle" class="boot-subtitle">VAULT-TEC PERSONAL INFORMATION PROCESSOR</p>
+        <div class="boot-head-copy">
+          <p id="bootTitle" class="boot-title">PIP-BOY 3000 MK VII</p>
+          <p id="bootSubtitle" class="boot-subtitle">VAULT-TEC PERSONAL INFORMATION PROCESSOR // TERMINAL INTERFACE</p>
+        </div>
+        <div class="boot-vault-mark" aria-hidden="true">
+          <img
+            src="assets/icons/vault_tec_terminal_symbol.svg"
+            alt=""
+            class="boot-vault-mark-image"
+            decoding="async"
+            draggable="false"
+          />
+        </div>
       </div>
       <div class="boot-trace-meta" aria-hidden="true">
         <span class="boot-trace-dot"></span>
         <span class="boot-trace-dot"></span>
         <span class="boot-trace-dot"></span>
-        <span class="boot-trace-label">TRACE</span>
+        <span class="boot-trace-label">LINK STATUS</span>
         <span id="bootPercent" class="boot-percent">0%</span>
       </div>
       <div id="bootLog" class="boot-log" aria-live="polite" aria-atomic="false"></div>
@@ -66,6 +77,14 @@
       <div class="boot-foot">
         <p id="bootHint" class="boot-hint">Initializing...</p>
         <p class="boot-diag" aria-hidden="true">MEM 64K OK &middot; RAD 0.2 mR/h &middot; CORE 31&deg;C</p>
+        <img
+          src="assets/icons/robco_industries_terminal_badge.svg"
+          alt=""
+          class="boot-robco-mark"
+          aria-hidden="true"
+          decoding="async"
+          draggable="false"
+        />
       </div>
       <div class="boot-lines-source" aria-hidden="true">
         <p id="bootLine1" class="boot-line">Initializing transceiver link...</p>
@@ -432,7 +451,18 @@
           <button id="filesUploadModalCloseBtn" class="files-btn files-admin-modal-close" type="button">CLOSE</button>
         </div>
         <article id="filesUploadPanel" class="panel files-upload-panel" hidden>
-          <h2 id="filesUploadTitle">ADMIN CONSOLE</h2>
+          <div class="files-upload-hero">
+            <div class="files-upload-hero-copy">
+              <p class="files-upload-eyebrow">Secure upload</p>
+              <h2 id="filesUploadTitle">ADMIN CONSOLE</h2>
+              <p class="files-upload-hero-hint">Stage the file, choose how it ships, then review the public dossier note before upload.</p>
+            </div>
+            <ol class="files-upload-steps" aria-label="Upload workflow">
+              <li>Package</li>
+              <li>Release flags</li>
+              <li>Dossier</li>
+            </ol>
+          </div>
           <form id="filesUploadForm" class="files-upload-form" novalidate>
             <div class="files-upload-grid">
               <section class="files-upload-shell files-upload-shell-assets" aria-labelledby="filesUploadAssetsLabel">
@@ -478,6 +508,10 @@
                     </button>
                     <ul id="filesGroupSuggestMenu" class="files-admin-requests-filter-menu files-group-suggest-menu" data-files-group-suggest-menu="true" role="listbox" hidden></ul>
                   </div>
+                </div>
+                <div class="files-upload-flags-head">
+                  <p>Release flags</p>
+                  <span>Optional safeguards</span>
                 </div>
                 <div class="files-upload-toggle-group">
                   <label class="files-upload-toggle" for="filesOutdatedInput">
@@ -1687,9 +1721,6 @@
                 <span id="classifiedSearchToggleText" class="classified-search-toggle-text">SEARCH</span>
               </button>
             </div>
-            <p id="classifiedMinervaHint">
-              Decrypted vendor rotation archive. Includes every known list and bullion cost.
-            </p>
             <div id="classifiedSearchWrap" class="classified-search-wrap" hidden>
               <div class="classified-search-head">
                 <label id="classifiedSearchLabel" class="classified-search-label" for="classifiedSearchInput">Search item</label>
@@ -1912,6 +1943,6 @@
   <script src="js/dom/elements.js?v=20260425-temp-shares-v3"></script>
   <script src="js/core/config.js"></script>
   <script src="js/core/state.js"></script>
-  <script src="js/app.js?v=20260610-silo-copy-v4"></script>
+  <script src="js/app.js?v=20260612-boot-log-mobile-1"></script>
 </body>
 </html>

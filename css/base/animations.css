@@ -320,11 +320,11 @@
 @keyframes mapGlow {
   0%,
   100% {
-    filter: brightness(0.95) saturate(0.94);
+    filter: blur(0.35px) brightness(0.94) saturate(0.78);
   }
 
   50% {
-    filter: brightness(1.03) saturate(1.04);
+    filter: blur(0.35px) brightness(1.01) saturate(0.86);
   }
 }
 

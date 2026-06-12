@@ -217,7 +217,7 @@ const STRINGS = Object.freeze({
     silo_reset_window: "Ventana de Reinicio",
     silo_status: "Estado Operativo",
     silo_status_live: "Codigos validos",
-    silo_status_expired: "Esperando codigos nuevos",
+    silo_status_expired: "Codigos expirados",
     silo_site_name: "Fallout Codex",
     silo_open_terminal: "Abrir terminal",
     silo_footer: "Fallout Codex | Monitor de Silos de Appalachia",

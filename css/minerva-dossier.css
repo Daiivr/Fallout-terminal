@@ -1711,3 +1711,304 @@ body::before {
     padding: 10px 14px 12px;
   }
 }
+
+/* 2026 dossier polish: compact merchant console aligned with the current terminal UI. */
+body {
+  background:
+    radial-gradient(820px 380px at 82% 0%, rgba(255, 225, 122, 0.09), transparent 68%),
+    radial-gradient(720px 420px at 6% 42%, rgba(139, 255, 139, 0.08), transparent 70%),
+    var(--bg);
+}
+
+.screen-vignette {
+  opacity: 0.74;
+}
+
+.screen-map {
+  opacity: 0.1;
+  animation: none;
+}
+
+.screen-grid {
+  opacity: 0.12;
+  animation: none;
+}
+
+.minerva-page-shell {
+  width: min(1220px, calc(100% - 24px));
+  padding: 12px 0 16px;
+  gap: 12px;
+}
+
+.minerva-page-header,
+.minerva-page-portrait-panel,
+.minerva-page-map-panel,
+.minerva-page-briefing-panel,
+.minerva-page-inventory-panel,
+.minerva-meta-card,
+.minerva-page-route-card {
+  border-radius: 12px;
+  border-color: rgba(139, 255, 139, 0.2);
+  background:
+    radial-gradient(520px 260px at 0% 0%, rgba(139, 255, 139, 0.075), transparent 72%),
+    linear-gradient(180deg, rgba(255, 225, 122, 0.045), rgba(0, 0, 0, 0.18)),
+    rgba(0, 0, 0, 0.24);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.54),
+    0 14px 34px rgba(0, 0, 0, 0.3);
+}
+
+.minerva-page-header::before,
+.minerva-page-portrait-panel::before,
+.minerva-page-map-panel::before,
+.minerva-page-briefing-panel::before,
+.minerva-page-inventory-panel::before,
+.minerva-meta-card::before,
+.minerva-page-route-card::before {
+  opacity: 0.08;
+  background-size: 100% 7px;
+}
+
+.minerva-page-header::after,
+.minerva-page-briefing-panel::after {
+  content: none;
+}
+
+.minerva-page-header {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 330px);
+  gap: 16px;
+  padding: 18px;
+}
+
+.minerva-page-copy {
+  gap: 8px;
+}
+
+.minerva-page-robco {
+  color: rgba(255, 239, 175, 0.58);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+}
+
+.minerva-page-eyebrow,
+.minerva-meta-label,
+.minerva-page-side-label,
+.minerva-page-map-kicker,
+.minerva-page-briefing-kicker,
+.minerva-page-inventory-title {
+  color: rgba(255, 239, 175, 0.72);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.minerva-page-title {
+  font-size: clamp(1.72rem, 3vw, 2.7rem);
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 18px rgba(139, 255, 139, 0.16);
+}
+
+.minerva-page-title::after {
+  height: 0.74em;
+}
+
+.minerva-page-summary {
+  max-width: 70ch;
+  color: rgba(229, 255, 197, 0.76);
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.minerva-page-side {
+  gap: 8px;
+}
+
+.minerva-page-status-pill,
+.minerva-page-chip,
+.minerva-page-briefing-badge,
+.minerva-page-map-slide-label {
+  border-radius: 8px;
+  min-height: 28px;
+}
+
+.minerva-page-chip {
+  border-color: rgba(255, 225, 122, 0.2);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.minerva-page-route-card {
+  padding: 10px 12px;
+}
+
+.minerva-page-button {
+  min-height: 40px;
+  border-radius: 10px;
+  color: rgba(186, 255, 186, 0.94);
+  background:
+    linear-gradient(180deg, rgba(139, 255, 139, 0.08), rgba(0, 0, 0, 0.22)),
+    rgba(0, 0, 0, 0.28);
+}
+
+.minerva-page-button:hover,
+.minerva-page-button:focus-visible {
+  border-color: rgba(255, 225, 122, 0.46);
+  color: #fff0be;
+  background:
+    linear-gradient(180deg, rgba(255, 225, 122, 0.13), rgba(0, 0, 0, 0.24)),
+    rgba(0, 0, 0, 0.3);
+}
+
+.minerva-page-stage {
+  gap: 12px;
+}
+
+.minerva-page-main-grid {
+  grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.35fr) minmax(290px, 0.9fr);
+  gap: 12px;
+}
+
+.minerva-page-left-stack,
+.minerva-page-sidebar {
+  gap: 10px;
+}
+
+.minerva-page-portrait-panel,
+.minerva-page-map-panel,
+.minerva-page-inventory-panel {
+  padding: 14px;
+}
+
+.minerva-page-briefing-panel {
+  padding: 12px;
+  gap: 10px;
+}
+
+.minerva-meta-card {
+  min-height: 78px;
+  padding: 11px 12px;
+  border-radius: 10px;
+}
+
+.minerva-page-portrait-head,
+.minerva-page-map-head,
+.minerva-page-briefing-head,
+.minerva-page-inventory-head {
+  padding-bottom: 10px;
+}
+
+.minerva-page-portrait-wrap,
+.minerva-page-map-wrap,
+.minerva-page-inventory-scroll,
+.minerva-page-availability,
+.minerva-page-briefing-cell,
+.minerva-item-dossier,
+.minerva-item-dossier-asset,
+.minerva-item-dossier-block,
+.minerva-item-dossier-meta-chip {
+  border-radius: 10px;
+}
+
+.minerva-page-map-wrap {
+  min-height: 430px;
+  background:
+    radial-gradient(180px 140px at 50% 42%, rgba(255, 225, 122, 0.09), transparent 70%),
+    repeating-linear-gradient(180deg, rgba(139, 255, 139, 0.035) 0 1px, transparent 1px 7px),
+    rgba(0, 0, 0, 0.26);
+}
+
+.minerva-page-map-image {
+  opacity: 0.96;
+  filter: saturate(0.9) brightness(0.9) hue-rotate(28deg);
+}
+
+.minerva-page-portrait-image {
+  filter: sepia(0.08) saturate(0.94) brightness(0.92) hue-rotate(36deg);
+}
+
+.minerva-page-availability {
+  padding: 10px 12px;
+}
+
+.minerva-page-availability-value {
+  font-size: clamp(1.25rem, 1.7vw, 1.55rem);
+}
+
+.minerva-meta-value,
+.minerva-page-side-value,
+.minerva-page-map-location {
+  color: rgba(245, 255, 216, 0.94);
+}
+
+.minerva-page-briefing-grid {
+  gap: 7px;
+}
+
+.minerva-page-briefing-cell {
+  min-height: 54px;
+  border-color: rgba(139, 255, 139, 0.16);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.minerva-page-inventory-panel {
+  min-height: 320px;
+}
+
+.minerva-page-inventory-list {
+  padding: 0 8px 0 12px;
+}
+
+.minerva-page-inventory-row {
+  padding: 9px 8px 9px 0;
+}
+
+.minerva-page-inventory-action {
+  border-radius: 8px;
+}
+
+.minerva-item-dossier {
+  grid-template-columns: minmax(190px, 0.27fr) minmax(0, 1fr);
+  margin-right: 6px;
+  padding: 12px;
+}
+
+.minerva-item-dossier-title {
+  color: rgba(245, 255, 216, 0.96);
+  font-size: 0.92rem;
+}
+
+@media (max-width: 1040px) {
+  .minerva-page-shell {
+    width: min(100% - 18px, 1220px);
+  }
+
+  .minerva-page-header,
+  .minerva-page-main-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .minerva-page-map-wrap {
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 640px) {
+  .minerva-page-shell {
+    width: min(100% - 14px, 1220px);
+  }
+
+  .minerva-page-header,
+  .minerva-page-portrait-panel,
+  .minerva-page-map-panel,
+  .minerva-page-briefing-panel,
+  .minerva-page-inventory-panel {
+    padding: 12px;
+  }
+
+  .minerva-page-map-wrap {
+    min-height: 280px;
+  }
+
+  .minerva-item-dossier {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

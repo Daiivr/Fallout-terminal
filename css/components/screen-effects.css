@@ -30,15 +30,19 @@ body::before {
 
 .screen-map {
   z-index: 0;
-  opacity: 0.17;
-  mix-blend-mode: screen;
+  opacity: 0.11;
+  mix-blend-mode: soft-light;
   background-image:
-    radial-gradient(100% 85% at 52% 46%, rgba(139, 255, 139, 0.14), rgba(0, 0, 0, 0) 72%),
-    linear-gradient(to bottom, rgba(7, 19, 12, 0.35), rgba(0, 0, 0, 0.12)),
+    radial-gradient(82% 72% at 52% 46%, rgba(139, 255, 139, 0.1), rgba(0, 0, 0, 0) 76%),
+    linear-gradient(to right, rgba(5, 10, 6, 0.72), rgba(7, 19, 12, 0.12) 24%, rgba(7, 19, 12, 0.12) 76%, rgba(5, 10, 6, 0.76)),
+    linear-gradient(to bottom, rgba(7, 19, 12, 0.44), rgba(0, 0, 0, 0.18)),
     url("../../assets/images/appalachia-map-texture.svg");
-  background-position: center center, center center, center center;
-  background-size: 120% 120%, 100% 100%, cover;
+  background-position: center center, center center, center center, center center;
+  background-size: 120% 120%, 100% 100%, 100% 100%, cover;
   background-repeat: no-repeat;
+  filter: blur(0.35px) saturate(0.82);
+  -webkit-mask-image: radial-gradient(ellipse 74% 78% at 50% 46%, #000 0 46%, rgba(0, 0, 0, 0.62) 68%, transparent 100%);
+  mask-image: radial-gradient(ellipse 74% 78% at 50% 46%, #000 0 46%, rgba(0, 0, 0, 0.62) 68%, transparent 100%);
   transform: translate3d(var(--map-parallax-x), var(--map-parallax-y), 0) scale(1.06);
   transition: transform 240ms ease-out, opacity 240ms ease;
   will-change: transform;
@@ -109,7 +113,7 @@ body.is-hacking .screen-grid {
 body.is-syncing .screen-map,
 body.is-classified-loading .screen-map,
 body.is-hacking .screen-map {
-  opacity: 0.23;
+  opacity: 0.16;
 }
 
 body.is-syncing .screen-noise,
@@ -119,11 +123,22 @@ body.is-hacking .screen-noise {
 }
 
 body.is-classified .screen-map {
-  opacity: 0.19;
+  opacity: 0.13;
 }
 
 body.is-classified .screen-grid {
   opacity: 0.2;
+}
+
+body.is-drops .screen-map {
+  opacity: 0.025;
+  -webkit-mask-image: radial-gradient(ellipse 48% 58% at 50% 42%, #000 0 30%, rgba(0, 0, 0, 0.24) 58%, transparent 100%);
+  mask-image: radial-gradient(ellipse 48% 58% at 50% 42%, #000 0 30%, rgba(0, 0, 0, 0.24) 58%, transparent 100%);
+}
+
+body.is-drops .screen-grid {
+  opacity: 0.045;
+  animation: none;
 }
 
 body.is-syncing .screen-scanlines::before,
