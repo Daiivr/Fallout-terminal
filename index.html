@@ -267,6 +267,47 @@
         </div>
       </div>
     </div>
+    <div id="classifiedAxolotlOverlay" class="intel-bot-modal-overlay classified-intel-modal-overlay classified-axolotl-modal-overlay" aria-hidden="true">
+      <div
+        id="classifiedAxolotlCore"
+        class="intel-bot-modal-core classified-intel-modal-core classified-axolotl-modal-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="classifiedAxolotlTitle"
+        aria-describedby="classifiedAxolotlBody"
+      >
+        <div class="classified-intel-modal-head">
+          <p id="classifiedAxolotlBadge" class="intel-bot-modal-badge classified-intel-modal-badge">FISHING INTEL</p>
+          <button id="classifiedAxolotlCloseIconBtn" class="classified-intel-modal-x" type="button" aria-label="Close axolotl modal">&times;</button>
+        </div>
+        <h2 id="classifiedAxolotlTitle" class="intel-bot-modal-title classified-intel-modal-title">AXOLOTL OF THE MONTH</h2>
+        <p id="classifiedAxolotlBody" class="intel-bot-modal-body classified-intel-modal-body">
+          Current monthly axolotl, where to catch it, and the full year-round catch rotation.
+        </p>
+        <img
+          class="classified-axolotl-character"
+          src="assets/images/axolotls/axolotl-fisher-character.png"
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          draggable="false"
+        />
+        <div id="classifiedAxolotlContent" class="classified-intel-modal-content classified-axolotl-content"></div>
+        <div class="intel-bot-modal-actions classified-intel-modal-actions">
+          <a
+            id="classifiedAxolotlSourceLink"
+            class="files-btn intel-bot-modal-cancel"
+            href="https://fallout.fandom.com/wiki/Fallout_76_fishing"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            OPEN SOURCE PAGE
+          </a>
+          <button id="classifiedAxolotlCloseBtn" class="files-btn intel-bot-modal-confirm" type="button">CLOSE</button>
+        </div>
+      </div>
+    </div>
     <div id="hackOverlay" class="hack-overlay" aria-hidden="true">
       <div class="hack-core">
         <div class="hack-frame">
@@ -1732,6 +1773,13 @@
               Access key fragments recovered from deprecated Pip-Boy firmware. Any complete key grants archive-level command injection.
             </p>
             <span id="classifiedCard3Action" class="classified-intel-button-action">OPEN DOSSIER</span>
+          </button>
+          <button id="classifiedAxolotlBtn" class="classified-card classified-intel-button" type="button" data-classified-axolotl="true">
+            <h3 id="classifiedCard4Title">AXOLOTL OF THE MONTH</h3>
+            <p id="classifiedCard4Body">
+              Current monthly axolotl, where to catch it, and the full year-round rotation.
+            </p>
+            <span id="classifiedCard4Action" class="classified-intel-button-action">OPEN DOSSIER</span>
           </button>
         </aside>
         <section class="classified-main">

@@ -14273,7 +14273,22 @@ const CLASSIFIED_NUKA_ES_CHALLENGE_TEXT = {
   "Cripple a Human's Head (25)": "Lisiar la cabeza de un humano (25)",
   "Kill a Mutated Enemy (30)": "Matar a un enemigo mutado (30)",
   "Mod an Energy Weapon (5)": "Modificar un arma de energía (5)",
-  "Scrap junk to produce Glass (30)": "Desguazar chatarra para obtener vidrio (30)"
+  "Scrap junk to produce Glass (30)": "Desguazar chatarra para obtener vidrio (30)",
+  "Collect a Board Game": "Recoger un juego de mesa",
+  "1st Collect a Board Game": "1.º recoger un juego de mesa",
+  "Craft or Scrap a piece of Power Armor": "Crear o desguazar una pieza de servoarmadura",
+  "Cripple a Protectron or a Robobrain's Arm (2)": "Lisiar el brazo de un Protectrón o un Robocerebro (2)",
+  "Destroy an Assaultron": "Destruir un Assaultron",
+  "Mod a piece of Armor (5)": "Modificar una pieza de armadura (5)",
+  "Buy an item from or Sell an item to another Player (15)": "Comprar un objeto de otro jugador o venderle un objeto (15)",
+  "Collect Caps (2500)": "Recoger chapas (2500)",
+  "Complete a Grunt Hunt (10)": "Completar una cacería Grunt Hunt (10)",
+  "Consume an Alcoholic Beverage (20)": "Consumir una bebida alcohólica (20)",
+  "Craft any Plushie at a Tinkerer's Bench (3)": "Crear cualquier peluche en una mesa de artesano (3)",
+  "Kill a Mole Miner (30)": "Matar a un minero topo (30)",
+  "Kill a Rust Raider (30)": "Matar a un Rust Raider (30)",
+  "Scrap junk to produce Acid (15)": "Desguazar chatarra para obtener ácido (15)",
+  "Scrap junk to produce Adhesive (15)": "Desguazar chatarra para obtener adhesivo (15)"
 };
 
 const CLASSIFIED_NUKA_ES_CHALLENGE_REPLACEMENTS = [
@@ -14285,11 +14300,15 @@ const CLASSIFIED_NUKA_ES_CHALLENGE_REPLACEMENTS = [
   [/\bComplete a Mutated Public Event\b/gi, "Completar un evento público mutado"],
   [/\bComplete a Public Event\b/gi, "Completar un evento público"],
   [/\bComplete an Event\b/gi, "Completar un evento"],
+  [/\bComplete a Grunt Hunt\b/gi, "Completar una cacería Grunt Hunt"],
+  [/\bBuy an item from or Sell an item to another Player\b/gi, "Comprar un objeto de otro jugador o venderle un objeto"],
   [/\bBuild a Bed, Table, or Stairs in a Workshop or C\.A\.M\.P\.\b/gi, "Construir una cama, mesa o escaleras en un taller o C.A.M.P."],
   [/\bBuild a Decoration in a Shelter\b/gi, "Construir una decoración en un refugio"],
+  [/\bConsume an Alcoholic Beverage\b/gi, "Consumir una bebida alcohólica"],
   [/\bCollect Pre-war Food\b/gi, "Recoger comida de antes de la guerra"],
   [/\bCollect RadAway or Rad-X\b/gi, "Recoger RadAway o Rad-X"],
   [/\bCollect Soap\b/gi, "Recoger jabón"],
+  [/\bCraft any Plushie at a Tinkerer's Bench\b/gi, "Crear cualquier peluche en una mesa de artesano"],
   [/\bCraft Bulk Aluminum\b/gi, "Crear aluminio a granel"],
   [/\bCripple a Human's Head\b/gi, "Lisiar la cabeza de un humano"],
   [/\bDrink Nuka-Twist\b/gi, "Beber Nuka-Twist"],
@@ -14300,7 +14319,44 @@ const CLASSIFIED_NUKA_ES_CHALLENGE_REPLACEMENTS = [
   [/\bKill a Creature\b/gi, "Matar una criatura"],
   [/\bMod an Energy Weapon\b/gi, "Modificar un arma de energía"],
   [/\bPick a Lock\b/gi, "Forzar una cerradura"],
-  [/\bScrap junk to produce Glass\b/gi, "Desguazar chatarra para obtener vidrio"]
+  [/\bScrap junk to produce Glass\b/gi, "Desguazar chatarra para obtener vidrio"],
+  [/\bCraft or Scrap a piece of Power Armor\b/gi, "Crear o desguazar una pieza de servoarmadura"],
+  [/\bCripple a Protectron or a Robobrain's Arm\b/gi, "Lisiar el brazo de un Protectrón o un Robocerebro"],
+  [/\bCollect a Board Game\b/gi, "Recoger un juego de mesa"],
+  [/\bCollect a Magazine\b/gi, "Recoger una revista"],
+  [/\bCollect Caps\b/gi, "Recoger chapas"],
+  [/\bCollect Junk\b/gi, "Recoger chatarra"],
+  [/\bCraft a piece of Power Armor\b/gi, "Crear una pieza de servoarmadura"],
+  [/\bCraft a piece of Armor\b/gi, "Crear una pieza de armadura"],
+  [/\bCraft a Weapon\b/gi, "Crear un arma"],
+  [/\bScrap a Weapon\b/gi, "Desguazar un arma"],
+  [/\bDestroy an Assaultron\b/gi, "Destruir un Assaultron"],
+  [/\bDestroy a Robot\b/gi, "Destruir un robot"],
+  [/\bMod a piece of Power Armor\b/gi, "Modificar una pieza de servoarmadura"],
+  [/\bMod a piece of Armor\b/gi, "Modificar una pieza de armadura"],
+  [/\bMod a Weapon\b/gi, "Modificar un arma"],
+  [/\bKill a Mole Miner\b/gi, "Matar a un minero topo"],
+  [/\bKill a Rust Raider\b/gi, "Matar a un Rust Raider"],
+  [/\bKill a Scorched\b/gi, "Matar a un Carbonizado"],
+  [/\bKill a Super Mutant\b/gi, "Matar a un supermutante"],
+  [/\bKill a Ghoul\b/gi, "Matar a un necrófago"],
+  [/\bKill a Robot\b/gi, "Matar a un robot"],
+  [/\bScrap junk to produce Acid\b/gi, "Desguazar chatarra para obtener ácido"],
+  [/\bScrap junk to produce Adhesive\b/gi, "Desguazar chatarra para obtener adhesivo"],
+  [/\bScrap junk to produce Aluminum\b/gi, "Desguazar chatarra para obtener aluminio"],
+  [/\bScrap junk to produce Cloth\b/gi, "Desguazar chatarra para obtener tela"],
+  [/\bScrap junk to produce Copper\b/gi, "Desguazar chatarra para obtener cobre"],
+  [/\bScrap junk to produce Gears\b/gi, "Desguazar chatarra para obtener engranajes"],
+  [/\bScrap junk to produce Leather\b/gi, "Desguazar chatarra para obtener cuero"],
+  [/\bScrap junk to produce Oil\b/gi, "Desguazar chatarra para obtener aceite"],
+  [/\bScrap junk to produce Plastic\b/gi, "Desguazar chatarra para obtener plástico"],
+  [/\bScrap junk to produce Rubber\b/gi, "Desguazar chatarra para obtener goma"],
+  [/\bScrap junk to produce Screws\b/gi, "Desguazar chatarra para obtener tornillos"],
+  [/\bScrap junk to produce Silver\b/gi, "Desguazar chatarra para obtener plata"],
+  [/\bScrap junk to produce Springs\b/gi, "Desguazar chatarra para obtener resortes"],
+  [/\bScrap junk to produce Steel\b/gi, "Desguazar chatarra para obtener acero"],
+  [/\bScrap junk to produce Wood\b/gi, "Desguazar chatarra para obtener madera"],
+  [/^1st\s+/i, "1.º "]
 ];
 
 function classifiedNukaIconMarkup(iconKey = "marker", className = "") {
@@ -14443,6 +14499,17 @@ function translateClassifiedNukaChallengeName(value = "") {
     (translated, [pattern, replacement]) => translated.replace(pattern, replacement),
     normalized
   );
+}
+
+function buildClassifiedNukaChallengeDisplayMarkup(value = "") {
+  const original = formatClassifiedNukaChallengeName(value).trim();
+  const translated = translateClassifiedNukaChallengeName(original);
+  const hasSpanishVariant = isClassifiedNukaSpanish() && translated && translated !== original;
+
+  if (!hasSpanishVariant) {
+    return `<span class="classified-intel-challenge-name-primary">${buildClassifiedNukaChallengeNameMarkup(original)}</span>`;
+  }
+  return `<span class="classified-intel-challenge-name-primary">${buildClassifiedNukaChallengeNameMarkup(translated)}</span>`;
 }
 
 function getClassifiedNukaChallengeIconKey(name = "") {
@@ -14927,7 +14994,9 @@ function renderClassifiedIntelButtons() {
   if (elements.classifiedCard2Body) elements.classifiedCard2Body.textContent = t("classified_card2_body");
   if (elements.classifiedCard3Title) elements.classifiedCard3Title.textContent = t("classified_card3_title");
   if (elements.classifiedCard3Body) elements.classifiedCard3Body.textContent = t("classified_card3_body");
-  for (const action of [elements.classifiedCard1Action, elements.classifiedCard2Action, elements.classifiedCard3Action]) {
+  if (elements.classifiedCard4Title) elements.classifiedCard4Title.textContent = t("classified_card4_title");
+  if (elements.classifiedCard4Body) elements.classifiedCard4Body.textContent = t("classified_card4_body");
+  for (const action of [elements.classifiedCard1Action, elements.classifiedCard2Action, elements.classifiedCard3Action, elements.classifiedCard4Action]) {
     if (action) {
       action.textContent = t("classified_card_action");
     }
@@ -15071,7 +15140,6 @@ function buildClassifiedChallengesMarkup(section = {}, activeKey = "dailyChallen
       ${items.map((item, index) => {
         const scoreText = item.score == null ? "--" : Number(item.score).toLocaleString(state.lang === "es" ? "es-ES" : "en-US");
         const iconKey = getClassifiedNukaChallengeIconKey(item.name);
-        const displayName = translateClassifiedNukaChallengeName(item.name);
         return `
           <article class="classified-intel-challenge-row">
             <div class="classified-intel-challenge-index">${String(index + 1).padStart(2, "0")}</div>
@@ -15079,7 +15147,7 @@ function buildClassifiedChallengesMarkup(section = {}, activeKey = "dailyChallen
               ? classifiedNukaGlyphIconMarkup("repeat", "classified-intel-challenge-icon")
               : classifiedNukaIconMarkup(iconKey, "classified-intel-challenge-icon")}
             <div class="classified-intel-challenge-name">
-              <span>${buildClassifiedNukaChallengeNameMarkup(displayName)}</span>
+              ${buildClassifiedNukaChallengeDisplayMarkup(item.name)}
             </div>
             ${buildClassifiedScorePillMarkup(scoreText)}
           </article>
@@ -15278,6 +15346,310 @@ async function openClassifiedNukaIntelModal(key = "dailyOps") {
       silent: hasActivePanel && (hydrated || Boolean(state.classifiedNukaIntel.data))
     });
   }
+}
+
+const AXOLOTL_SOURCE_URL = "https://fallout.fandom.com/wiki/Fallout_76_fishing";
+
+const AXOLOTL_REGION_NAMES = {
+  forest: { en: "The Forest", es: "El Bosque" },
+  toxic_valley: { en: "Toxic Valley", es: "Valle Tóxico" },
+  ash_heap: { en: "Ash Heap", es: "Cúmulo de Cenizas" },
+  the_mire: { en: "The Mire", es: "La Ciénaga" },
+  savage_divide: { en: "Savage Divide", es: "Sierra Salvaje" },
+  cranberry_bog: { en: "Cranberry Bog", es: "Pantano de Arándanos" },
+  skyline_valley: { en: "Skyline Valley", es: "Valle del Horizonte" },
+  burning_springs: { en: "Burning Springs", es: "Manantiales Ardientes" }
+};
+
+// Fallout 76 "Axolotl of the month" rotation (Gone Fission fishing update). Each
+// calendar month maps to one axolotl variant. The active variant rotates on the
+// first weekly reset of each month (first Tuesday, 12:00 ET). Names, regions, and
+// art sourced from the Fallout Wiki (fallout.fandom.com).
+const AXOLOTL_ROTATION = [
+  { month: 1, key: "charcoal", en: "Charcoal Axolotl", es: "Ajolote carbón", regions: ["burning_springs", "savage_divide"] },
+  { month: 2, key: "pink", en: "Pink Axolotl", es: "Ajolote rosa", regions: ["cranberry_bog", "forest"] },
+  { month: 3, key: "clay", en: "Clay Axolotl", es: "Ajolote arcilla", regions: ["skyline_valley", "toxic_valley"] },
+  { month: 4, key: "dotted", en: "Dotted Axolotl", es: "Ajolote punteado", regions: ["the_mire", "burning_springs"] },
+  { month: 5, key: "purple", en: "Purple Axolotl", es: "Ajolote púrpura", regions: ["skyline_valley", "cranberry_bog"] },
+  { month: 6, key: "banded", en: "Banded Axolotl", es: "Ajolote con bandas", regions: ["the_mire", "toxic_valley"] },
+  { month: 7, key: "scaled", en: "Scaled Axolotl", es: "Ajolote escamado", regions: ["forest", "ash_heap"] },
+  { month: 8, key: "striped", en: "Striped Axolotl", es: "Ajolote rayado", regions: ["the_mire", "skyline_valley"] },
+  { month: 9, key: "shadow", en: "Shadow Axolotl", es: "Ajolote sombrío", regions: ["toxic_valley", "ash_heap"] },
+  { month: 10, key: "spotted", en: "Spotted Axolotl", es: "Ajolote moteado", regions: ["toxic_valley", "savage_divide"] },
+  { month: 11, key: "speckled", en: "Speckled Axolotl", es: "Ajolote jaspeado", regions: ["forest", "cranberry_bog"] },
+  { month: 12, key: "stone", en: "Stone Axolotl", es: "Ajolote pétreo", regions: ["ash_heap", "toxic_valley"] }
+];
+
+function axolotlEntryForMonth(month) {
+  return AXOLOTL_ROTATION.find((entry) => entry.month === month) || AXOLOTL_ROTATION[0];
+}
+
+function axolotlName(entry, lang = state.lang) {
+  if (!entry) return "";
+  return (lang === "es" && entry.es) ? entry.es : entry.en;
+}
+
+function axolotlImageSrc(entry) {
+  return entry ? `assets/images/axolotls/axolotl-${entry.key}.webp` : "";
+}
+
+function axolotlRegionLabels(entry, lang = state.lang) {
+  if (!entry) return [];
+  return entry.regions.map((regionKey) => {
+    const region = AXOLOTL_REGION_NAMES[regionKey];
+    if (!region) return regionKey;
+    return (lang === "es" && region.es) ? region.es : region.en;
+  });
+}
+
+function axolotlRegionText(entry, lang = state.lang) {
+  return axolotlRegionLabels(entry, lang).join(lang === "es" ? " y " : " & ");
+}
+
+function getEasternDateParts(date) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23"
+  });
+  const byType = Object.create(null);
+  for (const part of formatter.formatToParts(date)) {
+    if (part.type !== "literal") {
+      byType[part.type] = part.value;
+    }
+  }
+  return {
+    year: Number(byType.year),
+    month: Number(byType.month),
+    day: Number(byType.day),
+    hour: Number(byType.hour),
+    minute: Number(byType.minute),
+    second: Number(byType.second || "0")
+  };
+}
+
+// Convert an America/New_York wall-clock time to an absolute UTC timestamp,
+// accounting for EST/EDT, by iteratively correcting the offset (DST-safe).
+function easternWallClockToMs(year, month, day, hour, minute) {
+  let utcMs = Date.UTC(year, month - 1, day, hour, minute, 0);
+  for (let index = 0; index < 4; index += 1) {
+    const actual = getEasternDateParts(new Date(utcMs));
+    const targetMs = Date.UTC(year, month - 1, day, hour, minute, 0);
+    const actualMs = Date.UTC(actual.year, actual.month - 1, actual.day, actual.hour, actual.minute, actual.second);
+    const diff = targetMs - actualMs;
+    if (!diff) {
+      return utcMs;
+    }
+    utcMs += diff;
+  }
+  return utcMs;
+}
+
+function firstTuesdayDayOfMonth(year, month) {
+  const firstDow = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+  return 1 + ((2 - firstDow + 7) % 7);
+}
+
+function axolotlPeriodStartMs(year, month) {
+  return easternWallClockToMs(year, month, firstTuesdayDayOfMonth(year, month), 12, 0);
+}
+
+// Resolve the axolotl that is active at `now`. The active window runs from the
+// first Tuesday of its month (12:00 ET) to the first Tuesday of the next month.
+function getCurrentAxolotl(now = Date.now()) {
+  const nowParts = getEasternDateParts(new Date(now));
+  const startThisMonth = axolotlPeriodStartMs(nowParts.year, nowParts.month);
+
+  let activeYear;
+  let activeMonth;
+  let periodStart;
+  let periodEnd;
+
+  if (now >= startThisMonth) {
+    activeYear = nowParts.year;
+    activeMonth = nowParts.month;
+    periodStart = startThisMonth;
+    const nextYear = activeMonth === 12 ? activeYear + 1 : activeYear;
+    const nextMonth = activeMonth === 12 ? 1 : activeMonth + 1;
+    periodEnd = axolotlPeriodStartMs(nextYear, nextMonth);
+  } else {
+    activeYear = nowParts.month === 1 ? nowParts.year - 1 : nowParts.year;
+    activeMonth = nowParts.month === 1 ? 12 : nowParts.month - 1;
+    periodStart = axolotlPeriodStartMs(activeYear, activeMonth);
+    periodEnd = startThisMonth;
+  }
+
+  const totalMs = periodEnd - periodStart;
+  const progress = totalMs > 0 ? Math.min(1, Math.max(0, (now - periodStart) / totalMs)) : 0;
+  const msLeft = Math.max(0, periodEnd - now);
+
+  return {
+    entry: axolotlEntryForMonth(activeMonth),
+    activeYear,
+    activeMonth,
+    periodStart,
+    periodEnd,
+    progress,
+    daysLeft: Math.ceil(msLeft / 86400000),
+    totalDays: Math.max(1, Math.round(totalMs / 86400000))
+  };
+}
+
+function formatAxolotlMonthLabel(year, month, lang = state.lang) {
+  const localeTag = lang === "es" ? "es-ES" : "en-US";
+  const label = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString(localeTag, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC"
+  });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function formatAxolotlMonthShort(month, lang = state.lang) {
+  const localeTag = lang === "es" ? "es-ES" : "en-US";
+  const label = new Date(Date.UTC(2026, month - 1, 1)).toLocaleDateString(localeTag, {
+    month: "long",
+    timeZone: "UTC"
+  });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function formatAxolotlEasternDateTime(ms, lang = state.lang) {
+  const localeTag = lang === "es" ? "es-ES" : "en-US";
+  const label = new Intl.DateTimeFormat(localeTag, {
+    timeZone: "America/New_York",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23"
+  }).format(new Date(ms));
+  return `${label} ET`;
+}
+
+function buildClassifiedAxolotlMarkup() {
+  const lang = state.lang === "es" ? "es" : "en";
+  const current = getCurrentAxolotl();
+  const entry = current.entry;
+  const pct = Math.round(current.progress * 100);
+
+  const daysLeftText = current.daysLeft <= 0
+    ? t("axolotl_modal_last_day")
+    : current.daysLeft === 1
+      ? t("axolotl_modal_day_left")
+      : t("axolotl_modal_days_left", { n: current.daysLeft });
+
+  const spotlight = `
+    <section class="classified-axolotl-spotlight">
+      <span class="classified-axolotl-spotlight-art" aria-hidden="true">
+        <img src="${escapeHtml(axolotlImageSrc(entry))}" alt="${escapeHtml(axolotlName(entry, lang))}" loading="eager" decoding="async" draggable="false">
+      </span>
+      <div class="classified-axolotl-spotlight-info">
+        <p class="classified-axolotl-spotlight-kicker">${escapeHtml(t("axolotl_modal_current_label"))} · ${escapeHtml(formatAxolotlMonthLabel(current.activeYear, current.activeMonth, lang))}</p>
+        <h3 class="classified-axolotl-spotlight-name">${escapeHtml(axolotlName(entry, lang))}</h3>
+        <p class="classified-axolotl-spotlight-type">${escapeHtml(t("axolotl_modal_type_small_fish"))}</p>
+        <dl class="classified-axolotl-meta">
+          <div class="classified-axolotl-meta-row">
+            <dt>${escapeHtml(t("axolotl_modal_regions_label"))}</dt>
+            <dd>${escapeHtml(axolotlRegionText(entry, lang))}</dd>
+          </div>
+          <div class="classified-axolotl-meta-row">
+            <dt>${escapeHtml(t("axolotl_modal_window_start"))}</dt>
+            <dd>${escapeHtml(formatAxolotlEasternDateTime(current.periodStart, lang))}</dd>
+          </div>
+          <div class="classified-axolotl-meta-row">
+            <dt>${escapeHtml(t("axolotl_modal_window_end"))}</dt>
+            <dd>${escapeHtml(formatAxolotlEasternDateTime(current.periodEnd - 60000, lang))}</dd>
+          </div>
+        </dl>
+        <div class="classified-axolotl-progress" role="img" aria-label="${escapeHtml(daysLeftText)}">
+          <div class="classified-axolotl-progress-track">
+            <span class="classified-axolotl-progress-fill" style="width: ${pct}%;"></span>
+          </div>
+          <div class="classified-axolotl-progress-foot">
+            <span>${pct}%</span>
+            <span>${escapeHtml(daysLeftText)}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+
+  const rotationItems = AXOLOTL_ROTATION.map((rotationEntry) => {
+    const isActive = rotationEntry.month === current.activeMonth;
+    return `
+      <article class="classified-axolotl-rotation-item${isActive ? " is-active" : ""}">
+        <span class="classified-axolotl-rotation-flag${isActive ? " is-active" : ""}">${escapeHtml(isActive ? t("axolotl_modal_active_tag") : t("axolotl_modal_inactive_tag"))}</span>
+        <span class="classified-axolotl-rotation-art" aria-hidden="true">
+          <img src="${escapeHtml(axolotlImageSrc(rotationEntry))}" alt="${escapeHtml(axolotlName(rotationEntry, lang))}" loading="lazy" decoding="async" draggable="false">
+        </span>
+        <div class="classified-axolotl-rotation-info">
+          <p class="classified-axolotl-rotation-month">${escapeHtml(formatAxolotlMonthShort(rotationEntry.month, lang))}</p>
+          <p class="classified-axolotl-rotation-name">${escapeHtml(axolotlName(rotationEntry, lang))}</p>
+          <p class="classified-axolotl-rotation-regions">${escapeHtml(axolotlRegionText(rotationEntry, lang))}</p>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  return `
+    ${spotlight}
+    <section class="classified-axolotl-rotation">
+      <p class="classified-axolotl-rotation-title">${escapeHtml(t("axolotl_modal_rotation_title"))}</p>
+      <div class="classified-axolotl-rotation-grid">${rotationItems}</div>
+    </section>
+  `;
+}
+
+function renderClassifiedAxolotlModal() {
+  const modalState = state.classifiedAxolotl;
+  if (!elements.classifiedAxolotlOverlay) {
+    state.classifiedAxolotl.open = false;
+    return;
+  }
+
+  if (elements.classifiedAxolotlBadge) {
+    elements.classifiedAxolotlBadge.textContent = t("axolotl_modal_badge");
+  }
+  if (elements.classifiedAxolotlTitle) {
+    elements.classifiedAxolotlTitle.textContent = t("axolotl_modal_title");
+  }
+  if (elements.classifiedAxolotlBody) {
+    elements.classifiedAxolotlBody.textContent = t("axolotl_modal_body");
+  }
+  if (elements.classifiedAxolotlSourceLink) {
+    elements.classifiedAxolotlSourceLink.textContent = t("axolotl_modal_source");
+    elements.classifiedAxolotlSourceLink.href = AXOLOTL_SOURCE_URL;
+  }
+  if (elements.classifiedAxolotlCloseBtn) {
+    elements.classifiedAxolotlCloseBtn.textContent = t("axolotl_modal_close");
+  }
+  if (elements.classifiedAxolotlCloseIconBtn) {
+    elements.classifiedAxolotlCloseIconBtn.setAttribute("aria-label", t("axolotl_modal_close"));
+  }
+  if (elements.classifiedAxolotlContent) {
+    elements.classifiedAxolotlContent.innerHTML = modalState.open ? buildClassifiedAxolotlMarkup() : "";
+  }
+
+  elements.classifiedAxolotlOverlay.classList.toggle("is-active", Boolean(modalState.open));
+  elements.classifiedAxolotlOverlay.setAttribute("aria-hidden", modalState.open ? "false" : "true");
+  document.body.classList.toggle("is-classified-intel-open", Boolean(modalState.open));
+}
+
+function openClassifiedAxolotlModal() {
+  state.classifiedAxolotl.open = true;
+  renderClassifiedAxolotlModal();
+}
+
+function closeClassifiedAxolotlModal() {
+  state.classifiedAxolotl.open = false;
+  renderClassifiedAxolotlModal();
 }
 
 const CLASSIFIED_PLAYER_HISTORY_RANGES = [
@@ -17971,6 +18343,7 @@ function applyLanguage(lang, persist = true) {
   setClassifiedSearchOpen(state.classifiedSearch.open);
   renderClassifiedPlayerCountsModal();
   renderClassifiedNukaIntelModal();
+  renderClassifiedAxolotlModal();
   if (elements.classifiedInlineStatus && !state.classifiedDetail.open) {
     elements.classifiedInlineStatus.textContent = t("minerva_detail_loading");
   }
@@ -18806,6 +19179,20 @@ function wireEvents() {
       closeClassifiedNukaIntelModal();
     }
   });
+  elements.classifiedAxolotlBtn?.addEventListener("click", () => {
+    openClassifiedAxolotlModal();
+  });
+  elements.classifiedAxolotlCloseBtn?.addEventListener("click", () => {
+    closeClassifiedAxolotlModal();
+  });
+  elements.classifiedAxolotlCloseIconBtn?.addEventListener("click", () => {
+    closeClassifiedAxolotlModal();
+  });
+  elements.classifiedAxolotlOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.classifiedAxolotlOverlay) {
+      closeClassifiedAxolotlModal();
+    }
+  });
   elements.siloDossierCloseBtn?.addEventListener("click", () => {
     hideSiloDossier({ updateHash: true });
   });
@@ -19382,6 +19769,11 @@ function wireEvents() {
 
     if (elements.classifiedIntelOverlay?.classList.contains("is-active")) {
       closeClassifiedNukaIntelModal();
+      return;
+    }
+
+    if (elements.classifiedAxolotlOverlay?.classList.contains("is-active")) {
+      closeClassifiedAxolotlModal();
       return;
     }
 

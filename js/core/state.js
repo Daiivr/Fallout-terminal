@@ -101,6 +101,9 @@ const state = {
     checkedAt: 0,
     requestId: 0
   },
+  classifiedAxolotl: {
+    open: false
+  },
   files: {
     me: null,
     localAccessExpired: false,
