@@ -245,6 +245,12 @@ window.MINERVA_LISTS = [
         "WikiUrl": "/wiki/Plan:_T-65_Stealth_Boy",
         "ImageName": "plan_general_mod",
         "Price": 563
+      },
+      {
+        "Name": "Plan: Chicken coop",
+        "WikiUrl": "/wiki/Plan:_Chicken_coop",
+        "ImageName": "plan_general_workshop",
+        "Price": 750
       }
     ]
   },
@@ -286,6 +292,12 @@ window.MINERVA_LISTS = [
         "WikiUrl": "/wiki/Plan:_Thorn_armor_right_leg",
         "ImageName": "plan_general",
         "Price": 563
+      },
+      {
+        "Name": "Plan: Chicken coop",
+        "WikiUrl": "/wiki/Plan:_Chicken_coop",
+        "ImageName": "plan_general_workshop",
+        "Price": 750
       },
       {
         "Name": "Plan: Gauss pistol aligned short barrel",
@@ -795,6 +807,12 @@ window.MINERVA_LISTS = [
         "WikiUrl": "/wiki/Plan:_Water_well",
         "ImageName": "plan_general_workshop",
         "Price": 563
+      },
+      {
+        "Name": "Plan: Weight bench",
+        "WikiUrl": "/wiki/Plan:_Weight_bench",
+        "ImageName": "plan_general_workshop",
+        "Price": 1250
       },
       {
         "Name": "Plan: Wendigo tube",
@@ -1394,6 +1412,12 @@ window.MINERVA_LISTS = [
   {
     "ListNumber": 4,
     "Inventory": [
+      {
+        "Name": "Plan: Ammo Converter",
+        "WikiUrl": "/wiki/Plan:_Ammo_Converter",
+        "ImageName": "plan_general_workshop",
+        "Price": 1250
+      },
       {
         "Name": "Plan: Cattle prod",
         "WikiUrl": "/wiki/Plan:_Cattle_prod",
@@ -2170,6 +2194,12 @@ window.MINERVA_LISTS = [
         "WikiUrl": "/wiki/Plan:_Water_well",
         "ImageName": "plan_general_workshop",
         "Price": 563
+      },
+      {
+        "Name": "Plan: Weight bench",
+        "WikiUrl": "/wiki/Plan:_Weight_bench",
+        "ImageName": "plan_general_workshop",
+        "Price": 1250
       },
       {
         "Name": "Plan: Wendigo tube",

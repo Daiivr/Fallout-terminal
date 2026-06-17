@@ -3,6 +3,7 @@
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const zlib = require("zlib");
 const express = require("express");
 const session = require("express-session");
 const { createClient } = require("redis");
@@ -4350,6 +4351,30 @@ function atomicShopDataCacheEntry(fileName) {
   }
 }
 
+// Cheap representation token for a cached data file (size + mtime). Used for
+// ETags and to invalidate the gzip cache only when the file actually changes.
+function atomicShopDataVersion(fileName) {
+  const safeName = path.basename(String(fileName || "").trim());
+  const cachePath = path.join(ATOMIC_SHOP_DATA_CACHE_DIR, safeName);
+  try {
+    const stat = fs.statSync(cachePath);
+    return `${stat.size}:${Math.round(stat.mtimeMs)}`;
+  } catch {
+    return "";
+  }
+}
+
+// In-memory gzip cache for the data files. The DB is several MB, so we gzip it
+// once per version and reuse the result instead of recompressing each request.
+const atomicShopGzipCache = new Map();
+function gzipAtomicShopData(fileName, version, payload) {
+  const cached = atomicShopGzipCache.get(fileName);
+  if (cached && version && cached.version === version) return cached.gz;
+  const gz = zlib.gzipSync(payload);
+  atomicShopGzipCache.set(fileName, { version, gz });
+  return gz;
+}
+
 function getAtomicShopCacheStatus() {
   return {
     remoteOrigin: ATOMIC_SHOP_REMOTE_ORIGIN,
@@ -7045,9 +7070,34 @@ app.get("/api/intel/nukaknights", async (req, res) => {
 app.get("/api/atomic-shop/:fileName(items-db\\.json|edidkeywords\\.json)", async (req, res) => {
   try {
     const payload = await getAtomicShopDataFile(req.params.fileName);
-    res.setHeader("Cache-Control", "no-store");
-    res.type("application/json");
-    res.send(payload);
+    const acceptsGzip = /\bgzip\b/i.test(String(req.headers["accept-encoding"] || ""));
+    const version = atomicShopDataVersion(req.params.fileName);
+    const etag = version ? `"${version}${acceptsGzip ? "-gz" : ""}"` : "";
+
+    // The server refreshes this data at most every ATOMIC_SHOP_DATA_TTL_MS, so let
+    // browsers cache it instead of re-downloading several MB on every page load.
+    res.setHeader("Cache-Control", "public, max-age=900, stale-while-revalidate=3600");
+    res.setHeader("Vary", "Accept-Encoding");
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+
+    if (etag) {
+      res.setHeader("ETag", etag);
+      const ifNoneMatch = String(req.headers["if-none-match"] || "");
+      if (ifNoneMatch && ifNoneMatch.split(/\s*,\s*/).some((tag) => tag.replace(/^W\//, "") === etag)) {
+        res.status(304).end();
+        return;
+      }
+    }
+
+    if (acceptsGzip) {
+      const gz = gzipAtomicShopData(req.params.fileName, version, payload);
+      res.setHeader("Content-Encoding", "gzip");
+      res.setHeader("Content-Length", gz.length);
+      res.end(gz);
+    } else {
+      res.setHeader("Content-Length", payload.length);
+      res.end(payload);
+    }
   } catch (error) {
     console.error(`[atomic-shop] data proxy failed for ${req.params.fileName}:`, error.message);
     res.status(error?.status || 502).json({ error: "Unable to fetch Atomic Shop data" });

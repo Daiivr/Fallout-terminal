@@ -394,7 +394,9 @@
 
     try {
       const fetchJson = async (url, { optional = false } = {}) => {
-        const response = await fetch(url, { cache: "no-store" });
+        // Honor the server's Cache-Control so repeat opens / reloads reuse the
+        // browser's cached copy instead of re-downloading the multi-MB database.
+        const response = await fetch(url);
         if (!response.ok) {
           const body = await response.text().catch(() => "");
           const error = new Error(`Atomic Shop request failed: ${response.status} ${url}`);
@@ -1097,6 +1099,14 @@
     }, { root: dom.atomicShopScroll || null, rootMargin: "240px" });
 
     dom.atomicShopBtn && dom.atomicShopBtn.addEventListener("click", openModal);
+    // Warm the database as soon as the user shows intent (hover/focus) so the
+    // modal opens to a ready grid instead of the loading spinner. Gated to these
+    // signals so we never pull the DB for visitors who don't reach this button.
+    if (dom.atomicShopBtn) {
+      const prefetch = () => { if (!data.loaded && !data.loading) loadData(); };
+      dom.atomicShopBtn.addEventListener("pointerenter", prefetch, { once: true });
+      dom.atomicShopBtn.addEventListener("focus", prefetch, { once: true });
+    }
     dom.atomicShopCloseBtn && dom.atomicShopCloseBtn.addEventListener("click", closeModal);
     dom.atomicShopCloseIconBtn && dom.atomicShopCloseIconBtn.addEventListener("click", closeModal);
     dom.atomicShopOverlay.addEventListener("click", (e) => { if (e.target === dom.atomicShopOverlay) closeModal(); });
