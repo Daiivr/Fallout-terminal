@@ -2,6 +2,7 @@
   "use strict";
 
   const ORIGIN = typeof ATOMIC_SHOP_ORIGIN !== "undefined" ? ATOMIC_SHOP_ORIGIN : "https://db.atomicshop.fyi";
+  const PROXY_ORIGIN = typeof ATOMIC_SHOP_PROXY_ORIGIN !== "undefined" ? ATOMIC_SHOP_PROXY_ORIGIN : "/api/atomic-shop/assets";
   const DB_URL = typeof ATOMIC_SHOP_DB_URL !== "undefined" ? ATOMIC_SHOP_DB_URL : `${ORIGIN}/data/items-db.json`;
   const KEYWORDS_URL = typeof ATOMIC_SHOP_KEYWORDS_URL !== "undefined" ? ATOMIC_SHOP_KEYWORDS_URL : `${ORIGIN}/data/edidkeywords.json`;
   const CACHE_KEY = typeof ATOMIC_SHOP_CACHE_KEY !== "undefined" ? ATOMIC_SHOP_CACHE_KEY : "atomic_shop_db_cache_v1";
@@ -245,12 +246,56 @@
     return hash.toString(16).padStart(8, "0").slice(-6);
   }
 
-  function getImageUrl(directory, imageName) {
+  function assetOrigin() {
+    return String(ORIGIN || "").replace(/\/+$/, "");
+  }
+
+  function proxyOrigin() {
+    return String(PROXY_ORIGIN || "").replace(/\/+$/, "");
+  }
+
+  function getImagePath(directory, imageName) {
     if (!directory || !imageName) return "";
     let dir = String(directory).toLowerCase().replace(/\\/g, "/").replace(/\/+/g, "/");
     if (dir.startsWith("/")) dir = dir.substring(1);
     if (!dir.endsWith("/")) dir += "/";
-    return `${ORIGIN}/${dir}${imageName}`;
+    return `${dir}${imageName}`;
+  }
+
+  function getImageUrl(directory, imageName) {
+    const path = getImagePath(directory, imageName);
+    return path ? `${assetOrigin()}/${path}` : "";
+  }
+
+  function getFallbackForImageUrl(url) {
+    const value = String(url || "");
+    const primary = assetOrigin();
+    const fallback = proxyOrigin();
+    if (!value || !primary || !fallback || primary === fallback) return "";
+    return value.startsWith(`${primary}/`) ? `${fallback}/${value.slice(primary.length + 1)}` : "";
+  }
+
+  function installImageFallback(img, fallbackUrl, onFinalError) {
+    if (!img) return;
+    img.onerror = () => {
+      if (fallbackUrl && img.src !== fallbackUrl) {
+        const next = fallbackUrl;
+        fallbackUrl = "";
+        img.src = next;
+        return;
+      }
+      if (typeof onFinalError === "function") onFinalError();
+    };
+  }
+
+  function warmGalleryImages(urls, activeUrl = "") {
+    if (!Array.isArray(urls)) return;
+    urls.slice(0, 6).forEach((url) => {
+      if (!url || url === activeUrl) return;
+      const image = new Image();
+      image.decoding = "async";
+      image.src = url;
+    });
   }
 
   function primaryImageUrl(item) {
@@ -481,8 +526,19 @@
       return;
     }
 
-    dom.atomicDossierImage.hidden = false;
-    dom.atomicDossierImage.src = gallery.images[gallery.index];
+    const currentSrc = gallery.images[gallery.index];
+    dom.atomicDossierImage.hidden = true;
+    dom.atomicDossierImage.onload = () => {
+      dom.atomicDossierImage.hidden = false;
+    };
+    installImageFallback(dom.atomicDossierImage, getFallbackForImageUrl(currentSrc), () => {
+      dom.atomicDossierImage.hidden = true;
+      dom.atomicDossierImage.removeAttribute("src");
+      if (dom.atomicDossierNoImage) dom.atomicDossierNoImage.hidden = false;
+    });
+    if ("fetchPriority" in dom.atomicDossierImage) dom.atomicDossierImage.fetchPriority = "high";
+    dom.atomicDossierImage.src = currentSrc;
+    warmGalleryImages(gallery.images, currentSrc);
     if (dom.atomicDossierNoImage) dom.atomicDossierNoImage.hidden = true;
 
     if (!dom.atomicDossierThumbs) return;
@@ -495,7 +551,8 @@
       img.src = src;
       img.alt = "";
       img.loading = "lazy";
-      img.onerror = () => { button.style.display = "none"; };
+      img.decoding = "async";
+      installImageFallback(img, getFallbackForImageUrl(src), () => { button.style.display = "none"; });
       button.appendChild(img);
       button.addEventListener("click", () => {
         gallery.index = index;

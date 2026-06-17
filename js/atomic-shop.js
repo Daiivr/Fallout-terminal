@@ -163,6 +163,7 @@
     error: ""
   };
   let filterStates = loadFilterStates(); // { [category]: 'included' | 'excluded' }
+  let activeFilterGroup = "";
   let query = "";
   let filtered = [];
   let renderedCount = 0;
@@ -208,12 +209,59 @@
     }
     return hash.toString(16).padStart(8, "0").slice(-6);
   }
-  function getImageUrl(directory, imageName) {
+  function atomicShopAssetOrigin() {
+    return String(typeof ATOMIC_SHOP_ORIGIN !== "undefined" ? ATOMIC_SHOP_ORIGIN : "/api/atomic-shop/assets").replace(/\/+$/, "");
+  }
+  function atomicShopProxyOrigin() {
+    return String(typeof ATOMIC_SHOP_PROXY_ORIGIN !== "undefined" ? ATOMIC_SHOP_PROXY_ORIGIN : "/api/atomic-shop/assets").replace(/\/+$/, "");
+  }
+  function getImagePath(directory, imageName) {
     if (!directory || !imageName) return "";
     let dir = String(directory).toLowerCase().replace(/\\/g, "/").replace(/\/+/g, "/");
     if (dir.startsWith("/")) dir = dir.substring(1);
     if (!dir.endsWith("/")) dir += "/";
-    return `${ATOMIC_SHOP_ORIGIN}/${dir}${imageName}`;
+    return `${dir}${imageName}`;
+  }
+  function getImageUrl(directory, imageName) {
+    const path = getImagePath(directory, imageName);
+    return path ? `${atomicShopAssetOrigin()}/${path}` : "";
+  }
+  function getImageFallbackUrl(directory, imageName) {
+    const path = getImagePath(directory, imageName);
+    const proxyOrigin = atomicShopProxyOrigin();
+    const assetOrigin = atomicShopAssetOrigin();
+    return path && proxyOrigin && proxyOrigin !== assetOrigin ? `${proxyOrigin}/${path}` : "";
+  }
+  function getFallbackForImageUrl(url) {
+    const value = String(url || "");
+    const assetOrigin = atomicShopAssetOrigin();
+    const proxyOrigin = atomicShopProxyOrigin();
+    if (!value || !assetOrigin || !proxyOrigin || assetOrigin === proxyOrigin) return "";
+    return value.startsWith(`${assetOrigin}/`) ? `${proxyOrigin}/${value.slice(assetOrigin.length + 1)}` : "";
+  }
+  function installImageFallback(img, fallbackUrl, onFinalError) {
+    if (!img) return;
+    img.onerror = () => {
+      if (fallbackUrl && img.src !== fallbackUrl) {
+        const next = fallbackUrl;
+        fallbackUrl = "";
+        img.src = next;
+        return;
+      }
+      if (typeof onFinalError === "function") onFinalError();
+    };
+  }
+  function warmImage(url) {
+    if (!url) return;
+    const image = new Image();
+    image.decoding = "async";
+    image.src = url;
+  }
+  function warmGalleryImages(urls, activeUrl = "") {
+    if (!Array.isArray(urls)) return;
+    urls.slice(0, 6).forEach((url) => {
+      if (url && url !== activeUrl) warmImage(url);
+    });
   }
   function matchesItemCondition(item, condition) {
     const [key, expected] = String(condition).split(":");
@@ -462,11 +510,12 @@
 
   function tileHtml(item) {
     const imgUrl = primaryImageUrl(item);
+    const fallbackUrl = item.primaryImage ? getImageFallbackUrl(item.primaryImage.directory, item.primaryImage.imageName) : "";
     const price = priceOf(item);
     const bundleCount = Array.isArray(item.dynamicBundleItems) ? item.dynamicBundleItems.length : 0;
     const noImg = esc(t("atomic_shop_no_image"));
     const imgBlock = imgUrl
-      ? `<img class="atomic-shop-tile-img" src="${esc(imgUrl)}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none';this.parentElement.classList.add('is-noimage');">`
+      ? `<img class="atomic-shop-tile-img" src="${esc(imgUrl)}" alt="" loading="lazy" decoding="async"${fallbackUrl ? ` data-fallback="${esc(fallbackUrl)}"` : ""} onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback;this.dataset.fallback='';}else{this.style.display='none';this.parentElement.classList.add('is-noimage');}">`
       : "";
     return `
       <button class="atomic-shop-tile${imgUrl ? "" : " is-noimage"}" type="button" role="listitem" data-edid="${esc(item.EDID || "")}" data-share="${esc(item._shareId || "")}">
@@ -510,25 +559,26 @@
     const host = dom.atomicShopFilterGroups;
     if (!host) return;
     host.innerHTML = "";
+    host.classList.add("is-compact-tabs");
+
+    const strip = document.createElement("div");
+    strip.className = "atomic-shop-filter-tabstrip";
+    const tray = document.createElement("div");
+    tray.className = "atomic-shop-filter-options";
+    tray.hidden = true;
+
     Object.entries(FILTER_GROUPS).forEach(([groupName, categories]) => {
-      const group = document.createElement("section");
-      group.className = "atomic-shop-filter-group is-open";
-
-      const head = document.createElement("div");
-      head.className = "atomic-shop-filter-group-head";
-
-      const expand = document.createElement("button");
-      expand.type = "button";
-      expand.className = "asf-group-expand";
-      expand.innerHTML = `<span class="asf-chevron" aria-hidden="true">▸</span><span>${esc(groupLabel(groupName))}</span>`;
-      expand.addEventListener("click", () => group.classList.toggle("is-open"));
+      const group = document.createElement("div");
+      group.className = "atomic-shop-filter-group";
+      group.dataset.group = groupName;
 
       const bulk = document.createElement("button");
       bulk.type = "button";
       bulk.className = "asf-group-bulk";
       bulk.dataset.group = groupName;
       bulk.setAttribute("aria-label", `Toggle all ${groupName}`);
-      bulk.addEventListener("click", () => {
+      bulk.addEventListener("click", (event) => {
+        event.stopPropagation();
         const agg = groupAggregate(categories);
         const next = agg === "included" ? "excluded" : agg === "excluded" ? "unchecked" : "included";
         categories.forEach((c) => setCategoryState(c, next, false));
@@ -537,31 +587,61 @@
         applyAndRender();
       });
 
-      head.appendChild(expand);
-      head.appendChild(bulk);
-      group.appendChild(head);
-
-      const body = document.createElement("div");
-      body.className = "atomic-shop-filter-group-body";
-      categories.forEach((cat) => {
-        const chip = document.createElement("button");
-        chip.type = "button";
-        chip.className = "atomic-shop-filter-chip";
-        chip.dataset.category = cat;
-        chip.textContent = categoryLabel(cat);
-        chip.addEventListener("click", () => {
-          const cur = filterStates[cat] || "unchecked";
-          const next = cur === "unchecked" ? "included" : cur === "included" ? "excluded" : "unchecked";
-          setCategoryState(cat, next, true);
-          refreshFilterUI();
-          applyAndRender();
-        });
-        body.appendChild(chip);
+      const expand = document.createElement("button");
+      expand.type = "button";
+      expand.className = "asf-group-expand";
+      expand.setAttribute("aria-expanded", "false");
+      expand.innerHTML =
+        `<span class="asf-group-label">${esc(groupLabel(groupName))}</span>` +
+        `<span class="asf-group-count" hidden></span>` +
+        `<span class="asf-chevron" aria-hidden="true">▾</span>`;
+      expand.addEventListener("click", () => {
+        activeFilterGroup = activeFilterGroup === groupName ? "" : groupName;
+        renderFilterOptionsTray();
+        refreshFilterUI();
       });
-      group.appendChild(body);
-      host.appendChild(group);
+
+      group.appendChild(bulk);
+      group.appendChild(expand);
+      strip.appendChild(group);
     });
+
+    host.appendChild(strip);
+    host.appendChild(tray);
+    renderFilterOptionsTray();
     refreshFilterUI();
+  }
+
+  function renderFilterOptionsTray() {
+    if (!dom.atomicShopFilterGroups) return;
+    const tray = dom.atomicShopFilterGroups.querySelector(".atomic-shop-filter-options");
+    if (!tray) return;
+
+    const categories = FILTER_GROUPS[activeFilterGroup] || [];
+    tray.innerHTML = "";
+    tray.hidden = !activeFilterGroup || categories.length < 1;
+    if (tray.hidden) return;
+
+    const label = document.createElement("span");
+    label.className = "asf-options-label";
+    label.textContent = groupLabel(activeFilterGroup);
+    tray.appendChild(label);
+
+    categories.forEach((cat) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "atomic-shop-filter-chip";
+      chip.dataset.category = cat;
+      chip.textContent = categoryLabel(cat);
+      chip.addEventListener("click", () => {
+        const cur = filterStates[cat] || "unchecked";
+        const next = cur === "unchecked" ? "included" : cur === "included" ? "excluded" : "unchecked";
+        setCategoryState(cat, next, true);
+        refreshFilterUI();
+        applyAndRender();
+      });
+      tray.appendChild(chip);
+    });
   }
 
   function setCategoryState(category, st, persist) {
@@ -576,11 +656,35 @@
       const st = filterStates[chip.dataset.category] || "unchecked";
       chip.dataset.state = st;
     });
+    dom.atomicShopFilterGroups.querySelectorAll(".atomic-shop-filter-group").forEach((group) => {
+      const groupName = group.dataset.group || "";
+      const bulk = group.querySelector(".asf-group-bulk");
+      const expand = group.querySelector(".asf-group-expand");
+      const cats = FILTER_GROUPS[groupName] || [];
+      const state = groupAggregate(cats);
+      const count = cats.filter((cat) => filterStates[cat] && filterStates[cat] !== "unchecked").length;
+      const countEl = group.querySelector(".asf-group-count");
+      group.classList.toggle("is-open", groupName === activeFilterGroup);
+      group.classList.toggle("has-active-filters", count > 0);
+      if (bulk) bulk.dataset.state = state;
+      if (expand) expand.setAttribute("aria-expanded", groupName === activeFilterGroup ? "true" : "false");
+      if (countEl) {
+        countEl.hidden = count < 1;
+        countEl.textContent = String(count);
+      }
+    });
     dom.atomicShopFilterGroups.querySelectorAll(".asf-group-bulk").forEach((bulk) => {
       const cats = FILTER_GROUPS[bulk.dataset.group] || [];
-      bulk.dataset.state = groupAggregate(cats);
+      const state = groupAggregate(cats);
+      bulk.dataset.state = state;
     });
     updateFilterIndicator();
+  }
+
+  function closeFilterGroups() {
+    activeFilterGroup = "";
+    renderFilterOptionsTray();
+    refreshFilterUI();
   }
 
   function updateFilterIndicator() {
@@ -605,6 +709,7 @@
     filterStates = {};
     try { localStorage.removeItem(ATOMIC_SHOP_FILTER_STATE_KEY); } catch (_) {}
     refreshFilterUI();
+    closeFilterGroups();
     applyAndRender();
   }
 
@@ -732,6 +837,8 @@
     }
 
     const currentSrc = gallery.images[gallery.index];
+    const fallbackSrc = getFallbackForImageUrl(currentSrc);
+    warmGalleryImages(gallery.images, currentSrc);
     if (noImg) noImg.hidden = true;
     mainImg.hidden = true;
     mainImg.removeAttribute("src");
@@ -739,12 +846,13 @@
       if (token !== galleryRenderToken) return;
       mainImg.hidden = false;
     };
-    mainImg.onerror = () => {
+    if ("fetchPriority" in mainImg) mainImg.fetchPriority = "high";
+    installImageFallback(mainImg, fallbackSrc, () => {
       if (token !== galleryRenderToken) return;
       mainImg.hidden = true;
       mainImg.removeAttribute("src");
       if (noImg) noImg.hidden = false;
-    };
+    });
     mainImg.src = currentSrc;
 
     if (thumbs) {
@@ -757,7 +865,8 @@
         im.src = src;
         im.alt = "";
         im.loading = "lazy";
-        im.onerror = () => { b.style.display = "none"; };
+        im.decoding = "async";
+        installImageFallback(im, getFallbackForImageUrl(src), () => { b.style.display = "none"; });
         b.appendChild(im);
         b.addEventListener("click", () => { gallery.index = i; renderGallery(); });
         thumbs.appendChild(b);
@@ -1019,6 +1128,7 @@
         const open = dom.atomicShopFilterPanel.hidden;
         dom.atomicShopFilterPanel.hidden = !open;
         dom.atomicShopFilterToggle.setAttribute("aria-expanded", open ? "true" : "false");
+        if (open) closeFilterGroups();
         renderStats();
       });
     }

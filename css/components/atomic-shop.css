@@ -1175,7 +1175,7 @@
 .atomic-shop-filter-panel {
   max-height: none;
   overflow: visible;
-  padding: 12px;
+  padding: 10px;
   border-color: rgba(255, 225, 122, 0.22);
   border-radius: 10px;
   background:
@@ -1186,8 +1186,8 @@
 }
 
 .atomic-shop-filter-panel-head {
-  margin-bottom: 10px;
-  padding-bottom: 9px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
   border-bottom: 1px solid rgba(139, 255, 139, 0.13);
 }
 
@@ -1207,47 +1207,152 @@
 
 .atomic-shop-filter-groups {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 9px;
+  gap: 8px;
 }
 
-.atomic-shop-filter-group {
+.atomic-shop-filter-tabstrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+}
+
+.atomic-shop-filter-tabstrip .atomic-shop-filter-group {
   min-width: 0;
-  border-color: rgba(139, 255, 139, 0.2);
-  border-radius: 8px;
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid rgba(139, 255, 139, 0.2);
+  border-radius: 2px;
   background:
-    linear-gradient(180deg, rgba(139, 255, 139, 0.04), rgba(0, 0, 0, 0.14)),
-    rgba(0, 0, 0, 0.22);
+    linear-gradient(180deg, rgba(139, 255, 139, 0.045), rgba(0, 0, 0, 0.18)),
+    rgba(0, 0, 0, 0.3);
+  transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
 }
 
-.atomic-shop-filter-group-head {
-  border-bottom: 1px solid rgba(139, 255, 139, 0.12);
+.atomic-shop-filter-tabstrip .atomic-shop-filter-group.is-open {
+  border-color: rgba(255, 225, 122, 0.58);
+  background:
+    linear-gradient(180deg, rgba(255, 225, 122, 0.12), rgba(0, 0, 0, 0.18)),
+    rgba(0, 0, 0, 0.32);
+  box-shadow: 0 0 16px rgba(255, 225, 122, 0.06);
+}
+
+.atomic-shop-filter-tabstrip .atomic-shop-filter-group.has-active-filters:not(.is-open) {
+  border-color: rgba(255, 225, 122, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 225, 122, 0.07), rgba(0, 0, 0, 0.18)),
+    rgba(0, 0, 0, 0.3);
 }
 
 .asf-group-expand {
-  pointer-events: none;
-  padding: 7px 9px 6px;
-  color: rgba(202, 255, 202, 0.88);
+  pointer-events: auto;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 5px;
+  padding: 7px 8px 6px 4px;
+  color: rgba(255, 239, 175, 0.9);
   background: transparent;
   font-size: 11px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.045em;
+  white-space: nowrap;
+}
+
+.asf-group-expand:hover,
+.asf-group-expand:focus-visible {
+  color: var(--fg-bright);
+  background: rgba(139, 255, 139, 0.055);
+  outline: none;
 }
 
 .asf-chevron {
-  display: none;
+  display: inline-block;
+  flex: 0 0 auto;
+  margin-left: 1px;
+  color: rgba(255, 225, 122, 0.88);
+  transition: transform 140ms ease;
+}
+
+.atomic-shop-filter-group.is-open .asf-chevron {
+  transform: rotate(180deg);
+}
+
+.asf-group-count {
+  flex: 0 0 auto;
+  min-width: 18px;
+  margin-left: auto;
+  padding: 2px 5px 1px;
+  border: 1px solid rgba(255, 225, 122, 0.32);
+  border-radius: 999px;
+  color: rgba(255, 225, 122, 0.86);
+  background: rgba(255, 225, 122, 0.06);
+  font-size: 9px;
+  line-height: 1.1;
+  text-align: center;
 }
 
 .asf-group-bulk {
-  width: 30px;
-  background: rgba(0, 0, 0, 0.22);
+  width: 28px;
+  border-left: 0;
+  border-right: 1px solid rgba(139, 255, 139, 0.16);
+  background: rgba(0, 0, 0, 0.16);
 }
 
-.atomic-shop-filter-group-body,
-.atomic-shop-filter-group.is-open .atomic-shop-filter-group-body {
+.asf-group-bulk::after {
+  border-color: rgba(255, 239, 175, 0.78);
+  background: rgba(255, 244, 203, 0.92);
+}
+
+.asf-group-bulk[data-state="included"]::after,
+.asf-group-bulk[data-state="mixed"]::after {
+  background: rgba(236, 91, 71, 0.98);
+  border-color: rgba(236, 91, 71, 0.98);
+}
+
+.asf-group-bulk[data-state="excluded"]::after {
+  background:
+    linear-gradient(135deg, rgba(236, 91, 71, 0.98) 0 50%, transparent 50% 100%),
+    rgba(255, 244, 203, 0.92);
+  border-color: rgba(236, 91, 71, 0.98);
+}
+
+.asf-group-bulk[data-state="included"]::before,
+.asf-group-bulk[data-state="mixed"]::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 2px;
+  background: #fff4cb;
+  transform: translate(-50%, -50%);
+}
+
+.atomic-shop-filter-options {
   display: flex;
-  align-content: flex-start;
-  gap: 5px;
-  padding: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 7px;
+  min-height: 34px;
+  padding: 8px 10px 2px;
+  border-top: 1px solid rgba(255, 225, 122, 0.2);
+  background:
+    linear-gradient(180deg, rgba(255, 225, 122, 0.045), rgba(0, 0, 0, 0.08)),
+    rgba(0, 0, 0, 0.12);
+}
+
+.atomic-shop-filter-options[hidden] {
+  display: none;
+}
+
+.asf-options-label {
+  color: rgba(255, 225, 122, 0.74);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .atomic-shop-filter-chip {
@@ -1282,13 +1387,39 @@
 }
 
 .atomic-shop-stats {
-  padding: 0 2px;
-  color: rgba(139, 255, 139, 0.58);
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  align-self: center;
+  width: fit-content;
+  max-width: min(100%, 480px);
+  margin: 0 auto 2px;
+  padding: 6px 13px 5px;
+  border: 1px solid rgba(139, 255, 139, 0.24);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(139, 255, 139, 0.075), rgba(0, 0, 0, 0.16)),
+    rgba(0, 0, 0, 0.32);
+  color: rgba(183, 255, 183, 0.78);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 0 18px rgba(139, 255, 139, 0.05);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  line-height: 1.15;
+  text-align: center;
 }
 
 .atomic-shop-stats.is-filter-panel-open {
-  width: 100%;
-  text-align: center;
+  margin: 0 auto 3px;
+  padding-inline: 15px;
+  border-color: rgba(255, 225, 122, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 225, 122, 0.105), rgba(0, 0, 0, 0.16)),
+    rgba(0, 0, 0, 0.32);
   color: rgba(255, 225, 122, 0.78);
 }
 
@@ -1332,14 +1463,18 @@
 }
 
 @media (max-width: 1100px) {
-  .atomic-shop-filter-groups {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .atomic-shop-filter-tabstrip {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
   }
 }
 
 @media (max-width: 860px) {
-  .atomic-shop-filter-groups {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .atomic-shop-filter-tabstrip .atomic-shop-filter-group {
+    flex: 0 0 auto;
   }
 }
 
@@ -1356,12 +1491,14 @@
     padding: 7px;
   }
 
-  .atomic-shop-filter-groups {
-    grid-template-columns: 1fr;
-  }
-
   .atomic-shop-filter-panel {
     overflow: auto;
     max-height: 48svh;
+  }
+
+  .atomic-shop-filter-options {
+    justify-content: flex-start;
+    max-height: 26svh;
+    overflow: auto;
   }
 }

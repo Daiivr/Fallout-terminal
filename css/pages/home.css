@@ -21280,12 +21280,41 @@ body.is-classified .visit-counter-data-art {
     grid-column: 1 / -1;
   }
 
+  body.is-classified #atomicShopBtn {
+    display: none !important;
+  }
+
   body.is-classified .classified-minerva-lists {
     max-height: none !important;
     overflow: visible !important;
   }
 
-body.is-classified .visit-counter-badge {
+  body.is-classified .classified-intel-mutation-tooltip {
+    left: 0;
+    right: auto;
+    bottom: calc(100% + 9px);
+    width: max-content;
+    max-width: min(248px, calc(100vw - 72px));
+    padding: 8px 9px;
+    text-align: left;
+    transform: translateY(5px);
+  }
+
+  body.is-classified .classified-intel-mutation-tooltip::after {
+    left: 18px;
+    transform: translate(0, -4px) rotate(45deg);
+  }
+
+  body.is-classified .classified-intel-cell-detail:hover .classified-intel-mutation-tooltip,
+  body.is-classified .classified-intel-cell-detail:focus .classified-intel-mutation-tooltip,
+  body.is-classified .classified-intel-cell-detail:focus-within .classified-intel-mutation-tooltip,
+  body.is-classified .classified-intel-mutation-token:hover .classified-intel-mutation-tooltip,
+  body.is-classified .classified-intel-mutation-token:focus .classified-intel-mutation-tooltip,
+  body.is-classified .classified-intel-mutation-token:focus-within .classified-intel-mutation-tooltip {
+    transform: translateY(0);
+  }
+
+  body.is-classified .visit-counter-badge {
     transform: translateY(0) scale(0.9);
   }
 }

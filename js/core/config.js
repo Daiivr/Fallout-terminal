@@ -265,8 +265,10 @@ const VISIT_COUNTER_EYE_POINTER_MAX_OFFSET_MOBILE_PX = 1.2;
 const VISIT_COUNTER_EYE_POINTER_EASING = 0.2;
 const VISIT_COUNTER_EYE_POINTER_SETTLE_PX = 0.02;
 
-// Atomic Shop database browser (proxied through our server-side cache).
-const ATOMIC_SHOP_ORIGIN = "/api/atomic-shop/assets";
+// Atomic Shop database browser. Images prefer the public R2 mirror and fall
+// back to the server proxy when an object is missing from the bucket.
+const ATOMIC_SHOP_PROXY_ORIGIN = "/api/atomic-shop/assets";
+const ATOMIC_SHOP_ORIGIN = "https://assets.pip-boy.net";
 const ATOMIC_SHOP_DB_URL = "/api/atomic-shop/items-db.json";
 const ATOMIC_SHOP_KEYWORDS_URL = "/api/atomic-shop/edidkeywords.json";
 const ATOMIC_SHOP_SOURCE_URL = "https://db.atomicshop.fyi/";

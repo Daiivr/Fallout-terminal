@@ -35,11 +35,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://fonts.cdnfonts.com" />
+  <link rel="preconnect" href="https://assets.pip-boy.net" crossorigin />
   <link href="https://fonts.cdnfonts.com/css/overseer" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="preload" as="image" href="assets/images/minerva-plan-fallback.png" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="css/styles.css?v=20260616-atomic-shop-v2" />
+  <link rel="stylesheet" href="css/styles.css?v=20260617-atomic-filter-tabs-v1" />
 </head>
 <body class="is-booting">
   <noscript>
@@ -354,6 +355,9 @@
           </button>
         </div>
 
+        <p id="atomicShopStatus" class="atomic-shop-status" aria-live="polite">Loading Atomic Shop database...</p>
+        <p id="atomicShopStats" class="atomic-shop-stats" hidden></p>
+
         <div id="atomicShopFilterPanel" class="atomic-shop-filter-panel" hidden>
           <div class="atomic-shop-filter-panel-head">
             <p class="atomic-shop-filter-hint" id="atomicShopFilterHint">Click a category once to include, twice to exclude.</p>
@@ -361,9 +365,6 @@
           </div>
           <div id="atomicShopFilterGroups" class="atomic-shop-filter-groups"></div>
         </div>
-
-        <p id="atomicShopStatus" class="atomic-shop-status" aria-live="polite">Loading Atomic Shop database...</p>
-        <p id="atomicShopStats" class="atomic-shop-stats" hidden></p>
 
         <div id="atomicShopScroll" class="atomic-shop-scroll">
           <div id="atomicShopResults" class="atomic-shop-results" role="list"></div>
@@ -2123,9 +2124,9 @@
   <script src="js/i18n/es.js?v=20260425-temp-shares-v1"></script>
   <script src="js/i18n/index.js?v=20260318-share-stop-alert-copy"></script>
   <script src="js/dom/elements.js?v=20260425-temp-shares-v3"></script>
-  <script src="js/core/config.js?v=20260616-atomic-shop-proxy-v2"></script>
+  <script src="js/core/config.js?v=20260617-atomic-shop-r2-v1"></script>
   <script src="js/core/state.js"></script>
   <script src="js/app.js?v=20260612-boot-log-mobile-1"></script>
-  <script src="js/atomic-shop.js?v=20260616-atomic-shop-v3"></script>
+  <script src="js/atomic-shop.js?v=20260617-atomic-filter-tabs-v1"></script>
 </body>
 </html>
