@@ -345,15 +345,38 @@
     }
 
     try {
+      const fetchJson = async (url, { optional = false } = {}) => {
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) {
+          const body = await response.text().catch(() => "");
+          const error = new Error(`Atomic Shop request failed: ${response.status} ${url}`);
+          error.status = response.status;
+          error.url = url;
+          error.bodyPreview = body.slice(0, 180);
+          throw error;
+        }
+        try {
+          return await response.json();
+        } catch (error) {
+          const parseError = new Error(`Atomic Shop JSON parse failed: ${url}`);
+          parseError.url = url;
+          parseError.cause = error;
+          throw parseError;
+        }
+      };
       const [keywords, items] = await Promise.all([
-        fetch(ATOMIC_SHOP_KEYWORDS_URL).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
-        fetch(ATOMIC_SHOP_DB_URL).then((r) => { if (!r.ok) throw new Error("db"); return r.json(); })
+        fetchJson(ATOMIC_SHOP_KEYWORDS_URL, { optional: true }).catch((error) => {
+          console.warn("[atomic-shop] Keywords request failed, continuing without keywords.", error);
+          return {};
+        }),
+        fetchJson(ATOMIC_SHOP_DB_URL)
       ]);
       indexItems(Array.isArray(items) ? items : [], keywords);
       writeCache(data.items, data.externalKeywords);
       data.loading = false;
       afterLoad();
     } catch (err) {
+      console.error("[atomic-shop] Database load failed.", err);
       data.loading = false;
       data.error = t("atomic_shop_error");
       renderStatus();
