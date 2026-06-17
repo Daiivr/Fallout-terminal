@@ -41,8 +41,6 @@
       assetViewer: "ASSET VIEWER",
       itemRecord: "ITEM RECORD",
       noImage: "NO IMAGE AVAILABLE",
-      sourceLabel: "Data and images: atomicshop.fyi",
-      sourceButton: "OPEN SOURCE",
       readySummary: "Public item dossier generated from the Atomic Shop database. Classified archive access remains locked to the terminal.",
       noDescription: "No public description is registered for this item.",
       notice: "- Notice -",
@@ -74,8 +72,6 @@
       assetViewer: "VISOR DE RECURSO",
       itemRecord: "REGISTRO DEL ARTICULO",
       noImage: "SIN IMAGEN DISPONIBLE",
-      sourceLabel: "Datos e imagenes: atomicshop.fyi",
-      sourceButton: "ABRIR FUENTE",
       readySummary: "Dossier publico generado desde la base de datos de Atomic Shop. El acceso al archivo clasificado sigue bloqueado en el terminal.",
       noDescription: "No hay descripcion publica registrada para este articulo.",
       notice: "- Aviso -",
@@ -225,8 +221,6 @@
     dom.returnButton = document.querySelector(".atomic-dossier-button");
     dom.assetPill = document.querySelector(".atomic-dossier-asset .atomic-dossier-pill");
     dom.recordPill = document.querySelector(".atomic-dossier-record .atomic-dossier-pill");
-    dom.footerLabel = document.querySelector(".atomic-dossier-footer span");
-    dom.footerSource = document.querySelector(".atomic-dossier-footer a");
   }
 
   function esc(value) {
@@ -621,8 +615,6 @@
     if (dom.assetPill) dom.assetPill.textContent = text.assetViewer;
     if (dom.recordPill) dom.recordPill.textContent = text.itemRecord;
     if (dom.atomicDossierNoImage) dom.atomicDossierNoImage.textContent = text.noImage;
-    if (dom.footerLabel) dom.footerLabel.textContent = text.sourceLabel;
-    if (dom.footerSource) dom.footerSource.textContent = text.sourceButton;
 
     const id = getRequestedItemId();
     if (!id) {

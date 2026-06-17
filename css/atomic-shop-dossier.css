@@ -208,6 +208,20 @@ body {
   outline: none;
 }
 
+.atomic-dossier-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+}
+
+.atomic-dossier-footer-mark {
+  color: rgba(139, 255, 139, 0.54);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+
 .atomic-dossier-status[data-state="error"] {
   border-color: rgba(255, 111, 111, 0.48);
   color: var(--bad);
@@ -475,38 +489,6 @@ body {
   transform: translateY(0.08em);
 }
 
-.atomic-dossier-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
-  color: rgba(139, 255, 139, 0.54);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-}
-
-.atomic-dossier-footer a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.28);
-  color: var(--fg-bright);
-  padding: 7px 11px 6px;
-  text-decoration: none;
-  transition: transform 120ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
-}
-
-.atomic-dossier-footer a:hover,
-.atomic-dossier-footer a:focus-visible {
-  transform: translateY(-1px);
-  border-color: var(--line-strong);
-  background: rgba(139, 255, 139, 0.08);
-  box-shadow: 0 0 16px rgba(139, 255, 139, 0.1);
-  outline: none;
-}
-
 /* Final dossier polish: calmer hierarchy, readable records, less empty panel space. */
 body {
   background:
@@ -555,8 +537,7 @@ body {
 }
 
 .atomic-dossier-status,
-.atomic-dossier-button,
-.atomic-dossier-footer a {
+.atomic-dossier-button {
   min-width: 156px;
   border-color: rgba(139, 255, 139, 0.3);
   border-radius: 8px;
@@ -684,10 +665,6 @@ body {
 .atomic-dossier-db-value {
   font-size: 12px;
   line-height: 1.42;
-}
-
-.atomic-dossier-footer {
-  align-items: center;
 }
 
 @media (max-width: 760px) {

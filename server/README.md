@@ -151,8 +151,11 @@ Recommended Render env vars:
 - `ATOMIC_SHOP_FALLBACK_ORIGINS=https://raw.githubusercontent.com/ggmatze/atomic-shop-web/main`
 - `ATOMIC_SHOP_DATA_TTL_MS=1800000`
 - `ATOMIC_SHOP_FETCH_TIMEOUT_MS=20000`
+- `ATOMIC_SHOP_ASSET_PUBLIC_ORIGIN=https://assets.example.com`
+- `ATOMIC_SHOP_ASSET_PUBLIC_PREFIX=`
+- `ATOMIC_SHOP_ASSET_REDIRECT=1`
 
-JSON data refreshes automatically after the TTL. If the primary origin is unavailable from Render, the server tries the comma-separated fallback origins in `ATOMIC_SHOP_FALLBACK_ORIGINS`. Images are cached lazily the first time a visitor requests them. To preserve the cache across Render restarts/redeploys, attach a persistent disk to the web service and set `STORAGE_DIR` to that disk path.
+JSON data refreshes automatically after the TTL. If the primary origin is unavailable from Render, the server tries the comma-separated fallback origins in `ATOMIC_SHOP_FALLBACK_ORIGINS`. Images are cached lazily the first time a visitor requests them. If Atomic Shop images are mirrored to Cloudflare R2 or another public object store, set `ATOMIC_SHOP_ASSET_PUBLIC_ORIGIN` and `ATOMIC_SHOP_ASSET_REDIRECT=1`; `/api/atomic-shop/assets/...` will redirect to that public asset URL while keeping the frontend URLs unchanged. Use `ATOMIC_SHOP_ASSET_PUBLIC_PREFIX` only if the files were uploaded inside a bucket folder such as `atomic-shop`. To preserve the local cache across Render restarts/redeploys, attach a persistent disk to the web service and set `STORAGE_DIR` to that disk path.
 
 #### Fresh Render setup with Blueprint
 

@@ -85,6 +85,15 @@ const ATOMIC_SHOP_REMOTE_ORIGINS = Array.from(new Set([
 const ATOMIC_SHOP_DATA_TTL_MS = parsePositiveInteger(process.env.ATOMIC_SHOP_DATA_TTL_MS, 30 * 60 * 1000);
 const ATOMIC_SHOP_FETCH_TIMEOUT_MS = parsePositiveInteger(process.env.ATOMIC_SHOP_FETCH_TIMEOUT_MS, 20000);
 const ATOMIC_SHOP_ALLOWED_DATA_FILES = new Set(["items-db.json", "edidkeywords.json"]);
+const ATOMIC_SHOP_ASSET_PUBLIC_ORIGIN = String(
+  process.env.ATOMIC_SHOP_ASSET_PUBLIC_ORIGIN
+  || process.env.R2_PUBLIC_BASE_URL
+  || ""
+).trim().replace(/\/+$/, "");
+const ATOMIC_SHOP_ASSET_PUBLIC_PREFIX = String(process.env.ATOMIC_SHOP_ASSET_PUBLIC_PREFIX || "")
+  .trim()
+  .replace(/^\/+|\/+$/g, "");
+const ATOMIC_SHOP_ASSET_REDIRECT = /^(1|true|yes)$/i.test(String(process.env.ATOMIC_SHOP_ASSET_REDIRECT || "0").trim());
 const FILE_SHARE_ROUTE_PREFIX = "/share/";
 const FILE_SHARE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const FILE_SHARE_META_MAX_CHARS = 260;
@@ -4345,6 +4354,9 @@ function getAtomicShopCacheStatus() {
   return {
     remoteOrigin: ATOMIC_SHOP_REMOTE_ORIGIN,
     remoteOrigins: ATOMIC_SHOP_REMOTE_ORIGINS,
+    assetPublicOrigin: ATOMIC_SHOP_ASSET_PUBLIC_ORIGIN,
+    assetPublicPrefix: ATOMIC_SHOP_ASSET_PUBLIC_PREFIX,
+    assetRedirect: ATOMIC_SHOP_ASSET_REDIRECT,
     dataTtlMs: ATOMIC_SHOP_DATA_TTL_MS,
     dataFiles: Array.from(ATOMIC_SHOP_ALLOWED_DATA_FILES).map(atomicShopDataCacheEntry)
   };
@@ -4391,10 +4403,27 @@ function atomicShopContentType(assetPath, fallback = "") {
   return fallback || "application/octet-stream";
 }
 
+function atomicShopPublicAssetUrl(assetPath) {
+  if (!ATOMIC_SHOP_ASSET_PUBLIC_ORIGIN) return "";
+  const cleanPath = sanitizeAtomicShopAssetPath(assetPath);
+  if (!cleanPath) return "";
+  const prefixedPath = ATOMIC_SHOP_ASSET_PUBLIC_PREFIX
+    ? `${ATOMIC_SHOP_ASSET_PUBLIC_PREFIX}/${cleanPath}`
+    : cleanPath;
+  return `${ATOMIC_SHOP_ASSET_PUBLIC_ORIGIN}/${prefixedPath}`;
+}
+
 async function sendAtomicShopAsset(req, res) {
   const assetPath = sanitizeAtomicShopAssetPath(req.params[0] || "");
   if (!assetPath) {
     res.status(400).json({ error: "Invalid Atomic Shop asset path" });
+    return;
+  }
+
+  const publicAssetUrl = atomicShopPublicAssetUrl(assetPath);
+  if (ATOMIC_SHOP_ASSET_REDIRECT && publicAssetUrl) {
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.redirect(302, publicAssetUrl);
     return;
   }
 
