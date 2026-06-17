@@ -72,6 +72,16 @@ const ACCESS_REQUEST_MAX_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 const DEFAULT_AUTH_RETURN_TO = "/#files";
 const DEFAULT_SHARE_PREVIEW_IMAGE_PATH = "/assets/images/image.png";
 const ATOMIC_SHOP_REMOTE_ORIGIN = String(process.env.ATOMIC_SHOP_REMOTE_ORIGIN || "https://db.atomicshop.fyi").trim().replace(/\/+$/, "");
+const ATOMIC_SHOP_FALLBACK_ORIGINS = String(
+  process.env.ATOMIC_SHOP_FALLBACK_ORIGINS || "https://raw.githubusercontent.com/ggmatze/atomic-shop-web/main"
+)
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/+$/, ""))
+  .filter((origin) => /^https?:\/\//i.test(origin));
+const ATOMIC_SHOP_REMOTE_ORIGINS = Array.from(new Set([
+  ATOMIC_SHOP_REMOTE_ORIGIN,
+  ...ATOMIC_SHOP_FALLBACK_ORIGINS
+].filter(Boolean)));
 const ATOMIC_SHOP_DATA_TTL_MS = parsePositiveInteger(process.env.ATOMIC_SHOP_DATA_TTL_MS, 30 * 60 * 1000);
 const ATOMIC_SHOP_FETCH_TIMEOUT_MS = parsePositiveInteger(process.env.ATOMIC_SHOP_FETCH_TIMEOUT_MS, 20000);
 const ATOMIC_SHOP_ALLOWED_DATA_FILES = new Set(["items-db.json", "edidkeywords.json"]);
@@ -4213,9 +4223,9 @@ function sendBotAdminProxyError(res, error) {
   });
 }
 
-function atomicShopRemoteUrl(relativePath) {
+function atomicShopRemoteUrl(relativePath, origin = ATOMIC_SHOP_REMOTE_ORIGIN) {
   const cleanPath = String(relativePath || "").replace(/^\/+/, "");
-  return `${ATOMIC_SHOP_REMOTE_ORIGIN}/${cleanPath}`;
+  return `${String(origin || "").replace(/\/+$/, "")}/${cleanPath}`;
 }
 
 function atomicShopCacheFresh(filePath, ttlMs) {
@@ -4228,33 +4238,40 @@ function atomicShopCacheFresh(filePath, ttlMs) {
 }
 
 async function fetchAtomicShopRemote(relativePath) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ATOMIC_SHOP_FETCH_TIMEOUT_MS);
-  try {
-    const response = await fetch(atomicShopRemoteUrl(relativePath), {
-      signal: controller.signal,
-      cache: "no-store",
-      headers: {
-        Accept: "*/*",
-        "User-Agent": "Fallout-Codex-Atomic-Shop-Cache/1.0"
+  const errors = [];
+
+  for (const origin of ATOMIC_SHOP_REMOTE_ORIGINS) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ATOMIC_SHOP_FETCH_TIMEOUT_MS);
+    const url = atomicShopRemoteUrl(relativePath, origin);
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        cache: "no-store",
+        headers: {
+          Accept: "*/*",
+          "User-Agent": "Fallout-Codex-Atomic-Shop-Cache/1.0"
+        }
+      });
+      if (!response.ok) {
+        const error = new Error(`HTTP ${response.status}`);
+        error.status = response.status;
+        throw error;
       }
-    });
-    if (!response.ok) {
-      const error = new Error(`Atomic Shop source HTTP ${response.status}`);
-      error.status = response.status;
-      throw error;
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const contentType = String(response.headers.get("content-type") || "").trim();
+      return { buffer, contentType, origin, url };
+    } catch (error) {
+      errors.push(`${origin}: ${error?.message || "request failed"}`);
+    } finally {
+      clearTimeout(timer);
     }
-    const buffer = Buffer.from(await response.arrayBuffer());
-    const contentType = String(response.headers.get("content-type") || "").trim();
-    return { buffer, contentType };
-  } catch (error) {
-    const nextError = new Error("Atomic Shop source is unreachable.");
-    nextError.status = error?.status || 502;
-    nextError.cause = error;
-    throw nextError;
-  } finally {
-    clearTimeout(timer);
   }
+
+  const nextError = new Error(`Atomic Shop source is unreachable. Tried: ${errors.join(" | ")}`);
+  nextError.status = 502;
+  nextError.sources = errors;
+  throw nextError;
 }
 
 async function getAtomicShopDataFile(fileName) {
@@ -4327,6 +4344,7 @@ function atomicShopDataCacheEntry(fileName) {
 function getAtomicShopCacheStatus() {
   return {
     remoteOrigin: ATOMIC_SHOP_REMOTE_ORIGIN,
+    remoteOrigins: ATOMIC_SHOP_REMOTE_ORIGINS,
     dataTtlMs: ATOMIC_SHOP_DATA_TTL_MS,
     dataFiles: Array.from(ATOMIC_SHOP_ALLOWED_DATA_FILES).map(atomicShopDataCacheEntry)
   };

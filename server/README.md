@@ -133,7 +133,7 @@ The web service disk and the bot worker disk are separate. They do not share fil
 
 #### Atomic Shop cache
 
-The Atomic Shop browser is routed through the web service instead of loading data and images directly.
+The Atomic Shop browser is routed through the web service instead of loading data and images directly from `db.atomicshop.fyi`.
 
 - Data endpoints:
   - `/api/atomic-shop/items-db.json`
@@ -147,15 +147,16 @@ The Atomic Shop browser is routed through the web service instead of loading dat
 
 Recommended Render env vars:
 
-- `ATOMIC_SHOP_REMOTE_ORIGIN=`
+- `ATOMIC_SHOP_REMOTE_ORIGIN=https://db.atomicshop.fyi`
+- `ATOMIC_SHOP_FALLBACK_ORIGINS=https://raw.githubusercontent.com/ggmatze/atomic-shop-web/main`
 - `ATOMIC_SHOP_DATA_TTL_MS=1800000`
 - `ATOMIC_SHOP_FETCH_TIMEOUT_MS=20000`
 
-JSON data refreshes automatically after the TTL. Images are cached lazily the first time a visitor requests them. To preserve the cache across Render restarts/redeploys, attach a persistent disk to the web service and set `STORAGE_DIR` to that disk path.
+JSON data refreshes automatically after the TTL. If the primary origin is unavailable from Render, the server tries the comma-separated fallback origins in `ATOMIC_SHOP_FALLBACK_ORIGINS`. Images are cached lazily the first time a visitor requests them. To preserve the cache across Render restarts/redeploys, attach a persistent disk to the web service and set `STORAGE_DIR` to that disk path.
 
 #### Fresh Render setup with Blueprint
 
-A sample Render blueprint is included at [render.yaml](C:/Users/*/Downloads/Fallout-terminal/render.yaml). Use that if you want Render to create both services from scratch.
+A sample Render blueprint is included at [render.yaml](C:/Users/ohits/Downloads/Fallout-terminal/render.yaml). Use that if you want Render to create both services from scratch.
 
 If you already have existing Render services, treat `render.yaml` as a reference unless you are intentionally replacing your current setup.
 
