@@ -39,7 +39,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="preload" as="image" href="assets/images/minerva-plan-fallback.png" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="css/styles.css?v=20260612-boot-loader-v5" />
+  <link rel="stylesheet" href="css/styles.css?v=20260616-atomic-shop-v2" />
 </head>
 <body class="is-booting">
   <noscript>
@@ -305,6 +305,120 @@
             OPEN SOURCE PAGE
           </a>
           <button id="classifiedAxolotlCloseBtn" class="files-btn intel-bot-modal-confirm" type="button">CLOSE</button>
+        </div>
+      </div>
+    </div>
+    <div id="atomicShopOverlay" class="intel-bot-modal-overlay atomic-shop-modal-overlay" aria-hidden="true">
+      <div
+        id="atomicShopCore"
+        class="intel-bot-modal-core atomic-shop-modal-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="atomicShopTitle"
+        aria-describedby="atomicShopBody"
+      >
+        <div class="atomic-shop-head">
+          <div class="atomic-shop-head-copy">
+            <p id="atomicShopBadge" class="intel-bot-modal-badge atomic-shop-badge">ENCLAVE REQUISITION ARCHIVE</p>
+            <h2 id="atomicShopTitle" class="intel-bot-modal-title atomic-shop-title">ATOMIC SHOP DATABASE</h2>
+            <p id="atomicShopBody" class="intel-bot-modal-body atomic-shop-body">
+              Searchable archive of Fallout 76 Atomic Shop offerings.
+            </p>
+          </div>
+          <button id="atomicShopCloseIconBtn" class="classified-intel-modal-x atomic-shop-x" type="button" aria-label="Close Atomic Shop">&times;</button>
+        </div>
+
+        <div class="atomic-shop-toolbar">
+          <div class="atomic-shop-search">
+            <span class="atomic-shop-search-icon" aria-hidden="true">&#9906;</span>
+            <input
+              id="atomicShopSearchInput"
+              class="atomic-shop-search-input"
+              type="search"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              placeholder="Search by name or EDID..."
+              aria-label="Search Atomic Shop"
+            />
+            <button id="atomicShopClearBtn" class="atomic-shop-search-clear" type="button" aria-label="Clear search" hidden>&times;</button>
+          </div>
+          <button
+            id="atomicShopFilterToggle"
+            class="files-btn atomic-shop-filter-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="atomicShopFilterPanel"
+          >
+            FILTERS
+          </button>
+        </div>
+
+        <div id="atomicShopFilterPanel" class="atomic-shop-filter-panel" hidden>
+          <div class="atomic-shop-filter-panel-head">
+            <p class="atomic-shop-filter-hint" id="atomicShopFilterHint">Click a category once to include, twice to exclude.</p>
+            <button id="atomicShopFilterReset" class="atomic-shop-filter-reset" type="button">RESET</button>
+          </div>
+          <div id="atomicShopFilterGroups" class="atomic-shop-filter-groups"></div>
+        </div>
+
+        <p id="atomicShopStatus" class="atomic-shop-status" aria-live="polite">Loading Atomic Shop database...</p>
+        <p id="atomicShopStats" class="atomic-shop-stats" hidden></p>
+
+        <div id="atomicShopScroll" class="atomic-shop-scroll">
+          <div id="atomicShopResults" class="atomic-shop-results" role="list"></div>
+          <div id="atomicShopSentinel" class="atomic-shop-sentinel" aria-hidden="true"></div>
+        </div>
+
+        <div class="intel-bot-modal-actions atomic-shop-actions">
+          <a
+            id="atomicShopSourceLink"
+            class="files-btn intel-bot-modal-cancel"
+            href="https://db.atomicshop.fyi/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            OPEN SOURCE
+          </a>
+          <span id="atomicShopAttribution" class="atomic-shop-attribution">Data &amp; images: atomicshop.fyi</span>
+          <button id="atomicShopCloseBtn" class="files-btn intel-bot-modal-confirm" type="button">CLOSE</button>
+        </div>
+      </div>
+    </div>
+    <div id="atomicShopItemOverlay" class="intel-bot-modal-overlay atomic-shop-item-overlay" aria-hidden="true">
+      <div
+        id="atomicShopItemCore"
+        class="intel-bot-modal-core atomic-shop-item-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="atomicShopItemTitle"
+      >
+        <div class="atomic-shop-item-head">
+          <button id="atomicShopItemBackBtn" class="atomic-shop-item-back" type="button">BACK</button>
+          <button id="atomicShopItemCloseIcon" class="classified-intel-modal-x" type="button" aria-label="Close item">&times;</button>
+        </div>
+        <div class="atomic-shop-item-body">
+          <div class="atomic-shop-item-top">
+            <div class="atomic-shop-item-gallery">
+              <div id="atomicShopItemMainWrap" class="atomic-shop-item-main-wrap">
+                <img id="atomicShopItemMainImage" class="atomic-shop-item-main-image" alt="" decoding="async" />
+                <p id="atomicShopItemNoImage" class="atomic-shop-item-noimage" hidden>NO IMAGE</p>
+              </div>
+              <div id="atomicShopItemThumbs" class="atomic-shop-item-thumbs"></div>
+            </div>
+            <div class="atomic-shop-item-info">
+              <h3 id="atomicShopItemTitle" class="atomic-shop-item-title"></h3>
+              <p id="atomicShopItemPrice" class="atomic-shop-item-price" hidden></p>
+              <div id="atomicShopItemCategories" class="atomic-shop-item-categories" hidden></div>
+              <p id="atomicShopItemDesc" class="atomic-shop-item-desc"></p>
+              <div id="atomicShopItemDisclaimer" class="atomic-shop-item-disclaimer" hidden></div>
+              <div id="atomicShopItemIncludes" class="atomic-shop-item-includes" hidden></div>
+            </div>
+          </div>
+          <div id="atomicShopItemDbInfo" class="atomic-shop-item-dbinfo"></div>
+        </div>
+        <div class="atomic-shop-item-actions">
+          <button id="atomicShopItemShareBtn" class="files-btn" type="button">COPY SHARE LINK</button>
         </div>
       </div>
     </div>
@@ -1749,6 +1863,7 @@
         <div class="classified-hero-actions">
           <button id="classifiedBackBtn" class="classified-back" type="button">RETURN TO INTEL</button>
           <button id="classifiedPlayersBtn" class="classified-back classified-back-secondary" type="button">LIVE PLAYERS</button>
+          <button id="atomicShopBtn" class="classified-back classified-back-secondary" type="button">ATOMIC SHOP</button>
         </div>
       </div>
       <div class="classified-layout">
@@ -2021,5 +2136,6 @@
   <script src="js/core/config.js"></script>
   <script src="js/core/state.js"></script>
   <script src="js/app.js?v=20260612-boot-log-mobile-1"></script>
+  <script src="js/atomic-shop.js?v=20260616-atomic-shop-v2"></script>
 </body>
 </html>

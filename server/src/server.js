@@ -28,6 +28,9 @@ const TEMP_SHARES_PATH = path.join(STORAGE_DIR, "temp-shares.json");
 const EXHAUSTED_SLUGS_PATH = path.join(STORAGE_DIR, "exhausted-slugs.json");
 const ACCESS_REQUESTS_PATH = path.join(STORAGE_DIR, "access-requests.json");
 const VISIT_COUNTER_PATH = path.join(STORAGE_DIR, "visit-counter.json");
+const ATOMIC_SHOP_CACHE_DIR = path.join(STORAGE_DIR, "atomic-shop-cache");
+const ATOMIC_SHOP_DATA_CACHE_DIR = path.join(ATOMIC_SHOP_CACHE_DIR, "data");
+const ATOMIC_SHOP_ASSET_CACHE_DIR = path.join(ATOMIC_SHOP_CACHE_DIR, "assets");
 const PORT = Number(process.env.PORT || 3000);
 const NODE_ENV = String(process.env.NODE_ENV || "development").trim() || "development";
 const SESSION_SECRET = String(process.env.SESSION_SECRET || "").trim() || "replace-me-in-production";
@@ -68,6 +71,10 @@ const VT_API_KEY = String(process.env.VT_API_KEY || process.env.VIRUSTOTAL_API_K
 const ACCESS_REQUEST_MAX_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 const DEFAULT_AUTH_RETURN_TO = "/#files";
 const DEFAULT_SHARE_PREVIEW_IMAGE_PATH = "/assets/images/image.png";
+const ATOMIC_SHOP_REMOTE_ORIGIN = String(process.env.ATOMIC_SHOP_REMOTE_ORIGIN || "https://db.atomicshop.fyi").trim().replace(/\/+$/, "");
+const ATOMIC_SHOP_DATA_TTL_MS = parsePositiveInteger(process.env.ATOMIC_SHOP_DATA_TTL_MS, 30 * 60 * 1000);
+const ATOMIC_SHOP_FETCH_TIMEOUT_MS = parsePositiveInteger(process.env.ATOMIC_SHOP_FETCH_TIMEOUT_MS, 20000);
+const ATOMIC_SHOP_ALLOWED_DATA_FILES = new Set(["items-db.json", "edidkeywords.json"]);
 const FILE_SHARE_ROUTE_PREFIX = "/share/";
 const FILE_SHARE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const FILE_SHARE_META_MAX_CHARS = 260;
@@ -212,6 +219,8 @@ if (isDiscordId(ADMIN_DISCORD_ID)) {
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 fs.mkdirSync(TEMP_SHARE_UPLOAD_DIR, { recursive: true });
+fs.mkdirSync(ATOMIC_SHOP_DATA_CACHE_DIR, { recursive: true });
+fs.mkdirSync(ATOMIC_SHOP_ASSET_CACHE_DIR, { recursive: true });
 if (!fs.existsSync(METADATA_PATH)) {
   fs.writeFileSync(METADATA_PATH, "[]\n", "utf8");
 }
@@ -4204,6 +4213,200 @@ function sendBotAdminProxyError(res, error) {
   });
 }
 
+function atomicShopRemoteUrl(relativePath) {
+  const cleanPath = String(relativePath || "").replace(/^\/+/, "");
+  return `${ATOMIC_SHOP_REMOTE_ORIGIN}/${cleanPath}`;
+}
+
+function atomicShopCacheFresh(filePath, ttlMs) {
+  try {
+    const stat = fs.statSync(filePath);
+    return stat.isFile() && Date.now() - stat.mtimeMs < ttlMs;
+  } catch {
+    return false;
+  }
+}
+
+async function fetchAtomicShopRemote(relativePath) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ATOMIC_SHOP_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(atomicShopRemoteUrl(relativePath), {
+      signal: controller.signal,
+      cache: "no-store",
+      headers: {
+        Accept: "*/*",
+        "User-Agent": "Fallout-Codex-Atomic-Shop-Cache/1.0"
+      }
+    });
+    if (!response.ok) {
+      const error = new Error(`Atomic Shop source HTTP ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const contentType = String(response.headers.get("content-type") || "").trim();
+    return { buffer, contentType };
+  } catch (error) {
+    const nextError = new Error("Atomic Shop source is unreachable.");
+    nextError.status = error?.status || 502;
+    nextError.cause = error;
+    throw nextError;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function getAtomicShopDataFile(fileName) {
+  const safeName = path.basename(String(fileName || "").trim());
+  if (!ATOMIC_SHOP_ALLOWED_DATA_FILES.has(safeName)) {
+    const error = new Error("Unknown Atomic Shop data file.");
+    error.status = 404;
+    throw error;
+  }
+
+  const cachePath = path.join(ATOMIC_SHOP_DATA_CACHE_DIR, safeName);
+  if (atomicShopCacheFresh(cachePath, ATOMIC_SHOP_DATA_TTL_MS)) {
+    return fs.readFileSync(cachePath);
+  }
+
+  try {
+    const { buffer } = await fetchAtomicShopRemote(`data/${safeName}`);
+    JSON.parse(buffer.toString("utf8").replace(/^\uFEFF/, ""));
+    fs.writeFileSync(`${cachePath}.tmp`, buffer);
+    fs.renameSync(`${cachePath}.tmp`, cachePath);
+    return buffer;
+  } catch (error) {
+    if (fs.existsSync(cachePath)) {
+      console.warn(`[atomic-shop] using stale cached ${safeName}: ${error.message}`);
+      return fs.readFileSync(cachePath);
+    }
+    throw error;
+  }
+}
+
+async function refreshAtomicShopDataFile(fileName) {
+  const safeName = path.basename(String(fileName || "").trim());
+  if (!ATOMIC_SHOP_ALLOWED_DATA_FILES.has(safeName)) {
+    const error = new Error("Unknown Atomic Shop data file.");
+    error.status = 404;
+    throw error;
+  }
+
+  const cachePath = path.join(ATOMIC_SHOP_DATA_CACHE_DIR, safeName);
+  const { buffer } = await fetchAtomicShopRemote(`data/${safeName}`);
+  JSON.parse(buffer.toString("utf8").replace(/^\uFEFF/, ""));
+  fs.writeFileSync(`${cachePath}.tmp`, buffer);
+  fs.renameSync(`${cachePath}.tmp`, cachePath);
+  return atomicShopDataCacheEntry(safeName);
+}
+
+function atomicShopDataCacheEntry(fileName) {
+  const safeName = path.basename(String(fileName || "").trim());
+  const cachePath = path.join(ATOMIC_SHOP_DATA_CACHE_DIR, safeName);
+  try {
+    const stat = fs.statSync(cachePath);
+    return {
+      file: safeName,
+      cached: stat.isFile(),
+      size: stat.isFile() ? stat.size : 0,
+      updatedAt: stat.isFile() ? stat.mtime.toISOString() : "",
+      fresh: stat.isFile() && Date.now() - stat.mtimeMs < ATOMIC_SHOP_DATA_TTL_MS
+    };
+  } catch {
+    return {
+      file: safeName,
+      cached: false,
+      size: 0,
+      updatedAt: "",
+      fresh: false
+    };
+  }
+}
+
+function getAtomicShopCacheStatus() {
+  return {
+    remoteOrigin: ATOMIC_SHOP_REMOTE_ORIGIN,
+    dataTtlMs: ATOMIC_SHOP_DATA_TTL_MS,
+    dataFiles: Array.from(ATOMIC_SHOP_ALLOWED_DATA_FILES).map(atomicShopDataCacheEntry)
+  };
+}
+
+async function refreshAtomicShopDataCache() {
+  const files = [];
+  for (const fileName of ATOMIC_SHOP_ALLOWED_DATA_FILES) {
+    files.push(await refreshAtomicShopDataFile(fileName));
+  }
+  return {
+    ok: true,
+    syncedAt: new Date().toISOString(),
+    ...getAtomicShopCacheStatus(),
+    dataFiles: files
+  };
+}
+
+function sanitizeAtomicShopAssetPath(rawPath) {
+  const normalized = String(rawPath || "")
+    .replace(/\\/g, "/")
+    .replace(/^\/+/, "")
+    .replace(/\/+/g, "/");
+
+  if (
+    !normalized
+    || normalized.includes("..")
+    || normalized.startsWith(".")
+    || /[\0?#]/.test(normalized)
+  ) {
+    return "";
+  }
+  return normalized;
+}
+
+function atomicShopContentType(assetPath, fallback = "") {
+  const ext = path.extname(assetPath).toLowerCase();
+  if (ext === ".webp") return "image/webp";
+  if (ext === ".png") return "image/png";
+  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+  if (ext === ".gif") return "image/gif";
+  if (ext === ".svg") return "image/svg+xml";
+  if (ext === ".json") return "application/json; charset=utf-8";
+  return fallback || "application/octet-stream";
+}
+
+async function sendAtomicShopAsset(req, res) {
+  const assetPath = sanitizeAtomicShopAssetPath(req.params[0] || "");
+  if (!assetPath) {
+    res.status(400).json({ error: "Invalid Atomic Shop asset path" });
+    return;
+  }
+
+  const cachePath = path.join(ATOMIC_SHOP_ASSET_CACHE_DIR, ...assetPath.split("/"));
+  if (!cachePath.startsWith(ATOMIC_SHOP_ASSET_CACHE_DIR + path.sep)) {
+    res.status(400).json({ error: "Invalid Atomic Shop asset path" });
+    return;
+  }
+
+  if (fs.existsSync(cachePath)) {
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.type(atomicShopContentType(assetPath));
+    res.sendFile(cachePath);
+    return;
+  }
+
+  try {
+    const { buffer, contentType } = await fetchAtomicShopRemote(assetPath);
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    fs.writeFileSync(`${cachePath}.tmp`, buffer);
+    fs.renameSync(`${cachePath}.tmp`, cachePath);
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.type(atomicShopContentType(assetPath, contentType));
+    res.send(buffer);
+  } catch (error) {
+    console.error(`[atomic-shop] asset proxy failed for ${assetPath}:`, error.message);
+    res.status(error?.status || 502).json({ error: "Unable to fetch Atomic Shop asset" });
+  }
+}
+
 async function getBotAdminOverview() {
   return requestBotAdminApi("/admin/bot/overview");
 }
@@ -6791,6 +6994,36 @@ app.get("/api/intel/nukaknights", async (req, res) => {
     });
   }
 });
+
+app.get("/api/atomic-shop/:fileName(items-db\\.json|edidkeywords\\.json)", async (req, res) => {
+  try {
+    const payload = await getAtomicShopDataFile(req.params.fileName);
+    res.setHeader("Cache-Control", "no-store");
+    res.type("application/json");
+    res.send(payload);
+  } catch (error) {
+    console.error(`[atomic-shop] data proxy failed for ${req.params.fileName}:`, error.message);
+    res.status(error?.status || 502).json({ error: "Unable to fetch Atomic Shop data" });
+  }
+});
+
+app.get("/api/atomic-shop/status", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(getAtomicShopCacheStatus());
+});
+
+app.post("/api/admin/atomic-shop/sync", requireAdmin, async (_req, res) => {
+  try {
+    const payload = await refreshAtomicShopDataCache();
+    res.setHeader("Cache-Control", "no-store");
+    res.json(payload);
+  } catch (error) {
+    console.error("[atomic-shop] admin sync failed:", error.message);
+    res.status(error?.status || 502).json({ error: "Unable to sync Atomic Shop data" });
+  }
+});
+
+app.get("/api/atomic-shop/assets/*", sendAtomicShopAsset);
 
 app.get("/api/public-config", (_req, res) => {
   res.setHeader("Cache-Control", "no-store");

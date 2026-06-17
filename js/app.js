@@ -1024,9 +1024,19 @@ function hideDropsPage() {
   }
 }
 
+function closeClassifiedModalsForNavigation() {
+  closeClassifiedPlayerCountsModal();
+  closeClassifiedNukaIntelModal();
+  closeClassifiedAxolotlModal();
+  if (typeof window.closeAtomicShopModal === "function") {
+    window.closeAtomicShopModal();
+  }
+  document.body.classList.remove("is-classified-intel-open", "atomic-shop-open");
+}
+
 function closeClassifiedPageForNavigation() {
   showClassifiedLoadOverlay(false);
-  closeClassifiedPlayerCountsModal();
+  closeClassifiedModalsForNavigation();
   document.body.classList.remove("is-classified");
   setClassifiedSearchOpen(false, { clearQuery: true });
   if (elements.classifiedPage) {
@@ -14275,7 +14285,7 @@ const CLASSIFIED_NUKA_ES_CHALLENGE_TEXT = {
   "Mod an Energy Weapon (5)": "Modificar un arma de energía (5)",
   "Scrap junk to produce Glass (30)": "Desguazar chatarra para obtener vidrio (30)",
   "Collect a Board Game": "Recoger un juego de mesa",
-  "1st Collect a Board Game": "1.º recoger un juego de mesa",
+  "1st Collect a Board Game": "1st recoger un juego de mesa",
   "Craft or Scrap a piece of Power Armor": "Crear o desguazar una pieza de servoarmadura",
   "Cripple a Protectron or a Robobrain's Arm (2)": "Lisiar el brazo de un Protectrón o un Robocerebro (2)",
   "Destroy an Assaultron": "Destruir un Assaultron",
@@ -14356,7 +14366,7 @@ const CLASSIFIED_NUKA_ES_CHALLENGE_REPLACEMENTS = [
   [/\bScrap junk to produce Springs\b/gi, "Desguazar chatarra para obtener resortes"],
   [/\bScrap junk to produce Steel\b/gi, "Desguazar chatarra para obtener acero"],
   [/\bScrap junk to produce Wood\b/gi, "Desguazar chatarra para obtener madera"],
-  [/^1st\s+/i, "1.º "]
+  [/^1st\s+/i, "1st "]
 ];
 
 function classifiedNukaIconMarkup(iconKey = "marker", className = "") {
@@ -14384,12 +14394,19 @@ function formatClassifiedNukaChallengeName(value = "") {
   return String(value || "").replace(/1ˢᵗ/g, "1st");
 }
 
-function buildClassifiedNukaChallengeNameMarkup(value = "") {
-  const normalized = formatClassifiedNukaChallengeName(value);
-  return escapeHtml(normalized).replace(
+function buildFo76FirstOrdinalMarkup(label = "first") {
+  return `<span class="fo76-icon classified-nuka-first-symbol" aria-label="${escapeHtml(label)}">¼</span>`;
+}
+
+function replaceFirstOrdinalWithFo76Markup(value = "") {
+  return escapeHtml(formatClassifiedNukaChallengeName(value)).replace(
     /\b1st\b/g,
-    '<span class="classified-nuka-first-symbol" aria-label="first">¼</span>'
+    buildFo76FirstOrdinalMarkup()
   );
+}
+
+function buildClassifiedNukaChallengeNameMarkup(value = "") {
+  return replaceFirstOrdinalWithFo76Markup(value);
 }
 
 function isClassifiedNukaSpanish() {
@@ -18344,6 +18361,9 @@ function applyLanguage(lang, persist = true) {
   renderClassifiedPlayerCountsModal();
   renderClassifiedNukaIntelModal();
   renderClassifiedAxolotlModal();
+  if (typeof window.updateAtomicShopLanguage === "function") {
+    window.updateAtomicShopLanguage();
+  }
   if (elements.classifiedInlineStatus && !state.classifiedDetail.open) {
     elements.classifiedInlineStatus.textContent = t("minerva_detail_loading");
   }

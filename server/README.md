@@ -131,9 +131,31 @@ If your bot and site OAuth use the same Discord application, `DISCORD_BOT_CLIENT
 
 The web service disk and the bot worker disk are separate. They do not share files with each other.
 
+#### Atomic Shop cache
+
+The Atomic Shop browser is routed through the web service instead of loading data and images directly.
+
+- Data endpoints:
+  - `/api/atomic-shop/items-db.json`
+  - `/api/atomic-shop/edidkeywords.json`
+- Image endpoint:
+  - `/api/atomic-shop/assets/...`
+- Cache status:
+  - `/api/atomic-shop/status`
+- Admin-only manual sync:
+  - `POST /api/admin/atomic-shop/sync`
+
+Recommended Render env vars:
+
+- `ATOMIC_SHOP_REMOTE_ORIGIN=`
+- `ATOMIC_SHOP_DATA_TTL_MS=1800000`
+- `ATOMIC_SHOP_FETCH_TIMEOUT_MS=20000`
+
+JSON data refreshes automatically after the TTL. Images are cached lazily the first time a visitor requests them. To preserve the cache across Render restarts/redeploys, attach a persistent disk to the web service and set `STORAGE_DIR` to that disk path.
+
 #### Fresh Render setup with Blueprint
 
-A sample Render blueprint is included at [render.yaml](C:/Users/ohits/Downloads/Fallout-terminal/render.yaml). Use that if you want Render to create both services from scratch.
+A sample Render blueprint is included at [render.yaml](C:/Users/*/Downloads/Fallout-terminal/render.yaml). Use that if you want Render to create both services from scratch.
 
 If you already have existing Render services, treat `render.yaml` as a reference unless you are intentionally replacing your current setup.
 

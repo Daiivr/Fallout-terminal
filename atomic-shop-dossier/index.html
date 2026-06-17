@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#050a06">
+  <title>Atomic Shop Item Dossier | Fallout Codex</title>
+  <meta name="description" content="Standalone Fallout Codex dossier for a shared Atomic Shop database item.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.cdnfonts.com">
+  <link href="https://fonts.cdnfonts.com/css/overseer" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/terminal-favicon.svg">
+  <link rel="stylesheet" href="/css/atomic-shop-dossier.css?v=20260616-dossier-1">
+</head>
+<body>
+  <div class="screen-vignette" aria-hidden="true"></div>
+  <div class="screen-map" aria-hidden="true"></div>
+  <div class="screen-grid" aria-hidden="true"></div>
+  <div class="screen-scanlines" aria-hidden="true"></div>
+  <div class="screen-noise" aria-hidden="true"></div>
+
+  <main class="atomic-dossier-shell">
+    <header class="atomic-dossier-topbar">
+      <div class="atomic-dossier-copy">
+        <p class="atomic-dossier-robco" aria-hidden="true">ROBCO INDUSTRIES (TM) TERMLINK V2.6</p>
+        <p class="atomic-dossier-eyebrow">PUBLIC REQUISITION DOSSIER</p>
+        <h1 id="atomicDossierTitle" class="atomic-dossier-title">ATOMIC SHOP ITEM</h1>
+        <p id="atomicDossierSummary" class="atomic-dossier-summary" aria-live="polite">Loading item record...</p>
+      </div>
+      <aside class="atomic-dossier-side">
+        <span id="atomicDossierStatus" class="atomic-dossier-status" data-state="loading">SYNCING</span>
+        <a class="atomic-dossier-button" href="/">RETURN TO FALLOUT CODEX</a>
+      </aside>
+    </header>
+
+    <section class="atomic-dossier-panel">
+      <div class="atomic-dossier-main">
+        <section class="atomic-dossier-asset">
+          <span class="atomic-dossier-pill">ASSET VIEWER</span>
+          <div class="atomic-dossier-image-frame">
+            <img id="atomicDossierImage" class="atomic-dossier-image" alt="" decoding="async">
+            <p id="atomicDossierNoImage" class="atomic-dossier-noimage" hidden>NO IMAGE AVAILABLE</p>
+          </div>
+          <div id="atomicDossierThumbs" class="atomic-dossier-thumbs"></div>
+        </section>
+
+        <section class="atomic-dossier-record">
+          <span class="atomic-dossier-pill">ITEM RECORD</span>
+          <h2 id="atomicDossierItemName" class="atomic-dossier-item-name">--</h2>
+          <div id="atomicDossierCategories" class="atomic-dossier-categories" hidden></div>
+          <p id="atomicDossierDescription" class="atomic-dossier-description"></p>
+          <div id="atomicDossierDisclaimer" class="atomic-dossier-alert" hidden></div>
+          <p id="atomicDossierIncludes" class="atomic-dossier-includes" hidden></p>
+        </section>
+      </div>
+
+      <section id="atomicDossierDbInfo" class="atomic-dossier-db"></section>
+    </section>
+
+    <footer class="atomic-dossier-footer">
+      <span>Data and images: atomicshop.fyi</span>
+      <a href="https://db.atomicshop.fyi/" target="_blank" rel="noopener">OPEN SOURCE</a>
+    </footer>
+  </main>
+
+  <script src="/js/core/config.js?v=20260616-atomic-shop-dossier-1"></script>
+  <script src="/js/atomic-shop-dossier.js?v=20260616-atomic-shop-dossier-1"></script>
+</body>
+</html>

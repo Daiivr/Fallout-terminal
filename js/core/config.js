@@ -265,3 +265,15 @@ const VISIT_COUNTER_EYE_POINTER_MAX_OFFSET_MOBILE_PX = 1.2;
 const VISIT_COUNTER_EYE_POINTER_EASING = 0.2;
 const VISIT_COUNTER_EYE_POINTER_SETTLE_PX = 0.02;
 
+// Atomic Shop database browser (proxied through our server-side cache).
+const ATOMIC_SHOP_ORIGIN = "/api/atomic-shop/assets";
+const ATOMIC_SHOP_DB_URL = "/api/atomic-shop/items-db.json";
+const ATOMIC_SHOP_KEYWORDS_URL = "/api/atomic-shop/edidkeywords.json";
+const ATOMIC_SHOP_SOURCE_URL = "https://db.atomicshop.fyi/";
+const ATOMIC_SHOP_REPO_URL = "https://github.com/ggmatze/atomic-shop-web";
+const ATOMIC_SHOP_CACHE_KEY = "atomic_shop_db_cache_v1";
+const ATOMIC_SHOP_FILTER_STATE_KEY = "atomic_shop_filter_states_v1";
+const ATOMIC_SHOP_CACHE_TTL_MS = 30 * 60 * 1000;
+const ATOMIC_SHOP_SHARE_PARAM = "atomicShop";
+const ATOMIC_SHOP_RENDER_CHUNK = 120;
+

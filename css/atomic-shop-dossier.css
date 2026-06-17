@@ -1,0 +1,765 @@
+@font-face {
+  font-family: "Fallout76IconTags";
+  src: url("../assets/fonts/Fallout76IconTags_v14.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+}
+
+:root {
+  --bg: #050a06;
+  --fg: #8bff8b;
+  --fg-bright: #b7ffb7;
+  --fg-dim: rgba(139, 255, 139, 0.74);
+  --fg-faint: rgba(139, 255, 139, 0.48);
+  --line: rgba(139, 255, 139, 0.24);
+  --line-strong: rgba(139, 255, 139, 0.4);
+  --warn: #ffe17a;
+  --bad: #ff6f6f;
+  --font-main: "Share Tech Mono", "VT323", "Overseer", ui-monospace, monospace;
+  --font-heading: "VT323", "Share Tech Mono", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  color-scheme: dark;
+  background: var(--bg);
+}
+
+body {
+  height: auto;
+  min-height: 100dvh;
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-main);
+  letter-spacing: 0.02em;
+  background:
+    radial-gradient(980px 620px at 50% 0%, rgba(139, 255, 139, 0.1), transparent 60%),
+    radial-gradient(900px 520px at 92% 100%, rgba(255, 225, 122, 0.055), transparent 62%),
+    var(--bg);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.screen-vignette,
+.screen-map,
+.screen-grid,
+.screen-scanlines,
+.screen-noise {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.screen-vignette {
+  z-index: 1;
+  background:
+    radial-gradient(140% 100% at 50% 45%, transparent 42%, rgba(0, 0, 0, 0.62) 92%),
+    radial-gradient(900px 520px at 50% 22%, rgba(139, 255, 139, 0.11), transparent 58%);
+}
+
+.screen-map {
+  z-index: 0;
+  opacity: 0.13;
+  background:
+    radial-gradient(100% 85% at 52% 46%, rgba(139, 255, 139, 0.14), transparent 72%),
+    linear-gradient(118deg, rgba(139, 255, 139, 0.05), transparent 34% 100%);
+}
+
+.screen-grid {
+  z-index: 1;
+  opacity: 0.18;
+  background-image:
+    linear-gradient(to right, rgba(139, 255, 139, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(139, 255, 139, 0.05) 1px, transparent 1px);
+  background-size: 38px 100%, 100% 26px;
+}
+
+.screen-scanlines {
+  z-index: 2;
+  opacity: 0.5;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0 2px,
+    rgba(0, 0, 0, 0.2) 3px 4px
+  );
+}
+
+.screen-noise {
+  z-index: 3;
+  opacity: 0.07;
+  background-image:
+    radial-gradient(circle at 18% 28%, rgba(139, 255, 139, 0.1) 0 1px, transparent 1.35px),
+    radial-gradient(circle at 64% 72%, rgba(139, 255, 139, 0.08) 0 1px, transparent 1.45px);
+  background-size: 3px 3px, 4px 4px;
+}
+
+.atomic-dossier-shell {
+  position: relative;
+  z-index: 5;
+  width: min(1180px, calc(100% - 24px));
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 8px 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 10px;
+}
+
+.atomic-dossier-topbar,
+.atomic-dossier-panel,
+.atomic-dossier-footer {
+  border: 1px solid rgba(255, 225, 122, 0.3);
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(139, 255, 139, 0.075), rgba(0, 0, 0, 0.24)),
+    rgba(0, 0, 0, 0.28);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.45),
+    0 18px 50px rgba(0, 0, 0, 0.34);
+}
+
+.atomic-dossier-topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+}
+
+.atomic-dossier-copy {
+  min-width: 0;
+}
+
+.atomic-dossier-robco,
+.atomic-dossier-eyebrow,
+.atomic-dossier-summary,
+.atomic-dossier-status,
+.atomic-dossier-button,
+.atomic-dossier-pill,
+.atomic-dossier-db-label,
+.atomic-dossier-footer {
+  text-transform: uppercase;
+}
+
+.atomic-dossier-robco,
+.atomic-dossier-eyebrow {
+  margin: 0 0 4px;
+  color: rgba(255, 239, 175, 0.74);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+
+.atomic-dossier-eyebrow {
+  color: rgba(139, 255, 139, 0.72);
+}
+
+.atomic-dossier-title {
+  margin: 0;
+  color: #fff4cb;
+  font-family: var(--font-heading);
+  font-size: clamp(1.65rem, 3vw, 2.65rem);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  line-height: 0.9;
+  text-shadow: 0 0 22px rgba(255, 225, 122, 0.2);
+}
+
+.atomic-dossier-summary {
+  max-width: 72ch;
+  margin: 7px 0 0;
+  color: rgba(183, 255, 183, 0.75);
+  font-size: 11.5px;
+  line-height: 1.28;
+  text-transform: none;
+}
+
+.atomic-dossier-side {
+  display: grid;
+  align-content: start;
+  justify-items: end;
+  gap: 8px;
+}
+
+.atomic-dossier-status,
+.atomic-dossier-button {
+  appearance: none;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--fg-bright);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  padding: 9px 12px 8px;
+  text-decoration: none;
+  transition: transform 120ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.atomic-dossier-button:hover,
+.atomic-dossier-button:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background: rgba(139, 255, 139, 0.08);
+  box-shadow: 0 0 16px rgba(139, 255, 139, 0.1);
+  outline: none;
+}
+
+.atomic-dossier-status[data-state="error"] {
+  border-color: rgba(255, 111, 111, 0.48);
+  color: var(--bad);
+}
+
+.atomic-dossier-panel {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 9px;
+  padding: 15px;
+  overflow: visible;
+}
+
+.atomic-dossier-main {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.72fr) minmax(0, 1.28fr);
+  gap: 14px;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.atomic-dossier-asset,
+.atomic-dossier-record,
+.atomic-dossier-db {
+  position: relative;
+  overflow: visible;
+  border: 1px solid rgba(139, 255, 139, 0.26);
+  border-radius: 9px;
+  background:
+    linear-gradient(180deg, rgba(139, 255, 139, 0.045), rgba(0, 0, 0, 0.22)),
+    rgba(0, 0, 0, 0.24);
+}
+
+.atomic-dossier-asset,
+.atomic-dossier-record {
+  min-height: 0;
+  padding: 14px 12px 10px;
+}
+
+.atomic-dossier-asset {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.atomic-dossier-pill,
+.atomic-dossier-db-label {
+  position: absolute;
+  top: -10px;
+  left: 14px;
+  padding: 3px 8px 2px;
+  border: 1px solid rgba(139, 255, 139, 0.28);
+  border-radius: 999px;
+  background: rgba(3, 14, 6, 0.98);
+  color: rgba(139, 255, 139, 0.78);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.atomic-dossier-image-frame {
+  position: relative;
+  min-height: 0;
+  height: auto;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(139, 255, 139, 0.3);
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(to bottom, rgba(139, 255, 139, 0.045) 0 1px, transparent 1px 6px),
+    radial-gradient(80% 75% at 50% 50%, rgba(139, 255, 139, 0.16), transparent 66%),
+    rgba(0, 0, 0, 0.58);
+}
+
+.atomic-dossier-image-frame::before,
+.atomic-dossier-image-frame::after {
+  content: "";
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+  border-color: rgba(255, 225, 122, 0.42);
+}
+
+.atomic-dossier-image-frame::before {
+  top: 10px;
+  left: 10px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+
+.atomic-dossier-image-frame::after {
+  right: 10px;
+  bottom: 10px;
+  border-right: 1px solid;
+  border-bottom: 1px solid;
+}
+
+.atomic-dossier-image {
+  max-width: 88%;
+  max-height: 88%;
+  object-fit: contain;
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.46));
+}
+
+.atomic-dossier-noimage {
+  margin: 0;
+  color: var(--fg-faint);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+.atomic-dossier-thumbs {
+  display: flex;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 0;
+  overflow-x: auto;
+}
+
+.atomic-dossier-thumb {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(139, 255, 139, 0.24);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.48);
+  padding: 2px;
+  cursor: pointer;
+}
+
+.atomic-dossier-thumb.is-active {
+  border-color: rgba(255, 225, 122, 0.72);
+  box-shadow: 0 0 0 1px rgba(255, 225, 122, 0.34);
+}
+
+.atomic-dossier-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.atomic-dossier-item-name {
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 225, 122, 0.16);
+  color: var(--fg-bright);
+  font-family: var(--font-heading);
+  font-size: clamp(1.48rem, 2.55vw, 2.22rem);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 0.95;
+  text-shadow: 0 0 16px rgba(139, 255, 139, 0.18);
+}
+
+.atomic-dossier-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.atomic-dossier-category {
+  border: 1px solid rgba(139, 255, 139, 0.31);
+  border-radius: 999px;
+  background: rgba(139, 255, 139, 0.07);
+  color: rgba(183, 255, 183, 0.88);
+  font-size: 10px;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  padding: 4px 10px 3px;
+}
+
+.atomic-dossier-description {
+  margin: 11px 0 0;
+  color: rgba(183, 255, 183, 0.84);
+  font-size: 12.5px;
+  line-height: 1.32;
+}
+
+.atomic-dossier-alert {
+  margin-top: 10px;
+  border: 1px solid rgba(255, 225, 122, 0.36);
+  border-radius: 9px;
+  background: rgba(255, 225, 122, 0.055);
+  color: rgba(183, 255, 183, 0.8);
+  padding: 8px 10px;
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+
+.atomic-dossier-alert strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--warn);
+  font-size: 11px;
+  letter-spacing: 0.095em;
+  text-transform: uppercase;
+}
+
+.atomic-dossier-includes {
+  margin: 10px 0 0;
+  color: var(--fg-dim);
+  font-size: 13px;
+  line-height: 1.34;
+}
+
+.atomic-dossier-db {
+  margin-top: 0;
+  padding: 17px 10px 9px;
+}
+
+.atomic-dossier-db-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid rgba(139, 255, 139, 0.16);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.atomic-dossier-db-cell {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-right: 1px solid rgba(139, 255, 139, 0.13);
+  border-bottom: 1px solid rgba(139, 255, 139, 0.13);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 8px 10px;
+}
+
+.atomic-dossier-db-cell.is-wide {
+  grid-column: 1 / -1;
+}
+
+.atomic-dossier-db-label-text {
+  color: rgba(139, 255, 139, 0.54);
+  font-size: 10px;
+  letter-spacing: 0.085em;
+  text-transform: uppercase;
+}
+
+.atomic-dossier-db-value {
+  color: var(--fg-bright);
+  font-family: var(--font-main);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.atomic-dossier-first-symbol {
+  display: inline-block;
+  margin: 0 0.18em;
+  color: rgba(255, 239, 175, 0.94);
+  font-family: "Fallout76IconTags", var(--font-main);
+  font-size: 1.38em;
+  font-weight: 400;
+  line-height: 1;
+  transform: translateY(0.08em);
+}
+
+.atomic-dossier-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  color: rgba(139, 255, 139, 0.54);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+
+.atomic-dossier-footer a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--fg-bright);
+  padding: 7px 11px 6px;
+  text-decoration: none;
+  transition: transform 120ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.atomic-dossier-footer a:hover,
+.atomic-dossier-footer a:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background: rgba(139, 255, 139, 0.08);
+  box-shadow: 0 0 16px rgba(139, 255, 139, 0.1);
+  outline: none;
+}
+
+/* Final dossier polish: calmer hierarchy, readable records, less empty panel space. */
+body {
+  background:
+    radial-gradient(980px 560px at 48% 0%, rgba(139, 255, 139, 0.1), transparent 62%),
+    radial-gradient(760px 420px at 94% 100%, rgba(255, 225, 122, 0.065), transparent 62%),
+    linear-gradient(180deg, rgba(5, 14, 7, 0.96), rgba(2, 7, 4, 0.98)),
+    var(--bg);
+}
+
+.atomic-dossier-shell {
+  width: min(1160px, calc(100% - 24px));
+}
+
+.atomic-dossier-topbar,
+.atomic-dossier-panel,
+.atomic-dossier-footer {
+  border-radius: 10px;
+  background:
+    radial-gradient(680px 220px at 8% 0%, rgba(255, 225, 122, 0.07), transparent 70%),
+    linear-gradient(135deg, rgba(139, 255, 139, 0.065), rgba(0, 0, 0, 0.28)),
+    rgba(0, 0, 0, 0.28);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.45),
+    0 16px 42px rgba(0, 0, 0, 0.34);
+}
+
+.atomic-dossier-topbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  padding: 12px 14px;
+}
+
+.atomic-dossier-title {
+  letter-spacing: 0.06em;
+  line-height: 0.94;
+}
+
+.atomic-dossier-summary {
+  max-width: 68ch;
+}
+
+.atomic-dossier-side {
+  min-width: 176px;
+  gap: 9px;
+}
+
+.atomic-dossier-status,
+.atomic-dossier-button,
+.atomic-dossier-footer a {
+  min-width: 156px;
+  border-color: rgba(139, 255, 139, 0.3);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(139, 255, 139, 0.07), rgba(0, 0, 0, 0.18)),
+    rgba(0, 0, 0, 0.28);
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-align: center;
+}
+
+.atomic-dossier-status[data-state="ready"] {
+  border-color: rgba(139, 255, 139, 0.44);
+  background:
+    linear-gradient(180deg, rgba(139, 255, 139, 0.12), rgba(0, 0, 0, 0.18)),
+    rgba(0, 0, 0, 0.28);
+}
+
+.atomic-dossier-panel {
+  gap: 12px;
+  padding: 14px;
+}
+
+.atomic-dossier-main {
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
+  align-items: start;
+}
+
+.atomic-dossier-asset,
+.atomic-dossier-record,
+.atomic-dossier-db {
+  border-radius: 8px;
+  background:
+    radial-gradient(420px 180px at 12% 0%, rgba(139, 255, 139, 0.08), transparent 72%),
+    linear-gradient(180deg, rgba(139, 255, 139, 0.04), rgba(0, 0, 0, 0.24)),
+    rgba(0, 0, 0, 0.24);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.38),
+    0 10px 24px rgba(0, 0, 0, 0.16);
+}
+
+.atomic-dossier-asset {
+  grid-template-rows: auto auto;
+}
+
+.atomic-dossier-image-frame {
+  height: clamp(230px, 32vh, 310px);
+}
+
+.atomic-dossier-image {
+  max-width: 86%;
+  max-height: 86%;
+}
+
+.atomic-dossier-record {
+  padding: 20px 16px 16px;
+}
+
+.atomic-dossier-record .atomic-dossier-pill {
+  left: 16px;
+}
+
+.atomic-dossier-item-name {
+  padding-bottom: 9px;
+  font-size: clamp(1.56rem, 2.55vw, 2.18rem);
+  line-height: 1;
+}
+
+.atomic-dossier-category {
+  background:
+    linear-gradient(180deg, rgba(139, 255, 139, 0.1), rgba(0, 0, 0, 0.08)),
+    rgba(139, 255, 139, 0.04);
+  color: rgba(183, 255, 183, 0.9);
+  letter-spacing: 0.065em;
+  padding: 4px 9px 3px;
+}
+
+.atomic-dossier-description {
+  max-width: 66ch;
+  margin-top: 12px;
+  color: rgba(183, 255, 183, 0.86);
+  line-height: 1.42;
+}
+
+.atomic-dossier-alert {
+  max-width: 74ch;
+  margin-top: 12px;
+  border-color: rgba(255, 225, 122, 0.38);
+  border-radius: 8px;
+  background:
+    radial-gradient(260px 80px at 0% 0%, rgba(255, 225, 122, 0.11), transparent 72%),
+    rgba(255, 225, 122, 0.05);
+  color: rgba(183, 255, 183, 0.82);
+  padding: 9px 11px;
+  line-height: 1.36;
+}
+
+.atomic-dossier-alert strong {
+  font-size: 10px;
+  letter-spacing: 0.11em;
+}
+
+.atomic-dossier-db {
+  padding: 18px 12px 12px;
+}
+
+.atomic-dossier-db-grid {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1fr);
+  border-color: rgba(139, 255, 139, 0.2);
+}
+
+.atomic-dossier-db-cell {
+  gap: 4px;
+  padding: 9px 11px;
+  background:
+    linear-gradient(180deg, rgba(139, 255, 139, 0.025), rgba(0, 0, 0, 0.08)),
+    rgba(0, 0, 0, 0.18);
+}
+
+.atomic-dossier-db-label-text {
+  color: rgba(139, 255, 139, 0.58);
+  font-size: 9.5px;
+}
+
+.atomic-dossier-db-value {
+  font-size: 12px;
+  line-height: 1.42;
+}
+
+.atomic-dossier-footer {
+  align-items: center;
+}
+
+@media (max-width: 760px) {
+  html {
+    height: auto;
+  }
+
+  body {
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .atomic-dossier-shell {
+    width: min(100% - 16px, 680px);
+    height: auto;
+    min-height: 100dvh;
+    padding: 10px 0;
+  }
+
+  .atomic-dossier-topbar,
+  .atomic-dossier-main,
+  .atomic-dossier-footer {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .atomic-dossier-side {
+    justify-items: stretch;
+  }
+
+  .atomic-dossier-button,
+  .atomic-dossier-status {
+    text-align: center;
+  }
+
+  .atomic-dossier-main {
+    display: grid;
+  }
+
+  .atomic-dossier-panel {
+    display: block;
+  }
+
+  .atomic-dossier-db {
+    margin-top: 14px;
+  }
+
+  .atomic-dossier-image-frame {
+    height: clamp(230px, 48vh, 360px);
+  }
+
+  .atomic-dossier-db-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .atomic-dossier-db-cell,
+  .atomic-dossier-db-cell:nth-child(1),
+  .atomic-dossier-db-cell:nth-child(2),
+  .atomic-dossier-db-cell:nth-child(3),
+  .atomic-dossier-db-cell:nth-child(4),
+  .atomic-dossier-db-cell:nth-child(5),
+  .atomic-dossier-db-cell:nth-child(6),
+  .atomic-dossier-db-cell:nth-child(7) {
+    grid-column: 1;
+  }
+
+  .atomic-dossier-db-cell.is-wide {
+    grid-column: 1;
+  }
+
+  .atomic-dossier-db-value {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+}
