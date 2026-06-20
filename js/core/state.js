@@ -1,6 +1,7 @@
 let filesLiveIdentityPollTimer = null;
 let filesLiveIdentityPollInFlight = false;
 let filesAdminRequestsFeedbackTimer = null;
+let filesPublicSharesFeedbackTimer = null;
 let filesUploadFeedbackTimer = null;
 let filesDownloadRefreshTimer = null;
 let filesDisclaimerAcceptTransitionTimer = null;
@@ -190,6 +191,26 @@ const state = {
       fileId: "",
       fileName: "",
       kind: ""
+    },
+    shareModal: {
+      open: false,
+      fileId: "",
+      fileName: "",
+      mode: "choice",
+      busy: false,
+      feedback: "",
+      feedbackKind: "",
+      sourceButton: null
+    },
+    publicShares: {
+      loading: false,
+      list: [],
+      adminList: [],
+      maxActive: 3,
+      mode: "mine",
+      message: "",
+      messageKind: "",
+      busyActionKey: ""
     },
     editModal: {
       fileId: "",

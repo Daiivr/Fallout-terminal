@@ -40,7 +40,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="preload" as="image" href="assets/images/minerva-plan-fallback.png" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="css/styles.css?v=20260619-drops-edge-v2" />
+  <link rel="stylesheet" href="css/styles.css?v=20260620-public-file-share-v4" />
 </head>
 <body class="is-booting">
   <noscript>
@@ -512,6 +512,55 @@
         </div>
       </div>
     </div>
+    <div id="filesShareOverlay" class="files-delete-overlay files-share-overlay" aria-hidden="true">
+      <div
+        class="files-delete-core files-share-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesShareTitle"
+        aria-describedby="filesShareMessage"
+      >
+        <p id="filesShareBadge" class="files-share-badge">SHARE PROTOCOL</p>
+        <p id="filesShareTitle" class="files-delete-title">CHOOSE SHARE TYPE</p>
+        <p id="filesShareMessage" class="files-delete-message">
+          Private links require an authorized account. Public links require a 4 digit code and expire after one download.
+        </p>
+        <div class="files-share-options" role="group" aria-label="Share type">
+          <button id="filesSharePrivateBtn" class="files-share-option" type="button">
+            <span id="filesSharePrivateTitle" class="files-share-option-title">PRIVATE</span>
+            <span id="filesSharePrivateBody" class="files-share-option-body">Requires an authorized account on this page to open the file.</span>
+          </button>
+          <button id="filesSharePublicBtn" class="files-share-option" type="button">
+            <span id="filesSharePublicTitle" class="files-share-option-title">PUBLIC LIMITED</span>
+            <span id="filesSharePublicBody" class="files-share-option-body">Anyone with the link and code can download once.</span>
+          </button>
+        </div>
+        <form id="filesSharePublicForm" class="files-share-public-form" hidden>
+          <label id="filesShareCodeLabel" class="files-share-code-label" for="filesShareCodeInput">4 DIGIT CODE</label>
+          <div class="files-share-code-row">
+            <input
+              id="filesShareCodeInput"
+              class="files-share-code-input"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              pattern="\d{4}"
+              maxlength="4"
+              required
+              placeholder="0000"
+            />
+            <button id="filesSharePublicCreateBtn" class="files-btn" type="submit">CREATE PUBLIC LINK</button>
+          </div>
+          <p id="filesSharePublicHint" class="files-share-public-hint">
+            Send this code separately. After one successful download, the public link becomes invalid.
+          </p>
+        </form>
+        <p id="filesShareFeedback" class="files-share-feedback" aria-live="polite" hidden></p>
+        <div class="files-delete-actions files-share-actions">
+          <button id="filesShareCancelBtn" class="files-btn" type="button">CANCEL</button>
+        </div>
+      </div>
+    </div>
     <div id="filesBotAdminLeaveOverlay" class="files-delete-overlay files-bot-admin-leave-overlay" aria-hidden="true">
       <div
         class="files-delete-core files-bot-admin-leave-core"
@@ -894,6 +943,48 @@
               </p>
             </div>
             <div id="filesAdminRequestsList" class="files-admin-requests-list"></div>
+          </section>
+        </article>
+      </div>
+    </div>
+    <div id="filesPublicSharesOverlay" class="files-admin-modal-overlay" aria-hidden="true">
+      <div
+        class="files-admin-modal-core files-public-shares-modal-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesPublicSharesTitle"
+        aria-describedby="filesPublicSharesHint"
+      >
+        <div class="files-admin-modal-head">
+          <button id="filesPublicSharesModalCloseBtn" class="files-btn files-admin-modal-close" type="button">CLOSE</button>
+        </div>
+        <article id="filesPublicSharesPanel" class="panel files-public-shares-panel" hidden>
+          <div class="files-public-shares-hero">
+            <div class="files-public-shares-hero-copy">
+              <p id="filesPublicSharesBadge" class="files-public-shares-badge">PUBLIC LINK VAULT</p>
+              <h2 id="filesPublicSharesTitle">ACTIVE PUBLIC LINKS</h2>
+              <p id="filesPublicSharesHint" class="files-public-shares-hint">
+                Open, copy, or revoke one-time public download links created from this terminal.
+              </p>
+            </div>
+          </div>
+          <section class="files-public-shares-console-shell" aria-labelledby="filesPublicSharesConsoleLabel">
+            <div class="files-public-shares-shell-head">
+              <div>
+                <p id="filesPublicSharesConsoleLabel" class="files-public-shares-shell-label">LINK REGISTRY</p>
+                <p id="filesPublicSharesConsoleHint" class="files-public-shares-shell-hint">
+                  Public links expire after one successful download or three failed code attempts.
+                </p>
+              </div>
+              <div class="files-public-shares-shell-actions">
+                <p id="filesPublicSharesStateBadge" class="files-public-shares-state-badge">0 / 3 ACTIVE</p>
+                <button id="filesPublicSharesRefreshBtn" class="files-btn files-public-shares-refresh" type="button">
+                  REFRESH
+                </button>
+              </div>
+            </div>
+            <p id="filesPublicSharesFeedback" class="files-upload-feedback files-public-shares-feedback" aria-live="polite" hidden></p>
+            <div id="filesPublicSharesList" class="files-public-shares-list"></div>
           </section>
         </article>
       </div>
@@ -1394,6 +1485,31 @@
             <button id="filesSessionLogoutBtn" class="files-btn" type="button">LOGOUT</button>
           </article>
 
+          <article id="filesPublicSharesToolsPanel" class="panel files-admin-tools-panel files-public-shares-tools-panel" hidden>
+            <div class="files-admin-tools-head">
+              <h2 id="filesPublicSharesToolsTitle">PUBLIC LINKS</h2>
+              <p id="filesPublicSharesToolsHint" class="files-admin-tools-hint">Review your active limited download links.</p>
+            </div>
+            <div class="files-admin-tools-actions">
+              <button
+                id="filesPublicSharesModalBtn"
+                class="files-btn files-admin-tools-btn files-public-shares-modal-btn"
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded="false"
+                aria-controls="filesPublicSharesOverlay"
+              >
+                <span class="files-admin-tools-btn-copy">
+                  <span class="files-admin-tools-btn-topline">
+                    <span id="filesPublicSharesModalBtnText" class="files-admin-tools-btn-title">PUBLIC LINKS</span>
+                    <span id="filesPublicSharesCountBadge" class="files-access-control-pending-badge files-public-shares-count-badge" hidden>0</span>
+                  </span>
+                  <span id="filesPublicSharesModalBtnHint" class="files-admin-tools-btn-hint">Open and revoke active limited downloads.</span>
+                </span>
+              </button>
+            </div>
+          </article>
+
           <article id="filesAdminToolsPanel" class="panel files-admin-tools-panel" hidden>
             <div class="files-admin-tools-head">
               <h2 id="filesAdminToolsTitle">ADMIN TOOLS</h2>
@@ -1429,6 +1545,21 @@
                     <span id="filesAccessControlPendingBadge" class="files-access-control-pending-badge" hidden>0</span>
                   </span>
                   <span id="filesAccessControlModalBtnHint" class="files-admin-tools-btn-hint">Review pending users and live permissions.</span>
+                </span>
+              </button>
+              <button
+                id="filesAdminPublicSharesModalBtn"
+                class="files-btn files-admin-tools-btn files-admin-public-shares-modal-btn"
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded="false"
+                aria-controls="filesPublicSharesOverlay"
+              >
+                <span class="files-admin-tools-btn-copy">
+                  <span class="files-admin-tools-btn-topline">
+                    <span id="filesAdminPublicSharesModalBtnText" class="files-admin-tools-btn-title">ALL PUBLIC LINKS</span>
+                  </span>
+                  <span id="filesAdminPublicSharesModalBtnHint" class="files-admin-tools-btn-hint">Audit every active public link and revoke access.</span>
                 </span>
               </button>
             </div>
@@ -1480,6 +1611,9 @@
             <h3 id="filesRestrictedTitle" class="files-restricted-title">ARCHIVE ACCESS IS CURRENTLY BLOCKED</h3>
             <p id="filesRestrictedSubtitle" class="files-restricted-subtitle">
               This account is authenticated but not approved for file index access.
+            </p>
+            <p id="filesRestrictedPublicShareNote" class="files-restricted-public-note">
+              If you do not have an authorized account, ask the person who shared this link for a public limited-download link.
             </p>
             <dl class="files-restricted-matrix">
               <div class="files-restricted-row">
@@ -2139,13 +2273,13 @@
 
   <script src="data/minerva-lists.js"></script>
   <script src="data/minerva-detail-fallback.js?v=20260408-minerva-mod-workshop-v5"></script>
-  <script src="js/i18n/en.js?v=20260425-temp-shares-v1"></script>
-  <script src="js/i18n/es.js?v=20260425-temp-shares-v1"></script>
+  <script src="js/i18n/en.js?v=20260620-public-file-share-v1"></script>
+  <script src="js/i18n/es.js?v=20260620-public-file-share-v1"></script>
   <script src="js/i18n/index.js?v=20260318-share-stop-alert-copy"></script>
-  <script src="js/dom/elements.js?v=20260425-temp-shares-v3"></script>
+  <script src="js/dom/elements.js?v=20260620-public-file-share-v1"></script>
   <script src="js/core/config.js?v=20260617-atomic-shop-r2-v1"></script>
-  <script src="js/core/state.js"></script>
-  <script src="js/app.js?v=20260612-boot-log-mobile-1"></script>
+  <script src="js/core/state.js?v=20260620-public-file-share-v2"></script>
+  <script src="js/app.js?v=20260620-public-file-share-v4"></script>
   <script src="js/atomic-shop.js?v=20260617-atomic-filter-tabs-v1"></script>
 </body>
 </html>

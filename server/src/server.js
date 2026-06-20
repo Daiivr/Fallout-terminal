@@ -26,6 +26,7 @@ const UPLOAD_DIR = path.join(STORAGE_DIR, "uploads");
 const TEMP_SHARE_UPLOAD_DIR = path.join(STORAGE_DIR, "temp-share-uploads");
 const METADATA_PATH = path.join(STORAGE_DIR, "files-metadata.json");
 const TEMP_SHARES_PATH = path.join(STORAGE_DIR, "temp-shares.json");
+const PUBLIC_FILE_SHARES_PATH = path.join(STORAGE_DIR, "public-file-shares.json");
 const EXHAUSTED_SLUGS_PATH = path.join(STORAGE_DIR, "exhausted-slugs.json");
 const ACCESS_REQUESTS_PATH = path.join(STORAGE_DIR, "access-requests.json");
 const VISIT_COUNTER_PATH = path.join(STORAGE_DIR, "visit-counter.json");
@@ -100,6 +101,11 @@ const FILE_SHARE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const FILE_SHARE_META_MAX_CHARS = 260;
 const FILE_SHARE_META_SUMMARY_MAX_CHARS = 120;
 const FILE_SHARE_META_EXCERPT_MAX_CHARS = 150;
+const PUBLIC_FILE_SHARE_ROUTE_PREFIX = "/public-share/";
+const PUBLIC_FILE_SHARE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const PUBLIC_FILE_SHARE_CODE_PATTERN = /^\d{4}$/;
+const PUBLIC_FILE_SHARE_MAX_FAILED_CODE_ATTEMPTS = 3;
+const PUBLIC_FILE_SHARE_MAX_ACTIVE_PER_USER = 3;
 const TEMP_SHARE_ROUTE_PREFIX = "/drops/";
 const TEMP_SHARE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const TEMP_SHARE_VIRUS_STATUS = Object.freeze({
@@ -246,6 +252,9 @@ if (!fs.existsSync(METADATA_PATH)) {
 }
 if (!fs.existsSync(TEMP_SHARES_PATH)) {
   fs.writeFileSync(TEMP_SHARES_PATH, "[]\n", "utf8");
+}
+if (!fs.existsSync(PUBLIC_FILE_SHARES_PATH)) {
+  fs.writeFileSync(PUBLIC_FILE_SHARES_PATH, "[]\n", "utf8");
 }
 if (!fs.existsSync(EXHAUSTED_SLUGS_PATH)) {
   fs.writeFileSync(EXHAUSTED_SLUGS_PATH, "{}\n", "utf8");
@@ -1563,6 +1572,29 @@ function getExhaustedSlugLang(slug) {
   return "en";
 }
 
+function getExhaustedPublicFileShareKey(slug) {
+  const normalized = normalizePublicFileShareSlugValue(slug);
+  return normalized ? `public:${normalized}` : "";
+}
+
+function recordExhaustedPublicFileShareSlug(slug, lang) {
+  const key = getExhaustedPublicFileShareKey(slug);
+  if (!key) {
+    return;
+  }
+  recordExhaustedTempShareSlug(key, lang);
+}
+
+function isExhaustedPublicFileShareSlug(slug) {
+  const key = getExhaustedPublicFileShareKey(slug);
+  return Boolean(key && isExhaustedTempShareSlug(key));
+}
+
+function getExhaustedPublicFileShareSlugLang(slug) {
+  const key = getExhaustedPublicFileShareKey(slug);
+  return key ? getExhaustedSlugLang(key) : "en";
+}
+
 function tryLockTempShareMutation(shareId) {
   const normalizedShareId = String(shareId || "").trim().toLowerCase();
   if (!normalizedShareId || activeTempShareMutationIds.has(normalizedShareId)) {
@@ -1762,6 +1794,21 @@ function isValidFileShareSlug(value) {
   return FILE_SHARE_SLUG_PATTERN.test(String(value || "").trim());
 }
 
+function normalizePublicFileShareSlugValue(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 96);
+}
+
+function isValidPublicFileShareSlug(value) {
+  return PUBLIC_FILE_SHARE_SLUG_PATTERN.test(String(value || "").trim());
+}
+
 function stripFileShareExtension(name) {
   const value = String(name || "").trim();
   if (!value) {
@@ -1784,6 +1831,253 @@ function buildFileShareSlug(entry) {
   const slugBase = normalizeFileShareSlugValue(stableName) || "shared-file";
   const shortId = normalized.id.replace(/-/g, "").slice(0, 8);
   return shortId ? `${slugBase}-${shortId}` : slugBase;
+}
+
+function hashPublicFileShareCode(code, salt) {
+  const normalizedCode = String(code || "").trim();
+  const normalizedSalt = String(salt || "").trim();
+  if (!PUBLIC_FILE_SHARE_CODE_PATTERN.test(normalizedCode) || !normalizedSalt) {
+    return "";
+  }
+  return crypto
+    .createHash("sha256")
+    .update(`${normalizedSalt}:${normalizedCode}`, "utf8")
+    .digest("hex");
+}
+
+function verifyPublicFileShareCode(entry, code) {
+  const normalized = normalizePublicFileShareEntry(entry);
+  const normalizedCode = String(code || "").trim();
+  if (!normalized || !PUBLIC_FILE_SHARE_CODE_PATTERN.test(normalizedCode)) {
+    return false;
+  }
+
+  const expected = Buffer.from(normalized.codeHash, "hex");
+  const actual = Buffer.from(hashPublicFileShareCode(normalizedCode, normalized.codeSalt), "hex");
+  return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+}
+
+function normalizePublicFileShareEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const id = String(entry.id || "").trim().toLowerCase();
+  const fileId = String(entry.fileId || "").trim().toLowerCase();
+  const codeSalt = String(entry.codeSalt || "").trim();
+  const codeHash = String(entry.codeHash || "").trim().toLowerCase();
+  const name = sanitizeDisplayFilename(entry.name || "");
+  if (
+    !FILE_ID_PATTERN.test(id)
+    || !FILE_ID_PATTERN.test(fileId)
+    || !codeSalt
+    || !/^[a-f0-9]{64}$/i.test(codeHash)
+    || !name
+  ) {
+    return null;
+  }
+
+  const createdAt = String(entry.createdAt || "").trim() || new Date(0).toISOString();
+  const downloadedAt = String(entry.downloadedAt || "").trim();
+  const downloadCount = parseOptionalPositiveInteger(entry.downloadCount, 0);
+  const failedCodeAttempts = parseOptionalPositiveInteger(entry.failedCodeAttempts, 0);
+  const code = PUBLIC_FILE_SHARE_CODE_PATTERN.test(String(entry.code || "").trim())
+    ? String(entry.code || "").trim()
+    : "";
+  const langRaw = String(entry.lang || "").trim().toLowerCase();
+
+  return {
+    id,
+    fileId,
+    name,
+    displayName: sanitizeFileDisplayName(entry.displayName) || name,
+    mimeType: String(entry.mimeType || "application/octet-stream").trim() || "application/octet-stream",
+    size: Math.max(0, Number(entry.size) || 0),
+    code,
+    codeSalt,
+    codeHash,
+    createdAt,
+    downloadedAt,
+    downloadCount,
+    failedCodeAttempts,
+    createdByDiscordId: String(entry.createdByDiscordId || "").trim(),
+    createdBy: String(entry.createdBy || "").trim(),
+    lang: langRaw === "es" ? "es" : "en"
+  };
+}
+
+function readPublicFileShareStore() {
+  try {
+    const raw = fs.readFileSync(PUBLIC_FILE_SHARES_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed
+      .map((entry) => normalizePublicFileShareEntry(entry))
+      .filter(Boolean);
+  } catch (error) {
+    console.error("[public-file-shares] read error:", error);
+    return [];
+  }
+}
+
+function writePublicFileShareStore(entries) {
+  const tempPath = `${PUBLIC_FILE_SHARES_PATH}.tmp`;
+  const payload = JSON.stringify(Array.isArray(entries) ? entries : [], null, 2);
+  fs.writeFileSync(tempPath, `${payload}\n`, "utf8");
+  fs.renameSync(tempPath, PUBLIC_FILE_SHARES_PATH);
+}
+
+function buildPublicFileShareSlug(entry) {
+  const normalized = normalizePublicFileShareEntry(entry);
+  if (!normalized) {
+    return "";
+  }
+
+  const stableName = stripFileShareExtension(normalized.displayName || normalized.name) || "public-file";
+  const slugBase = normalizePublicFileShareSlugValue(stableName) || "public-file";
+  const shortId = normalized.id.replace(/-/g, "").slice(0, 8);
+  return shortId ? `${slugBase}-${shortId}` : slugBase;
+}
+
+function buildPublicFileSharePath(shareSlug) {
+  const normalizedSlug = normalizePublicFileShareSlugValue(shareSlug);
+  if (!isValidPublicFileShareSlug(normalizedSlug)) {
+    return PUBLIC_FILE_SHARE_ROUTE_PREFIX;
+  }
+  return `${PUBLIC_FILE_SHARE_ROUTE_PREFIX}${encodeURIComponent(normalizedSlug)}`;
+}
+
+function getPublicFileShareActiveLimitMessage(lang) {
+  return lang === "es"
+    ? "Ya alcanzaste el maximo de 3 enlaces publicos activos. Borra uno y vuelve a intentarlo."
+    : "You already reached the maximum of 3 active public links. Delete one and try again.";
+}
+
+function buildPublicFileShareListEntry(entry, req) {
+  const normalized = normalizePublicFileShareEntry(entry);
+  if (!normalized) {
+    return null;
+  }
+
+  const slug = buildPublicFileShareSlug(normalized);
+  const sharePath = buildPublicFileSharePath(slug);
+  return {
+    id: normalized.id,
+    fileId: normalized.fileId,
+    name: normalized.name,
+    displayName: normalized.displayName || normalized.name,
+    mimeType: normalized.mimeType,
+    size: normalized.size,
+    sizeLabel: formatFileSizeForMeta(normalized.size) || "--",
+    code: normalized.code,
+    createdAt: normalized.createdAt,
+    failedCodeAttempts: normalized.failedCodeAttempts,
+    remainingCodeAttempts: Math.max(0, PUBLIC_FILE_SHARE_MAX_FAILED_CODE_ATTEMPTS - normalized.failedCodeAttempts),
+    createdBy: normalized.createdBy,
+    createdByDiscordId: normalized.createdByDiscordId,
+    sharePath,
+    shareUrl: buildAbsoluteSiteUrl(req, sharePath)
+  };
+}
+
+function resolvePublicFileShareBySlug(shareSlug) {
+  const normalizedSlug = normalizePublicFileShareSlugValue(shareSlug);
+  if (!isValidPublicFileShareSlug(normalizedSlug)) {
+    return null;
+  }
+  return readPublicFileShareStore().find((entry) => buildPublicFileShareSlug(entry) === normalizedSlug) || null;
+}
+
+const activePublicFileShareMutationIds = new Set();
+const publicFileShareDownloadTokens = new Map();
+const PUBLIC_FILE_SHARE_DOWNLOAD_TOKEN_TTL_MS = 2 * 60 * 1000;
+
+function tryLockPublicFileShareMutation(shareId) {
+  const normalizedShareId = String(shareId || "").trim().toLowerCase();
+  if (!normalizedShareId || activePublicFileShareMutationIds.has(normalizedShareId)) {
+    return false;
+  }
+  activePublicFileShareMutationIds.add(normalizedShareId);
+  return true;
+}
+
+function unlockPublicFileShareMutation(shareId) {
+  const normalizedShareId = String(shareId || "").trim().toLowerCase();
+  if (!normalizedShareId) {
+    return;
+  }
+  activePublicFileShareMutationIds.delete(normalizedShareId);
+}
+
+function prunePublicFileShareDownloadTokens(nowMs = Date.now()) {
+  for (const [token, entry] of publicFileShareDownloadTokens.entries()) {
+    const expiresAt = Number(entry?.expiresAt || 0);
+    if (!Number.isFinite(expiresAt) || expiresAt <= nowMs) {
+      publicFileShareDownloadTokens.delete(token);
+    }
+  }
+}
+
+function createPublicFileShareDownloadToken({ storedPath, responseName, responseType }) {
+  prunePublicFileShareDownloadTokens();
+  const token = crypto.randomBytes(24).toString("hex");
+  publicFileShareDownloadTokens.set(token, {
+    storedPath: String(storedPath || ""),
+    responseName: sanitizeDisplayFilename(responseName || "download") || "download",
+    responseType: String(responseType || "application/octet-stream").trim() || "application/octet-stream",
+    expiresAt: Date.now() + PUBLIC_FILE_SHARE_DOWNLOAD_TOKEN_TTL_MS
+  });
+  return token;
+}
+
+function consumePublicFileShareDownloadToken(token) {
+  prunePublicFileShareDownloadTokens();
+  const normalizedToken = String(token || "").trim();
+  if (!/^[a-f0-9]{48}$/i.test(normalizedToken)) {
+    return null;
+  }
+  const entry = publicFileShareDownloadTokens.get(normalizedToken) || null;
+  publicFileShareDownloadTokens.delete(normalizedToken);
+  return entry;
+}
+
+function deletePublicFileShareById(shareId) {
+  const normalizedShareId = String(shareId || "").trim().toLowerCase();
+  if (!FILE_ID_PATTERN.test(normalizedShareId)) {
+    return { ok: false, reason: "invalid_id" };
+  }
+
+  const entries = readPublicFileShareStore();
+  const index = entries.findIndex((entry) => entry.id === normalizedShareId);
+  if (index < 0) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  const [entry] = entries.splice(index, 1);
+  recordExhaustedPublicFileShareSlug(buildPublicFileShareSlug(entry), entry.lang);
+  writePublicFileShareStore(entries);
+  return { ok: true, entry };
+}
+
+function deletePublicFileSharesForFileId(fileId) {
+  const normalizedFileId = String(fileId || "").trim().toLowerCase();
+  if (!FILE_ID_PATTERN.test(normalizedFileId)) {
+    return 0;
+  }
+
+  const entries = readPublicFileShareStore();
+  const removedEntries = entries.filter((entry) => entry.fileId === normalizedFileId);
+  const nextEntries = entries.filter((entry) => entry.fileId !== normalizedFileId);
+  if (nextEntries.length === entries.length) {
+    return 0;
+  }
+  for (const entry of removedEntries) {
+    recordExhaustedPublicFileShareSlug(buildPublicFileShareSlug(entry), entry.lang);
+  }
+  writePublicFileShareStore(nextEntries);
+  return entries.length - nextEntries.length;
 }
 
 function resolveSharedFileEntryBySlug(shareSlug) {
@@ -2075,6 +2369,1132 @@ function renderSharedFilePage(entry, req) {
   html = upsertHeadMetaByName(html, "twitter:description", description);
   html = upsertHeadMetaByName(html, "robots", "noindex");
   return html;
+}
+
+function getPublicFileShareI18n(lang) {
+  const normalizedLang = String(lang || "").trim().toLowerCase() === "es" ? "es" : "en";
+  if (normalizedLang === "es") {
+    return {
+      lang: "es",
+      title: "Descarga publica limitada",
+      badge: "ENLACE PUBLICO",
+      kicker: "ROBCO INDUSTRIES (TM) TERMLINK",
+      heading: "CODIGO DE DESCARGA REQUERIDO",
+      body: "Este enlace publico permite una sola descarga. Introduce el codigo de 4 digitos que te dio la persona que compartio el archivo.",
+      labelCode: "Codigo de 4 digitos",
+      button: "VERIFICAR Y DESCARGAR",
+      buttonBusy: "PREPARANDO DESCARGA...",
+      metaFile: "ARCHIVO",
+      metaSize: "TAMANO",
+      metaLimit: "LIMITE",
+      limitValue: "1 descarga",
+      invalidCode: "Codigo invalido. Revisa los 4 digitos e intenta de nuevo.",
+      invalidCodeAttemptsLeft: (count) => `Codigo invalido. Te ${count === 1 ? "queda" : "quedan"} ${count} ${count === 1 ? "intento" : "intentos"} antes de que este enlace sea eliminado.`,
+      unavailableTitle: "Enlace no disponible",
+      unavailableStatus: "ENLACE CERRADO",
+      unavailableHeading: "ENLACE PUBLICO NO DISPONIBLE",
+      unavailableBody: "Este enlace publico ya fue usado, no existe o el archivo original ya no esta disponible.",
+      unavailableHint: "Si necesitas el archivo, pidele a la persona que compartio este enlace que genere uno nuevo.",
+      limitReachedTitle: "Limite de descarga alcanzado",
+      limitReachedStatus: "DESCARGA COMPLETADA",
+      limitReachedHeading: "LIMITE DE DESCARGA ALCANZADO",
+      limitReachedBody: "Ya alcanzaste el limite de descarga de este enlace publico. Si necesitas o quieres descargar otra vez, pidele a quien te envio este enlace que lo comparta nuevamente contigo :)",
+      limitStateLabel: "Estado",
+      limitStateValue: "Archivo entregado",
+      limitAccessLabel: "Acceso",
+      limitAccessValue: "Enlace cerrado",
+      limitNextLabel: "Siguiente paso",
+      codeAttemptLimitBody: "Se alcanzo el limite de intentos de codigo. Este enlace publico fue eliminado.",
+      outdatedBody: "Este archivo esta marcado como obsoleto. La descarga publica fue bloqueada.",
+      busyBody: "El enlace esta siendo verificado. Intenta otra vez en un momento.",
+      unavailableStateLabel: "Estado",
+      unavailableStateClosed: "Cerrado",
+      unavailableReasonLabel: "Motivo",
+      unavailableNextLabel: "Siguiente paso",
+      unavailableAttemptStatus: "CODIGO BLOQUEADO"
+    };
+  }
+  return {
+    lang: "en",
+    title: "Limited public download",
+    badge: "PUBLIC LINK",
+    kicker: "ROBCO INDUSTRIES (TM) TERMLINK",
+    heading: "DOWNLOAD CODE REQUIRED",
+    body: "This public link allows one download. Enter the 4-digit code given by the person who shared the file.",
+      labelCode: "4-digit code",
+      button: "VERIFY AND DOWNLOAD",
+      buttonBusy: "PREPARING DOWNLOAD...",
+    metaFile: "FILE",
+    metaSize: "SIZE",
+    metaLimit: "LIMIT",
+    limitValue: "1 download",
+    invalidCode: "Invalid code. Check the 4 digits and try again.",
+    invalidCodeAttemptsLeft: (count) => `Invalid code. You have ${count} ${count === 1 ? "try" : "tries"} left before this link is deleted.`,
+    unavailableTitle: "Link unavailable",
+    unavailableStatus: "LINK CLOSED",
+    unavailableHeading: "PUBLIC LINK UNAVAILABLE",
+    unavailableBody: "This public link was already used, does not exist, or the original file is no longer available.",
+    unavailableHint: "If you need the file, ask the person who shared this link to generate a new one.",
+    limitReachedTitle: "Download limit reached",
+    limitReachedStatus: "DOWNLOAD COMPLETE",
+    limitReachedHeading: "DOWNLOAD LIMIT REACHED",
+    limitReachedBody: "You have already reached the download limit of this public share link. If you need or want to download it again, ask the person who sent you this link to share it with you again :)",
+    limitStateLabel: "Status",
+    limitStateValue: "File delivered",
+    limitAccessLabel: "Access",
+    limitAccessValue: "Link closed",
+    limitNextLabel: "Next step",
+    codeAttemptLimitBody: "The code attempt limit was reached. This public link was deleted.",
+    outdatedBody: "This file is marked outdated. Public download was blocked.",
+    busyBody: "This link is being verified. Try again in a moment.",
+    unavailableStateLabel: "Status",
+    unavailableStateClosed: "Closed",
+    unavailableReasonLabel: "Reason",
+    unavailableNextLabel: "Next step",
+    unavailableAttemptStatus: "CODE LOCKOUT"
+  };
+}
+
+function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
+  const normalizedShare = normalizePublicFileShareEntry(shareEntry);
+  const t = getPublicFileShareI18n(normalizedShare?.lang || "en");
+  if (!normalizedShare) {
+    return renderPublicFileShareUnavailablePage(t.lang);
+  }
+
+  const slug = buildPublicFileShareSlug(normalizedShare);
+  const publicPath = buildPublicFileSharePath(slug);
+  const title = `${normalizedShare.displayName || normalizedShare.name} | ${t.title}`;
+  const description = `${resolveFileTypeForMeta(normalizedShare)} - ${formatFileSizeForMeta(normalizedShare.size)} - ${t.limitValue}`;
+  const actionPath = `${publicPath}/download`;
+  const pageUrl = buildAbsoluteSiteUrl(req, publicPath);
+  const limitReachedPayload = {
+    lang: t.lang,
+    title: t.limitReachedTitle,
+    kicker: t.kicker,
+    badge: t.badge,
+    status: t.limitReachedStatus,
+    heading: t.limitReachedHeading,
+    body: t.limitReachedBody,
+    buttonBusy: t.buttonBusy,
+    stateLabel: t.limitStateLabel,
+    stateValue: t.limitStateValue,
+    accessLabel: t.limitAccessLabel,
+    accessValue: t.limitAccessValue,
+    nextLabel: t.limitNextLabel,
+    nextValue: t.unavailableHint,
+    fallbackFileName: normalizedShare.name || normalizedShare.displayName || "download"
+  };
+
+  const errorMarkup = error
+    ? `<p class="public-share-error">${escapeHtml(error)}</p>`
+    : "";
+
+  return `<!doctype html>
+<html lang="${escapeHtml(t.lang)}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#07100a" />
+  <title>${escapeHtml(title)}</title>
+  <meta name="description" content="${escapeHtml(description)}" />
+  <meta property="og:title" content="${escapeHtml(title)}" />
+  <meta property="og:description" content="${escapeHtml(description)}" />
+  <meta property="og:type" content="website" />
+  ${pageUrl ? `<meta property="og:url" content="${escapeHtml(pageUrl)}" />` : ""}
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/terminal-favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #061009;
+      --panel: rgba(8, 24, 12, 0.86);
+      --line: rgba(139, 255, 139, 0.28);
+      --line-hot: rgba(255, 225, 122, 0.46);
+      --fg: #b8ffb8;
+      --muted: rgba(184, 255, 184, 0.72);
+      --warn: #ffe17a;
+      --danger: #ff8f7a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      background:
+        linear-gradient(rgba(139, 255, 139, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(139, 255, 139, 0.035) 1px, transparent 1px),
+        radial-gradient(90% 70% at 50% 0%, rgba(139, 255, 139, 0.12), transparent 58%),
+        #030604;
+      background-size: 38px 38px, 38px 38px, auto, auto;
+      color: var(--fg);
+      font-family: "Share Tech Mono", monospace;
+    }
+    .public-share {
+      width: min(100%, 680px);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 26px;
+      background:
+        linear-gradient(160deg, rgba(139, 255, 139, 0.08), transparent 44%),
+        var(--panel);
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.42), 0 0 42px rgba(139, 255, 139, 0.08);
+    }
+    .public-share-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      border-bottom: 1px solid rgba(139, 255, 139, 0.2);
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+    .public-share-kicker,
+    .public-share-badge,
+    .public-share-label,
+    .public-share-meta-label {
+      margin: 0;
+      color: var(--warn);
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .public-share-badge {
+      border: 1px solid var(--line-hot);
+      border-radius: 999px;
+      padding: 5px 9px 4px;
+      white-space: nowrap;
+    }
+    .public-share-title {
+      margin: 12px 0 0;
+      color: #e1ffe1;
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: 28px;
+      line-height: 1.08;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .public-share-body {
+      margin: 0 0 18px;
+      max-width: 65ch;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .public-share-meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .public-share-meta-item {
+      border: 1px solid rgba(139, 255, 139, 0.18);
+      border-radius: 8px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.22);
+      min-width: 0;
+    }
+    .public-share-meta-value {
+      display: block;
+      margin-top: 5px;
+      overflow-wrap: anywhere;
+      color: #d4ffd4;
+      font-size: 13px;
+    }
+    .public-share-form {
+      display: grid;
+      gap: 12px;
+      border-top: 1px solid rgba(139, 255, 139, 0.18);
+      padding-top: 18px;
+    }
+    .public-share-code-row {
+      display: flex;
+      gap: 10px;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+    .public-share-field {
+      display: grid;
+      gap: 7px;
+      flex: 1 1 180px;
+    }
+    .public-share-code {
+      width: 100%;
+      border: 1px solid rgba(255, 225, 122, 0.42);
+      border-radius: 8px;
+      padding: 11px 12px;
+      background: rgba(0, 0, 0, 0.34);
+      color: var(--warn);
+      font: inherit;
+      font-size: 20px;
+      letter-spacing: 0.32em;
+      text-align: center;
+    }
+    .public-share-code:focus {
+      outline: none;
+      border-color: rgba(255, 225, 122, 0.74);
+      box-shadow: 0 0 0 1px rgba(255, 225, 122, 0.28);
+    }
+    .public-share-btn {
+      min-height: 48px;
+      border: 1px solid rgba(255, 225, 122, 0.54);
+      border-radius: 8px;
+      padding: 0 18px;
+      background:
+        linear-gradient(to bottom, rgba(255, 225, 122, 0.16), rgba(0, 0, 0, 0.2)),
+        rgba(255, 225, 122, 0.08);
+      color: #fff0bd;
+      cursor: pointer;
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    .public-share-btn:hover,
+    .public-share-btn:focus-visible {
+      border-color: rgba(255, 225, 122, 0.82);
+      box-shadow: 0 0 20px rgba(255, 225, 122, 0.14);
+    }
+    .public-share-error {
+      margin: 0;
+      border: 1px solid rgba(255, 143, 122, 0.42);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: rgba(255, 96, 72, 0.12);
+      color: #ffd0c7;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .public-share.is-limit-reached {
+      max-width: 760px;
+      border-color: rgba(139, 255, 139, 0.3);
+      background:
+        radial-gradient(120% 120% at 100% 0%, rgba(255, 225, 122, 0.1), transparent 52%),
+        linear-gradient(160deg, rgba(139, 255, 139, 0.09), transparent 45%),
+        var(--panel);
+      box-shadow:
+        0 24px 76px rgba(0, 0, 0, 0.56),
+        0 0 46px rgba(139, 255, 139, 0.09);
+    }
+    .public-share-limit {
+      display: grid;
+      gap: 16px;
+      border-top: 1px solid rgba(139, 255, 139, 0.18);
+      padding-top: 18px;
+    }
+    .public-share-limit-status {
+      width: fit-content;
+      border: 1px solid rgba(255, 225, 122, 0.5);
+      border-radius: 999px;
+      padding: 6px 10px 5px;
+      color: var(--warn);
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      background: rgba(0, 0, 0, 0.22);
+    }
+    .public-share-limit-card {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+      border: 1px solid rgba(255, 225, 122, 0.25);
+      border-radius: 12px;
+      padding: 16px;
+      background:
+        linear-gradient(180deg, rgba(255, 225, 122, 0.07), rgba(0, 0, 0, 0.16)),
+        rgba(0, 0, 0, 0.28);
+    }
+    .public-share-limit-mark {
+      width: 42px;
+      height: 42px;
+      border: 1px solid rgba(255, 225, 122, 0.5);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--warn);
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
+      background: rgba(255, 225, 122, 0.08);
+      box-shadow: 0 0 18px rgba(255, 225, 122, 0.09);
+    }
+    .public-share-limit-copy {
+      min-width: 0;
+      display: grid;
+      gap: 9px;
+    }
+    .public-share-limit-title {
+      margin: 0;
+      color: #fff0bd;
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: clamp(22px, 3.2vw, 30px);
+      line-height: 1;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .public-share-limit-body {
+      margin: 0;
+      max-width: 60ch;
+      color: rgba(255, 240, 189, 0.82);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .public-share-limit-meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .public-share-limit-meta-item {
+      min-width: 0;
+      border: 1px solid rgba(139, 255, 139, 0.16);
+      border-radius: 10px;
+      padding: 11px 12px;
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .public-share-limit-meta-item span {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--warn);
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .public-share-limit-meta-item strong {
+      display: block;
+      color: #d9ffd2;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+    @media (max-width: 620px) {
+      body { padding: 16px; }
+      .public-share { padding: 18px; }
+      .public-share-top { display: grid; }
+      .public-share-meta { grid-template-columns: 1fr; }
+      .public-share-btn { width: 100%; }
+      .public-share-limit-card,
+      .public-share-limit-meta { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="public-share">
+    <div class="public-share-top">
+      <div>
+        <p class="public-share-kicker">${escapeHtml(t.kicker)}</p>
+        <h1 class="public-share-title">${escapeHtml(t.heading)}</h1>
+      </div>
+      <p class="public-share-badge">${escapeHtml(t.badge)}</p>
+    </div>
+    <p class="public-share-body">${escapeHtml(t.body)}</p>
+    <section class="public-share-meta" aria-label="File details">
+      <div class="public-share-meta-item">
+        <span class="public-share-meta-label">${escapeHtml(t.metaFile)}</span>
+        <span class="public-share-meta-value">${escapeHtml(normalizedShare.displayName || normalizedShare.name)}</span>
+      </div>
+      <div class="public-share-meta-item">
+        <span class="public-share-meta-label">${escapeHtml(t.metaSize)}</span>
+        <span class="public-share-meta-value">${escapeHtml(formatFileSizeForMeta(normalizedShare.size) || "--")}</span>
+      </div>
+      <div class="public-share-meta-item">
+        <span class="public-share-meta-label">${escapeHtml(t.metaLimit)}</span>
+        <span class="public-share-meta-value">${escapeHtml(t.limitValue)}</span>
+      </div>
+    </section>
+    <form class="public-share-form" method="post" action="${escapeHtml(actionPath)}" data-public-share-form>
+      ${errorMarkup}
+      <div class="public-share-code-row">
+        <label class="public-share-field">
+          <span class="public-share-label">${escapeHtml(t.labelCode)}</span>
+          <input class="public-share-code" name="code" type="tel" inputmode="numeric" autocomplete="one-time-code" pattern="\\d{4}" maxlength="4" required autofocus />
+        </label>
+        <button class="public-share-btn" type="submit">${escapeHtml(t.button)}</button>
+      </div>
+    </form>
+  </main>
+  <script>
+    (() => {
+      const config = ${JSON.stringify(limitReachedPayload)};
+      const form = document.querySelector("[data-public-share-form]");
+      const main = document.querySelector(".public-share");
+      if (!(form instanceof HTMLFormElement) || !main || !window.fetch || !window.URL || !window.Blob) {
+        return;
+      }
+
+      const createTextElement = (tag, className, text) => {
+        const element = document.createElement(tag);
+        element.className = className;
+        element.textContent = String(text || "");
+        return element;
+      };
+
+      const parseDownloadFileName = (response) => {
+        const disposition = String(response.headers.get("content-disposition") || "");
+        const utfMatch = disposition.match(/filename\\*=UTF-8''([^;]+)/i);
+        if (utfMatch) {
+          try {
+            return decodeURIComponent(utfMatch[1].replace(/"/g, "").trim());
+          } catch {}
+        }
+        const plainMatch = disposition.match(/filename="?([^";]+)"?/i);
+        if (plainMatch) {
+          return plainMatch[1].trim();
+        }
+        return String(config.fallbackFileName || "download");
+      };
+
+      const normalizeCodeValue = (input) => {
+        if (!(input instanceof HTMLInputElement)) {
+          return "";
+        }
+        const nextValue = String(input.value || "").replace(/\\D/g, "").slice(0, 4);
+        if (input.value !== nextValue) {
+          input.value = nextValue;
+        }
+        return nextValue;
+      };
+
+      const codeInput = form.querySelector("input[name='code']");
+      if (codeInput instanceof HTMLInputElement) {
+        codeInput.addEventListener("beforeinput", (event) => {
+          if (event.inputType && !event.inputType.startsWith("insert")) {
+            return;
+          }
+          if (typeof event.data === "string" && /\\D/.test(event.data)) {
+            event.preventDefault();
+          }
+        });
+        codeInput.addEventListener("input", () => normalizeCodeValue(codeInput));
+        codeInput.addEventListener("paste", () => {
+          window.setTimeout(() => normalizeCodeValue(codeInput), 0);
+        });
+      }
+
+      const triggerBrowserDownload = (blob, fileName) => {
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = fileName || String(config.fallbackFileName || "download");
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+      };
+
+      const renderLimitReached = () => {
+        document.documentElement.lang = String(config.lang || "en");
+        document.title = String(config.title || document.title);
+        main.classList.add("is-limit-reached");
+
+        const top = document.createElement("div");
+        top.className = "public-share-top";
+        const titleWrap = document.createElement("div");
+        titleWrap.append(
+          createTextElement("p", "public-share-kicker", config.kicker),
+          createTextElement("h1", "public-share-title", config.heading)
+        );
+        top.append(titleWrap, createTextElement("p", "public-share-badge", config.badge));
+
+        const limit = document.createElement("section");
+        limit.className = "public-share-limit";
+        const limitCard = document.createElement("div");
+        limitCard.className = "public-share-limit-card";
+        limitCard.append(createTextElement("div", "public-share-limit-mark", "OK"));
+        const limitCopy = document.createElement("div");
+        limitCopy.className = "public-share-limit-copy";
+        limitCopy.append(
+          createTextElement("h2", "public-share-limit-title", config.heading),
+          createTextElement("p", "public-share-limit-body", config.body)
+        );
+        limitCard.append(limitCopy);
+        const meta = document.createElement("div");
+        meta.className = "public-share-limit-meta";
+        [
+          [config.stateLabel, config.stateValue],
+          [config.accessLabel, config.accessValue],
+          [config.nextLabel, config.nextValue]
+        ].forEach(([label, value]) => {
+          const item = document.createElement("div");
+          item.className = "public-share-limit-meta-item";
+          item.append(
+            createTextElement("span", "", label),
+            createTextElement("strong", "", value)
+          );
+          meta.append(item);
+        });
+        limit.append(
+          createTextElement("p", "public-share-limit-status", config.status),
+          limitCard,
+          meta
+        );
+
+        main.replaceChildren(top, limit);
+      };
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const submitButton = form.querySelector("button[type='submit']");
+        normalizeCodeValue(codeInput);
+        const originalButtonText = submitButton ? submitButton.textContent : "";
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.textContent = String(config.buttonBusy || originalButtonText);
+        }
+
+        try {
+          const body = new URLSearchParams(new FormData(form));
+          const response = await fetch(form.action, {
+            method: "POST",
+            body,
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+              "X-Public-Share-Download": "fetch"
+            }
+          });
+
+          if (!response.ok) {
+            const html = await response.text();
+            document.open();
+            document.write(html);
+            document.close();
+            return;
+          }
+
+          const blob = await response.blob();
+          triggerBrowserDownload(blob, parseDownloadFileName(response));
+          renderLimitReached();
+        } catch {
+          renderLimitReached();
+        } finally {
+          if (submitButton && main.contains(submitButton)) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalButtonText;
+          }
+        }
+      });
+    })();
+  </script>
+</body>
+</html>`;
+}
+
+function renderPublicFileShareLimitReachedPage(lang = "en", { downloadUrl = "" } = {}) {
+  const t = getPublicFileShareI18n(lang);
+  const safeDownloadUrl = String(downloadUrl || "").trim();
+  return `<!doctype html>
+<html lang="${escapeHtml(t.lang)}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#07100a" />
+  <title>${escapeHtml(t.limitReachedTitle)}</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/terminal-favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #030604;
+      --panel: rgba(6, 24, 12, 0.9);
+      --panel-soft: rgba(0, 0, 0, 0.28);
+      --line: rgba(139, 255, 139, 0.3);
+      --line-hot: rgba(255, 225, 122, 0.5);
+      --line-soft: rgba(139, 255, 139, 0.16);
+      --fg: #d9ffd2;
+      --muted: rgba(217, 255, 210, 0.72);
+      --warn: #ffe17a;
+      --shadow: rgba(0, 0, 0, 0.56);
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      background:
+        linear-gradient(rgba(139, 255, 139, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(139, 255, 139, 0.03) 1px, transparent 1px),
+        radial-gradient(760px 420px at 50% 20%, rgba(139, 255, 139, 0.13), transparent 64%),
+        radial-gradient(520px 260px at 78% 72%, rgba(255, 225, 122, 0.07), transparent 68%),
+        var(--bg);
+      background-size: 42px 42px, 42px 42px, auto, auto, auto;
+      color: var(--fg);
+      font-family: "Share Tech Mono", ui-monospace, monospace;
+    }
+    .public-share-limit-shell {
+      width: min(100%, 760px);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: clamp(22px, 4vw, 34px);
+      background:
+        radial-gradient(120% 120% at 100% 0%, rgba(255, 225, 122, 0.1), transparent 52%),
+        linear-gradient(160deg, rgba(139, 255, 139, 0.09), transparent 45%),
+        var(--panel);
+      box-shadow:
+        0 24px 76px var(--shadow),
+        0 0 0 1px rgba(0, 0, 0, 0.52) inset,
+        0 0 46px rgba(139, 255, 139, 0.09);
+    }
+    .public-share-limit-shell::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.18;
+      background:
+        linear-gradient(to right, rgba(139, 255, 139, 0.12) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 225, 122, 0.09) 1px, transparent 1px);
+      background-size: 34px 100%, 100% 24px;
+    }
+    .public-share-limit-shell::after {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      pointer-events: none;
+      border: 1px solid rgba(139, 255, 139, 0.1);
+      border-radius: 10px;
+    }
+    .public-share-limit-shell > * {
+      position: relative;
+      z-index: 1;
+    }
+    .public-share-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+      border-bottom: 1px solid rgba(139, 255, 139, 0.18);
+      padding-bottom: 18px;
+      margin-bottom: 18px;
+    }
+    .public-share-kicker,
+    .public-share-badge,
+    .public-share-limit-status {
+      margin: 0;
+      color: var(--warn);
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .public-share-badge,
+    .public-share-limit-status {
+      border: 1px solid var(--line-hot);
+      border-radius: 999px;
+      padding: 6px 10px 5px;
+      white-space: nowrap;
+      background: rgba(0, 0, 0, 0.22);
+    }
+    .public-share-title {
+      margin: 10px 0 0;
+      color: #eefee8;
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: clamp(30px, 5vw, 42px);
+      line-height: 0.96;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-shadow: 0 0 18px rgba(139, 255, 139, 0.18);
+    }
+    .public-share-limit {
+      display: grid;
+      gap: 16px;
+      padding-top: 2px;
+    }
+    .public-share-limit-card {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+      border: 1px solid rgba(255, 225, 122, 0.25);
+      border-radius: 12px;
+      padding: 16px;
+      background:
+        linear-gradient(180deg, rgba(255, 225, 122, 0.07), rgba(0, 0, 0, 0.16)),
+        var(--panel-soft);
+    }
+    .public-share-limit-mark {
+      width: 42px;
+      height: 42px;
+      border: 1px solid rgba(255, 225, 122, 0.5);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--warn);
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1;
+      background: rgba(255, 225, 122, 0.08);
+      box-shadow: 0 0 18px rgba(255, 225, 122, 0.09);
+    }
+    .public-share-limit-copy {
+      min-width: 0;
+      display: grid;
+      gap: 9px;
+    }
+    .public-share-limit-title {
+      margin: 0;
+      color: #fff0bd;
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: clamp(22px, 3.2vw, 30px);
+      line-height: 1;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .public-share-limit-body {
+      margin: 0;
+      max-width: 60ch;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .public-share-limit-meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .public-share-limit-meta-item {
+      min-width: 0;
+      border: 1px solid var(--line-soft);
+      border-radius: 10px;
+      padding: 11px 12px;
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .public-share-limit-meta-item span {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--warn);
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .public-share-limit-meta-item strong {
+      display: block;
+      color: #d9ffd2;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+    .public-share-download-frame {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      border: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+    @media (max-width: 620px) {
+      body { padding: 16px; }
+      .public-share-limit-shell { padding: 18px; }
+      .public-share-top { display: grid; }
+      .public-share-title { font-size: 30px; }
+      .public-share-limit-card { grid-template-columns: 1fr; }
+      .public-share-limit-meta { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="public-share-limit-shell">
+    <div class="public-share-top">
+      <div>
+        <p class="public-share-kicker">${escapeHtml(t.kicker)}</p>
+        <h1 class="public-share-title">${escapeHtml(t.limitReachedHeading)}</h1>
+      </div>
+      <p class="public-share-badge">${escapeHtml(t.badge)}</p>
+    </div>
+    <section class="public-share-limit" aria-label="${escapeHtml(t.limitReachedTitle)}">
+      <p class="public-share-limit-status">${escapeHtml(t.limitReachedStatus)}</p>
+      <div class="public-share-limit-card">
+        <div class="public-share-limit-mark" aria-hidden="true">OK</div>
+        <div class="public-share-limit-copy">
+          <h2 class="public-share-limit-title">${escapeHtml(t.limitReachedHeading)}</h2>
+          <p class="public-share-limit-body">${escapeHtml(t.limitReachedBody)}</p>
+        </div>
+      </div>
+      <div class="public-share-limit-meta" aria-label="${escapeHtml(t.limitReachedStatus)}">
+        <div class="public-share-limit-meta-item">
+          <span>${escapeHtml(t.limitStateLabel)}</span>
+          <strong>${escapeHtml(t.limitStateValue)}</strong>
+        </div>
+        <div class="public-share-limit-meta-item">
+          <span>${escapeHtml(t.limitAccessLabel)}</span>
+          <strong>${escapeHtml(t.limitAccessValue)}</strong>
+        </div>
+        <div class="public-share-limit-meta-item">
+          <span>${escapeHtml(t.limitNextLabel)}</span>
+          <strong>${escapeHtml(t.unavailableHint)}</strong>
+        </div>
+      </div>
+    </section>
+    ${safeDownloadUrl ? `<iframe class="public-share-download-frame" src="${escapeHtml(safeDownloadUrl)}" title="download" aria-hidden="true"></iframe>` : ""}
+  </main>
+</body>
+</html>`;
+}
+
+function renderPublicFileShareUnavailablePage(lang = "en", { message = "" } = {}) {
+  const t = getPublicFileShareI18n(lang);
+  const body = message || t.unavailableBody;
+  const isAttemptLimit = Boolean(message) && message === t.codeAttemptLimitBody;
+  const statusText = isAttemptLimit ? t.unavailableAttemptStatus : t.unavailableStatus;
+  return `<!doctype html>
+<html lang="${escapeHtml(t.lang)}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>${escapeHtml(t.unavailableTitle)}</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/terminal-favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #030604;
+      --panel: rgba(22, 7, 5, 0.9);
+      --panel-soft: rgba(0, 0, 0, 0.28);
+      --line: rgba(255, 143, 122, 0.48);
+      --line-soft: rgba(255, 143, 122, 0.2);
+      --fg: #ffd0c7;
+      --muted: rgba(255, 208, 199, 0.78);
+      --warn: #ffe17a;
+      --shadow: rgba(0, 0, 0, 0.6);
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      background:
+        linear-gradient(rgba(255, 143, 122, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 143, 122, 0.024) 1px, transparent 1px),
+        radial-gradient(720px 380px at 50% 18%, rgba(255, 143, 122, 0.12), transparent 64%),
+        radial-gradient(500px 260px at 78% 74%, rgba(255, 225, 122, 0.055), transparent 68%),
+        var(--bg);
+      background-size: 42px 42px, 42px 42px, auto, auto, auto;
+      color: var(--fg);
+      font-family: "Share Tech Mono", ui-monospace, monospace;
+    }
+    main {
+      width: min(100%, 760px);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: clamp(22px, 4vw, 34px);
+      background:
+        radial-gradient(110% 110% at 100% 0%, rgba(255, 143, 122, 0.14), transparent 54%),
+        linear-gradient(155deg, rgba(255, 143, 122, 0.08), transparent 46%),
+        var(--panel);
+      box-shadow:
+        0 24px 76px var(--shadow),
+        0 0 0 1px rgba(0, 0, 0, 0.55) inset,
+        0 0 44px rgba(255, 143, 122, 0.09);
+    }
+    main::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.16;
+      background:
+        linear-gradient(to right, rgba(255, 143, 122, 0.13) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 225, 122, 0.075) 1px, transparent 1px);
+      background-size: 34px 100%, 100% 24px;
+    }
+    main::after {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      pointer-events: none;
+      border: 1px solid rgba(255, 143, 122, 0.11);
+      border-radius: 10px;
+    }
+    main > * {
+      position: relative;
+      z-index: 1;
+    }
+    .public-share-unavailable-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      border-bottom: 1px solid var(--line-soft);
+      padding-bottom: 18px;
+      margin-bottom: 18px;
+    }
+    .public-share-kicker,
+    .public-share-badge,
+    .public-share-status {
+      margin: 0;
+      color: var(--warn);
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .public-share-badge {
+      border: 1px solid rgba(255, 225, 122, 0.42);
+      border-radius: 999px;
+      padding: 6px 10px 5px;
+      white-space: nowrap;
+      background: rgba(0, 0, 0, 0.22);
+    }
+    h1 {
+      margin: 10px 0 0;
+      color: #ffe5df;
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: clamp(30px, 5vw, 42px);
+      line-height: 0.96;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-shadow: 0 0 18px rgba(255, 143, 122, 0.14);
+    }
+    .public-share-message {
+      display: grid;
+      gap: 14px;
+    }
+    .public-share-alert {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+      border: 1px solid rgba(255, 143, 122, 0.28);
+      border-radius: 12px;
+      padding: 16px;
+      background:
+        linear-gradient(180deg, rgba(255, 143, 122, 0.08), rgba(0, 0, 0, 0.16)),
+        var(--panel-soft);
+    }
+    .public-share-alert-mark {
+      width: 42px;
+      height: 42px;
+      border: 1px solid rgba(255, 143, 122, 0.5);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--fg);
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1;
+      background: rgba(255, 143, 122, 0.08);
+      box-shadow: 0 0 18px rgba(255, 143, 122, 0.1);
+    }
+    .public-share-alert-copy {
+      min-width: 0;
+      display: grid;
+      gap: 9px;
+    }
+    .public-share-message p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .public-share-status {
+      width: fit-content;
+      color: var(--fg);
+      border: 1px solid rgba(255, 143, 122, 0.36);
+      border-radius: 999px;
+      padding: 6px 10px 5px;
+      background: rgba(0, 0, 0, 0.22);
+    }
+    .public-share-detail-grid {
+      display: grid;
+      grid-template-columns: 0.75fr 1.25fr;
+      gap: 10px;
+    }
+    .public-share-detail {
+      min-width: 0;
+      border: 1px solid var(--line-soft);
+      border-radius: 10px;
+      padding: 11px 12px;
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .public-share-detail span {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--warn);
+      font-family: Rajdhani, system-ui, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .public-share-detail strong {
+      display: block;
+      color: #ffe5df;
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.35;
+    }
+    @media (max-width: 620px) {
+      body { padding: 16px; }
+      main { padding: 18px; }
+      .public-share-unavailable-top { display: grid; }
+      h1 { font-size: 30px; }
+      .public-share-alert,
+      .public-share-detail-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="public-share-unavailable-top">
+      <div>
+        <p class="public-share-kicker">${escapeHtml(t.kicker)}</p>
+        <h1>${escapeHtml(t.unavailableHeading)}</h1>
+      </div>
+      <p class="public-share-badge">${escapeHtml(t.badge)}</p>
+    </div>
+    <section class="public-share-message" aria-label="${escapeHtml(t.unavailableTitle)}">
+      <div class="public-share-alert">
+        <div class="public-share-alert-mark" aria-hidden="true">!</div>
+        <div class="public-share-alert-copy">
+          <p class="public-share-status">${escapeHtml(statusText)}</p>
+          <p>${escapeHtml(body)}</p>
+        </div>
+      </div>
+      <div class="public-share-detail-grid">
+        <div class="public-share-detail">
+          <span>${escapeHtml(t.unavailableStateLabel)}</span>
+          <strong>${escapeHtml(t.unavailableStateClosed)}</strong>
+        </div>
+        <div class="public-share-detail">
+          <span>${escapeHtml(t.unavailableNextLabel)}</span>
+          <strong>${escapeHtml(t.unavailableHint)}</strong>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>`;
 }
 
 function sendStoredFileImage(res, entry) {
@@ -6726,6 +8146,7 @@ app.delete("/api/files/:id", requireAdmin, (req, res) => {
 
     deleteStoredUpload(entry.storedName);
     deleteStoredUpload(entry.imageStoredName);
+    deletePublicFileSharesForFileId(fileId);
 
     res.json({ ok: true });
   } finally {
@@ -6796,6 +8217,159 @@ app.get("/api/files/:id/download", requireAuthorized, (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.type(entry.mimeType || "application/octet-stream");
   res.download(storedPath, entry.name);
+});
+
+app.post("/api/files/:id/public-share", requireAuthorized, (req, res) => {
+  const fileId = String(req.params.id || "").trim().toLowerCase();
+  const code = String(req.body?.code || "").trim();
+  const langRaw = String(req.body?.lang || "").trim().toLowerCase();
+  const lang = langRaw === "es" ? "es" : "en";
+  if (!FILE_ID_PATTERN.test(fileId)) {
+    res.status(400).json({ error: "Invalid file id" });
+    return;
+  }
+  if (!PUBLIC_FILE_SHARE_CODE_PATTERN.test(code)) {
+    res.status(400).json({ error: "Enter a 4-digit code." });
+    return;
+  }
+
+  const entry = readMetadataStore().find((item) => String(item.id || "").trim().toLowerCase() === fileId);
+  const normalizedEntry = normalizeMetadataFileEntry(entry);
+  if (!normalizedEntry) {
+    res.status(404).json({ error: "File not found" });
+    return;
+  }
+  if (normalizedEntry.outdated) {
+    res.status(409).json({ error: "This file is outdated and cannot be shared publicly." });
+    return;
+  }
+
+  const storedPath = resolveUploadStoredPath(normalizedEntry.storedName);
+  if (!storedPath || !fs.existsSync(storedPath)) {
+    res.status(404).json({ error: "File blob not found" });
+    return;
+  }
+
+  const shareId = crypto.randomUUID();
+  const codeSalt = crypto.randomBytes(16).toString("hex");
+  const now = new Date().toISOString();
+  const shareEntry = normalizePublicFileShareEntry({
+    id: shareId,
+    fileId: normalizedEntry.id,
+    name: normalizedEntry.name,
+    displayName: normalizedEntry.displayName || normalizedEntry.name,
+    mimeType: normalizedEntry.mimeType,
+    size: normalizedEntry.size,
+    codeSalt,
+    codeHash: hashPublicFileShareCode(code, codeSalt),
+    code,
+    createdAt: now,
+    downloadedAt: "",
+    downloadCount: 0,
+    failedCodeAttempts: 0,
+    createdByDiscordId: req.currentUser?.discordId || "",
+    createdBy: req.currentUser?.username || "",
+    lang
+  });
+
+  if (!shareEntry) {
+    res.status(500).json({ error: "Unable to prepare public share." });
+    return;
+  }
+
+  try {
+    const shares = readPublicFileShareStore();
+    const creatorDiscordId = String(req.currentUser?.discordId || "").trim();
+    const activePublicLinksForUser = creatorDiscordId
+      ? shares.filter((share) => String(share.createdByDiscordId || "").trim() === creatorDiscordId).length
+      : shares.length;
+    if (activePublicLinksForUser >= PUBLIC_FILE_SHARE_MAX_ACTIVE_PER_USER) {
+      res.status(409).json({ error: getPublicFileShareActiveLimitMessage(lang) });
+      return;
+    }
+    shares.push(shareEntry);
+    writePublicFileShareStore(shares);
+  } catch (error) {
+    console.error("[public-file-shares] create error:", error);
+    res.status(500).json({ error: "Unable to create public share." });
+    return;
+  }
+
+  const slug = buildPublicFileShareSlug(shareEntry);
+  const sharePath = buildPublicFileSharePath(slug);
+  res.status(201).json({
+    ok: true,
+    sharePath,
+    shareUrl: buildAbsoluteSiteUrl(req, sharePath)
+  });
+});
+
+app.get("/api/files/public-shares", requireAuthorized, (req, res) => {
+  const ownerDiscordId = String(req.currentUser?.discordId || "").trim();
+  if (!ownerDiscordId) {
+    res.status(401).json({ error: "Authorization required" });
+    return;
+  }
+
+  const entries = readPublicFileShareStore()
+    .filter((entry) => String(entry.createdByDiscordId || "").trim() === ownerDiscordId)
+    .sort((left, right) => String(right.createdAt || "").localeCompare(String(left.createdAt || "")))
+    .map((entry) => buildPublicFileShareListEntry(entry, req))
+    .filter(Boolean);
+
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    entries,
+    maxActive: PUBLIC_FILE_SHARE_MAX_ACTIVE_PER_USER
+  });
+});
+
+app.get("/api/files/public-shares/admin", requireAdmin, (req, res) => {
+  const entries = readPublicFileShareStore()
+    .sort((left, right) => String(right.createdAt || "").localeCompare(String(left.createdAt || "")))
+    .map((entry) => buildPublicFileShareListEntry(entry, req))
+    .filter(Boolean);
+
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    entries,
+    maxActive: entries.length
+  });
+});
+
+app.delete("/api/files/public-shares/:id", requireAuthorized, (req, res) => {
+  const shareId = String(req.params.id || "").trim().toLowerCase();
+  const ownerDiscordId = String(req.currentUser?.discordId || "").trim();
+  if (!FILE_ID_PATTERN.test(shareId)) {
+    res.status(400).json({ error: "Invalid public link id" });
+    return;
+  }
+  if (!ownerDiscordId) {
+    res.status(401).json({ error: "Authorization required" });
+    return;
+  }
+
+  const matchedShare = readPublicFileShareStore().find((entry) => entry.id === shareId) || null;
+  if (!matchedShare) {
+    res.status(404).json({ error: "Public link not found" });
+    return;
+  }
+  if (String(matchedShare.createdByDiscordId || "").trim() !== ownerDiscordId && !req.currentUser?.isAdmin) {
+    res.status(403).json({ error: "You can only delete public links you created." });
+    return;
+  }
+
+  try {
+    const result = deletePublicFileShareById(shareId);
+    if (!result.ok) {
+      res.status(result.reason === "not_found" ? 404 : 400).json({ error: "Unable to delete public link" });
+      return;
+    }
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("[public-file-shares] delete error:", error);
+    res.status(500).json({ error: "Unable to delete public link." });
+  }
 });
 
 app.get("/api/admin/temp-shares", requireAdmin, (req, res) => {
@@ -7332,6 +8906,171 @@ app.get("/drops/:shareSlug", async (req, res) => {
         })
       );
   }
+});
+
+app.get("/public-share/:shareSlug", (req, res) => {
+  const entry = resolvePublicFileShareBySlug(req.params.shareSlug);
+  if (!entry) {
+    const slug = normalizePublicFileShareSlugValue(req.params.shareSlug);
+    const statusCode = isExhaustedPublicFileShareSlug(slug) ? 410 : 404;
+    const lang = isExhaustedPublicFileShareSlug(slug) ? getExhaustedPublicFileShareSlugLang(slug) : "en";
+    res.status(statusCode).type("html").send(renderPublicFileShareUnavailablePage(lang));
+    return;
+  }
+
+  res.setHeader("Cache-Control", "no-store");
+  res.type("html").send(renderPublicFileSharePage(entry, req));
+});
+
+app.post("/public-share/:shareSlug/download", (req, res) => {
+  const entry = resolvePublicFileShareBySlug(req.params.shareSlug);
+  if (!entry) {
+    const slug = normalizePublicFileShareSlugValue(req.params.shareSlug);
+    const lang = isExhaustedPublicFileShareSlug(slug) ? getExhaustedPublicFileShareSlugLang(slug) : "en";
+    res.status(410).type("html").send(renderPublicFileShareUnavailablePage(lang));
+    return;
+  }
+
+  const shareId = entry.id;
+  const shareLang = entry.lang;
+  const t = getPublicFileShareI18n(shareLang);
+  if (!tryLockPublicFileShareMutation(shareId)) {
+    res.status(409).type("html").send(renderPublicFileSharePage(entry, req, { error: t.busyBody }));
+    return;
+  }
+
+  let storedPath = "";
+  let responseName = entry.name;
+  let responseType = entry.mimeType || "application/octet-stream";
+  const wantsFetchDownload = String(req.get("X-Public-Share-Download") || "").trim().toLowerCase() === "fetch";
+
+  try {
+    const shares = readPublicFileShareStore();
+    const shareIndex = shares.findIndex((candidate) => candidate.id === shareId);
+    if (shareIndex < 0) {
+      unlockPublicFileShareMutation(shareId);
+      res.status(410).type("html").send(renderPublicFileShareUnavailablePage(shareLang));
+      return;
+    }
+
+    const currentShare = shares[shareIndex];
+    const currentSlug = buildPublicFileShareSlug(currentShare);
+    if (!verifyPublicFileShareCode(currentShare, req.body?.code)) {
+      const failedCodeAttempts = Math.max(0, Number(currentShare.failedCodeAttempts) || 0) + 1;
+      const attemptsLeft = Math.max(0, PUBLIC_FILE_SHARE_MAX_FAILED_CODE_ATTEMPTS - failedCodeAttempts);
+      if (attemptsLeft <= 0) {
+        recordExhaustedPublicFileShareSlug(currentSlug, shareLang);
+        shares.splice(shareIndex, 1);
+        writePublicFileShareStore(shares);
+        unlockPublicFileShareMutation(shareId);
+        res.status(410).type("html").send(renderPublicFileShareUnavailablePage(shareLang, {
+          message: t.codeAttemptLimitBody
+        }));
+        return;
+      }
+
+      const nextShare = normalizePublicFileShareEntry({
+        ...currentShare,
+        failedCodeAttempts
+      });
+      if (nextShare) {
+        shares[shareIndex] = nextShare;
+        writePublicFileShareStore(shares);
+      }
+      unlockPublicFileShareMutation(shareId);
+      res.status(401).type("html").send(renderPublicFileSharePage(nextShare || currentShare, req, {
+        error: typeof t.invalidCodeAttemptsLeft === "function"
+          ? t.invalidCodeAttemptsLeft(attemptsLeft)
+          : t.invalidCode
+      }));
+      return;
+    }
+
+    const entries = readMetadataStore();
+    const fileIndex = entries.findIndex((candidate) => String(candidate.id || "").trim().toLowerCase() === currentShare.fileId);
+    const fileEntry = fileIndex >= 0 ? normalizeMetadataFileEntry(entries[fileIndex]) : null;
+    if (!fileEntry) {
+      recordExhaustedPublicFileShareSlug(currentSlug, shareLang);
+      shares.splice(shareIndex, 1);
+      writePublicFileShareStore(shares);
+      unlockPublicFileShareMutation(shareId);
+      res.status(404).type("html").send(renderPublicFileShareUnavailablePage(shareLang));
+      return;
+    }
+    if (fileEntry.outdated) {
+      unlockPublicFileShareMutation(shareId);
+      res.status(410).type("html").send(renderPublicFileShareUnavailablePage(shareLang, { message: t.outdatedBody }));
+      return;
+    }
+
+    storedPath = resolveUploadStoredPath(fileEntry.storedName);
+    if (!storedPath || !fs.existsSync(storedPath)) {
+      recordExhaustedPublicFileShareSlug(currentSlug, shareLang);
+      shares.splice(shareIndex, 1);
+      writePublicFileShareStore(shares);
+      unlockPublicFileShareMutation(shareId);
+      res.status(404).type("html").send(renderPublicFileShareUnavailablePage(shareLang));
+      return;
+    }
+
+    responseName = fileEntry.name;
+    responseType = fileEntry.mimeType || "application/octet-stream";
+
+    recordExhaustedPublicFileShareSlug(currentSlug, shareLang);
+    shares.splice(shareIndex, 1);
+    writePublicFileShareStore(shares);
+
+    const normalizedEntry = normalizeMetadataFileEntry({
+      ...fileEntry,
+      downloadCount: Math.max(0, Number(fileEntry.downloadCount) || 0) + 1
+    });
+    if (normalizedEntry && fileIndex >= 0) {
+      entries[fileIndex] = normalizedEntry;
+      writeMetadataStore(entries);
+    }
+  } catch (error) {
+    unlockPublicFileShareMutation(shareId);
+    console.error("[public-file-shares] download error:", error);
+    res.status(500).json({ error: "Unable to prepare public file download" });
+    return;
+  }
+
+  unlockPublicFileShareMutation(shareId);
+
+  if (!wantsFetchDownload) {
+    const token = createPublicFileShareDownloadToken({ storedPath, responseName, responseType });
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).type("html").send(renderPublicFileShareLimitReachedPage(shareLang, {
+      downloadUrl: `/public-share-download/${encodeURIComponent(token)}`
+    }));
+    return;
+  }
+
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.type(responseType);
+  res.download(storedPath, responseName, (error) => {
+    if (error && !res.headersSent) {
+      res.status(500).json({ error: "Unable to stream public file download" });
+    }
+  });
+});
+
+app.get("/public-share-download/:token", (req, res) => {
+  const entry = consumePublicFileShareDownloadToken(req.params.token);
+  if (!entry || !entry.storedPath || !fs.existsSync(entry.storedPath)) {
+    res.status(410).type("text").send("Download token expired");
+    return;
+  }
+
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.type(entry.responseType || "application/octet-stream");
+  res.download(entry.storedPath, entry.responseName || "download", (error) => {
+    if (error && !res.headersSent) {
+      res.status(500).type("text").send("Unable to stream public file download");
+    }
+  });
 });
 
 app.get("/share/:shareSlug/image", (req, res) => {

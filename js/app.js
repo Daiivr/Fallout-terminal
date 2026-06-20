@@ -264,6 +264,7 @@ function setFilesShareButtonText(button, text) {
         : "share";
     button.classList.toggle("is-flash-success", iconKind === "copied");
     button.classList.toggle("is-flash-error", iconKind === "error");
+    button.classList.toggle("is-tooltip-forced", iconKind === "copied" || iconKind === "error");
     decorateFilesActionIconButton(button, nextText, iconKind);
     return;
   }
@@ -289,6 +290,18 @@ function flashFilesShareButtonState(button, text) {
     delete button.dataset.shareResetTimer;
   }, FILES_SHARE_BUTTON_RESET_MS);
   button.dataset.shareResetTimer = String(timerId);
+}
+
+function flashFilesShareButtonStateAfterModal(button, text) {
+  if (!(button instanceof HTMLButtonElement)) {
+    return;
+  }
+
+  window.setTimeout(() => {
+    if (button.isConnected) {
+      flashFilesShareButtonState(button, text);
+    }
+  }, 80);
 }
 
 async function copyTextToClipboard(text) {
@@ -3834,9 +3847,103 @@ function clearFilesAdminRequestsState() {
   state.files.adminRequests.messageKind = "";
 }
 
+function setFilesPublicSharesFeedback(message = "", kind = "") {
+  if (filesPublicSharesFeedbackTimer) {
+    clearTimeout(filesPublicSharesFeedbackTimer);
+    filesPublicSharesFeedbackTimer = null;
+  }
+
+  state.files.publicShares.message = String(message || "");
+  state.files.publicShares.messageKind = kind === "success" ? "success" : kind === "error" ? "error" : "";
+
+  if (!state.files.publicShares.message) {
+    return;
+  }
+
+  filesPublicSharesFeedbackTimer = setTimeout(() => {
+    filesPublicSharesFeedbackTimer = null;
+    state.files.publicShares.message = "";
+    state.files.publicShares.messageKind = "";
+    if (state.view === "files" && document.body.classList.contains("is-files")) {
+      renderFilesAccessView();
+    }
+  }, FILES_ADMIN_REQUESTS_FEEDBACK_AUTO_HIDE_MS);
+}
+
+function normalizeFilesPublicShareEntry(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const id = String(payload.id || "").trim().toLowerCase();
+  const shareUrl = String(payload.shareUrl || "").trim();
+  if (!id || !shareUrl) {
+    return null;
+  }
+
+  return {
+    id,
+    fileId: String(payload.fileId || "").trim().toLowerCase(),
+    name: String(payload.name || "").trim(),
+    displayName: String(payload.displayName || payload.name || t("files_unknown_value")).trim(),
+    mimeType: String(payload.mimeType || "application/octet-stream").trim(),
+    size: Math.max(0, Number(payload.size) || 0),
+    sizeLabel: String(payload.sizeLabel || "").trim(),
+    code: /^\d{4}$/.test(String(payload.code || "").trim()) ? String(payload.code || "").trim() : "",
+    createdAt: String(payload.createdAt || "").trim(),
+    failedCodeAttempts: Math.max(0, Number(payload.failedCodeAttempts) || 0),
+    remainingCodeAttempts: Math.max(0, Number(payload.remainingCodeAttempts) || 0),
+    createdBy: String(payload.createdBy || "").trim(),
+    createdByDiscordId: String(payload.createdByDiscordId || "").trim(),
+    sharePath: String(payload.sharePath || "").trim(),
+    shareUrl
+  };
+}
+
+function normalizeFilesPublicSharesMode(value) {
+  return String(value || "").trim().toLowerCase() === "admin" ? "admin" : "mine";
+}
+
+function getFilesPublicSharesCurrentList() {
+  const mode = normalizeFilesPublicSharesMode(state.files.publicShares.mode);
+  if (mode === "admin") {
+    return Array.isArray(state.files.publicShares.adminList) ? state.files.publicShares.adminList : [];
+  }
+  return Array.isArray(state.files.publicShares.list) ? state.files.publicShares.list : [];
+}
+
+function getFilesPublicSharesActiveCount() {
+  return Array.isArray(state.files.publicShares.list) ? state.files.publicShares.list.length : 0;
+}
+
+function clearFilesPublicSharesState() {
+  if (filesPublicSharesFeedbackTimer) {
+    clearTimeout(filesPublicSharesFeedbackTimer);
+    filesPublicSharesFeedbackTimer = null;
+  }
+  state.files.publicShares.loading = false;
+  state.files.publicShares.list = [];
+  state.files.publicShares.adminList = [];
+  state.files.publicShares.maxActive = 3;
+  state.files.publicShares.mode = "mine";
+  state.files.publicShares.message = "";
+  state.files.publicShares.messageKind = "";
+  state.files.publicShares.busyActionKey = "";
+}
+
 function normalizeFilesAdminModalType(value) {
   const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "upload" || normalized === "edit" || normalized === "requests" || normalized === "bot") {
+  if (
+    normalized === "upload"
+    || normalized === "edit"
+    || normalized === "requests"
+    || normalized === "publicshares"
+    || normalized === "public-shares"
+    || normalized === "bot"
+  ) {
+    if (normalized === "publicshares" || normalized === "public-shares") {
+      return "publicShares";
+    }
     return normalized;
   }
   return "";
@@ -3942,10 +4049,18 @@ function renderFilesEditModal({ force = false } = {}) {
 function renderFilesAdminModals() {
   const me = normalizeFilesProfile(state.files.me);
   const canUseAdminTools = Boolean(me.isAuthorized && me.isAdmin);
+  const canUsePublicShares = Boolean(me.isAuthorized);
   const canUseBotAdmin = canUseFilesBotAdmin(me, { requireDesktop: true });
-  let activeModal = canUseAdminTools
-    ? normalizeFilesAdminModalType(state.files.adminModal.active)
-    : "";
+  let activeModal = normalizeFilesAdminModalType(state.files.adminModal.active);
+  if ((activeModal === "upload" || activeModal === "edit" || activeModal === "requests") && !canUseAdminTools) {
+    activeModal = "";
+  }
+  if (activeModal === "publicShares" && !canUsePublicShares) {
+    activeModal = "";
+  }
+  if (activeModal === "publicShares" && normalizeFilesPublicSharesMode(state.files.publicShares.mode) === "admin" && !canUseAdminTools) {
+    activeModal = "";
+  }
   if (activeModal === "bot" && !canUseBotAdmin) {
     activeModal = "";
   }
@@ -3954,10 +4069,14 @@ function renderFilesAdminModals() {
   const uploadOpen = activeModal === "upload";
   const editOpen = activeModal === "edit";
   const requestsOpen = activeModal === "requests";
+  const publicSharesOpen = activeModal === "publicShares";
+  const publicSharesMode = normalizeFilesPublicSharesMode(state.files.publicShares.mode);
   const botOpen = canUseBotAdmin && activeModal === "bot";
-  const modalOpen = uploadOpen || editOpen || requestsOpen || botOpen;
+  const modalOpen = uploadOpen || editOpen || requestsOpen || publicSharesOpen || botOpen;
   const pendingCount = getFilesPendingAdminRequestCount();
   const pendingBadgeText = pendingCount > 99 ? "99+" : String(pendingCount);
+  const publicSharesCount = getFilesPublicSharesActiveCount();
+  const publicSharesBadgeText = publicSharesCount > 99 ? "99+" : String(publicSharesCount);
   if (!botOpen) {
     state.files.botAdmin.diagnosticsOpen = false;
     state.files.botAdmin.selectedGuildId = "";
@@ -3968,6 +4087,9 @@ function renderFilesAdminModals() {
 
   if (elements.filesAdminToolsPanel) {
     elements.filesAdminToolsPanel.hidden = !canUseAdminTools;
+  }
+  if (elements.filesPublicSharesToolsPanel) {
+    elements.filesPublicSharesToolsPanel.hidden = !canUsePublicShares;
   }
   if (elements.filesAdminConsoleModalBtn) {
     elements.filesAdminConsoleModalBtn.classList.toggle("is-active", uploadOpen);
@@ -3992,6 +4114,38 @@ function renderFilesAdminModals() {
     elements.filesAccessControlPendingBadge.setAttribute("aria-label", badgeLabel);
     elements.filesAccessControlPendingBadge.title = badgeLabel;
   }
+  if (elements.filesPublicSharesModalBtn) {
+    const publicSharesMineOpen = publicSharesOpen && publicSharesMode === "mine";
+    elements.filesPublicSharesModalBtn.classList.toggle("is-active", publicSharesMineOpen);
+    elements.filesPublicSharesModalBtn.setAttribute("aria-expanded", publicSharesMineOpen ? "true" : "false");
+    const showBadge = canUsePublicShares && publicSharesCount > 0;
+    elements.filesPublicSharesModalBtn.classList.toggle("has-pending-badge", showBadge);
+    const baseLabel = t("files_public_shares_title");
+    const fullLabel = publicSharesCount > 0
+      ? `${baseLabel}. ${t("files_public_shares_active_count", {
+        count: publicSharesCount,
+        max: state.files.publicShares.maxActive || 3
+      })}`
+      : baseLabel;
+    elements.filesPublicSharesModalBtn.setAttribute("aria-label", fullLabel);
+  }
+  if (elements.filesPublicSharesCountBadge) {
+    const showBadge = canUsePublicShares && publicSharesCount > 0;
+    elements.filesPublicSharesCountBadge.hidden = !showBadge;
+    elements.filesPublicSharesCountBadge.textContent = showBadge ? publicSharesBadgeText : "0";
+    const badgeLabel = t("files_public_shares_active_count", {
+      count: publicSharesCount,
+      max: state.files.publicShares.maxActive || 3
+    });
+    elements.filesPublicSharesCountBadge.setAttribute("aria-label", badgeLabel);
+    elements.filesPublicSharesCountBadge.title = badgeLabel;
+  }
+  if (elements.filesAdminPublicSharesModalBtn) {
+    const publicSharesAdminOpen = publicSharesOpen && publicSharesMode === "admin";
+    elements.filesAdminPublicSharesModalBtn.classList.toggle("is-active", publicSharesAdminOpen);
+    elements.filesAdminPublicSharesModalBtn.setAttribute("aria-expanded", publicSharesAdminOpen ? "true" : "false");
+    elements.filesAdminPublicSharesModalBtn.setAttribute("aria-label", t("files_admin_public_shares_title"));
+  }
   if (elements.filesBotAdminModalBtn) {
     elements.filesBotAdminModalBtn.classList.toggle("is-active", botOpen);
     elements.filesBotAdminModalBtn.setAttribute("aria-expanded", botOpen ? "true" : "false");
@@ -4012,6 +4166,10 @@ function renderFilesAdminModals() {
     elements.filesAdminRequestsOverlay.classList.toggle("is-active", requestsOpen);
     elements.filesAdminRequestsOverlay.setAttribute("aria-hidden", requestsOpen ? "false" : "true");
   }
+  if (elements.filesPublicSharesOverlay) {
+    elements.filesPublicSharesOverlay.classList.toggle("is-active", publicSharesOpen);
+    elements.filesPublicSharesOverlay.setAttribute("aria-hidden", publicSharesOpen ? "false" : "true");
+  }
   if (elements.filesBotAdminOverlay) {
     elements.filesBotAdminOverlay.classList.toggle("is-active", botOpen);
     elements.filesBotAdminOverlay.setAttribute("aria-hidden", botOpen ? "false" : "true");
@@ -4029,18 +4187,33 @@ function renderFilesAdminModals() {
     clearFilesEditModalState();
   }
   renderFilesEditModal();
+  renderFilesPublicSharesPanel();
   renderFilesBotAdminDiagnosticsModal();
   renderFilesBotAdminPanel();
 }
 
-function setFilesAdminModalOpen(nextModal, { focus = true } = {}) {
+function setFilesAdminModalOpen(nextModal, { focus = true, publicSharesMode = "" } = {}) {
   const me = normalizeFilesProfile(state.files.me);
   const canUseAdminTools = Boolean(me.isAuthorized && me.isAdmin);
-  let normalizedModal = canUseAdminTools ? normalizeFilesAdminModalType(nextModal) : "";
+  const canUsePublicShares = Boolean(me.isAuthorized);
+  let normalizedModal = normalizeFilesAdminModalType(nextModal);
+  const normalizedPublicSharesMode = normalizeFilesPublicSharesMode(publicSharesMode || state.files.publicShares.mode);
+  if ((normalizedModal === "upload" || normalizedModal === "edit" || normalizedModal === "requests") && !canUseAdminTools) {
+    normalizedModal = "";
+  }
+  if (normalizedModal === "publicShares" && !canUsePublicShares) {
+    normalizedModal = "";
+  }
+  if (normalizedModal === "publicShares" && normalizedPublicSharesMode === "admin" && !canUseAdminTools) {
+    normalizedModal = "";
+  }
   if (normalizedModal === "bot" && !canUseFilesBotAdmin(me, { requireDesktop: true })) {
     normalizedModal = "";
   }
   state.files.adminModal.active = normalizedModal;
+  if (normalizedModal === "publicShares") {
+    state.files.publicShares.mode = normalizedPublicSharesMode;
+  }
   if (normalizedModal === "bot") {
     startFilesBotAdminLivePolling();
   } else {
@@ -4079,6 +4252,18 @@ function setFilesAdminModalOpen(nextModal, { focus = true } = {}) {
       focusFilesOpenTarget(elements.filesAdminRequestsSearchInput, {
         fallback: elements.filesAdminRequestsModalCloseBtn,
         selectText: true
+      });
+    }
+    return;
+  }
+
+  if (normalizedModal === "publicShares") {
+    if (!state.files.publicShares.loading) {
+      void refreshFilesPublicShares({ silent: true, mode: normalizedPublicSharesMode });
+    }
+    if (elements.filesPublicSharesRefreshBtn instanceof HTMLButtonElement) {
+      focusFilesOpenTarget(elements.filesPublicSharesRefreshBtn, {
+        fallback: elements.filesPublicSharesModalCloseBtn
       });
     }
     return;
@@ -4492,6 +4677,157 @@ function renderFilesAdminRequestsPanel() {
   elements.filesAdminRequestsList.appendChild(fragment);
 }
 
+function renderFilesPublicSharesPanel() {
+  if (!elements.filesPublicSharesPanel) {
+    return;
+  }
+
+  const me = normalizeFilesProfile(state.files.me);
+  const mode = normalizeFilesPublicSharesMode(state.files.publicShares.mode);
+  const adminMode = mode === "admin";
+  const showPanel = Boolean(me.isAuthorized && (!adminMode || me.isAdmin));
+  elements.filesPublicSharesPanel.hidden = !showPanel;
+  if (!showPanel) {
+    return;
+  }
+
+  elements.filesPublicSharesPanel.classList.toggle("is-admin-scope", adminMode);
+  if (elements.filesPublicSharesBadge) {
+    elements.filesPublicSharesBadge.textContent = t(adminMode ? "files_public_shares_admin_badge" : "files_public_shares_badge");
+  }
+  if (elements.filesPublicSharesTitle) {
+    elements.filesPublicSharesTitle.textContent = t(adminMode ? "files_public_shares_admin_title" : "files_public_shares_title");
+  }
+  if (elements.filesPublicSharesHint) {
+    elements.filesPublicSharesHint.textContent = t(adminMode ? "files_public_shares_admin_hint" : "files_public_shares_hint");
+  }
+  if (elements.filesPublicSharesConsoleLabel) {
+    elements.filesPublicSharesConsoleLabel.textContent = t(adminMode ? "files_public_shares_admin_console_label" : "files_public_shares_console_label");
+  }
+  if (elements.filesPublicSharesConsoleHint) {
+    elements.filesPublicSharesConsoleHint.textContent = t(adminMode ? "files_public_shares_admin_console_hint" : "files_public_shares_console_hint");
+  }
+
+  const entries = getFilesPublicSharesCurrentList();
+  const activeCount = entries.length;
+  const maxActive = Math.max(1, Number(state.files.publicShares.maxActive) || 3);
+  const activeLabel = adminMode
+    ? t("files_public_shares_admin_active_count", { count: activeCount })
+    : t("files_public_shares_active_count", { count: activeCount, max: maxActive });
+
+  if (elements.filesPublicSharesStateBadge) {
+    elements.filesPublicSharesStateBadge.textContent = activeLabel;
+  }
+  if (elements.filesPublicSharesRefreshBtn) {
+    elements.filesPublicSharesRefreshBtn.disabled = state.files.publicShares.loading || Boolean(state.files.publicShares.busyActionKey);
+  }
+  if (elements.filesPublicSharesFeedback) {
+    const message = String(state.files.publicShares.message || "");
+    const hasMessage = Boolean(message);
+    elements.filesPublicSharesFeedback.hidden = !hasMessage;
+    elements.filesPublicSharesFeedback.textContent = message;
+    elements.filesPublicSharesFeedback.classList.toggle("is-success", state.files.publicShares.messageKind === "success");
+    elements.filesPublicSharesFeedback.classList.toggle("is-error", state.files.publicShares.messageKind === "error");
+  }
+  if (!elements.filesPublicSharesList) {
+    return;
+  }
+
+  if (state.files.publicShares.loading) {
+    elements.filesPublicSharesList.innerHTML = `<p class="files-public-shares-empty">${t("files_public_shares_loading")}</p>`;
+    return;
+  }
+
+  if (!entries.length) {
+    elements.filesPublicSharesList.innerHTML = `
+      <article class="files-public-shares-empty-card">
+        <p class="files-public-shares-empty-title">${t(adminMode ? "files_public_shares_admin_empty_title" : "files_public_shares_empty_title")}</p>
+        <p class="files-public-shares-empty">${t(adminMode ? "files_public_shares_admin_empty" : "files_public_shares_empty")}</p>
+      </article>
+    `;
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  entries.forEach((entry, index) => {
+    const card = document.createElement("article");
+    card.className = "files-public-share-item";
+    card.style.setProperty("--files-public-share-index", String(Math.min(index, 10)));
+
+    const top = document.createElement("div");
+    top.className = "files-public-share-top";
+    const titleWrap = document.createElement("div");
+    titleWrap.className = "files-public-share-title-wrap";
+    const badge = document.createElement("span");
+    badge.className = "files-public-share-index";
+    badge.textContent = String(index + 1).padStart(2, "0");
+    const title = document.createElement("p");
+    title.className = "files-public-share-name";
+    title.textContent = entry.displayName || entry.name || t("files_unknown_value");
+    titleWrap.append(badge, title);
+    const status = document.createElement("span");
+    status.className = "files-public-share-status";
+    status.textContent = t("files_public_shares_status_ready");
+    top.append(titleWrap, status);
+
+    const meta = document.createElement("div");
+    meta.className = "files-public-share-meta";
+    const metaRows = adminMode
+      ? [
+        [t("files_public_shares_meta_owner"), entry.createdBy || t("files_unknown_value")],
+        [t("files_public_shares_meta_owner_id"), entry.createdByDiscordId || t("files_unknown_value")],
+        [t("files_public_shares_meta_code"), entry.code || "----"],
+        [t("files_public_shares_meta_size"), entry.sizeLabel || (entry.size ? formatFileSize(entry.size) : t("files_unknown_value"))],
+        [t("files_public_shares_meta_created"), formatFileDateTime(entry.createdAt)],
+        [t("files_public_shares_meta_attempts"), t("files_public_shares_attempts_value", { n: entry.remainingCodeAttempts })]
+      ]
+      : [
+        [t("files_public_shares_meta_code"), entry.code || "----"],
+        [t("files_public_shares_meta_size"), entry.sizeLabel || (entry.size ? formatFileSize(entry.size) : t("files_unknown_value"))],
+        [t("files_public_shares_meta_created"), formatFileDateTime(entry.createdAt)],
+        [t("files_public_shares_meta_attempts"), t("files_public_shares_attempts_value", { n: entry.remainingCodeAttempts })]
+      ];
+    for (const [label, value] of metaRows) {
+      const row = document.createElement("div");
+      const key = document.createElement("span");
+      key.textContent = label;
+      const val = document.createElement("strong");
+      val.textContent = value || t("files_unknown_value");
+      row.append(key, val);
+      meta.appendChild(row);
+    }
+
+    const link = document.createElement("p");
+    link.className = "files-public-share-url";
+    link.textContent = entry.shareUrl;
+
+    const actions = document.createElement("div");
+    actions.className = "files-public-share-actions";
+    const rowBusy = state.files.publicShares.busyActionKey === entry.id;
+    const actionSpecs = [
+      ["open", t("files_public_shares_action_open"), false],
+      ["copy", t("files_public_shares_action_copy"), false],
+      ["delete", rowBusy ? t("files_public_shares_action_busy") : t("files_public_shares_action_delete"), true]
+    ];
+    for (const [action, label, isDelete] of actionSpecs) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `files-card-action files-public-share-action${isDelete ? " is-delete" : ""}`;
+      button.textContent = label;
+      button.dataset.filesPublicShareAction = action;
+      button.dataset.shareId = entry.id;
+      button.disabled = Boolean(state.files.publicShares.busyActionKey) || state.files.publicShares.loading;
+      actions.appendChild(button);
+    }
+
+    card.append(top, meta, link, actions);
+    fragment.appendChild(card);
+  });
+
+  elements.filesPublicSharesList.innerHTML = "";
+  elements.filesPublicSharesList.appendChild(fragment);
+}
+
 function renderFilesBotAdminPanel() {
   if (!elements.filesBotAdminPanel) {
     return;
@@ -4859,6 +5195,229 @@ function confirmFilesCautionDownload() {
 
   closeFilesCautionModal();
   startFilesDownload(fileId);
+}
+
+function setFilesShareFeedback(message = "", kind = "") {
+  state.files.shareModal.feedback = String(message || "");
+  state.files.shareModal.feedbackKind = String(kind || "");
+  renderFilesShareModal();
+}
+
+function renderFilesShareModal() {
+  const modalState = state.files.shareModal;
+  const isOpen = Boolean(modalState.open);
+  const isPublicMode = modalState.mode === "public";
+  const isBusy = Boolean(modalState.busy);
+
+  if (elements.filesShareBadge) {
+    elements.filesShareBadge.textContent = t("files_share_modal_badge");
+  }
+  if (elements.filesShareTitle) {
+    elements.filesShareTitle.textContent = t("files_share_modal_title");
+  }
+  if (elements.filesShareMessage) {
+    elements.filesShareMessage.textContent = t("files_share_modal_body");
+  }
+  if (elements.filesSharePrivateTitle) {
+    elements.filesSharePrivateTitle.textContent = t("files_share_private_title");
+  }
+  if (elements.filesSharePrivateBody) {
+    elements.filesSharePrivateBody.textContent = t("files_share_private_body");
+  }
+  if (elements.filesSharePublicTitle) {
+    elements.filesSharePublicTitle.textContent = t("files_share_public_title");
+  }
+  if (elements.filesSharePublicBody) {
+    elements.filesSharePublicBody.textContent = t("files_share_public_body");
+  }
+  if (elements.filesShareCodeLabel) {
+    elements.filesShareCodeLabel.textContent = t("files_share_code_label");
+  }
+  if (elements.filesSharePublicCreateBtn) {
+    elements.filesSharePublicCreateBtn.textContent = isBusy
+      ? t("files_share_public_creating")
+      : t("files_share_public_create");
+    elements.filesSharePublicCreateBtn.disabled = isBusy;
+  }
+  if (elements.filesSharePublicHint) {
+    elements.filesSharePublicHint.textContent = t("files_share_public_hint");
+  }
+  if (elements.filesShareCancelBtn) {
+    elements.filesShareCancelBtn.textContent = t("files_share_modal_cancel");
+    elements.filesShareCancelBtn.disabled = isBusy;
+  }
+  if (elements.filesSharePrivateBtn) {
+    elements.filesSharePrivateBtn.disabled = isBusy;
+    elements.filesSharePrivateBtn.classList.toggle("is-selected", modalState.mode === "private");
+  }
+  if (elements.filesSharePublicBtn) {
+    elements.filesSharePublicBtn.disabled = isBusy;
+    elements.filesSharePublicBtn.classList.toggle("is-selected", isPublicMode);
+  }
+  if (elements.filesSharePublicForm) {
+    elements.filesSharePublicForm.hidden = !isPublicMode;
+    elements.filesSharePublicForm.style.display = isPublicMode ? "" : "none";
+  }
+  if (elements.filesShareFeedback) {
+    elements.filesShareFeedback.hidden = !modalState.feedback;
+    elements.filesShareFeedback.textContent = modalState.feedback;
+    elements.filesShareFeedback.classList.toggle("is-error", modalState.feedbackKind === "error");
+    elements.filesShareFeedback.classList.toggle("is-success", modalState.feedbackKind === "success");
+  }
+  if (elements.filesShareOverlay) {
+    elements.filesShareOverlay.classList.toggle("is-active", isOpen);
+    elements.filesShareOverlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  }
+}
+
+function openFilesShareModal(fileId, button = null) {
+  const normalizedFileId = String(fileId || "").trim().toLowerCase();
+  const matchedFile = state.files.list.find((entry) => String(entry?.id || "").trim().toLowerCase() === normalizedFileId) || null;
+  if (!matchedFile) {
+    if (button instanceof HTMLButtonElement) {
+      flashFilesShareButtonState(button, t("files_share_button_copy_error"));
+    }
+    return;
+  }
+
+  state.files.shareModal.open = true;
+  state.files.shareModal.fileId = normalizedFileId;
+  state.files.shareModal.fileName = getFilesDisplayName(matchedFile);
+  state.files.shareModal.mode = "choice";
+  state.files.shareModal.busy = false;
+  state.files.shareModal.feedback = "";
+  state.files.shareModal.feedbackKind = "";
+  state.files.shareModal.sourceButton = button instanceof HTMLButtonElement ? button : null;
+  if (elements.filesShareCodeInput instanceof HTMLInputElement) {
+    elements.filesShareCodeInput.value = "";
+    elements.filesShareCodeInput.classList.remove("is-invalid");
+  }
+  renderFilesShareModal();
+  setTimeout(() => {
+    elements.filesShareCancelBtn?.focus();
+  }, 0);
+}
+
+function closeFilesShareModal({ force = false } = {}) {
+  if (state.files.shareModal.busy && !force) {
+    return;
+  }
+
+  state.files.shareModal.open = false;
+  state.files.shareModal.fileId = "";
+  state.files.shareModal.fileName = "";
+  state.files.shareModal.mode = "choice";
+  state.files.shareModal.busy = false;
+  state.files.shareModal.feedback = "";
+  state.files.shareModal.feedbackKind = "";
+  state.files.shareModal.sourceButton = null;
+  if (elements.filesShareCodeInput instanceof HTMLInputElement) {
+    elements.filesShareCodeInput.value = "";
+    elements.filesShareCodeInput.classList.remove("is-invalid");
+  }
+  renderFilesShareModal();
+}
+
+async function copyPrivateFilesShareLink() {
+  state.files.shareModal.mode = "private";
+  renderFilesShareModal();
+  const normalizedFileId = String(state.files.shareModal.fileId || "").trim().toLowerCase();
+  const button = state.files.shareModal.sourceButton;
+  const matchedFile = state.files.list.find((entry) => String(entry?.id || "").trim().toLowerCase() === normalizedFileId) || null;
+  if (!matchedFile) {
+    if (button instanceof HTMLButtonElement) {
+      flashFilesShareButtonState(button, t("files_share_button_copy_error"));
+    }
+    closeFilesShareModal({ force: true });
+    return;
+  }
+
+  const shareUrl = buildFilesLocationUrl(matchedFile, { absolute: true });
+  try {
+    await copyTextToClipboard(shareUrl);
+    closeFilesShareModal({ force: true });
+    flashFilesShareButtonStateAfterModal(button, t("files_share_button_copied"));
+  } catch {
+    setFilesShareFeedback(t("files_share_button_copy_error"), "error");
+    if (button instanceof HTMLButtonElement) {
+      flashFilesShareButtonState(button, t("files_share_button_copy_error"));
+    }
+  }
+}
+
+function showPublicFilesShareForm() {
+  state.files.shareModal.mode = "public";
+  state.files.shareModal.feedback = "";
+  state.files.shareModal.feedbackKind = "";
+  renderFilesShareModal();
+  setTimeout(() => {
+    elements.filesShareCodeInput?.focus();
+  }, 0);
+}
+
+async function submitPublicFilesShare(event) {
+  event?.preventDefault?.();
+  const normalizedFileId = String(state.files.shareModal.fileId || "").trim().toLowerCase();
+  const button = state.files.shareModal.sourceButton;
+  const codeInput = elements.filesShareCodeInput instanceof HTMLInputElement ? elements.filesShareCodeInput : null;
+  const code = String(codeInput?.value || "").replace(/\D/g, "").slice(0, 4);
+  if (codeInput) {
+    codeInput.value = code;
+    codeInput.classList.toggle("is-invalid", !/^\d{4}$/.test(code));
+  }
+  if (!/^\d{4}$/.test(code)) {
+    setFilesShareFeedback(t("files_share_public_invalid_code"), "error");
+    codeInput?.focus();
+    return;
+  }
+  if (!normalizedFileId || state.files.shareModal.busy) {
+    return;
+  }
+
+  state.files.shareModal.busy = true;
+  state.files.shareModal.feedback = "";
+  state.files.shareModal.feedbackKind = "";
+  renderFilesShareModal();
+
+  try {
+    const payload = await requestJson(`/api/files/${encodeURIComponent(normalizedFileId)}/public-share`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        code,
+        lang: state.lang === "es" ? "es" : "en"
+      })
+    });
+    const shareUrl = String(payload.shareUrl || payload.sharePath || "").trim();
+    if (!shareUrl) {
+      throw new Error(t("files_share_public_create_error"));
+    }
+    try {
+      await copyTextToClipboard(shareUrl);
+    } catch {
+      state.files.shareModal.busy = false;
+      setFilesShareFeedback(t("files_share_public_copy_error"), "error");
+      window.prompt("Copy public link:", shareUrl);
+      return;
+    }
+    if (button instanceof HTMLButtonElement) {
+      void refreshFilesPublicShares({ silent: true, mode: "mine" });
+      closeFilesShareModal({ force: true });
+      flashFilesShareButtonStateAfterModal(button, t("files_share_button_copied"));
+    } else {
+      void refreshFilesPublicShares({ silent: true, mode: "mine" });
+      closeFilesShareModal({ force: true });
+    }
+  } catch (error) {
+    const message = String(error?.message || t("files_share_public_create_error"));
+    state.files.shareModal.busy = false;
+    setFilesShareFeedback(message, "error");
+    if (button instanceof HTMLButtonElement) {
+      flashFilesShareButtonState(button, t("files_share_button_copy_error"));
+    }
+  }
 }
 
 function renderFilesBotAdminLeaveModal() {
@@ -6419,6 +6978,10 @@ function renderFilesRestrictedView({
           ? t("files_share_restricted_subtitle")
           : t("files_restricted_subtitle");
   }
+  if (elements.filesRestrictedPublicShareNote) {
+    elements.filesRestrictedPublicShareNote.hidden = !sharedRestrictedLanding;
+    elements.filesRestrictedPublicShareNote.textContent = t("files_share_restricted_public_note");
+  }
   if (elements.filesRestrictedIdentityValue) {
     elements.filesRestrictedIdentityValue.textContent = resolvedUsername;
   }
@@ -6891,6 +7454,7 @@ async function submitFilesDisclaimerDecision(decision) {
     const hasActiveAuthorizedAccess = hasFilesAuthorizedAccess(state.files.me);
     if (isAcceptDecision && nextProfile && hasActiveAuthorizedAccess) {
       await refreshFilesList();
+      await refreshFilesPublicShares({ silent: true });
       if (state.files.me.isAdmin) {
         await refreshFilesAdminRequests({ silent: true });
       } else {
@@ -9767,6 +10331,7 @@ async function pollFilesIdentityLive({ force = false } = {}) {
         clearFilesAdminRequestsState();
         renderFilesAccessView();
       }
+      await refreshFilesPublicShares({ silent: true });
       return;
     }
 
@@ -9930,6 +10495,62 @@ async function refreshFilesAdminRequests({ silent = false } = {}) {
   renderFilesAccessView();
 }
 
+async function refreshFilesPublicShares({ silent = false, mode = "" } = {}) {
+  const me = normalizeFilesProfile(state.files.me);
+  if (!hasFilesAuthorizedAccess(me)) {
+    clearFilesPublicSharesState();
+    renderFilesAccessView();
+    return;
+  }
+  const normalizedMode = normalizeFilesPublicSharesMode(mode || state.files.publicShares.mode);
+  if (normalizedMode === "admin" && !me.isAdmin) {
+    state.files.publicShares.adminList = [];
+    renderFilesAccessView();
+    return;
+  }
+  if (state.files.publicShares.loading) {
+    return;
+  }
+
+  state.files.publicShares.loading = true;
+  state.files.publicShares.busyActionKey = "";
+  if (!silent) {
+    renderFilesAccessView();
+  }
+
+  try {
+    const endpoint = normalizedMode === "admin"
+      ? "/api/files/public-shares/admin"
+      : "/api/files/public-shares";
+    const payload = await requestJson(endpoint);
+    const rawEntries = Array.isArray(payload?.entries) ? payload.entries : [];
+    const parsedEntries = rawEntries
+      .map((entry) => normalizeFilesPublicShareEntry(entry))
+      .filter(Boolean);
+    if (normalizedMode === "admin") {
+      state.files.publicShares.adminList = parsedEntries;
+    } else {
+      state.files.publicShares.list = parsedEntries;
+      state.files.publicShares.maxActive = Math.max(1, Number(payload?.maxActive) || 3);
+    }
+  } catch (error) {
+    if (error?.status === 401 || error?.status === 403) {
+      await refreshFilesIdentity({ loadFiles: false });
+      return;
+    }
+    if (normalizedMode === "admin") {
+      state.files.publicShares.adminList = [];
+    } else {
+      state.files.publicShares.list = [];
+    }
+    setFilesPublicSharesFeedback(String(error?.message || t("files_public_shares_error_load")), "error");
+  } finally {
+    state.files.publicShares.loading = false;
+  }
+
+  renderFilesAccessView();
+}
+
 async function refreshFilesBotAdminOverview({ silent = false } = {}) {
   const me = normalizeFilesProfile(state.files.me);
   if (!hasFilesAuthorizedAccess(me) || !me.isAdmin) {
@@ -10008,6 +10629,7 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
 
   if (hasActiveAuthorizedAccess && loadFiles) {
     await refreshFilesList();
+    await refreshFilesPublicShares({ silent: true });
     if (hasActiveAdminAccess) {
       await refreshFilesAdminRequests({ silent: true });
     } else {
@@ -10031,6 +10653,7 @@ async function refreshFilesIdentity({ loadFiles = true } = {}) {
     state.files.detailOrigin = "";
     state.files.transition = "";
     clearFilesAdminRequestsState();
+    clearFilesPublicSharesState();
     clearFilesBotAdminState({ preserveQuery: true });
   }
   if (hasActiveAuthorizedAccess && !hasActiveAdminAccess) {
@@ -10677,6 +11300,85 @@ function handleFilesAdminRequestsListInput(event) {
   state.files.adminRequests.declineComposerValue = String(target.value || "");
 }
 
+async function handleFilesPublicShareAction(actionElement) {
+  const me = normalizeFilesProfile(state.files.me);
+  if (!hasFilesAuthorizedAccess(me)) {
+    return;
+  }
+  if (!(actionElement instanceof HTMLElement)) {
+    return;
+  }
+
+  const action = String(actionElement.dataset.filesPublicShareAction || "").trim().toLowerCase();
+  const shareId = String(actionElement.dataset.shareId || "").trim().toLowerCase();
+  const mode = normalizeFilesPublicSharesMode(state.files.publicShares.mode);
+  if (mode === "admin" && !me.isAdmin) {
+    return;
+  }
+  const entry = getFilesPublicSharesCurrentList()
+    .find((item) => item.id === shareId) || null;
+  if (!action || !entry) {
+    return;
+  }
+
+  if (action === "open") {
+    window.open(entry.shareUrl, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  if (action === "copy") {
+    try {
+      await copyTextToClipboard(entry.shareUrl);
+      setFilesPublicSharesFeedback(t("files_public_shares_copied"), "success");
+    } catch {
+      setFilesPublicSharesFeedback(t("files_share_button_copy_error"), "error");
+    }
+    renderFilesAccessView();
+    return;
+  }
+
+  if (action !== "delete" || state.files.publicShares.busyActionKey) {
+    return;
+  }
+
+  state.files.publicShares.busyActionKey = shareId;
+  setFilesPublicSharesFeedback("", "");
+  renderFilesAccessView();
+
+  try {
+    await requestJson(`/api/files/public-shares/${encodeURIComponent(shareId)}`, {
+      method: "DELETE"
+    });
+    state.files.publicShares.list = (Array.isArray(state.files.publicShares.list) ? state.files.publicShares.list : [])
+      .filter((item) => item.id !== shareId);
+    state.files.publicShares.adminList = (Array.isArray(state.files.publicShares.adminList) ? state.files.publicShares.adminList : [])
+      .filter((item) => item.id !== shareId);
+    setFilesPublicSharesFeedback(t("files_public_shares_deleted"), "success");
+    await refreshFilesPublicShares({ silent: true, mode });
+  } catch (error) {
+    if (error?.status === 401 || error?.status === 403) {
+      await refreshFilesIdentity({ loadFiles: false });
+      return;
+    }
+    setFilesPublicSharesFeedback(String(error?.message || t("files_public_shares_error_delete")), "error");
+  } finally {
+    state.files.publicShares.busyActionKey = "";
+    renderFilesAccessView();
+  }
+}
+
+function handleFilesPublicSharesListClick(event) {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return;
+  }
+  const actionTarget = target.closest("[data-files-public-share-action]");
+  if (!(actionTarget instanceof HTMLElement)) {
+    return;
+  }
+  void handleFilesPublicShareAction(actionTarget);
+}
+
 async function executeFilesBotAdminAction({ action = "", guildId = "", guildName = "", actionKey = "" } = {}) {
   let requestUrl = "";
   let successMessage = "";
@@ -10813,18 +11515,7 @@ async function handleFilesShare(fileId, button = null) {
     return;
   }
 
-  const shareUrl = buildFilesLocationUrl(matchedFile, { absolute: true });
-
-  try {
-    await copyTextToClipboard(shareUrl);
-    if (button instanceof HTMLButtonElement) {
-      flashFilesShareButtonState(button, t("files_share_button_copied"));
-    }
-  } catch {
-    if (button instanceof HTMLButtonElement) {
-      flashFilesShareButtonState(button, t("files_share_button_copy_error"));
-    }
-  }
+  openFilesShareModal(normalizedFileId, button);
 }
 
 function scheduleFilesDownloadRefresh() {
@@ -18626,6 +19317,9 @@ function applyLanguage(lang, persist = true) {
   elements.filesRestrictedIncident.textContent = t("files_restricted_incident", { code: "FR-000000" });
   elements.filesRestrictedTitle.textContent = t("files_restricted_title");
   elements.filesRestrictedSubtitle.textContent = t("files_restricted_subtitle");
+  if (elements.filesRestrictedPublicShareNote) {
+    elements.filesRestrictedPublicShareNote.textContent = t("files_share_restricted_public_note");
+  }
   elements.filesRestrictedIdentityLabel.textContent = t("files_restricted_identity_label");
   elements.filesRestrictedDiscordLabel.textContent = t("files_restricted_discord_label");
   elements.filesRestrictedClearanceLabel.textContent = t("files_restricted_clearance_label");
@@ -18748,6 +19442,12 @@ function applyLanguage(lang, persist = true) {
   if (elements.filesAdminToolsHint) {
     elements.filesAdminToolsHint.textContent = t("files_admin_tools_hint");
   }
+  if (elements.filesPublicSharesToolsTitle) {
+    elements.filesPublicSharesToolsTitle.textContent = t("files_public_shares_tools_title");
+  }
+  if (elements.filesPublicSharesToolsHint) {
+    elements.filesPublicSharesToolsHint.textContent = t("files_public_shares_tools_hint");
+  }
   if (elements.filesAdminConsoleModalBtnText) {
     elements.filesAdminConsoleModalBtnText.textContent = t("files_admin_console_title");
   }
@@ -18759,6 +19459,18 @@ function applyLanguage(lang, persist = true) {
   }
   if (elements.filesAccessControlModalBtnHint) {
     elements.filesAccessControlModalBtnHint.textContent = t("files_admin_tools_access_hint");
+  }
+  if (elements.filesAdminPublicSharesModalBtnText) {
+    elements.filesAdminPublicSharesModalBtnText.textContent = t("files_admin_public_shares_title");
+  }
+  if (elements.filesAdminPublicSharesModalBtnHint) {
+    elements.filesAdminPublicSharesModalBtnHint.textContent = t("files_admin_tools_global_public_shares_hint");
+  }
+  if (elements.filesPublicSharesModalBtnText) {
+    elements.filesPublicSharesModalBtnText.textContent = t("files_public_shares_title");
+  }
+  if (elements.filesPublicSharesModalBtnHint) {
+    elements.filesPublicSharesModalBtnHint.textContent = t("files_admin_tools_public_shares_hint");
   }
   if (elements.filesBotAdminModalBtnText) {
     elements.filesBotAdminModalBtnText.textContent = t("files_bot_admin_modal_title");
@@ -18784,6 +19496,9 @@ function applyLanguage(lang, persist = true) {
   if (elements.filesAdminRequestsModalCloseBtn) {
     elements.filesAdminRequestsModalCloseBtn.textContent = t("files_admin_modal_close");
   }
+  if (elements.filesPublicSharesModalCloseBtn) {
+    elements.filesPublicSharesModalCloseBtn.textContent = t("files_admin_modal_close");
+  }
   if (elements.filesBotAdminModalCloseBtn) {
     elements.filesBotAdminModalCloseBtn.textContent = t("files_admin_modal_close");
   }
@@ -18796,6 +19511,21 @@ function applyLanguage(lang, persist = true) {
   }
   elements.filesAdminRequestsTitle.textContent = t("files_admin_requests_title");
   elements.filesAdminRequestsHint.textContent = t("files_admin_requests_hint");
+  if (elements.filesPublicSharesBadge) {
+    elements.filesPublicSharesBadge.textContent = t("files_public_shares_badge");
+  }
+  if (elements.filesPublicSharesTitle) {
+    elements.filesPublicSharesTitle.textContent = t("files_public_shares_title");
+  }
+  if (elements.filesPublicSharesHint) {
+    elements.filesPublicSharesHint.textContent = t("files_public_shares_hint");
+  }
+  if (elements.filesPublicSharesConsoleLabel) {
+    elements.filesPublicSharesConsoleLabel.textContent = t("files_public_shares_console_label");
+  }
+  if (elements.filesPublicSharesConsoleHint) {
+    elements.filesPublicSharesConsoleHint.textContent = t("files_public_shares_console_hint");
+  }
   if (elements.filesAdminRequestsConsoleLabel) {
     elements.filesAdminRequestsConsoleLabel.textContent = t("files_admin_requests_console_label");
   }
@@ -18909,6 +19639,10 @@ function applyLanguage(lang, persist = true) {
   }
   syncFilesAdminRequestsFilterMenu();
   elements.filesAdminRequestsRefreshBtn.textContent = t("files_admin_requests_refresh_button");
+  if (elements.filesPublicSharesRefreshBtn) {
+    elements.filesPublicSharesRefreshBtn.textContent = t("files_public_shares_refresh_button");
+  }
+  renderFilesPublicSharesPanel();
   renderFilesBotAdminPanel();
   elements.filesBrowserTitle.textContent = t("files_file_index_title");
   elements.filesSearchLabel.textContent = t("files_search_label");
@@ -19201,10 +19935,12 @@ function wireEvents() {
   const filesBotAdminServerModalRoot = elements.filesBotAdminServerOverlay?.querySelector(".files-bot-admin-server-core") || null;
   const filesGroupRenameModalRoot = elements.filesGroupRenameOverlay?.querySelector(".files-group-rename-core") || null;
   const filesCautionModalRoot = elements.filesCautionOverlay?.querySelector(".files-caution-core") || null;
+  const filesShareModalRoot = elements.filesShareOverlay?.querySelector(".files-share-core") || null;
   const filesDisclaimerModalRoot = elements.filesDisclaimerOverlay?.querySelector(".files-disclaimer-core") || null;
   const filesUploadModalRoot = elements.filesUploadOverlay?.querySelector(".files-admin-modal-core") || null;
   const filesEditModalRoot = elements.filesEditOverlay?.querySelector(".files-admin-modal-core") || null;
   const filesAdminRequestsModalRoot = elements.filesAdminRequestsOverlay?.querySelector(".files-admin-modal-core") || null;
+  const filesPublicSharesModalRoot = elements.filesPublicSharesOverlay?.querySelector(".files-admin-modal-core") || null;
   const filesBotAdminModalRoot = elements.filesBotAdminOverlay?.querySelector(".files-admin-modal-core") || null;
   const shouldBlockBackgroundForActiveOverlay = (target) => {
     if (document.body.classList.contains("is-syncing") && elements.syncOverlay?.classList.contains("is-active")) {
@@ -19261,6 +19997,12 @@ function wireEvents() {
       }
       return !filesCautionModalRoot.contains(target);
     }
+    if (elements.filesShareOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node) || !(filesShareModalRoot instanceof Node)) {
+        return true;
+      }
+      return !filesShareModalRoot.contains(target);
+    }
     if (elements.filesDisclaimerOverlay?.classList.contains("is-active")) {
       if (!(target instanceof Node) || !(filesDisclaimerModalRoot instanceof Node)) {
         return true;
@@ -19284,6 +20026,12 @@ function wireEvents() {
         return true;
       }
       return !filesAdminRequestsModalRoot.contains(target);
+    }
+    if (elements.filesPublicSharesOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node) || !(filesPublicSharesModalRoot instanceof Node)) {
+        return true;
+      }
+      return !filesPublicSharesModalRoot.contains(target);
     }
     if (elements.filesBotAdminOverlay?.classList.contains("is-active")) {
       if (!(target instanceof Node) || !(filesBotAdminModalRoot instanceof Node)) {
@@ -19624,6 +20372,16 @@ function wireEvents() {
     const isOpen = normalizeFilesAdminModalType(state.files.adminModal.active) === "requests";
     setFilesAdminModalOpen(isOpen ? "" : "requests");
   });
+  elements.filesPublicSharesModalBtn?.addEventListener("click", () => {
+    const isOpen = normalizeFilesAdminModalType(state.files.adminModal.active) === "publicShares"
+      && normalizeFilesPublicSharesMode(state.files.publicShares.mode) === "mine";
+    setFilesAdminModalOpen(isOpen ? "" : "publicShares", { publicSharesMode: "mine" });
+  });
+  elements.filesAdminPublicSharesModalBtn?.addEventListener("click", () => {
+    const isOpen = normalizeFilesAdminModalType(state.files.adminModal.active) === "publicShares"
+      && normalizeFilesPublicSharesMode(state.files.publicShares.mode) === "admin";
+    setFilesAdminModalOpen(isOpen ? "" : "publicShares", { publicSharesMode: "admin" });
+  });
   elements.filesBotAdminModalBtn?.addEventListener("click", () => {
     const isOpen = normalizeFilesAdminModalType(state.files.adminModal.active) === "bot";
     setFilesAdminModalOpen(isOpen ? "" : "bot");
@@ -19647,6 +20405,9 @@ function wireEvents() {
     }
   });
   elements.filesAdminRequestsModalCloseBtn?.addEventListener("click", () => {
+    closeFilesAdminModal();
+  });
+  elements.filesPublicSharesModalCloseBtn?.addEventListener("click", () => {
     closeFilesAdminModal();
   });
   elements.filesBotAdminModalCloseBtn?.addEventListener("click", () => {
@@ -19688,6 +20449,14 @@ function wireEvents() {
   });
   elements.filesAdminRequestsOverlay?.addEventListener("click", (event) => {
     if (event.target === elements.filesAdminRequestsOverlay) {
+      if (isDesktopModalViewport()) {
+        return;
+      }
+      closeFilesAdminModal();
+    }
+  });
+  elements.filesPublicSharesOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.filesPublicSharesOverlay) {
       if (isDesktopModalViewport()) {
         return;
       }
@@ -19746,6 +20515,9 @@ function wireEvents() {
   });
   elements.filesAdminRequestsRefreshBtn?.addEventListener("click", () => {
     void refreshFilesAdminRequests();
+  });
+  elements.filesPublicSharesRefreshBtn?.addEventListener("click", () => {
+    void refreshFilesPublicShares();
   });
   elements.filesBotAdminRefreshBtn?.addEventListener("click", () => {
     void refreshFilesBotAdminOverview();
@@ -19843,6 +20615,7 @@ function wireEvents() {
   elements.filesSearchResults?.addEventListener("click", handleFilesListClick);
   elements.filesAdminRequestsList?.addEventListener("click", handleFilesAdminRequestsListClick);
   elements.filesAdminRequestsList?.addEventListener("input", handleFilesAdminRequestsListInput);
+  elements.filesPublicSharesList?.addEventListener("click", handleFilesPublicSharesListClick);
   elements.filesDeleteCancelBtn?.addEventListener("click", () => {
     closeFilesDeleteModal();
   });
@@ -19863,6 +20636,33 @@ function wireEvents() {
   elements.filesCautionOverlay?.addEventListener("click", (event) => {
     if (event.target === elements.filesCautionOverlay) {
       closeFilesCautionModal();
+    }
+  });
+  elements.filesShareCancelBtn?.addEventListener("click", () => {
+    closeFilesShareModal();
+  });
+  elements.filesSharePrivateBtn?.addEventListener("click", () => {
+    void copyPrivateFilesShareLink();
+  });
+  elements.filesSharePublicBtn?.addEventListener("click", () => {
+    showPublicFilesShareForm();
+  });
+  elements.filesShareCodeInput?.addEventListener("input", () => {
+    if (!(elements.filesShareCodeInput instanceof HTMLInputElement)) {
+      return;
+    }
+    elements.filesShareCodeInput.value = elements.filesShareCodeInput.value.replace(/\D/g, "").slice(0, 4);
+    elements.filesShareCodeInput.classList.remove("is-invalid");
+    if (state.files.shareModal.feedbackKind === "error") {
+      setFilesShareFeedback("", "");
+    }
+  });
+  elements.filesSharePublicForm?.addEventListener("submit", (event) => {
+    void submitPublicFilesShare(event);
+  });
+  elements.filesShareOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.filesShareOverlay) {
+      closeFilesShareModal();
     }
   });
   elements.filesBotAdminLeaveCancelBtn?.addEventListener("click", () => {
@@ -20081,6 +20881,11 @@ function wireEvents() {
       return;
     }
 
+    if (elements.filesShareOverlay?.classList.contains("is-active")) {
+      closeFilesShareModal();
+      return;
+    }
+
     if (elements.hackOverlay.classList.contains("is-active")) {
       hideHackOverlay();
       return;
@@ -20110,6 +20915,7 @@ function wireEvents() {
       elements.filesUploadOverlay?.classList.contains("is-active")
       || elements.filesEditOverlay?.classList.contains("is-active")
       || elements.filesAdminRequestsOverlay?.classList.contains("is-active")
+      || elements.filesPublicSharesOverlay?.classList.contains("is-active")
       || elements.filesBotAdminOverlay?.classList.contains("is-active")
     ) {
       if (!isDesktopModalViewport()) {
