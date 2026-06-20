@@ -8709,6 +8709,10 @@ app.post("/api/visits", (req, res) => {
   res.json(visitCounter);
 });
 
+app.get("/public-share/:shareSlug", handlePublicFileSharePage);
+app.post("/public-share/:shareSlug/download", handlePublicFileShareDownload);
+app.get("/public-share-download/:token", handlePublicFileShareDownloadToken);
+
 app.use(express.static(SITE_ROOT));
 
 app.get("/", (_req, res) => {
@@ -8908,7 +8912,7 @@ app.get("/drops/:shareSlug", async (req, res) => {
   }
 });
 
-app.get("/public-share/:shareSlug", (req, res) => {
+function handlePublicFileSharePage(req, res) {
   const entry = resolvePublicFileShareBySlug(req.params.shareSlug);
   if (!entry) {
     const slug = normalizePublicFileShareSlugValue(req.params.shareSlug);
@@ -8920,9 +8924,9 @@ app.get("/public-share/:shareSlug", (req, res) => {
 
   res.setHeader("Cache-Control", "no-store");
   res.type("html").send(renderPublicFileSharePage(entry, req));
-});
+}
 
-app.post("/public-share/:shareSlug/download", (req, res) => {
+function handlePublicFileShareDownload(req, res) {
   const entry = resolvePublicFileShareBySlug(req.params.shareSlug);
   if (!entry) {
     const slug = normalizePublicFileShareSlugValue(req.params.shareSlug);
@@ -9054,9 +9058,9 @@ app.post("/public-share/:shareSlug/download", (req, res) => {
       res.status(500).json({ error: "Unable to stream public file download" });
     }
   });
-});
+}
 
-app.get("/public-share-download/:token", (req, res) => {
+function handlePublicFileShareDownloadToken(req, res) {
   const entry = consumePublicFileShareDownloadToken(req.params.token);
   if (!entry || !entry.storedPath || !fs.existsSync(entry.storedPath)) {
     res.status(410).type("text").send("Download token expired");
@@ -9071,7 +9075,7 @@ app.get("/public-share-download/:token", (req, res) => {
       res.status(500).type("text").send("Unable to stream public file download");
     }
   });
-});
+}
 
 app.get("/share/:shareSlug/image", (req, res) => {
   const entry = resolveSharedFileEntryBySlug(req.params.shareSlug);
