@@ -2487,7 +2487,7 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
   };
 
   const errorMarkup = error
-    ? `<p class="public-share-error">${escapeHtml(error)}</p>`
+    ? `<p class="gate-terminal-error">${escapeHtml(error)}</p>`
     : "";
 
   return `<!doctype html>
@@ -2535,7 +2535,7 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
       color: var(--fg);
       font-family: "Share Tech Mono", monospace;
     }
-    .public-share {
+    .gate-terminal {
       width: min(100%, 680px);
       border: 1px solid var(--line);
       border-radius: 10px;
@@ -2545,7 +2545,7 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
         var(--panel);
       box-shadow: 0 18px 60px rgba(0, 0, 0, 0.42), 0 0 42px rgba(139, 255, 139, 0.08);
     }
-    .public-share-top {
+    .gate-terminal-top {
       display: flex;
       justify-content: space-between;
       gap: 16px;
@@ -2554,10 +2554,10 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
       padding-bottom: 16px;
       margin-bottom: 20px;
     }
-    .public-share-kicker,
-    .public-share-badge,
-    .public-share-label,
-    .public-share-meta-label {
+    .gate-terminal-kicker,
+    .gate-terminal-badge,
+    .gate-terminal-label,
+    .gate-terminal-meta-label {
       margin: 0;
       color: var(--warn);
       font-family: Rajdhani, system-ui, sans-serif;
@@ -2566,13 +2566,13 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
       letter-spacing: 0.14em;
       text-transform: uppercase;
     }
-    .public-share-badge {
+    .gate-terminal-badge {
       border: 1px solid var(--line-hot);
       border-radius: 999px;
       padding: 5px 9px 4px;
       white-space: nowrap;
     }
-    .public-share-title {
+    .gate-terminal-title {
       margin: 12px 0 0;
       color: #e1ffe1;
       font-family: Rajdhani, system-ui, sans-serif;
@@ -2581,51 +2581,51 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
-    .public-share-body {
+    .gate-terminal-body {
       margin: 0 0 18px;
       max-width: 65ch;
       color: var(--muted);
       font-size: 14px;
       line-height: 1.45;
     }
-    .public-share-meta {
+    .gate-terminal-meta {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
       margin-bottom: 20px;
     }
-    .public-share-meta-item {
+    .gate-terminal-meta-item {
       border: 1px solid rgba(139, 255, 139, 0.18);
       border-radius: 8px;
       padding: 10px;
       background: rgba(0, 0, 0, 0.22);
       min-width: 0;
     }
-    .public-share-meta-value {
+    .gate-terminal-meta-value {
       display: block;
       margin-top: 5px;
       overflow-wrap: anywhere;
       color: #d4ffd4;
       font-size: 13px;
     }
-    .public-share-form {
+    .gate-terminal-form {
       display: grid;
       gap: 12px;
       border-top: 1px solid rgba(139, 255, 139, 0.18);
       padding-top: 18px;
     }
-    .public-share-code-row {
+    .gate-terminal-code-row {
       display: flex;
       gap: 10px;
       align-items: end;
       flex-wrap: wrap;
     }
-    .public-share-field {
+    .gate-terminal-field {
       display: grid;
       gap: 7px;
       flex: 1 1 180px;
     }
-    .public-share-code {
+    .gate-terminal-code {
       width: 100%;
       border: 1px solid rgba(255, 225, 122, 0.42);
       border-radius: 8px;
@@ -2637,12 +2637,12 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
       letter-spacing: 0.32em;
       text-align: center;
     }
-    .public-share-code:focus {
+    .gate-terminal-code:focus {
       outline: none;
       border-color: rgba(255, 225, 122, 0.74);
       box-shadow: 0 0 0 1px rgba(255, 225, 122, 0.28);
     }
-    .public-share-btn {
+    .gate-terminal-btn {
       min-height: 48px;
       border: 1px solid rgba(255, 225, 122, 0.54);
       border-radius: 8px;
@@ -2658,12 +2658,12 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
       letter-spacing: 0.16em;
       text-transform: uppercase;
     }
-    .public-share-btn:hover,
-    .public-share-btn:focus-visible {
+    .gate-terminal-btn:hover,
+    .gate-terminal-btn:focus-visible {
       border-color: rgba(255, 225, 122, 0.82);
       box-shadow: 0 0 20px rgba(255, 225, 122, 0.14);
     }
-    .public-share-error {
+    .gate-terminal-error {
       margin: 0;
       border: 1px solid rgba(255, 143, 122, 0.42);
       border-radius: 8px;
@@ -2673,7 +2673,7 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
       font-size: 13px;
       line-height: 1.35;
     }
-    .public-share.is-limit-reached {
+    .gate-terminal.is-limit-reached {
       max-width: 760px;
       border-color: rgba(139, 255, 139, 0.3);
       background:
@@ -2684,13 +2684,13 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
         0 24px 76px rgba(0, 0, 0, 0.56),
         0 0 46px rgba(139, 255, 139, 0.09);
     }
-    .public-share-limit {
+    .gate-terminal-limit {
       display: grid;
       gap: 16px;
       border-top: 1px solid rgba(139, 255, 139, 0.18);
       padding-top: 18px;
     }
-    .public-share-limit-status {
+    .gate-terminal-limit-status {
       width: fit-content;
       border: 1px solid rgba(255, 225, 122, 0.5);
       border-radius: 999px;
@@ -2703,7 +2703,7 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
       text-transform: uppercase;
       background: rgba(0, 0, 0, 0.22);
     }
-    .public-share-limit-card {
+    .gate-terminal-limit-card {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
       gap: 16px;
@@ -2715,7 +2715,7 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
         linear-gradient(180deg, rgba(255, 225, 122, 0.07), rgba(0, 0, 0, 0.16)),
         rgba(0, 0, 0, 0.28);
     }
-    .public-share-limit-mark {
+    .gate-terminal-limit-mark {
       width: 42px;
       height: 42px;
       border: 1px solid rgba(255, 225, 122, 0.5);
@@ -2730,12 +2730,12 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
       background: rgba(255, 225, 122, 0.08);
       box-shadow: 0 0 18px rgba(255, 225, 122, 0.09);
     }
-    .public-share-limit-copy {
+    .gate-terminal-limit-copy {
       min-width: 0;
       display: grid;
       gap: 9px;
     }
-    .public-share-limit-title {
+    .gate-terminal-limit-title {
       margin: 0;
       color: #fff0bd;
       font-family: Rajdhani, system-ui, sans-serif;
@@ -2744,26 +2744,26 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
       letter-spacing: 0.1em;
       text-transform: uppercase;
     }
-    .public-share-limit-body {
+    .gate-terminal-limit-body {
       margin: 0;
       max-width: 60ch;
       color: rgba(255, 240, 189, 0.82);
       font-size: 14px;
       line-height: 1.55;
     }
-    .public-share-limit-meta {
+    .gate-terminal-limit-meta {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
     }
-    .public-share-limit-meta-item {
+    .gate-terminal-limit-meta-item {
       min-width: 0;
       border: 1px solid rgba(139, 255, 139, 0.16);
       border-radius: 10px;
       padding: 11px 12px;
       background: rgba(0, 0, 0, 0.2);
     }
-    .public-share-limit-meta-item span {
+    .gate-terminal-limit-meta-item span {
       display: block;
       margin-bottom: 5px;
       color: var(--warn);
@@ -2773,7 +2773,7 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
       letter-spacing: 0.14em;
       text-transform: uppercase;
     }
-    .public-share-limit-meta-item strong {
+    .gate-terminal-limit-meta-item strong {
       display: block;
       color: #d9ffd2;
       font-size: 13px;
@@ -2781,55 +2781,55 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
     }
     @media (max-width: 620px) {
       body { padding: 16px; }
-      .public-share { padding: 18px; }
-      .public-share-top { display: grid; }
-      .public-share-meta { grid-template-columns: 1fr; }
-      .public-share-btn { width: 100%; }
-      .public-share-limit-card,
-      .public-share-limit-meta { grid-template-columns: 1fr; }
+      .gate-terminal { padding: 18px; }
+      .gate-terminal-top { display: grid; }
+      .gate-terminal-meta { grid-template-columns: 1fr; }
+      .gate-terminal-btn { width: 100%; }
+      .gate-terminal-limit-card,
+      .gate-terminal-limit-meta { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <main class="public-share">
-    <div class="public-share-top">
+  <main class="gate-terminal">
+    <div class="gate-terminal-top">
       <div>
-        <p class="public-share-kicker">${escapeHtml(t.kicker)}</p>
-        <h1 class="public-share-title">${escapeHtml(t.heading)}</h1>
+        <p class="gate-terminal-kicker">${escapeHtml(t.kicker)}</p>
+        <h1 class="gate-terminal-title">${escapeHtml(t.heading)}</h1>
       </div>
-      <p class="public-share-badge">${escapeHtml(t.badge)}</p>
+      <p class="gate-terminal-badge">${escapeHtml(t.badge)}</p>
     </div>
-    <p class="public-share-body">${escapeHtml(t.body)}</p>
-    <section class="public-share-meta" aria-label="File details">
-      <div class="public-share-meta-item">
-        <span class="public-share-meta-label">${escapeHtml(t.metaFile)}</span>
-        <span class="public-share-meta-value">${escapeHtml(normalizedShare.displayName || normalizedShare.name)}</span>
+    <p class="gate-terminal-body">${escapeHtml(t.body)}</p>
+    <section class="gate-terminal-meta" aria-label="File details">
+      <div class="gate-terminal-meta-item">
+        <span class="gate-terminal-meta-label">${escapeHtml(t.metaFile)}</span>
+        <span class="gate-terminal-meta-value">${escapeHtml(normalizedShare.displayName || normalizedShare.name)}</span>
       </div>
-      <div class="public-share-meta-item">
-        <span class="public-share-meta-label">${escapeHtml(t.metaSize)}</span>
-        <span class="public-share-meta-value">${escapeHtml(formatFileSizeForMeta(normalizedShare.size) || "--")}</span>
+      <div class="gate-terminal-meta-item">
+        <span class="gate-terminal-meta-label">${escapeHtml(t.metaSize)}</span>
+        <span class="gate-terminal-meta-value">${escapeHtml(formatFileSizeForMeta(normalizedShare.size) || "--")}</span>
       </div>
-      <div class="public-share-meta-item">
-        <span class="public-share-meta-label">${escapeHtml(t.metaLimit)}</span>
-        <span class="public-share-meta-value">${escapeHtml(t.limitValue)}</span>
+      <div class="gate-terminal-meta-item">
+        <span class="gate-terminal-meta-label">${escapeHtml(t.metaLimit)}</span>
+        <span class="gate-terminal-meta-value">${escapeHtml(t.limitValue)}</span>
       </div>
     </section>
-    <form class="public-share-form" method="post" action="${escapeHtml(actionPath)}" data-public-share-form>
+    <form class="gate-terminal-form" method="post" action="${escapeHtml(actionPath)}" data-download-gate-form>
       ${errorMarkup}
-      <div class="public-share-code-row">
-        <label class="public-share-field">
-          <span class="public-share-label">${escapeHtml(t.labelCode)}</span>
-          <input class="public-share-code" name="code" type="tel" inputmode="numeric" autocomplete="one-time-code" pattern="\\d{4}" maxlength="4" required autofocus />
+      <div class="gate-terminal-code-row">
+        <label class="gate-terminal-field">
+          <span class="gate-terminal-label">${escapeHtml(t.labelCode)}</span>
+          <input class="gate-terminal-code" name="code" type="tel" inputmode="numeric" autocomplete="one-time-code" pattern="\\d{4}" maxlength="4" required autofocus />
         </label>
-        <button class="public-share-btn" type="submit">${escapeHtml(t.button)}</button>
+        <button class="gate-terminal-btn" type="submit">${escapeHtml(t.button)}</button>
       </div>
     </form>
   </main>
   <script>
     (() => {
       const config = ${JSON.stringify(limitReachedPayload)};
-      const form = document.querySelector("[data-public-share-form]");
-      const main = document.querySelector(".public-share");
+      const form = document.querySelector("[data-download-gate-form]");
+      const main = document.querySelector(".gate-terminal");
       if (!(form instanceof HTMLFormElement) || !main || !window.fetch || !window.URL || !window.Blob) {
         return;
       }
@@ -2901,35 +2901,35 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
         main.classList.add("is-limit-reached");
 
         const top = document.createElement("div");
-        top.className = "public-share-top";
+        top.className = "gate-terminal-top";
         const titleWrap = document.createElement("div");
         titleWrap.append(
-          createTextElement("p", "public-share-kicker", config.kicker),
-          createTextElement("h1", "public-share-title", config.heading)
+          createTextElement("p", "gate-terminal-kicker", config.kicker),
+          createTextElement("h1", "gate-terminal-title", config.heading)
         );
-        top.append(titleWrap, createTextElement("p", "public-share-badge", config.badge));
+        top.append(titleWrap, createTextElement("p", "gate-terminal-badge", config.badge));
 
         const limit = document.createElement("section");
-        limit.className = "public-share-limit";
+        limit.className = "gate-terminal-limit";
         const limitCard = document.createElement("div");
-        limitCard.className = "public-share-limit-card";
-        limitCard.append(createTextElement("div", "public-share-limit-mark", "OK"));
+        limitCard.className = "gate-terminal-limit-card";
+        limitCard.append(createTextElement("div", "gate-terminal-limit-mark", "OK"));
         const limitCopy = document.createElement("div");
-        limitCopy.className = "public-share-limit-copy";
+        limitCopy.className = "gate-terminal-limit-copy";
         limitCopy.append(
-          createTextElement("h2", "public-share-limit-title", config.heading),
-          createTextElement("p", "public-share-limit-body", config.body)
+          createTextElement("h2", "gate-terminal-limit-title", config.heading),
+          createTextElement("p", "gate-terminal-limit-body", config.body)
         );
         limitCard.append(limitCopy);
         const meta = document.createElement("div");
-        meta.className = "public-share-limit-meta";
+        meta.className = "gate-terminal-limit-meta";
         [
           [config.stateLabel, config.stateValue],
           [config.accessLabel, config.accessValue],
           [config.nextLabel, config.nextValue]
         ].forEach(([label, value]) => {
           const item = document.createElement("div");
-          item.className = "public-share-limit-meta-item";
+          item.className = "gate-terminal-limit-meta-item";
           item.append(
             createTextElement("span", "", label),
             createTextElement("strong", "", value)
@@ -2937,7 +2937,7 @@ function renderPublicFileSharePage(shareEntry, req, { error = "" } = {}) {
           meta.append(item);
         });
         limit.append(
-          createTextElement("p", "public-share-limit-status", config.status),
+          createTextElement("p", "gate-terminal-limit-status", config.status),
           limitCard,
           meta
         );
@@ -3038,7 +3038,7 @@ function renderPublicFileShareLimitReachedPage(lang = "en", { downloadUrl = "" }
       color: var(--fg);
       font-family: "Share Tech Mono", ui-monospace, monospace;
     }
-    .public-share-limit-shell {
+    .gate-terminal-limit-shell {
       width: min(100%, 760px);
       position: relative;
       overflow: hidden;
@@ -3054,7 +3054,7 @@ function renderPublicFileShareLimitReachedPage(lang = "en", { downloadUrl = "" }
         0 0 0 1px rgba(0, 0, 0, 0.52) inset,
         0 0 46px rgba(139, 255, 139, 0.09);
     }
-    .public-share-limit-shell::before {
+    .gate-terminal-limit-shell::before {
       content: "";
       position: absolute;
       inset: 0;
@@ -3065,7 +3065,7 @@ function renderPublicFileShareLimitReachedPage(lang = "en", { downloadUrl = "" }
         linear-gradient(to bottom, rgba(255, 225, 122, 0.09) 1px, transparent 1px);
       background-size: 34px 100%, 100% 24px;
     }
-    .public-share-limit-shell::after {
+    .gate-terminal-limit-shell::after {
       content: "";
       position: absolute;
       inset: 12px;
@@ -3073,11 +3073,11 @@ function renderPublicFileShareLimitReachedPage(lang = "en", { downloadUrl = "" }
       border: 1px solid rgba(139, 255, 139, 0.1);
       border-radius: 10px;
     }
-    .public-share-limit-shell > * {
+    .gate-terminal-limit-shell > * {
       position: relative;
       z-index: 1;
     }
-    .public-share-top {
+    .gate-terminal-top {
       display: flex;
       justify-content: space-between;
       gap: 18px;
@@ -3086,9 +3086,9 @@ function renderPublicFileShareLimitReachedPage(lang = "en", { downloadUrl = "" }
       padding-bottom: 18px;
       margin-bottom: 18px;
     }
-    .public-share-kicker,
-    .public-share-badge,
-    .public-share-limit-status {
+    .gate-terminal-kicker,
+    .gate-terminal-badge,
+    .gate-terminal-limit-status {
       margin: 0;
       color: var(--warn);
       font-family: Rajdhani, system-ui, sans-serif;
@@ -3097,15 +3097,15 @@ function renderPublicFileShareLimitReachedPage(lang = "en", { downloadUrl = "" }
       letter-spacing: 0.14em;
       text-transform: uppercase;
     }
-    .public-share-badge,
-    .public-share-limit-status {
+    .gate-terminal-badge,
+    .gate-terminal-limit-status {
       border: 1px solid var(--line-hot);
       border-radius: 999px;
       padding: 6px 10px 5px;
       white-space: nowrap;
       background: rgba(0, 0, 0, 0.22);
     }
-    .public-share-title {
+    .gate-terminal-title {
       margin: 10px 0 0;
       color: #eefee8;
       font-family: Rajdhani, system-ui, sans-serif;
@@ -3115,12 +3115,12 @@ function renderPublicFileShareLimitReachedPage(lang = "en", { downloadUrl = "" }
       text-transform: uppercase;
       text-shadow: 0 0 18px rgba(139, 255, 139, 0.18);
     }
-    .public-share-limit {
+    .gate-terminal-limit {
       display: grid;
       gap: 16px;
       padding-top: 2px;
     }
-    .public-share-limit-card {
+    .gate-terminal-limit-card {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
       gap: 16px;
@@ -3132,7 +3132,7 @@ function renderPublicFileShareLimitReachedPage(lang = "en", { downloadUrl = "" }
         linear-gradient(180deg, rgba(255, 225, 122, 0.07), rgba(0, 0, 0, 0.16)),
         var(--panel-soft);
     }
-    .public-share-limit-mark {
+    .gate-terminal-limit-mark {
       width: 42px;
       height: 42px;
       border: 1px solid rgba(255, 225, 122, 0.5);
@@ -3147,12 +3147,12 @@ function renderPublicFileShareLimitReachedPage(lang = "en", { downloadUrl = "" }
       background: rgba(255, 225, 122, 0.08);
       box-shadow: 0 0 18px rgba(255, 225, 122, 0.09);
     }
-    .public-share-limit-copy {
+    .gate-terminal-limit-copy {
       min-width: 0;
       display: grid;
       gap: 9px;
     }
-    .public-share-limit-title {
+    .gate-terminal-limit-title {
       margin: 0;
       color: #fff0bd;
       font-family: Rajdhani, system-ui, sans-serif;
@@ -3161,26 +3161,26 @@ function renderPublicFileShareLimitReachedPage(lang = "en", { downloadUrl = "" }
       letter-spacing: 0.1em;
       text-transform: uppercase;
     }
-    .public-share-limit-body {
+    .gate-terminal-limit-body {
       margin: 0;
       max-width: 60ch;
       color: var(--muted);
       font-size: 14px;
       line-height: 1.55;
     }
-    .public-share-limit-meta {
+    .gate-terminal-limit-meta {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
     }
-    .public-share-limit-meta-item {
+    .gate-terminal-limit-meta-item {
       min-width: 0;
       border: 1px solid var(--line-soft);
       border-radius: 10px;
       padding: 11px 12px;
       background: rgba(0, 0, 0, 0.2);
     }
-    .public-share-limit-meta-item span {
+    .gate-terminal-limit-meta-item span {
       display: block;
       margin-bottom: 5px;
       color: var(--warn);
@@ -3190,13 +3190,13 @@ function renderPublicFileShareLimitReachedPage(lang = "en", { downloadUrl = "" }
       letter-spacing: 0.14em;
       text-transform: uppercase;
     }
-    .public-share-limit-meta-item strong {
+    .gate-terminal-limit-meta-item strong {
       display: block;
       color: #d9ffd2;
       font-size: 13px;
       line-height: 1.3;
     }
-    .public-share-download-frame {
+    .gate-terminal-download-frame {
       position: absolute;
       width: 1px;
       height: 1px;
@@ -3206,48 +3206,48 @@ function renderPublicFileShareLimitReachedPage(lang = "en", { downloadUrl = "" }
     }
     @media (max-width: 620px) {
       body { padding: 16px; }
-      .public-share-limit-shell { padding: 18px; }
-      .public-share-top { display: grid; }
-      .public-share-title { font-size: 30px; }
-      .public-share-limit-card { grid-template-columns: 1fr; }
-      .public-share-limit-meta { grid-template-columns: 1fr; }
+      .gate-terminal-limit-shell { padding: 18px; }
+      .gate-terminal-top { display: grid; }
+      .gate-terminal-title { font-size: 30px; }
+      .gate-terminal-limit-card { grid-template-columns: 1fr; }
+      .gate-terminal-limit-meta { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <main class="public-share-limit-shell">
-    <div class="public-share-top">
+  <main class="gate-terminal-limit-shell">
+    <div class="gate-terminal-top">
       <div>
-        <p class="public-share-kicker">${escapeHtml(t.kicker)}</p>
-        <h1 class="public-share-title">${escapeHtml(t.limitReachedHeading)}</h1>
+        <p class="gate-terminal-kicker">${escapeHtml(t.kicker)}</p>
+        <h1 class="gate-terminal-title">${escapeHtml(t.limitReachedHeading)}</h1>
       </div>
-      <p class="public-share-badge">${escapeHtml(t.badge)}</p>
+      <p class="gate-terminal-badge">${escapeHtml(t.badge)}</p>
     </div>
-    <section class="public-share-limit" aria-label="${escapeHtml(t.limitReachedTitle)}">
-      <p class="public-share-limit-status">${escapeHtml(t.limitReachedStatus)}</p>
-      <div class="public-share-limit-card">
-        <div class="public-share-limit-mark" aria-hidden="true">OK</div>
-        <div class="public-share-limit-copy">
-          <h2 class="public-share-limit-title">${escapeHtml(t.limitReachedHeading)}</h2>
-          <p class="public-share-limit-body">${escapeHtml(t.limitReachedBody)}</p>
+    <section class="gate-terminal-limit" aria-label="${escapeHtml(t.limitReachedTitle)}">
+      <p class="gate-terminal-limit-status">${escapeHtml(t.limitReachedStatus)}</p>
+      <div class="gate-terminal-limit-card">
+        <div class="gate-terminal-limit-mark" aria-hidden="true">OK</div>
+        <div class="gate-terminal-limit-copy">
+          <h2 class="gate-terminal-limit-title">${escapeHtml(t.limitReachedHeading)}</h2>
+          <p class="gate-terminal-limit-body">${escapeHtml(t.limitReachedBody)}</p>
         </div>
       </div>
-      <div class="public-share-limit-meta" aria-label="${escapeHtml(t.limitReachedStatus)}">
-        <div class="public-share-limit-meta-item">
+      <div class="gate-terminal-limit-meta" aria-label="${escapeHtml(t.limitReachedStatus)}">
+        <div class="gate-terminal-limit-meta-item">
           <span>${escapeHtml(t.limitStateLabel)}</span>
           <strong>${escapeHtml(t.limitStateValue)}</strong>
         </div>
-        <div class="public-share-limit-meta-item">
+        <div class="gate-terminal-limit-meta-item">
           <span>${escapeHtml(t.limitAccessLabel)}</span>
           <strong>${escapeHtml(t.limitAccessValue)}</strong>
         </div>
-        <div class="public-share-limit-meta-item">
+        <div class="gate-terminal-limit-meta-item">
           <span>${escapeHtml(t.limitNextLabel)}</span>
           <strong>${escapeHtml(t.unavailableHint)}</strong>
         </div>
       </div>
     </section>
-    ${safeDownloadUrl ? `<iframe class="public-share-download-frame" src="${escapeHtml(safeDownloadUrl)}" title="download" aria-hidden="true"></iframe>` : ""}
+    ${safeDownloadUrl ? `<iframe class="gate-terminal-download-frame" src="${escapeHtml(safeDownloadUrl)}" title="download" aria-hidden="true"></iframe>` : ""}
   </main>
 </body>
 </html>`;
@@ -3338,7 +3338,7 @@ function renderPublicFileShareUnavailablePage(lang = "en", { message = "" } = {}
       position: relative;
       z-index: 1;
     }
-    .public-share-unavailable-top {
+    .gate-terminal-unavailable-top {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
@@ -3347,9 +3347,9 @@ function renderPublicFileShareUnavailablePage(lang = "en", { message = "" } = {}
       padding-bottom: 18px;
       margin-bottom: 18px;
     }
-    .public-share-kicker,
-    .public-share-badge,
-    .public-share-status {
+    .gate-terminal-kicker,
+    .gate-terminal-badge,
+    .gate-terminal-status {
       margin: 0;
       color: var(--warn);
       font-family: Rajdhani, system-ui, sans-serif;
@@ -3358,7 +3358,7 @@ function renderPublicFileShareUnavailablePage(lang = "en", { message = "" } = {}
       letter-spacing: 0.14em;
       text-transform: uppercase;
     }
-    .public-share-badge {
+    .gate-terminal-badge {
       border: 1px solid rgba(255, 225, 122, 0.42);
       border-radius: 999px;
       padding: 6px 10px 5px;
@@ -3375,11 +3375,11 @@ function renderPublicFileShareUnavailablePage(lang = "en", { message = "" } = {}
       text-transform: uppercase;
       text-shadow: 0 0 18px rgba(255, 143, 122, 0.14);
     }
-    .public-share-message {
+    .gate-terminal-message {
       display: grid;
       gap: 14px;
     }
-    .public-share-alert {
+    .gate-terminal-alert {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
       gap: 16px;
@@ -3391,7 +3391,7 @@ function renderPublicFileShareUnavailablePage(lang = "en", { message = "" } = {}
         linear-gradient(180deg, rgba(255, 143, 122, 0.08), rgba(0, 0, 0, 0.16)),
         var(--panel-soft);
     }
-    .public-share-alert-mark {
+    .gate-terminal-alert-mark {
       width: 42px;
       height: 42px;
       border: 1px solid rgba(255, 143, 122, 0.5);
@@ -3406,18 +3406,18 @@ function renderPublicFileShareUnavailablePage(lang = "en", { message = "" } = {}
       background: rgba(255, 143, 122, 0.08);
       box-shadow: 0 0 18px rgba(255, 143, 122, 0.1);
     }
-    .public-share-alert-copy {
+    .gate-terminal-alert-copy {
       min-width: 0;
       display: grid;
       gap: 9px;
     }
-    .public-share-message p {
+    .gate-terminal-message p {
       margin: 0;
       color: var(--muted);
       font-size: 14px;
       line-height: 1.55;
     }
-    .public-share-status {
+    .gate-terminal-status {
       width: fit-content;
       color: var(--fg);
       border: 1px solid rgba(255, 143, 122, 0.36);
@@ -3425,19 +3425,19 @@ function renderPublicFileShareUnavailablePage(lang = "en", { message = "" } = {}
       padding: 6px 10px 5px;
       background: rgba(0, 0, 0, 0.22);
     }
-    .public-share-detail-grid {
+    .gate-terminal-detail-grid {
       display: grid;
       grid-template-columns: 0.75fr 1.25fr;
       gap: 10px;
     }
-    .public-share-detail {
+    .gate-terminal-detail {
       min-width: 0;
       border: 1px solid var(--line-soft);
       border-radius: 10px;
       padding: 11px 12px;
       background: rgba(0, 0, 0, 0.2);
     }
-    .public-share-detail span {
+    .gate-terminal-detail span {
       display: block;
       margin-bottom: 5px;
       color: var(--warn);
@@ -3447,7 +3447,7 @@ function renderPublicFileShareUnavailablePage(lang = "en", { message = "" } = {}
       letter-spacing: 0.14em;
       text-transform: uppercase;
     }
-    .public-share-detail strong {
+    .gate-terminal-detail strong {
       display: block;
       color: #ffe5df;
       font-size: 13px;
@@ -3457,36 +3457,36 @@ function renderPublicFileShareUnavailablePage(lang = "en", { message = "" } = {}
     @media (max-width: 620px) {
       body { padding: 16px; }
       main { padding: 18px; }
-      .public-share-unavailable-top { display: grid; }
+      .gate-terminal-unavailable-top { display: grid; }
       h1 { font-size: 30px; }
-      .public-share-alert,
-      .public-share-detail-grid { grid-template-columns: 1fr; }
+      .gate-terminal-alert,
+      .gate-terminal-detail-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <main>
-    <div class="public-share-unavailable-top">
+    <div class="gate-terminal-unavailable-top">
       <div>
-        <p class="public-share-kicker">${escapeHtml(t.kicker)}</p>
+        <p class="gate-terminal-kicker">${escapeHtml(t.kicker)}</p>
         <h1>${escapeHtml(t.unavailableHeading)}</h1>
       </div>
-      <p class="public-share-badge">${escapeHtml(t.badge)}</p>
+      <p class="gate-terminal-badge">${escapeHtml(t.badge)}</p>
     </div>
-    <section class="public-share-message" aria-label="${escapeHtml(t.unavailableTitle)}">
-      <div class="public-share-alert">
-        <div class="public-share-alert-mark" aria-hidden="true">!</div>
-        <div class="public-share-alert-copy">
-          <p class="public-share-status">${escapeHtml(statusText)}</p>
+    <section class="gate-terminal-message" aria-label="${escapeHtml(t.unavailableTitle)}">
+      <div class="gate-terminal-alert">
+        <div class="gate-terminal-alert-mark" aria-hidden="true">!</div>
+        <div class="gate-terminal-alert-copy">
+          <p class="gate-terminal-status">${escapeHtml(statusText)}</p>
           <p>${escapeHtml(body)}</p>
         </div>
       </div>
-      <div class="public-share-detail-grid">
-        <div class="public-share-detail">
+      <div class="gate-terminal-detail-grid">
+        <div class="gate-terminal-detail">
           <span>${escapeHtml(t.unavailableStateLabel)}</span>
           <strong>${escapeHtml(t.unavailableStateClosed)}</strong>
         </div>
-        <div class="public-share-detail">
+        <div class="gate-terminal-detail">
           <span>${escapeHtml(t.unavailableNextLabel)}</span>
           <strong>${escapeHtml(t.unavailableHint)}</strong>
         </div>
