@@ -127,6 +127,10 @@
 
   const CUSTOM_CATEGORY_FILTERS = { [CUT_CONTENT]: ["cBadge:cut"] };
 
+  // Placeholder tiles painted into the results grid while the database loads, so
+  // the panel previews its layout with a shimmer instead of sitting empty.
+  const SKELETON_TILE_COUNT = 24;
+
   // Spanish labels for group/category names (UI chrome only; item data stays English).
   const GROUP_LABELS_ES = {
     CAMP: "C.A.M.P.", Skins: "Aspectos", Apparel: "Vestimenta",
@@ -381,6 +385,7 @@
     data.loading = true;
     data.error = "";
     renderStatus();
+    renderSkeleton(true);
 
     const cached = readCache();
     if (cached) {
@@ -430,7 +435,7 @@
       data.loading = false;
       data.error = t("atomic_shop_error");
       renderStatus();
-      renderResults();
+      renderSkeleton(false);
     }
   }
 
@@ -495,6 +500,30 @@
     el.hidden = !text;
     el.textContent = text;
     el.classList.toggle("is-error", Boolean(data.error));
+    el.classList.toggle("is-loading", Boolean(data.loading));
+  }
+
+  // Paint (or clear) shimmer placeholder tiles in the results grid. Real tiles
+  // replace them once applyAndRender() wipes the grid, so this only ever shows
+  // while the database is in flight.
+  function renderSkeleton(show) {
+    const host = dom.atomicShopResults;
+    if (!host) return;
+    if (!show) {
+      host.querySelectorAll(".atomic-shop-skel-tile").forEach((el) => el.remove());
+      return;
+    }
+    if (host.querySelector(".atomic-shop-tile") || host.querySelector(".atomic-shop-skel-tile")) return;
+    let html = "";
+    for (let i = 0; i < SKELETON_TILE_COUNT; i++) {
+      html +=
+        `<div class="atomic-shop-skel-tile" aria-hidden="true">` +
+          `<span class="atomic-shop-skel-img"></span>` +
+          `<span class="atomic-shop-skel-line"></span>` +
+          `<span class="atomic-shop-skel-line is-short"></span>` +
+        `</div>`;
+    }
+    host.insertAdjacentHTML("beforeend", html);
   }
 
   function renderStats() {

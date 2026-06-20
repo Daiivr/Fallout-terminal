@@ -1632,3 +1632,56 @@
     transform: none;
   }
 }
+
+/* --- Ambient Fallout icon glyphs drifting across the page background --- */
+/* Fixed layer behind the terminal (z-index 5); glyphs show in the side margins
+   and through the terminal's transparent gaps. Per-glyph variance comes from the
+   inline custom properties (--x/--y position, --s size, --f/--p durations,
+   --d delay, --o peak opacity). Uses the project's Fallout76IconTags font. */
+.bg-symbols {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bg-symbol {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  font-family: "Fallout76IconTags", "Share Tech Mono", monospace;
+  font-size: var(--s, 2rem);
+  line-height: 1;
+  color: rgba(139, 255, 139, 0.92);
+  text-shadow: 0 0 14px rgba(139, 255, 139, 0.35);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation:
+    bgSymbolDrift var(--f, 34s) ease-in-out var(--d, 0s) infinite,
+    bgSymbolPulse var(--p, 8s) ease-in-out var(--d, 0s) infinite;
+}
+
+@keyframes bgSymbolDrift {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  25%  { transform: translate(10px, -26px) rotate(7deg); }
+  50%  { transform: translate(-8px, -46px) rotate(-6deg); }
+  75%  { transform: translate(12px, -22px) rotate(8deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes bgSymbolPulse {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: var(--o, 0.14); }
+}
+
+@media (max-width: 760px) {
+  .bg-symbols { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-symbol {
+    animation: none;
+    opacity: var(--o, 0.1);
+  }
+}

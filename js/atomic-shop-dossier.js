@@ -491,6 +491,10 @@
     const bundleCarousel = resolveBundleItems(item)
       .map((entry) => entry.primaryImage)
       .filter((img) => img && img.directory && img.imageName);
+    // Only an explicit, NON-EMPTY carousel list should suppress auto-detection.
+    // Most records carry `carouselImages: []`, and treating that empty array as
+    // "explicit" hid every item's _c1/_c2/... variants behind the primary image.
+    const hasExplicitCarousel = Array.isArray(item.carouselImages) && item.carouselImages.length > 0;
     const source = bundleCarousel.length ? bundleCarousel : item.carouselImages;
     if (Array.isArray(source)) {
       const seen = new Set();
@@ -502,10 +506,10 @@
       });
     }
 
-    if (!Array.isArray(item.carouselImages) && !bundleCarousel.length && item.primaryImage?.imageName && item.primaryImage?.directory) {
+    if (!hasExplicitCarousel && !bundleCarousel.length && item.primaryImage?.imageName && item.primaryImage?.directory) {
       const parsed = parseVariantBase(item.primaryImage.imageName);
       if (parsed) {
-        for (let i = 1; i <= 8; i++) {
+        for (let i = 1; i <= 16; i++) {
           const variant = getImageUrl(item.primaryImage.directory, buildVariantName(parsed.base, parsed.ext, i));
           const exists = await checkImageExists(variant);
           if (exists && !images.includes(variant)) images.push(variant);

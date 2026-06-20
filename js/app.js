@@ -3964,6 +3964,7 @@ function renderFilesAdminModals() {
   }
 
   document.body.classList.toggle("is-files-admin-modal-open", modalOpen);
+  document.body.classList.toggle("is-files-bot-admin-modal-open", botOpen);
 
   if (elements.filesAdminToolsPanel) {
     elements.filesAdminToolsPanel.hidden = !canUseAdminTools;
@@ -12572,6 +12573,226 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const BACKGROUND_SYMBOL_VISIBLE_COUNT = 16;
+const BACKGROUND_SYMBOL_GLYPHS = [
+  "¤", "¢", "", "", "", "", "", "", "", "", "", "",
+  "", "", "", "", "", "", "", "", "", "", "", "",
+  "", "", "", "", "", "", "", "", "", "", "", ""
+];
+
+function randomBetween(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function pickRandomArrayItem(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function shuffleArray(items) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
+function createBackgroundSymbolSideSlots(leftRange, rightRange, yBands) {
+  return yBands.flatMap((yBand, index) => {
+    const leftInset = index % 2 === 0 ? 0 : 2.2;
+    const rightInset = index % 2 === 0 ? 0 : 2.2;
+    return [
+      { x: [leftRange[0] + leftInset, leftRange[1]], y: yBand },
+      { x: [rightRange[0], rightRange[1] - rightInset], y: yBand }
+    ];
+  });
+}
+
+function getMeasuredBackgroundSymbolSideSlots(viewportWidth) {
+  if (typeof document === "undefined") {
+    return [];
+  }
+
+  const terminalRect = document.querySelector(".pipboy-terminal")?.getBoundingClientRect();
+  if (!terminalRect || terminalRect.width <= 0) {
+    return [];
+  }
+
+  const gutterGapPx = 18;
+  const outerGapPx = 18;
+  const leftMin = (outerGapPx / viewportWidth) * 100;
+  const leftMax = ((terminalRect.left - gutterGapPx) / viewportWidth) * 100;
+  const rightMin = ((terminalRect.right + gutterGapPx) / viewportWidth) * 100;
+  const rightMax = 100 - (outerGapPx / viewportWidth) * 100;
+
+  if (leftMax - leftMin < 8 || rightMax - rightMin < 8) {
+    return [];
+  }
+
+  return createBackgroundSymbolSideSlots(
+    [Math.max(1.4, leftMin), Math.min(23, leftMax)],
+    [Math.max(77, rightMin), Math.min(98.6, rightMax)],
+    [
+      [7.5, 16],
+      [19.5, 28],
+      [31.5, 40],
+      [43.5, 52],
+      [55.5, 64],
+      [67.5, 76],
+      [79.5, 86.5],
+      [88, 94]
+    ]
+  );
+}
+
+function getBackgroundSymbolSlots(isWideViewport) {
+  if (!isWideViewport) {
+    return [
+      { x: [8, 31], y: [8, 18] },
+      { x: [34, 57], y: [8, 18] },
+      { x: [61, 84], y: [8, 18] },
+      { x: [8, 31], y: [22, 33] },
+      { x: [69, 92], y: [22, 33] },
+      { x: [7, 30], y: [36, 47] },
+      { x: [70, 93], y: [36, 47] },
+      { x: [7, 30], y: [50, 61] },
+      { x: [70, 93], y: [50, 61] },
+      { x: [7, 30], y: [64, 75] },
+      { x: [70, 93], y: [64, 75] },
+      { x: [8, 31], y: [79, 91] },
+      { x: [34, 57], y: [79, 91] },
+      { x: [61, 84], y: [79, 91] },
+      { x: [22, 47], y: [20, 31] },
+      { x: [53, 78], y: [20, 31] }
+    ];
+  }
+
+  const viewportWidth = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 1);
+  const measuredSlots = getMeasuredBackgroundSymbolSideSlots(viewportWidth);
+  if (measuredSlots.length) {
+    return measuredSlots;
+  }
+
+  return createBackgroundSymbolSideSlots(
+    [1.5, 20.8],
+    [79.2, 98.5],
+    [
+      [7.5, 16],
+      [19.5, 28],
+      [31.5, 40],
+      [43.5, 52],
+      [55.5, 64],
+      [67.5, 76],
+      [79.5, 86.5],
+      [88, 94]
+    ]
+  );
+}
+
+function moveBackgroundSymbolWithinSlot(symbol) {
+  const minX = Number.parseFloat(symbol.dataset.bgSlotMinX);
+  const maxX = Number.parseFloat(symbol.dataset.bgSlotMaxX);
+  const minY = Number.parseFloat(symbol.dataset.bgSlotMinY);
+  const maxY = Number.parseFloat(symbol.dataset.bgSlotMaxY);
+
+  if (![minX, maxX, minY, maxY].every(Number.isFinite)) {
+    return;
+  }
+
+  symbol.style.setProperty("--x", `${randomBetween(minX, maxX).toFixed(2)}%`);
+  symbol.style.setProperty("--y", `${randomBetween(minY, maxY).toFixed(2)}%`);
+}
+
+function assignBackgroundSymbolSlot(symbol, slot) {
+  symbol.dataset.bgSlotMinX = String(slot.x[0]);
+  symbol.dataset.bgSlotMaxX = String(slot.x[1]);
+  symbol.dataset.bgSlotMinY = String(slot.y[0]);
+  symbol.dataset.bgSlotMaxY = String(slot.y[1]);
+  moveBackgroundSymbolWithinSlot(symbol);
+}
+
+function normalizeBackgroundSymbolNodes() {
+  const container = document.querySelector(".bg-symbols");
+  if (!container) {
+    return [];
+  }
+
+  let symbols = Array.from(container.querySelectorAll(".bg-symbol"));
+  symbols.slice(BACKGROUND_SYMBOL_VISIBLE_COUNT).forEach((symbol) => symbol.remove());
+  symbols = symbols.slice(0, BACKGROUND_SYMBOL_VISIBLE_COUNT);
+
+  while (symbols.length < BACKGROUND_SYMBOL_VISIBLE_COUNT) {
+    const symbol = document.createElement("span");
+    symbol.className = "bg-symbol";
+    container.appendChild(symbol);
+    symbols.push(symbol);
+  }
+
+  return symbols;
+}
+
+function getActiveBackgroundGlyphs(symbols) {
+  return symbols
+    .map((symbol) => symbol.textContent.trim())
+    .filter(Boolean);
+}
+
+function pickNextBackgroundGlyph(symbol, symbols) {
+  const currentGlyph = symbol.textContent.trim();
+  const activeGlyphs = new Set(getActiveBackgroundGlyphs(symbols));
+  const inactiveGlyphs = BACKGROUND_SYMBOL_GLYPHS.filter((glyph) => !activeGlyphs.has(glyph));
+  const candidates = inactiveGlyphs.length
+    ? inactiveGlyphs
+    : BACKGROUND_SYMBOL_GLYPHS.filter((glyph) => glyph !== currentGlyph);
+  return pickRandomArrayItem(candidates.length ? candidates : BACKGROUND_SYMBOL_GLYPHS);
+}
+
+function cycleBackgroundSymbolGlyph(symbol, symbols) {
+  const nextGlyph = pickNextBackgroundGlyph(symbol, symbols);
+  if (nextGlyph) {
+    symbol.textContent = nextGlyph;
+  }
+  moveBackgroundSymbolWithinSlot(symbol);
+}
+
+function wireBackgroundSymbolCycling(symbol, symbols) {
+  if (symbol.dataset.bgSymbolCycling === "true") {
+    return;
+  }
+
+  symbol.dataset.bgSymbolCycling = "true";
+  symbol.addEventListener("animationiteration", (event) => {
+    if (event.animationName === "bgSymbolPulse") {
+      cycleBackgroundSymbolGlyph(symbol, symbols);
+    }
+  });
+}
+
+function randomizeBackgroundSymbols() {
+  const symbols = normalizeBackgroundSymbolNodes();
+  if (!symbols.length) {
+    return;
+  }
+
+  const initialGlyphs = shuffleArray(BACKGROUND_SYMBOL_GLYPHS);
+  const viewportWidth = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 1);
+  const isWideViewport = viewportWidth >= 1100;
+  const slots = shuffleArray(getBackgroundSymbolSlots(isWideViewport));
+
+  symbols.forEach((symbol, index) => {
+    const slot = slots[index % slots.length];
+
+    symbol.textContent = initialGlyphs[index % initialGlyphs.length] || pickRandomArrayItem(BACKGROUND_SYMBOL_GLYPHS);
+    assignBackgroundSymbolSlot(symbol, slot);
+    symbol.style.setProperty("--s", `${randomBetween(1.65, 2.75).toFixed(2)}rem`);
+    symbol.style.setProperty("--f", `${randomBetween(29, 48).toFixed(2)}s`);
+    symbol.style.setProperty("--p", `${randomBetween(7.8, 10.8).toFixed(2)}s`);
+    symbol.style.setProperty("--d", `${(-(index * 0.62 + randomBetween(0, 1.7))).toFixed(2)}s`);
+    symbol.style.setProperty("--o", randomBetween(0.12, 0.19).toFixed(3));
+    wireBackgroundSymbolCycling(symbol, symbols);
+  });
+}
+
 function setupBackgroundParallax() {
   const root = document.documentElement;
   if (!root) {
@@ -14205,9 +14426,14 @@ const CLASSIFIED_NUKA_ES_DAILY_OPS_TEXT = {
   "Piercing Gaze": "Mirada penetrante",
   "Active Camouflage": "Camuflaje activo",
   Volatile: "Volátil",
+  "Freezing Touch": "Toque congelante",
+  "Swift-Footed": "Pies ligeros",
+  "Resilient": "Resistente",
+  "Toxic Blood": "Sangre tóxica",
   "Arktos Pharma Biome Labs": "Laboratorios de biomas de Arktos Pharma",
-  "Communists": "Comunistas",
   "Watoga Raider Arena": "Arena de saqueadores de Watoga",
+  "Community Center": "Centro comunitario",
+  "Communists": "Comunistas",
   "Overgrown": "Agrestes"
 };
 
@@ -14240,7 +14466,7 @@ const CLASSIFIED_NUKA_MUTATION_TOOLTIPS = {
     en: "Enemies are cloaked while not attacking.",
     es: "Los enemigos se camuflan mientras no atacan."
   },
-  "Swift Footed": {
+  "Swift-Footed": {
     en: "Enemies have increased movement speed.",
     es: "Los enemigos tienen mayor velocidad de movimiento."
   },
@@ -14258,7 +14484,7 @@ const CLASSIFIED_NUKA_MUTATION_SYMBOLS = {
   Resilient: "shield",
   "Freezing Touch": "snowflake",
   "Toxic Blood": "hazard",
-  "Swift Footed": "swift",
+  "Swift-Footed": "swift",
   "Group Regeneration": "medkit"
 };
 
@@ -14322,6 +14548,14 @@ const CLASSIFIED_NUKA_ES_CHALLENGE_REPLACEMENTS = [
   [/\bCraft Bulk Aluminum\b/gi, "Crear aluminio a granel"],
   [/\bCripple a Human's Head\b/gi, "Lisiar la cabeza de un humano"],
   [/\bDrink Nuka-Twist\b/gi, "Beber Nuka-Twist"],
+  [/\bDrink Nuka-Cola Quantum\b/gi, "Beber Nuka-Cola Quantum"],
+  [/\bDrink Nuka-Cola Wild\b/gi, "Beber Nuka-Cola Wild"],
+  [/\bDrink Nuka-Cola\b/gi, "Beber Nuka-Cola"],
+  [/\bDrink Nuka-Grape\b/gi, "Beber Nuka-Grape"],
+  [/\bDrink Nuka-Orange\b/gi, "Beber Nuka-Orange"],
+  [/\bCollect any flavor of Nuka-Cola\b/gi, "Recoger cualquier sabor de Nuka-Cola"],
+  [/\bTake a Camera Picture at\b/gi, "Hacer una foto con la cámara en"],
+  [/\bTake a Camera Picture\b/gi, "Hacer una foto con la cámara"],
   [/\bEat Dog Food\b/gi, "Comer comida para perro"],
   [/\bGain XP\b/gi, "Ganar PE"],
   [/\bKill a Mutated Enemy\b/gi, "Matar a un enemigo mutado"],
@@ -14450,13 +14684,12 @@ function splitClassifiedNukaMutationTokens(value = "") {
     .filter(Boolean);
 }
 
-function buildClassifiedNukaMutationTokenMarkup(value = "", { prefixed = false } = {}) {
+function buildClassifiedNukaMutationTokenMarkup(value = "") {
   const displayValue = translateClassifiedNukaDailyOpsText(value);
   const tooltip = getClassifiedNukaMutationTooltip(value);
   const symbolKey = getClassifiedNukaMutationSymbol(value);
   return `
     <span class="classified-intel-mutation-token"${tooltip ? ` tabindex="0" aria-label="${escapeHtml(`${displayValue}. ${tooltip}`)}"` : ""}>
-      ${prefixed ? '<span class="classified-intel-mutation-plus" aria-hidden="true">+</span>' : ""}
       ${classifiedNukaIconMarkup(symbolKey, "classified-nuka-mutation-icon")}
       <span>${escapeHtml(displayValue)}</span>
       ${tooltip ? `<span class="classified-intel-mutation-tooltip" role="tooltip">${escapeHtml(tooltip)}</span>` : ""}
@@ -14470,9 +14703,14 @@ function buildClassifiedNukaMutationValueMarkup(value = "") {
     return "";
   }
 
+  // Render the "+" as its own connector between tokens (a centered line in the
+  // stacked card layout) rather than as a prefix glued to the next mutation.
+  const plus = '<span class="classified-intel-mutation-plus" aria-hidden="true">+</span>';
   return `
     <span class="classified-intel-mutation-value">
-      ${tokens.map((token) => buildClassifiedNukaMutationTokenMarkup(token.value, { prefixed: token.prefixed })).join("")}
+      ${tokens.map((token, index) =>
+        (index > 0 ? plus : "") + buildClassifiedNukaMutationTokenMarkup(token.value)
+      ).join("")}
     </span>
   `;
 }
@@ -19918,6 +20156,7 @@ function wireEvents() {
 }
 
 async function init() {
+  randomizeBackgroundSymbols();
   setupBackgroundParallax();
   wireEvents();
   setupVisitCounterEyeTracking();

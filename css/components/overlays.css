@@ -54,9 +54,14 @@ body.is-ready.is-classified.is-hacking:not(.error-page) .pipboy-terminal {
   -webkit-overflow-scrolling: auto;
 }
 
-body.is-hacking > :not(.pipboy-terminal),
-body.is-hacking .pipboy-terminal > :not(#hackOverlay) {
+body.is-hacking > :not(.pipboy-terminal) {
   filter: blur(4px) saturate(0.82) brightness(0.86);
+  pointer-events: none !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body.is-hacking .pipboy-terminal > :not(#hackOverlay) {
   pointer-events: none !important;
   user-select: none;
   -webkit-user-select: none;

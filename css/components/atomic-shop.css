@@ -4,6 +4,35 @@
   padding: 16px;
 }
 
+/* The overlay's backdrop-filter only paints if no ancestor is transformed, but
+   `.pipboy-terminal` carries an identity `transform: translateY(0)` that silently
+   disables it. Drop the terminal transform while the modal is open (translateY(0)
+   and none render identically, so there's no visual shift) — this is exactly what
+   `body.is-classified-intel-open` does for the axolotl/intel modals. */
+body.atomic-shop-open .pipboy-terminal {
+  transform: none !important;
+  transition: opacity 420ms ease;
+}
+
+/* Match the other classified-tab intel modals: tinted, blurred backdrop so the
+   page behind reads as out-of-focus instead of just dimmed. The compound
+   selector outranks the base `.intel-bot-modal-overlay` rule in home.css, which
+   is imported after this file and otherwise wins with its faint blur(1px).
+   `isolation: isolate` is required: both overlays live inside `.pipboy-terminal`,
+   which has a `transform`. A transformed ancestor stops a descendant's
+   backdrop-filter from painting (it still computes), so without an isolated
+   backdrop root the blur silently no-ops and you just see the flat fill — this
+   is what the classified intel/axolotl overlay already does to make blur work. */
+.intel-bot-modal-overlay.atomic-shop-modal-overlay {
+  isolation: isolate;
+  background:
+    radial-gradient(980px 620px at 18% 0%, rgba(139, 255, 139, 0.14), rgba(0, 0, 0, 0) 58%),
+    radial-gradient(780px 540px at 100% 92%, rgba(255, 225, 122, 0.14), rgba(0, 0, 0, 0) 62%),
+    rgba(0, 0, 0, 0.84);
+  backdrop-filter: blur(4px) saturate(1.08);
+  -webkit-backdrop-filter: blur(4px) saturate(1.08);
+}
+
 .atomic-shop-modal-core.intel-bot-modal-core {
   width: min(1120px, 96vw);
   height: min(900px, 92vh);
@@ -1500,5 +1529,112 @@
     justify-content: flex-start;
     max-height: 26svh;
     overflow: auto;
+  }
+}
+
+/* ---- loading state: animated status + skeleton grid ---- */
+/* Animated scan bar + breathing text so "syncing" reads as live, not stalled. */
+.atomic-shop-status.is-loading {
+  position: relative;
+  padding-bottom: 16px;
+  animation: atomicShopStatusPulse 1.6s ease-in-out infinite;
+}
+
+.atomic-shop-status.is-loading::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 180px;
+  height: 2px;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, var(--fg), transparent);
+  background-size: 60% 100%;
+  background-repeat: no-repeat;
+  box-shadow: 0 0 10px rgba(139, 255, 139, 0.35);
+  animation: atomicShopStatusScan 1.4s ease-in-out infinite;
+}
+
+@keyframes atomicShopStatusPulse {
+  0%, 100% { opacity: 0.78; }
+  50% { opacity: 1; }
+}
+
+@keyframes atomicShopStatusScan {
+  0% { background-position: -20% 0; }
+  100% { background-position: 120% 0; }
+}
+
+/* Placeholder tiles mirror .atomic-shop-tile so the grid previews its shape. */
+.atomic-shop-skel-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(139, 255, 139, 0.12);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+  animation: atomicShopSkelFade 1.8s ease-in-out infinite;
+}
+
+.atomic-shop-skel-img,
+.atomic-shop-skel-line {
+  border-radius: 6px;
+  background: linear-gradient(
+    100deg,
+    rgba(139, 255, 139, 0.04) 30%,
+    rgba(139, 255, 139, 0.16) 50%,
+    rgba(139, 255, 139, 0.04) 70%
+  );
+  background-size: 220% 100%;
+  animation: atomicShopSkelShimmer 1.4s ease-in-out infinite;
+}
+
+.atomic-shop-skel-img {
+  aspect-ratio: 1 / 1;
+  border-radius: 7px;
+}
+
+.atomic-shop-skel-line {
+  height: 10px;
+}
+
+.atomic-shop-skel-line.is-short {
+  width: 55%;
+}
+
+/* Stagger the first row so the shimmer reads as a left-to-right scan sweep. */
+.atomic-shop-skel-tile:nth-child(2) .atomic-shop-skel-img,
+.atomic-shop-skel-tile:nth-child(2) .atomic-shop-skel-line { animation-delay: 0.08s; }
+.atomic-shop-skel-tile:nth-child(3) .atomic-shop-skel-img,
+.atomic-shop-skel-tile:nth-child(3) .atomic-shop-skel-line { animation-delay: 0.16s; }
+.atomic-shop-skel-tile:nth-child(4) .atomic-shop-skel-img,
+.atomic-shop-skel-tile:nth-child(4) .atomic-shop-skel-line { animation-delay: 0.24s; }
+.atomic-shop-skel-tile:nth-child(5) .atomic-shop-skel-img,
+.atomic-shop-skel-tile:nth-child(5) .atomic-shop-skel-line { animation-delay: 0.32s; }
+.atomic-shop-skel-tile:nth-child(6) .atomic-shop-skel-img,
+.atomic-shop-skel-tile:nth-child(6) .atomic-shop-skel-line { animation-delay: 0.4s; }
+.atomic-shop-skel-tile:nth-child(7) .atomic-shop-skel-img,
+.atomic-shop-skel-tile:nth-child(7) .atomic-shop-skel-line { animation-delay: 0.48s; }
+
+@keyframes atomicShopSkelShimmer {
+  0% { background-position: 220% 0; }
+  100% { background-position: -220% 0; }
+}
+
+@keyframes atomicShopSkelFade {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.95; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atomic-shop-status.is-loading,
+  .atomic-shop-status.is-loading::after,
+  .atomic-shop-skel-tile,
+  .atomic-shop-skel-img,
+  .atomic-shop-skel-line {
+    animation: none;
   }
 }
