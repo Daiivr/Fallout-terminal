@@ -29,6 +29,9 @@ const TEMP_SHARES_PATH = path.join(STORAGE_DIR, "temp-shares.json");
 const PUBLIC_FILE_SHARES_PATH = path.join(STORAGE_DIR, "public-file-shares.json");
 const EXHAUSTED_SLUGS_PATH = path.join(STORAGE_DIR, "exhausted-slugs.json");
 const ACCESS_REQUESTS_PATH = path.join(STORAGE_DIR, "access-requests.json");
+const INTEL_EMAIL_SUBSCRIPTIONS_PATH = path.join(STORAGE_DIR, "intel-email-subscriptions.json");
+const INTEL_EMAIL_COOLDOWNS_PATH = path.join(STORAGE_DIR, "intel-email-cooldowns.json");
+const INTEL_EMAIL_NOTIFICATION_STATE_PATH = path.join(STORAGE_DIR, "intel-email-notification-state.json");
 const VISIT_COUNTER_PATH = path.join(STORAGE_DIR, "visit-counter.json");
 const ATOMIC_SHOP_CACHE_DIR = path.join(STORAGE_DIR, "atomic-shop-cache");
 const ATOMIC_SHOP_DATA_CACHE_DIR = path.join(ATOMIC_SHOP_CACHE_DIR, "data");
@@ -54,6 +57,9 @@ const SMTP_USER = String(process.env.SMTP_USER || "").trim();
 const SMTP_PASS = String(process.env.SMTP_PASS || "").trim();
 const SMTP_FROM = String(process.env.SMTP_FROM || "").trim();
 const SMTP_TLS_REJECT_UNAUTHORIZED_RAW = String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || "").trim();
+const INTEL_EMAIL_POLL_INTERVAL_MS_RAW = String(process.env.INTEL_EMAIL_POLL_INTERVAL_MS || "").trim();
+const INTEL_EMAIL_RESUBSCRIBE_COOLDOWN_MS_RAW = String(process.env.INTEL_EMAIL_RESUBSCRIBE_COOLDOWN_MS || "").trim();
+const EMAIL_RELAY_LOGO_URL = String(process.env.EMAIL_RELAY_LOGO_URL || "").trim();
 const ACCESS_REQUEST_COOLDOWN_MS_RAW = String(process.env.ACCESS_REQUEST_COOLDOWN_MS || "").trim();
 const ACCESS_REQUEST_DECISION_TTL_MS_RAW = String(process.env.ACCESS_REQUEST_DECISION_TTL_MS || "").trim();
 const ACCESS_REQUEST_REAPPLY_COOLDOWN_MS_RAW = String(process.env.ACCESS_REQUEST_REAPPLY_COOLDOWN_MS || "").trim();
@@ -73,6 +79,7 @@ const VT_API_KEY = String(process.env.VT_API_KEY || process.env.VIRUSTOTAL_API_K
 const ACCESS_REQUEST_MAX_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 const DEFAULT_AUTH_RETURN_TO = "/#files";
 const DEFAULT_SHARE_PREVIEW_IMAGE_PATH = "/assets/images/image.png";
+const EMAIL_RELAY_LOGO_PATH = "/assets/images/email-relay-logo.png";
 const ATOMIC_SHOP_REMOTE_ORIGIN = String(process.env.ATOMIC_SHOP_REMOTE_ORIGIN || "https://db.atomicshop.fyi").trim().replace(/\/+$/, "");
 const ATOMIC_SHOP_FALLBACK_ORIGINS = String(
   process.env.ATOMIC_SHOP_FALLBACK_ORIGINS || "https://raw.githubusercontent.com/ggmatze/atomic-shop-web/main"
@@ -195,6 +202,8 @@ const TEMP_SHARE_RETENTION_MAX_HOURS = parsePositiveInteger(TEMP_SHARE_RETENTION
 const TEMP_SHARE_TEXT_PREVIEW_MAX_BYTES = parsePositiveInteger(TEMP_SHARE_TEXT_PREVIEW_MAX_BYTES_RAW, 256 * 1024);
 const TEMP_SHARE_VT_TICK_MS = parsePositiveInteger(TEMP_SHARE_VT_TICK_MS_RAW, 20 * 1000);
 const TEMP_SHARE_CLEANUP_INTERVAL_MS = parsePositiveInteger(TEMP_SHARE_CLEANUP_INTERVAL_MS_RAW, 60 * 1000);
+const INTEL_EMAIL_POLL_INTERVAL_MS = parsePositiveInteger(INTEL_EMAIL_POLL_INTERVAL_MS_RAW, 5 * 60 * 1000);
+const INTEL_EMAIL_RESUBSCRIBE_COOLDOWN_MS = parsePositiveInteger(INTEL_EMAIL_RESUBSCRIBE_COOLDOWN_MS_RAW, 5 * 60 * 60 * 1000);
 const ACCESS_REQUEST_DECISION_TTL_MS = Math.min(
   parsePositiveInteger(ACCESS_REQUEST_DECISION_TTL_MS_RAW, ACCESS_REQUEST_MAX_WINDOW_MS),
   ACCESS_REQUEST_MAX_WINDOW_MS
@@ -206,6 +215,8 @@ const ACCESS_REQUEST_REAPPLY_COOLDOWN_MS = parsePositiveInteger(
 const ACCESS_REQUEST_APPROVED_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 const ACCESS_REQUEST_REASON_MAX_CHARS = 1200;
 const FILES_DISCLAIMER_REEVALUATION_MAX_CHARS = ACCESS_REQUEST_REASON_MAX_CHARS;
+const INTEL_EMAIL_FEEDS = new Set(["silo", "minerva"]);
+const INTEL_EMAIL_MAX_LENGTH = 254;
 const FILE_DESCRIPTION_MAX_CHARS = 900;
 const FILE_FUNCTIONS_MAX_CHARS = 4000;
 const FILE_GROUP_MAX_CHARS = 80;
@@ -261,6 +272,15 @@ if (!fs.existsSync(EXHAUSTED_SLUGS_PATH)) {
 }
 if (!fs.existsSync(ACCESS_REQUESTS_PATH)) {
   fs.writeFileSync(ACCESS_REQUESTS_PATH, "[]\n", "utf8");
+}
+if (!fs.existsSync(INTEL_EMAIL_SUBSCRIPTIONS_PATH)) {
+  fs.writeFileSync(INTEL_EMAIL_SUBSCRIPTIONS_PATH, "[]\n", "utf8");
+}
+if (!fs.existsSync(INTEL_EMAIL_COOLDOWNS_PATH)) {
+  fs.writeFileSync(INTEL_EMAIL_COOLDOWNS_PATH, "[]\n", "utf8");
+}
+if (!fs.existsSync(INTEL_EMAIL_NOTIFICATION_STATE_PATH)) {
+  fs.writeFileSync(INTEL_EMAIL_NOTIFICATION_STATE_PATH, '{\n  "siloFingerprint": "",\n  "minervaFingerprint": ""\n}\n', "utf8");
 }
 if (!fs.existsSync(VISIT_COUNTER_PATH)) {
   fs.writeFileSync(VISIT_COUNTER_PATH, '{\n  "totalVisits": 0,\n  "updatedAt": ""\n}\n', "utf8");
@@ -344,6 +364,435 @@ function writeVisitCounterStore(entry) {
   const payload = JSON.stringify(normalized, null, 2);
   fs.writeFileSync(tempPath, `${payload}\n`, "utf8");
   fs.renameSync(tempPath, VISIT_COUNTER_PATH);
+  return normalized;
+}
+
+function normalizeIntelEmailFeed(value) {
+  const feed = String(value || "").trim().toLowerCase();
+  return INTEL_EMAIL_FEEDS.has(feed) ? feed : "silo";
+}
+
+function normalizeIntelEmailLang(value) {
+  return String(value || "").trim().toLowerCase() === "es" ? "es" : "en";
+}
+
+function normalizeIntelEmailAddress(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .slice(0, INTEL_EMAIL_MAX_LENGTH);
+}
+
+function isValidIntelEmailAddress(value) {
+  const email = normalizeIntelEmailAddress(value);
+  return email.length <= INTEL_EMAIL_MAX_LENGTH && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+}
+
+function normalizeIntelEmailDiscordId(value) {
+  const discordId = String(value || "").trim();
+  return isDiscordId(discordId) ? discordId : "";
+}
+
+function normalizeIntelEmailSubscriptionEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const email = normalizeIntelEmailAddress(entry.email);
+  if (!isValidIntelEmailAddress(email)) {
+    return null;
+  }
+
+  const feeds = Array.from(new Set(
+    (Array.isArray(entry.feeds) ? entry.feeds : [entry.feed])
+      .map((feed) => String(feed || "").trim().toLowerCase())
+      .filter((feed) => INTEL_EMAIL_FEEDS.has(feed))
+  ));
+  if (!feeds.length) {
+    feeds.push("silo");
+  }
+
+  const lastSentAtByFeed = entry.lastSentAtByFeed && typeof entry.lastSentAtByFeed === "object"
+    ? entry.lastSentAtByFeed
+    : {};
+
+  return {
+    id: /^[a-f0-9-]{36}$/i.test(String(entry.id || "").trim())
+      ? String(entry.id || "").trim().toLowerCase()
+      : crypto.randomUUID(),
+    email,
+    discordId: normalizeIntelEmailDiscordId(entry.discordId),
+    discordUsername: String(entry.discordUsername || "").trim().slice(0, 120),
+    discordAvatarUrl: String(entry.discordAvatarUrl || "").trim().slice(0, 500),
+    feeds,
+    lang: normalizeIntelEmailLang(entry.lang),
+    createdAt: String(entry.createdAt || "").trim() || new Date().toISOString(),
+    updatedAt: String(entry.updatedAt || "").trim() || new Date().toISOString(),
+    confirmedAt: String(entry.confirmedAt || "").trim(),
+    lastSentAtByFeed: {
+      silo: String(lastSentAtByFeed.silo || "").trim(),
+      minerva: String(lastSentAtByFeed.minerva || "").trim()
+    }
+  };
+}
+
+function readIntelEmailSubscriptions() {
+  try {
+    const raw = fs.readFileSync(INTEL_EMAIL_SUBSCRIPTIONS_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed
+      .map((entry) => normalizeIntelEmailSubscriptionEntry(entry))
+      .filter(Boolean);
+  } catch (error) {
+    console.error("[intel-email] subscription read error:", error);
+    return [];
+  }
+}
+
+function writeIntelEmailSubscriptions(entries) {
+  const normalized = (Array.isArray(entries) ? entries : [])
+    .map((entry) => normalizeIntelEmailSubscriptionEntry(entry))
+    .filter(Boolean);
+  const tempPath = `${INTEL_EMAIL_SUBSCRIPTIONS_PATH}.tmp`;
+  fs.writeFileSync(tempPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+  fs.renameSync(tempPath, INTEL_EMAIL_SUBSCRIPTIONS_PATH);
+  return normalized;
+}
+
+function normalizeIntelEmailCooldownEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const discordId = normalizeIntelEmailDiscordId(entry.discordId);
+  const feed = normalizeIntelEmailFeed(entry.feed);
+  const cooldownUntil = String(entry.cooldownUntil || "").trim();
+  const cooldownUntilMs = Date.parse(cooldownUntil);
+  if (!discordId || !Number.isFinite(cooldownUntilMs)) {
+    return null;
+  }
+
+  return {
+    discordId,
+    feed,
+    email: normalizeIntelEmailAddress(entry.email),
+    lang: normalizeIntelEmailLang(entry.lang),
+    cooldownUntil: new Date(cooldownUntilMs).toISOString(),
+    createdAt: String(entry.createdAt || "").trim() || new Date().toISOString()
+  };
+}
+
+function readIntelEmailCooldowns({ includeExpired = false } = {}) {
+  let parsed = [];
+  try {
+    const raw = fs.readFileSync(INTEL_EMAIL_COOLDOWNS_PATH, "utf8");
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    console.error("[intel-email] cooldown read error:", error);
+    parsed = [];
+  }
+
+  const nowMs = Date.now();
+  const normalized = (Array.isArray(parsed) ? parsed : [])
+    .map((entry) => normalizeIntelEmailCooldownEntry(entry))
+    .filter(Boolean);
+  const active = normalized.filter((entry) => Date.parse(entry.cooldownUntil) > nowMs);
+  if (!includeExpired && active.length !== normalized.length) {
+    writeIntelEmailCooldowns(active);
+  }
+  return includeExpired ? normalized : active;
+}
+
+function writeIntelEmailCooldowns(entries) {
+  const normalized = (Array.isArray(entries) ? entries : [])
+    .map((entry) => normalizeIntelEmailCooldownEntry(entry))
+    .filter(Boolean);
+  const tempPath = `${INTEL_EMAIL_COOLDOWNS_PATH}.tmp`;
+  fs.writeFileSync(tempPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+  fs.renameSync(tempPath, INTEL_EMAIL_COOLDOWNS_PATH);
+  return normalized;
+}
+
+function getIntelEmailCooldownForDiscordFeed(discordId, feed) {
+  const normalizedDiscordId = normalizeIntelEmailDiscordId(discordId);
+  const normalizedFeed = normalizeIntelEmailFeed(feed);
+  if (!normalizedDiscordId) {
+    return null;
+  }
+  return readIntelEmailCooldowns().find((entry) => (
+    entry.discordId === normalizedDiscordId
+      && entry.feed === normalizedFeed
+      && Date.parse(entry.cooldownUntil) > Date.now()
+  )) || null;
+}
+
+function getIntelEmailCooldownForUserFeed(user, feed) {
+  return getIntelEmailCooldownForDiscordFeed(user?.discordId, feed);
+}
+
+function setIntelEmailResubscribeCooldown({ user, feed, email, lang }) {
+  const discordId = normalizeIntelEmailDiscordId(user?.discordId);
+  if (!discordId || INTEL_EMAIL_RESUBSCRIBE_COOLDOWN_MS <= 0) {
+    return null;
+  }
+
+  const normalizedFeed = normalizeIntelEmailFeed(feed);
+  const now = new Date();
+  const cooldownEntry = normalizeIntelEmailCooldownEntry({
+    discordId,
+    feed: normalizedFeed,
+    email,
+    lang,
+    cooldownUntil: new Date(now.getTime() + INTEL_EMAIL_RESUBSCRIBE_COOLDOWN_MS).toISOString(),
+    createdAt: now.toISOString()
+  });
+  if (!cooldownEntry) {
+    return null;
+  }
+
+  const entries = readIntelEmailCooldowns()
+    .filter((entry) => !(entry.discordId === discordId && entry.feed === normalizedFeed));
+  entries.push(cooldownEntry);
+  writeIntelEmailCooldowns(entries);
+  return cooldownEntry;
+}
+
+function clearIntelEmailCooldownForUserFeed(user, feed) {
+  const discordId = normalizeIntelEmailDiscordId(user?.discordId);
+  if (!discordId) {
+    return;
+  }
+  const normalizedFeed = normalizeIntelEmailFeed(feed);
+  writeIntelEmailCooldowns(readIntelEmailCooldowns()
+    .filter((entry) => !(entry.discordId === discordId && entry.feed === normalizedFeed)));
+}
+
+function upsertIntelEmailSubscription({ email, feed, lang, user = null }) {
+  const normalizedEmail = normalizeIntelEmailAddress(email);
+  const normalizedFeed = normalizeIntelEmailFeed(feed);
+  const normalizedLang = normalizeIntelEmailLang(lang);
+  const discordId = normalizeIntelEmailDiscordId(user?.discordId);
+  const discordUsername = String(user?.username || "").trim().slice(0, 120);
+  const discordAvatarUrl = discordId ? resolveDiscordAvatarUrl(user, 96) : "";
+  const now = new Date().toISOString();
+  const entries = readIntelEmailSubscriptions();
+  let existingIndex = discordId
+    ? entries.findIndex((entry) => entry.discordId === discordId)
+    : -1;
+  if (existingIndex < 0) {
+    existingIndex = discordId
+      ? entries.findIndex((entry) => entry.email === normalizedEmail && !entry.discordId)
+      : entries.findIndex((entry) => entry.email === normalizedEmail);
+  }
+  let entry;
+
+  if (existingIndex >= 0) {
+    const existing = entries[existingIndex];
+    entry = normalizeIntelEmailSubscriptionEntry({
+      ...existing,
+      email: normalizedEmail,
+      discordId: discordId || existing.discordId,
+      discordUsername: discordUsername || existing.discordUsername,
+      discordAvatarUrl: discordAvatarUrl || existing.discordAvatarUrl,
+      feeds: Array.from(new Set([...existing.feeds, normalizedFeed])),
+      lang: normalizedLang,
+      updatedAt: now,
+      confirmedAt: existing.confirmedAt || now
+    });
+    entries[existingIndex] = entry;
+  } else {
+    entry = normalizeIntelEmailSubscriptionEntry({
+      id: crypto.randomUUID(),
+      email: normalizedEmail,
+      discordId,
+      discordUsername,
+      discordAvatarUrl,
+      feeds: [normalizedFeed],
+      lang: normalizedLang,
+      createdAt: now,
+      updatedAt: now,
+      confirmedAt: now,
+      lastSentAtByFeed: {}
+    });
+    entries.push(entry);
+  }
+
+  writeIntelEmailSubscriptions(entries);
+  clearIntelEmailCooldownForUserFeed(user, normalizedFeed);
+  return entry;
+}
+
+function findIntelEmailSubscriptionForUser(user) {
+  const discordId = normalizeIntelEmailDiscordId(user?.discordId);
+  if (!discordId) {
+    return null;
+  }
+  return readIntelEmailSubscriptions().find((entry) => entry.discordId === discordId) || null;
+}
+
+function buildIntelEmailSubscriptionMePayload(user) {
+  const subscription = findIntelEmailSubscriptionForUser(user);
+  const feeds = subscription?.feeds || [];
+  const cooldownForFeed = (feed) => {
+    const cooldown = getIntelEmailCooldownForUserFeed(user, feed);
+    return cooldown
+      ? {
+          feed: cooldown.feed,
+          email: cooldown.email,
+          cooldownUntil: cooldown.cooldownUntil,
+          lang: cooldown.lang
+        }
+      : null;
+  };
+  const entryForFeed = (feed) => {
+    const normalizedFeed = normalizeIntelEmailFeed(feed);
+    if (!subscription || !feeds.includes(normalizedFeed)) {
+      return null;
+    }
+    return {
+      feed: normalizedFeed,
+      email: subscription.email,
+      lang: subscription.lang,
+      updatedAt: subscription.updatedAt,
+      confirmedAt: subscription.confirmedAt
+    };
+  };
+
+  return {
+    loggedIn: Boolean(normalizeIntelEmailDiscordId(user?.discordId)),
+    subscriptions: {
+      silo: entryForFeed("silo"),
+      minerva: entryForFeed("minerva")
+    },
+    cooldowns: {
+      silo: cooldownForFeed("silo"),
+      minerva: cooldownForFeed("minerva")
+    }
+  };
+}
+
+function removeIntelEmailSubscriptionForUserFeed(user, feed) {
+  const discordId = normalizeIntelEmailDiscordId(user?.discordId);
+  const normalizedFeed = normalizeIntelEmailFeed(feed);
+  if (!discordId) {
+    return null;
+  }
+
+  const entries = readIntelEmailSubscriptions();
+  const existingIndex = entries.findIndex((entry) => entry.discordId === discordId);
+  if (existingIndex < 0) {
+    writeIntelEmailSubscriptions(entries);
+    return null;
+  }
+
+  const existing = entries[existingIndex];
+  if (!existing.feeds.includes(normalizedFeed)) {
+    writeIntelEmailSubscriptions(entries);
+    return null;
+  }
+  const removed = normalizeIntelEmailSubscriptionEntry({
+    ...existing,
+    feeds: [normalizedFeed]
+  });
+  const nextFeeds = existing.feeds.filter((entryFeed) => entryFeed !== normalizedFeed);
+  if (nextFeeds.length) {
+    const updated = normalizeIntelEmailSubscriptionEntry({
+      ...existing,
+      feeds: nextFeeds,
+      updatedAt: new Date().toISOString()
+    });
+    entries[existingIndex] = updated;
+  } else {
+    entries.splice(existingIndex, 1);
+  }
+  writeIntelEmailSubscriptions(entries);
+  return removed;
+}
+
+function buildIntelEmailAdminSubscriptionEntry(entry) {
+  const normalized = normalizeIntelEmailSubscriptionEntry(entry);
+  if (!normalized) {
+    return null;
+  }
+  const fallbackAvatarUrl = normalized.discordId
+    ? resolveDiscordAvatarUrl({ discordId: normalized.discordId, discordProfile: null }, 96)
+    : "";
+  return {
+    id: normalized.id,
+    email: normalized.email,
+    discordId: normalized.discordId,
+    discordUsername: normalized.discordUsername || "Unknown Discord user",
+    avatarUrl: normalized.discordAvatarUrl || fallbackAvatarUrl,
+    feeds: normalized.feeds,
+    lang: normalized.lang,
+    createdAt: normalized.createdAt,
+    updatedAt: normalized.updatedAt,
+    confirmedAt: normalized.confirmedAt
+  };
+}
+
+function buildIntelEmailAdminSubscriptionsPayload() {
+  const entries = readIntelEmailSubscriptions()
+    .map((entry) => buildIntelEmailAdminSubscriptionEntry(entry))
+    .filter(Boolean)
+    .sort((left, right) => String(right.updatedAt || "").localeCompare(String(left.updatedAt || "")));
+  return {
+    entries
+  };
+}
+
+function removeIntelEmailSubscriptionByIdFeed(subscriptionId, feed) {
+  const normalizedId = String(subscriptionId || "").trim().toLowerCase();
+  const normalizedFeed = normalizeIntelEmailFeed(feed);
+  const entries = readIntelEmailSubscriptions();
+  const existingIndex = entries.findIndex((entry) => entry.id === normalizedId);
+  if (existingIndex < 0) {
+    return false;
+  }
+
+  const existing = entries[existingIndex];
+  const nextFeeds = existing.feeds.filter((entryFeed) => entryFeed !== normalizedFeed);
+  if (nextFeeds.length) {
+    entries[existingIndex] = normalizeIntelEmailSubscriptionEntry({
+      ...existing,
+      feeds: nextFeeds,
+      updatedAt: new Date().toISOString()
+    });
+  } else {
+    entries.splice(existingIndex, 1);
+  }
+  writeIntelEmailSubscriptions(entries);
+  return true;
+}
+
+function readIntelEmailNotificationState() {
+  try {
+    const raw = fs.readFileSync(INTEL_EMAIL_NOTIFICATION_STATE_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    return {
+      siloFingerprint: String(parsed?.siloFingerprint || ""),
+      minervaFingerprint: String(parsed?.minervaFingerprint || "")
+    };
+  } catch (error) {
+    console.error("[intel-email] notification state read error:", error);
+    return {
+      siloFingerprint: "",
+      minervaFingerprint: ""
+    };
+  }
+}
+
+function writeIntelEmailNotificationState(entry) {
+  const normalized = {
+    siloFingerprint: String(entry?.siloFingerprint || ""),
+    minervaFingerprint: String(entry?.minervaFingerprint || "")
+  };
+  const tempPath = `${INTEL_EMAIL_NOTIFICATION_STATE_PATH}.tmp`;
+  fs.writeFileSync(tempPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+  fs.renameSync(tempPath, INTEL_EMAIL_NOTIFICATION_STATE_PATH);
   return normalized;
 }
 
@@ -5555,6 +6004,7 @@ function buildMePayload(req) {
     loggedIn: true,
     discordId: user.discordId,
     username: user.username,
+    avatarUrl: resolveDiscordAvatarUrl(user, 96),
     isAdmin: isAdmin(user),
     isAuthorized: isAuthorized(user, accessRequestState),
     accessRequestStatus: accessRequestState.status,
@@ -5573,6 +6023,16 @@ function requireAuthorized(req, res, next) {
   const user = getSessionUser(req);
   if (!isAuthorized(user)) {
     res.status(403).json({ error: "Unauthorized" });
+    return;
+  }
+  req.currentUser = user;
+  next();
+}
+
+function requireDiscordLogin(req, res, next) {
+  const user = getSessionUser(req);
+  if (!normalizeIntelEmailDiscordId(user?.discordId)) {
+    res.status(401).json({ error: "Discord login required" });
     return;
   }
   req.currentUser = user;
@@ -6176,6 +6636,9 @@ function getRequestBaseUrl(req) {
   if (configuredBaseUrl) {
     return configuredBaseUrl.replace(/\/+$/, "");
   }
+  if (!req || typeof req.get !== "function") {
+    return "";
+  }
 
   const forwardedProto = String(req.get("x-forwarded-proto") || "").trim().split(",")[0].trim();
   const protocol = forwardedProto || String(req.protocol || "http");
@@ -6438,9 +6901,9 @@ function buildFalloutEmailCardsGrid(cards = []) {
         return "<td width=\"50%\" style=\"padding:0 0 12px 10px;vertical-align:top;\">&nbsp;</td>";
       }
       return `<td width="50%" style="padding:0 ${card === left ? "10px 12px 0" : "0 0 12px 10px"};vertical-align:top;">
-        <div style="min-height:94px;padding:12px 14px;border:1px solid rgba(139,255,139,0.2);border-radius:16px;background:linear-gradient(140deg,rgba(255,225,122,0.08),rgba(255,225,122,0.01) 34%,rgba(0,0,0,0.18)),rgba(8,12,8,0.84);box-shadow:inset 0 0 0 1px rgba(0,0,0,0.42),0 10px 24px rgba(0,0,0,0.18);">
-          <div style="margin:0 0 8px;color:#ffe88d;font-size:11px;letter-spacing:.22em;text-transform:uppercase;">${card.label}</div>
-          <div style="color:#e6ffd7;font-size:${card.mono ? "15px" : "16px"};line-height:1.45;${card.mono ? "font-family:Consolas,'Courier New',monospace;" : ""}white-space:pre-wrap;word-break:break-word;">${card.value}</div>
+        <div style="min-height:94px;padding:12px 14px;border:1px solid rgba(255,225,122,0.26);border-radius:12px;background-color:#040d07;background-image:linear-gradient(140deg,rgba(255,225,122,0.08),rgba(139,255,139,0.045) 44%,rgba(0,0,0,0.26));box-shadow:inset 0 0 0 1px rgba(0,0,0,0.64),0 12px 28px rgba(0,0,0,0.42);">
+          <div style="margin:0 0 8px;color:#ffe17a;font-size:11px;letter-spacing:.2em;text-transform:uppercase;">${card.label}</div>
+          <div style="color:#caffca;font-size:${card.mono ? "15px" : "16px"};line-height:1.45;${card.mono ? "font-family:Consolas,'Courier New',monospace;" : ""}white-space:pre-wrap;word-break:break-word;">${card.value}</div>
         </div>
       </td>`;
     };
@@ -6451,14 +6914,97 @@ function buildFalloutEmailCardsGrid(cards = []) {
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:separate;border-spacing:0;">${rows.join("")}</table>`;
 }
 
+function buildSiloEmailCodeStack({ codes = {}, copy = {}, resetTarget = "" } = {}) {
+  const codeRows = [
+    { label: copy.siteAlpha || "Site Alpha", value: formatSiloCodeEmailValue(codes.Alpha) },
+    { label: copy.siteBravo || "Site Bravo", value: formatSiloCodeEmailValue(codes.Bravo) },
+    { label: copy.siteCharlie || "Site Charlie", value: formatSiloCodeEmailValue(codes.Charlie) }
+  ];
+  const rowsHtml = codeRows.map((row) => {
+    const safeLabel = escapeHtml(row.label);
+    const safeValue = escapeHtml(row.value);
+    return `<tr>
+      <td style="padding:0 0 10px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;border-collapse:separate;border-spacing:0;border:1px solid rgba(255,225,122,0.3);border-radius:12px;background-color:#041008;background-image:linear-gradient(135deg,rgba(255,225,122,0.09),rgba(139,255,139,0.045) 48%,rgba(0,0,0,0.28));box-shadow:inset 0 0 0 1px rgba(0,0,0,0.66),0 12px 28px rgba(0,0,0,0.38);">
+          <tr>
+            <td style="padding:13px 16px 12px;">
+              <div style="margin:0 0 7px;color:#ffe17a;font-size:11px;line-height:1;letter-spacing:.22em;text-transform:uppercase;">${safeLabel}</div>
+              <div style="color:#d8ffd8;font-family:Consolas,'Courier New',monospace;font-size:27px;line-height:1.15;letter-spacing:.08em;word-spacing:.18em;white-space:nowrap;text-shadow:0 0 16px rgba(139,255,139,0.18);">${safeValue}</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>`;
+  }).join("");
+  const safeResetLabel = escapeHtml(copy.resetTarget || "Reset Target");
+  const safeResetTarget = escapeHtml(resetTarget);
+
+  return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;margin:0 0 4px;border-collapse:separate;border-spacing:0;">
+    ${rowsHtml}
+    <tr>
+      <td style="padding:0 0 12px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;border-collapse:separate;border-spacing:0;border:1px solid rgba(139,255,139,0.22);border-radius:12px;background-color:#030b06;background-image:linear-gradient(90deg,rgba(139,255,139,0.08),rgba(255,225,122,0.045) 60%,rgba(0,0,0,0.2));box-shadow:inset 0 0 0 1px rgba(0,0,0,0.58);">
+          <tr>
+            <td style="padding:11px 14px;color:#ffe17a;font-size:11px;line-height:1.25;letter-spacing:.18em;text-transform:uppercase;">${safeResetLabel}</td>
+            <td align="right" style="padding:11px 14px;color:#caffca;font-family:Consolas,'Courier New',monospace;font-size:13px;line-height:1.35;white-space:normal;">${safeResetTarget}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>`;
+}
+
+function buildMinervaInventoryEmailPanel({ items = [], copy = {} } = {}) {
+  const safeItems = Array.isArray(items) ? items : [];
+  const hasItems = safeItems.length > 0;
+  const kicker = escapeHtml(copy.inventoryPreview || "Inventory Preview");
+  const title = escapeHtml(hasItems ? (copy.fullInventory || copy.firstItems || "Full Inventory Manifest") : (copy.manifestPending || "Manifest Pending"));
+  const unavailable = escapeHtml(copy.inventoryUnavailable || "Inventory details are unavailable right now.");
+  const bullionLabel = escapeHtml(copy.bullion || "bullion");
+  const rowsHtml = hasItems
+    ? safeItems.map((item, index) => {
+        const name = escapeHtml(String(item?.name || "").trim() || "--");
+        const priceValue = Number.isFinite(Number(item?.price))
+          ? Number(item.price).toLocaleString("en-US")
+          : "--";
+        return `<tr>
+          <td style="padding:${index === 0 ? "0" : "8px"} 0 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;border-collapse:separate;border-spacing:0;border:1px solid rgba(139,255,139,0.18);border-radius:10px;background-color:#041008;background-image:linear-gradient(90deg,rgba(139,255,139,0.075),rgba(255,225,122,0.035) 68%,rgba(0,0,0,0.2));box-shadow:inset 0 0 0 1px rgba(0,0,0,0.54);">
+              <tr>
+                <td width="34" valign="top" style="width:34px;padding:12px 0 11px 12px;color:#ffe17a;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.2;letter-spacing:.08em;">${String(index + 1).padStart(2, "0")}</td>
+                <td valign="top" style="padding:12px 10px 11px 8px;color:#d8ffd8;font-size:14px;line-height:1.35;font-weight:700;word-break:break-word;">${name}</td>
+                <td width="118" align="right" valign="top" style="width:118px;padding:9px 12px 9px 6px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" align="right" style="border-collapse:separate;border-spacing:0;">
+                    <tr>
+                      <td align="center" style="min-width:76px;padding:6px 9px;border:1px solid rgba(255,225,122,0.3);border-radius:9px;background-color:#0b0f06;background-image:linear-gradient(180deg,rgba(255,225,122,0.1),rgba(0,0,0,0.18));">
+                        <div style="color:#fff1bd;font-family:Consolas,'Courier New',monospace;font-size:14px;line-height:1.1;font-weight:700;white-space:nowrap;">${escapeHtml(priceValue)}</div>
+                        <div style="margin-top:3px;color:rgba(255,225,122,0.72);font-size:9px;line-height:1.1;letter-spacing:.12em;text-transform:uppercase;">${bullionLabel}</div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>`;
+      }).join("")
+    : `<tr><td style="padding:12px 14px;color:#c6efc6;font-size:14px;line-height:1.55;">${unavailable}</td></tr>`;
+
+  return `<div style="margin-top:14px;padding:14px 16px;border:1px solid rgba(255,225,122,0.34);border-radius:12px;background-color:#030b06;background-image:linear-gradient(135deg,rgba(255,225,122,0.1),rgba(0,0,0,0) 48%),linear-gradient(180deg,rgba(139,255,139,0.04),rgba(0,0,0,0.22));box-shadow:inset 0 0 0 1px rgba(0,0,0,0.62),0 14px 30px rgba(0,0,0,0.38);">
+    <div style="margin:0 0 8px;color:#ffe17a;font-size:11px;letter-spacing:.2em;text-transform:uppercase;">${kicker}</div>
+    <div style="margin:0 0 12px;color:#fff1bd;font-size:18px;line-height:1.2;letter-spacing:.06em;text-transform:uppercase;text-shadow:0 0 14px rgba(255,225,122,0.12);">${title}</div>
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;border-collapse:separate;border-spacing:0;">${rowsHtml}</table>
+  </div>`;
+}
+
 function buildFalloutEmailPanel({ kicker, title = "", bodyHtml = "", accent = "green" } = {}) {
-  const accentColor = accent === "amber" ? "#ffefaf" : "#d8ffd8";
-  const borderColor = accent === "amber" ? "rgba(255,225,122,0.28)" : "rgba(139,255,139,0.24)";
-  const glow = accent === "amber" ? "rgba(255,225,122,0.08)" : "rgba(139,255,139,0.08)";
-  return `<div style="margin-top:14px;padding:14px 16px;border:1px solid ${borderColor};border-radius:16px;background:linear-gradient(135deg,${glow},rgba(0,0,0,0) 48%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.2)),rgba(8,12,8,0.8);box-shadow:inset 0 0 0 1px rgba(0,0,0,0.4),0 14px 28px rgba(0,0,0,0.16);">
-    <div style="margin:0 0 8px;color:#ffe88d;font-size:11px;letter-spacing:.22em;text-transform:uppercase;">${kicker}</div>
-    ${title ? `<div style="margin:0 0 10px;color:${accentColor};font-size:18px;line-height:1.2;letter-spacing:.06em;text-transform:uppercase;">${title}</div>` : ""}
-    <div style="color:#d8ffd8;font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word;">${bodyHtml}</div>
+  const accentColor = accent === "amber" ? "#fff1bd" : "#caffca";
+  const borderColor = accent === "amber" ? "rgba(255,225,122,0.34)" : "rgba(139,255,139,0.3)";
+  const glow = accent === "amber" ? "rgba(255,225,122,0.1)" : "rgba(139,255,139,0.1)";
+  return `<div style="margin-top:14px;padding:14px 16px;border:1px solid ${borderColor};border-radius:12px;background-color:#030b06;background-image:linear-gradient(135deg,${glow},rgba(0,0,0,0) 48%),linear-gradient(180deg,rgba(139,255,139,0.04),rgba(0,0,0,0.22));box-shadow:inset 0 0 0 1px rgba(0,0,0,0.62),0 14px 30px rgba(0,0,0,0.38);">
+    <div style="margin:0 0 8px;color:#ffe17a;font-size:11px;letter-spacing:.2em;text-transform:uppercase;">${kicker}</div>
+    ${title ? `<div style="margin:0 0 10px;color:${accentColor};font-size:18px;line-height:1.2;letter-spacing:.06em;text-transform:uppercase;text-shadow:0 0 14px rgba(139,255,139,0.12);">${title}</div>` : ""}
+    <div style="color:#c6efc6;font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word;">${bodyHtml}</div>
   </div>`;
 }
 
@@ -6507,6 +7053,8 @@ function buildFalloutEmailDiscordProfileCard({ user, identity, metaRows = [] } =
 }
 
 function buildFalloutEmailShell({
+  req = null,
+  lang = "en",
   preheader = "",
   badge = "",
   headerEyebrow = "",
@@ -6523,29 +7071,46 @@ function buildFalloutEmailShell({
   const accentLine = accent === "amber" ? "rgba(255,225,122,0.34)" : "rgba(139,255,139,0.34)";
   const badgeBorder = accent === "amber" ? "rgba(255,225,122,0.48)" : "rgba(139,255,139,0.44)";
   const badgeText = accent === "amber" ? "#fff1bd" : "#dcffcf";
+  const htmlLang = normalizeIntelEmailLang(lang);
+  const logoUrl = /^https?:\/\//i.test(EMAIL_RELAY_LOGO_URL)
+    ? EMAIL_RELAY_LOGO_URL
+    : buildAbsoluteSiteUrl(req, EMAIL_RELAY_LOGO_PATH);
+  const logoHtml = logoUrl
+    ? `<td width="58" valign="top" style="width:58px;padding:0 12px 0 0;">
+        <img src="${escapeHtml(logoUrl)}" alt="Fallout Codex relay" width="46" height="46" style="display:block;width:46px;height:46px;border:0;border-radius:12px;outline:none;text-decoration:none;background:#06140a;box-shadow:0 0 18px rgba(139,255,139,0.16);" />
+      </td>`
+    : "";
 
   return `<!doctype html>
-<html>
-  <body style="margin:0;padding:0;background:#070803;color:#d8ffd8;font-family:Consolas,'Courier New',monospace;">
+<html lang="${htmlLang}">
+  <body bgcolor="#020704" style="margin:0;padding:0;background:#020704;background-color:#020704;color:#caffca;font-family:Consolas,'Courier New',monospace;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">${preheader}</div>
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;border-collapse:collapse;background:
-      radial-gradient(1200px 700px at 100% 0%, rgba(255,225,122,0.12), rgba(0,0,0,0) 54%),
-      radial-gradient(1000px 700px at 0% 100%, rgba(139,255,139,0.10), rgba(0,0,0,0) 58%),
-      #070803;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" bgcolor="#020704" style="width:100%;border-collapse:collapse;background-color:#020704;background-image:
+      radial-gradient(980px 620px at 100% 0%, rgba(255,225,122,0.1), rgba(0,0,0,0) 55%),
+      radial-gradient(920px 640px at 0% 100%, rgba(139,255,139,0.12), rgba(0,0,0,0) 58%),
+      linear-gradient(180deg,#071108,#020704);">
       <tr>
         <td align="center" style="padding:24px 12px;">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:720px;width:100%;border-collapse:separate;border-spacing:0;border:1px solid ${accentLine};border-radius:20px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.2)),rgba(7,10,7,0.92);box-shadow:0 0 0 1px rgba(0,0,0,0.45) inset,0 20px 60px rgba(0,0,0,0.62);">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" bgcolor="#030c06" style="max-width:720px;width:100%;border-collapse:separate;border-spacing:0;border:1px solid ${accentLine};border-radius:16px;overflow:hidden;background-color:#030c06;background-image:linear-gradient(180deg,rgba(139,255,139,0.045),rgba(0,0,0,0.24));box-shadow:0 0 0 1px rgba(0,0,0,0.72) inset,0 22px 70px rgba(0,0,0,0.78);">
             <tr>
               <td style="padding:0;">
                 <div style="height:6px;background:
-                  linear-gradient(90deg,rgba(139,255,139,0.34),rgba(255,225,122,0.24) 45%,rgba(0,0,0,0) 100%);"></div>
-                <div style="padding:16px 18px;border-bottom:1px solid ${accentLine};background:
-                  linear-gradient(90deg,rgba(255,225,122,0.16),rgba(255,225,122,0.02) 45%,rgba(0,0,0,0) 70%),
-                  linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.15));">
-                <div style="margin:0 0 10px;color:#97cf97;font-size:11px;letter-spacing:.24em;text-transform:uppercase;">${headerEyebrow}</div>
-                <span style="display:inline-block;padding:5px 10px;border:1px solid ${badgeBorder};border-radius:999px;color:${badgeText};background:rgba(0,0,0,0.32);font-size:11px;letter-spacing:.12em;text-transform:uppercase;">${badge}</span>
-                <div style="margin:14px 0 8px;color:#fff3ca;font-size:22px;line-height:1.2;letter-spacing:.08em;text-transform:uppercase;">${title}</div>
-                <div style="color:#cfeecf;font-size:14px;line-height:1.6;">${lead}</div>
+                  linear-gradient(90deg,rgba(139,255,139,0.5),rgba(255,225,122,0.36) 46%,rgba(0,0,0,0) 100%);"></div>
+                <div style="padding:16px 18px;border-bottom:1px solid ${accentLine};background-color:#06140a;background-image:
+                  radial-gradient(520px 180px at 100% 0%,rgba(255,225,122,0.12),rgba(0,0,0,0) 70%),
+                  linear-gradient(90deg,rgba(139,255,139,0.1),rgba(255,225,122,0.045) 50%,rgba(0,0,0,0) 76%),
+                  linear-gradient(180deg,rgba(139,255,139,0.04),rgba(0,0,0,0.18));">
+                <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+                  <tr>
+                    ${logoHtml}
+                    <td valign="top" style="padding:0;">
+                      <div style="margin:0 0 10px;color:#9ff39f;font-size:11px;letter-spacing:.22em;text-transform:uppercase;">${headerEyebrow}</div>
+                      <span style="display:inline-block;padding:5px 10px;border:1px solid ${badgeBorder};border-radius:7px;color:${badgeText};background:rgba(0,0,0,0.42);font-size:11px;letter-spacing:.12em;text-transform:uppercase;">${badge}</span>
+                    </td>
+                  </tr>
+                </table>
+                <div style="margin:14px 0 8px;color:#fff4cb;font-size:22px;line-height:1.2;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 0 18px rgba(255,225,122,0.14);">${title}</div>
+                <div style="color:#caffca;font-size:14px;line-height:1.6;">${lead}</div>
                 </div>
               </td>
             </tr>
@@ -6553,10 +7118,10 @@ function buildFalloutEmailShell({
               <td style="padding:18px;">
                 ${cardsHtml}
                 ${sectionsHtml}
-                <div style="margin-top:16px;padding:14px 16px;border:1px solid rgba(255,225,122,0.24);border-radius:16px;background:linear-gradient(180deg,rgba(255,225,122,0.05),rgba(0,0,0,0.16)),rgba(8,12,8,0.82);box-shadow:inset 0 0 0 1px rgba(0,0,0,0.4);">
-                  <div style="margin:0 0 10px;color:#ffe88d;font-size:11px;letter-spacing:.22em;text-transform:uppercase;">${actionsTitle}</div>
+                <div style="margin-top:16px;padding:14px 16px;border:1px solid rgba(255,225,122,0.28);border-radius:12px;background-color:#030b06;background-image:linear-gradient(180deg,rgba(255,225,122,0.06),rgba(0,0,0,0.2));box-shadow:inset 0 0 0 1px rgba(0,0,0,0.62);">
+                  <div style="margin:0 0 10px;color:#ffe17a;font-size:11px;letter-spacing:.2em;text-transform:uppercase;">${actionsTitle}</div>
                   <div style="font-size:0;line-height:0;">${actionsHtml}</div>
-                  ${footerNote ? `<div style="margin-top:12px;color:#a7d7a7;font-size:12px;line-height:1.5;">${footerNote}</div>` : ""}
+                  ${footerNote ? `<div style="margin-top:12px;color:#9edc9e;font-size:12px;line-height:1.5;">${footerNote}</div>` : ""}
                 </div>
                 ${footerActionHtml ? `<div style="margin-top:14px;text-align:right;">${footerActionHtml}</div>` : ""}
               </td>
@@ -6675,6 +7240,7 @@ function buildAccessRequestEmailContent({ user, requestEntry, req }) {
     subject,
     text,
     html: buildFalloutEmailShell({
+      req,
       preheader: escapeHtml(`New access request from ${identity.username} is waiting for review.`),
       badge: escapeHtml("Access Review Required"),
       headerEyebrow: escapeHtml("Fallout Codex // Secure File Intake"),
@@ -6842,6 +7408,7 @@ function buildDisclaimerReevaluationEmailContent({ user, accessRequestState, exp
     subject,
     text,
     html: buildFalloutEmailShell({
+      req,
       preheader: escapeHtml(`Disclaimer reevaluation request received from ${identity.username}.`),
       badge: escapeHtml("Reevaluation Request"),
       headerEyebrow: escapeHtml("Fallout Codex // Disclaimer Appeal Relay"),
@@ -6875,6 +7442,798 @@ async function sendDisclaimerReevaluationEmail({ user, accessRequestState, expla
     text: content.text,
     html: content.html
   });
+}
+
+const INTEL_EMAIL_COPY = {
+  en: {
+    feedLabels: {
+      silo: "Silo Codes",
+      minerva: "Minerva Intel"
+    },
+    openAction: "Open Fallout Codex",
+    terminalAction: "Terminal Action",
+    confirmation: {
+      subject: (feedLabel) => `[Fallout Codex] ${feedLabel} email relay armed`,
+      preheader: ({ feedLabel, email }) => `${feedLabel} email relay armed for ${email}.`,
+      badge: "Email Relay Armed",
+      eyebrow: "Fallout Codex // Intel Subscription",
+      title: (feedLabel) => `${feedLabel} Updates Enabled`,
+      lead: "Your terminal relay is linked. Future changes from this intel channel will be transmitted to your inbox with the latest field summary.",
+      subscribedFeed: "Subscribed Feed",
+      relayAddress: "Relay Address",
+      relayTerms: "Relay Terms",
+      minervaTitle: "Minerva Route Alerts",
+      siloTitle: "Silo Code Rotation Alerts",
+      minervaBody: "You will receive email when Minerva arrives, leaves, changes route state, or when her sale list updates through the Fallout Codex relay.",
+      siloBody: "You will receive email when the weekly Appalachian silo launch code set changes through the Fallout Codex relay.",
+      footer: "You received this message because this address was entered on Fallout Codex.",
+      textTitle: "FALLOUT CODEX - EMAIL RELAY ARMED",
+      textFeed: "Feed",
+      textEmail: "Email"
+    },
+    unsubscribe: {
+      subject: (feedLabel) => `[Fallout Codex] ${feedLabel} email relay disarmed`,
+      preheader: ({ feedLabel, email }) => `${feedLabel} email relay was removed for ${email}.`,
+      badge: "Email Relay Disarmed",
+      eyebrow: "Fallout Codex // Intel Subscription",
+      title: (feedLabel) => `${feedLabel} Updates Disabled`,
+      lead: "Your terminal relay was disarmed. This feed will stop sending new intel to your inbox.",
+      removedFeed: "Removed Feed",
+      relayAddress: "Relay Address",
+      cooldown: "Rearm Cooldown",
+      cooldownTitle: "Relay Cooldown Active",
+      cooldownBody: "To prevent inbox spam, this Discord account cannot subscribe to the same email relay again until the cooldown expires.",
+      footer: "You received this message because this relay was removed from Fallout Codex.",
+      textTitle: "FALLOUT CODEX - EMAIL RELAY DISARMED",
+      textFeed: "Feed",
+      textEmail: "Email",
+      textCooldown: "Rearm cooldown"
+    },
+    siloUpdate: {
+      subject: "[Fallout Codex] Silo codes updated",
+      preheader: "Fallout Codex detected a silo code update.",
+      badge: "Silo Code Update",
+      eyebrow: "Fallout Codex // Nuclear Command Relay",
+      title: "Silo Codes Updated",
+      lead: "The relay detected a change in the Appalachian launch code feed. The current code board is below.",
+      siteAlpha: "Site Alpha",
+      siteBravo: "Site Bravo",
+      siteCharlie: "Site Charlie",
+      resetTarget: "Reset Target",
+      launchStatus: "Launch Status",
+      expiredTitle: "Codes Marked Expired",
+      freshTitle: "Fresh Code Set Detected",
+      expiredBody: "The current code set is marked expired by the relay. Wait for the next rotation before authorizing a launch.",
+      freshBody: "A new or changed Appalachian silo code set is available. Cross-check the site you need before authorizing a launch.",
+      footer: "This alert was sent because you subscribed to Silo Codes on Fallout Codex.",
+      textTitle: "FALLOUT CODEX - SILO CODE UPDATE",
+      alpha: "Alpha",
+      bravo: "Bravo",
+      charlie: "Charlie",
+      status: "Status",
+      expired: "Expired",
+      valid: "Valid"
+    },
+    minervaUpdate: {
+      subject: ({ active, location }) => active
+        ? `[Fallout Codex] Minerva is available at ${location}`
+        : `[Fallout Codex] Minerva route updated: ${location}`,
+      preheader: ({ active, location }) => active
+        ? `Minerva is available at ${location}.`
+        : `Minerva route updated: ${location}.`,
+      badge: "Minerva Intel Update",
+      eyebrow: "Fallout Codex // Vendor Route Relay",
+      title: ({ active }) => active ? "Minerva Available" : "Minerva Route Updated",
+      lead: ({ active }) => active
+        ? "The relay detected that Minerva is available. Current route state and inventory preview are below."
+        : "The relay detected a Minerva route change. Current route state and next window are below.",
+      routeState: "Route State",
+      availableNow: "Available Now",
+      inTransit: "In Transit",
+      location: "Location",
+      list: "List",
+      leaves: "Leaves",
+      arrives: "Arrives",
+      vendorStatus: "Vendor Status",
+      activeTitle: "Minerva Is Available",
+      transitTitle: "Minerva Is In Transit",
+      activeBody: (location) => `Minerva is currently broadcasting from <strong>${escapeHtml(location)}</strong>.`,
+      transitBody: (location) => `Minerva is moving toward <strong>${escapeHtml(location)}</strong>.`,
+      inventoryPreview: "Inventory Preview",
+      firstItems: "First Items In The List",
+      fullInventory: "Full Inventory Manifest",
+      manifestPending: "Manifest Pending",
+      inventoryUnavailable: "Inventory details are unavailable right now.",
+      bullion: "bullion",
+      footer: "This alert was sent because you subscribed to Minerva Intel on Fallout Codex.",
+      textTitle: "FALLOUT CODEX - MINERVA INTEL UPDATE",
+      textInventory: "Inventory preview"
+    }
+  },
+  es: {
+    feedLabels: {
+      silo: "Codigos de Silo",
+      minerva: "Intel de Minerva"
+    },
+    openAction: "Abrir Fallout Codex",
+    terminalAction: "Accion de Terminal",
+    confirmation: {
+      subject: (feedLabel) => `[Fallout Codex] Relay de email de ${feedLabel} armado`,
+      preheader: ({ feedLabel, email }) => `Relay de email de ${feedLabel} armado para ${email}.`,
+      badge: "Relay de Email Armado",
+      eyebrow: "Fallout Codex // Suscripcion de Intel",
+      title: (feedLabel) => `${feedLabel} Activado`,
+      lead: "Tu relay de terminal esta enlazado. Los futuros cambios de este canal de intel se transmitiran a tu inbox con el resumen mas reciente.",
+      subscribedFeed: "Feed Suscrito",
+      relayAddress: "Direccion del Relay",
+      relayTerms: "Terminos del Relay",
+      minervaTitle: "Alertas de Ruta de Minerva",
+      siloTitle: "Alertas de Rotacion de Codigos de Silo",
+      minervaBody: "Recibiras email cuando Minerva llegue, se vaya, cambie de estado de ruta o cuando su lista de venta se actualice por el relay de Fallout Codex.",
+      siloBody: "Recibiras email cuando cambie el set semanal de codigos de lanzamiento de Appalachia por el relay de Fallout Codex.",
+      footer: "Recibiste este mensaje porque este email fue ingresado en Fallout Codex.",
+      textTitle: "FALLOUT CODEX - RELAY DE EMAIL ARMADO",
+      textFeed: "Feed",
+      textEmail: "Email"
+    },
+    unsubscribe: {
+      subject: (feedLabel) => `[Fallout Codex] Relay de email de ${feedLabel} desarmado`,
+      preheader: ({ feedLabel, email }) => `Relay de email de ${feedLabel} eliminado para ${email}.`,
+      badge: "Relay de Email Desarmado",
+      eyebrow: "Fallout Codex // Suscripcion de Intel",
+      title: (feedLabel) => `${feedLabel} Desactivado`,
+      lead: "Tu relay de terminal fue desarmado. Este feed dejara de enviar nueva intel a tu inbox.",
+      removedFeed: "Feed Eliminado",
+      relayAddress: "Direccion del Relay",
+      cooldown: "Cooldown para Rearmar",
+      cooldownTitle: "Cooldown del Relay Activo",
+      cooldownBody: "Para evitar spam en el inbox, esta cuenta de Discord no podra suscribirse otra vez al mismo relay hasta que termine el cooldown.",
+      footer: "Recibiste este mensaje porque este relay fue eliminado de Fallout Codex.",
+      textTitle: "FALLOUT CODEX - RELAY DE EMAIL DESARMADO",
+      textFeed: "Feed",
+      textEmail: "Email",
+      textCooldown: "Cooldown para rearmar"
+    },
+    siloUpdate: {
+      subject: "[Fallout Codex] Codigos de silo actualizados",
+      preheader: "Fallout Codex detecto una actualizacion de codigos de silo.",
+      badge: "Actualizacion de Codigos",
+      eyebrow: "Fallout Codex // Relay de Comando Nuclear",
+      title: "Codigos de Silo Actualizados",
+      lead: "El relay detecto un cambio en el feed de codigos de lanzamiento de Appalachia. El tablero actual esta abajo.",
+      siteAlpha: "Sitio Alpha",
+      siteBravo: "Sitio Bravo",
+      siteCharlie: "Sitio Charlie",
+      resetTarget: "Objetivo de Reinicio",
+      launchStatus: "Estado de Lanzamiento",
+      expiredTitle: "Codigos Marcados Expirados",
+      freshTitle: "Nuevo Set de Codigos Detectado",
+      expiredBody: "El set actual de codigos esta marcado como expirado por el relay. Espera la siguiente rotacion antes de autorizar un lanzamiento.",
+      freshBody: "Un set nuevo o cambiado de codigos de silo de Appalachia esta disponible. Verifica el sitio que necesitas antes de autorizar un lanzamiento.",
+      footer: "Esta alerta fue enviada porque te suscribiste a Codigos de Silo en Fallout Codex.",
+      textTitle: "FALLOUT CODEX - ACTUALIZACION DE CODIGOS DE SILO",
+      alpha: "Alpha",
+      bravo: "Bravo",
+      charlie: "Charlie",
+      status: "Estado",
+      expired: "Expirados",
+      valid: "Validos"
+    },
+    minervaUpdate: {
+      subject: ({ active, location }) => active
+        ? `[Fallout Codex] Minerva esta disponible en ${location}`
+        : `[Fallout Codex] Ruta de Minerva actualizada: ${location}`,
+      preheader: ({ active, location }) => active
+        ? `Minerva esta disponible en ${location}.`
+        : `Ruta de Minerva actualizada: ${location}.`,
+      badge: "Actualizacion de Minerva",
+      eyebrow: "Fallout Codex // Relay de Ruta de Vendedora",
+      title: ({ active }) => active ? "Minerva Disponible" : "Ruta de Minerva Actualizada",
+      lead: ({ active }) => active
+        ? "El relay detecto que Minerva esta disponible. El estado de ruta y la vista previa del inventario estan abajo."
+        : "El relay detecto un cambio en la ruta de Minerva. El estado actual y la proxima ventana estan abajo.",
+      routeState: "Estado de Ruta",
+      availableNow: "Disponible Ahora",
+      inTransit: "En Traslado",
+      location: "Ubicacion",
+      list: "Lista",
+      leaves: "Se Va",
+      arrives: "Llega",
+      vendorStatus: "Estado de Vendedora",
+      activeTitle: "Minerva Esta Disponible",
+      transitTitle: "Minerva Esta En Traslado",
+      activeBody: (location) => `Minerva esta transmitiendo desde <strong>${escapeHtml(location)}</strong>.`,
+      transitBody: (location) => `Minerva se mueve hacia <strong>${escapeHtml(location)}</strong>.`,
+      inventoryPreview: "Vista Previa de Inventario",
+      firstItems: "Primeros Items de la Lista",
+      fullInventory: "Manifiesto Completo de Inventario",
+      manifestPending: "Manifiesto Pendiente",
+      inventoryUnavailable: "Los detalles del inventario no estan disponibles ahora mismo.",
+      bullion: "oro en lingotes",
+      footer: "Esta alerta fue enviada porque te suscribiste a Intel de Minerva en Fallout Codex.",
+      textTitle: "FALLOUT CODEX - ACTUALIZACION DE INTEL DE MINERVA",
+      textInventory: "Vista previa de inventario"
+    }
+  }
+};
+
+function getIntelEmailCopy(lang) {
+  return INTEL_EMAIL_COPY[normalizeIntelEmailLang(lang)] || INTEL_EMAIL_COPY.en;
+}
+
+function getIntelFeedLabel(feed, lang = "en") {
+  const normalizedFeed = normalizeIntelEmailFeed(feed);
+  const copy = getIntelEmailCopy(lang);
+  return copy.feedLabels[normalizedFeed] || INTEL_EMAIL_COPY.en.feedLabels[normalizedFeed] || normalizedFeed;
+}
+
+function formatIntelEmailDate(value) {
+  return value ? formatUtcTimestamp(value) : "Unknown";
+}
+
+function formatIntelEmailCooldownDuration(lang = "en") {
+  const totalMinutes = Math.max(1, Math.round(INTEL_EMAIL_RESUBSCRIBE_COOLDOWN_MS / (60 * 1000)));
+  if (totalMinutes % 60 === 0) {
+    const hours = totalMinutes / 60;
+    return normalizeIntelEmailLang(lang) === "es"
+      ? `${hours} ${hours === 1 ? "hora" : "horas"}`
+      : `${hours} ${hours === 1 ? "hour" : "hours"}`;
+  }
+  return normalizeIntelEmailLang(lang) === "es"
+    ? `${totalMinutes} minutos`
+    : `${totalMinutes} minutes`;
+}
+
+function formatSiloCodeEmailValue(value) {
+  const raw = String(value || "").replace(/\D/g, "");
+  return raw.length === 8 ? raw.replace(/(\d{3})(\d{2})(\d{3})/, "$1 $2 $3") : (raw || "--");
+}
+
+function buildIntelEmailOpenAction(req, lang = "en", feed = "") {
+  const baseUrl = getRequestBaseUrl(req);
+  if (!baseUrl) {
+    return "";
+  }
+
+  const normalizedLang = normalizeIntelEmailLang(lang);
+  const normalizedFeed = normalizeIntelEmailFeed(feed);
+  const dossierPath = normalizedFeed === "minerva" ? "/minerva" : "/silos";
+  const actionUrl = `${baseUrl}${dossierPath}?lang=${encodeURIComponent(normalizedLang)}`;
+  return `<a href="${escapeHtml(actionUrl)}" style="${buildFalloutEmailButtonStyle({ tone: "neutral", enabled: true })};margin:0 10px 10px 0;">${escapeHtml(getIntelEmailCopy(normalizedLang).openAction)}</a>`;
+}
+
+function buildIntelSubscriptionConfirmationEmailContent({ subscription, feed, req }) {
+  const normalizedFeed = normalizeIntelEmailFeed(feed);
+  const lang = normalizeIntelEmailLang(subscription?.lang);
+  const copy = getIntelEmailCopy(lang);
+  const c = copy.confirmation;
+  const isMinerva = normalizedFeed === "minerva";
+  const feedLabel = getIntelFeedLabel(normalizedFeed, lang);
+  const subject = c.subject(feedLabel);
+  const actionsHtml = buildIntelEmailOpenAction(req, lang, normalizedFeed);
+  const cardsHtml = buildFalloutEmailCardsGrid([
+    {
+      label: escapeHtml(c.subscribedFeed),
+      value: escapeHtml(feedLabel)
+    },
+    {
+      label: escapeHtml(c.relayAddress),
+      value: escapeHtml(subscription.email),
+      mono: true
+    }
+  ]);
+  const sectionsHtml = buildFalloutEmailPanel({
+    kicker: escapeHtml(c.relayTerms),
+    title: escapeHtml(isMinerva ? c.minervaTitle : c.siloTitle),
+    bodyHtml: isMinerva ? c.minervaBody : c.siloBody,
+    accent: isMinerva ? "green" : "amber"
+  });
+  const text = [
+    c.textTitle,
+    "",
+    `${c.textFeed}: ${feedLabel}`,
+    `${c.textEmail}: ${subscription.email}`,
+    "",
+    isMinerva ? c.minervaBody : c.siloBody
+  ].join("\n");
+
+  return {
+    subject,
+    text,
+    html: buildFalloutEmailShell({
+      req,
+      lang,
+      preheader: escapeHtml(c.preheader({ feedLabel, email: subscription.email })),
+      badge: escapeHtml(c.badge),
+      headerEyebrow: escapeHtml(c.eyebrow),
+      title: escapeHtml(c.title(feedLabel)),
+      lead: c.lead,
+      accent: isMinerva ? "green" : "amber",
+      cardsHtml,
+      sectionsHtml,
+      actionsTitle: escapeHtml(copy.terminalAction),
+      actionsHtml,
+      footerNote: c.footer
+    })
+  };
+}
+
+async function sendIntelSubscriptionConfirmationEmail({ subscription, feed, req }) {
+  if (!mailTransport) {
+    throw new Error("Mail transport is not configured");
+  }
+
+  const content = buildIntelSubscriptionConfirmationEmailContent({
+    subscription,
+    feed,
+    req
+  });
+  await mailTransport.sendMail({
+    from: SMTP_FROM,
+    to: subscription.email,
+    subject: content.subject,
+    text: content.text,
+    html: content.html
+  });
+}
+
+function buildIntelSubscriptionUnsubscribeEmailContent({ subscription, feed, cooldown, req }) {
+  const normalizedFeed = normalizeIntelEmailFeed(feed);
+  const lang = normalizeIntelEmailLang(subscription?.lang || cooldown?.lang);
+  const copy = getIntelEmailCopy(lang);
+  const c = copy.unsubscribe;
+  const isMinerva = normalizedFeed === "minerva";
+  const feedLabel = getIntelFeedLabel(normalizedFeed, lang);
+  const cooldownValue = formatIntelEmailCooldownDuration(lang);
+  const actionsHtml = buildIntelEmailOpenAction(req, lang, normalizedFeed);
+  const cardsHtml = buildFalloutEmailCardsGrid([
+    {
+      label: escapeHtml(c.removedFeed),
+      value: escapeHtml(feedLabel)
+    },
+    {
+      label: escapeHtml(c.relayAddress),
+      value: escapeHtml(subscription.email),
+      mono: true
+    },
+    {
+      label: escapeHtml(c.cooldown),
+      value: escapeHtml(cooldownValue),
+      mono: true
+    }
+  ]);
+  const sectionsHtml = buildFalloutEmailPanel({
+    kicker: escapeHtml(c.cooldownTitle),
+    title: escapeHtml(c.cooldown),
+    bodyHtml: c.cooldownBody,
+    accent: isMinerva ? "green" : "amber"
+  });
+  const text = [
+    c.textTitle,
+    "",
+    `${c.textFeed}: ${feedLabel}`,
+    `${c.textEmail}: ${subscription.email}`,
+    `${c.textCooldown}: ${cooldownValue}`,
+    "",
+    c.cooldownBody
+  ].join("\n");
+
+  return {
+    subject: c.subject(feedLabel),
+    text,
+    html: buildFalloutEmailShell({
+      req,
+      lang,
+      preheader: escapeHtml(c.preheader({ feedLabel, email: subscription.email })),
+      badge: escapeHtml(c.badge),
+      headerEyebrow: escapeHtml(c.eyebrow),
+      title: escapeHtml(c.title(feedLabel)),
+      lead: c.lead,
+      accent: isMinerva ? "green" : "amber",
+      cardsHtml,
+      sectionsHtml,
+      actionsTitle: escapeHtml(copy.terminalAction),
+      actionsHtml,
+      footerNote: c.footer
+    })
+  };
+}
+
+async function sendIntelSubscriptionUnsubscribeEmail({ subscription, feed, cooldown, req }) {
+  if (!mailTransport || !subscription?.email) {
+    return false;
+  }
+
+  const content = buildIntelSubscriptionUnsubscribeEmailContent({
+    subscription,
+    feed,
+    cooldown,
+    req
+  });
+  await mailTransport.sendMail({
+    from: SMTP_FROM,
+    to: subscription.email,
+    subject: content.subject,
+    text: content.text,
+    html: content.html
+  });
+  return true;
+}
+
+function serializeSiloEmailFingerprint(payload = {}) {
+  return JSON.stringify({
+    codes: payload.codes || {},
+    isExpired: Boolean(payload.isExpired)
+  });
+}
+
+function serializeMinervaEmailFingerprint(payload = {}) {
+  return JSON.stringify({
+    location: String(payload.location || "").trim() || "--",
+    listNumber: Number.isFinite(Number(payload.listNumber)) ? Number(payload.listNumber) : null,
+    active: Boolean(payload.active),
+    eventStart: String(payload.eventStart || ""),
+    eventEnd: String(payload.eventEnd || "")
+  });
+}
+
+function buildSiloUpdateEmailContent({ payload, req, lang = "en" }) {
+  const normalizedLang = normalizeIntelEmailLang(lang);
+  const copy = getIntelEmailCopy(normalizedLang);
+  const c = copy.siloUpdate;
+  const codes = payload?.codes || {};
+  const cardsHtml = buildSiloEmailCodeStack({
+    codes,
+    copy: c,
+    resetTarget: formatIntelEmailDate(payload?.resetTargetUtc)
+  });
+  const sectionsHtml = buildFalloutEmailPanel({
+    kicker: escapeHtml(c.launchStatus),
+    title: escapeHtml(payload?.isExpired ? c.expiredTitle : c.freshTitle),
+    bodyHtml: payload?.isExpired ? c.expiredBody : c.freshBody,
+    accent: "amber"
+  });
+  const actionsHtml = buildIntelEmailOpenAction(req, normalizedLang, "silo");
+  const text = [
+    c.textTitle,
+    "",
+    `${c.alpha}: ${formatSiloCodeEmailValue(codes.Alpha)}`,
+    `${c.bravo}: ${formatSiloCodeEmailValue(codes.Bravo)}`,
+    `${c.charlie}: ${formatSiloCodeEmailValue(codes.Charlie)}`,
+    `${c.resetTarget}: ${formatIntelEmailDate(payload?.resetTargetUtc)}`,
+    `${c.status}: ${payload?.isExpired ? c.expired : c.valid}`
+  ].join("\n");
+
+  return {
+    subject: c.subject,
+    text,
+    html: buildFalloutEmailShell({
+      req,
+      lang: normalizedLang,
+      preheader: escapeHtml(c.preheader),
+      badge: escapeHtml(c.badge),
+      headerEyebrow: escapeHtml(c.eyebrow),
+      title: escapeHtml(c.title),
+      lead: c.lead,
+      accent: "amber",
+      cardsHtml,
+      sectionsHtml,
+      actionsTitle: escapeHtml(copy.terminalAction),
+      actionsHtml,
+      footerNote: c.footer
+    })
+  };
+}
+
+function buildMinervaUpdateEmailContent({ payload, req, lang = "en" }) {
+  const normalizedLang = normalizeIntelEmailLang(lang);
+  const copy = getIntelEmailCopy(normalizedLang);
+  const c = copy.minervaUpdate;
+  const active = Boolean(payload?.active);
+  const location = String(payload?.location || "").trim() || "--";
+  const listNumber = Number.isFinite(Number(payload?.listNumber)) ? Number(payload.listNumber) : null;
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  const cardsHtml = buildFalloutEmailCardsGrid([
+    { label: escapeHtml(c.routeState), value: escapeHtml(active ? c.availableNow : c.inTransit) },
+    { label: escapeHtml(c.location), value: escapeHtml(location) },
+    { label: escapeHtml(c.list), value: escapeHtml(listNumber ? `${c.list} ${String(listNumber).padStart(2, "0")}` : "--") },
+    { label: escapeHtml(active ? c.leaves : c.arrives), value: escapeHtml(formatIntelEmailDate(active ? payload?.eventEnd : payload?.eventStart)), mono: true }
+  ]);
+  const sectionsHtml = [
+    buildFalloutEmailPanel({
+      kicker: escapeHtml(c.vendorStatus),
+      title: escapeHtml(active ? c.activeTitle : c.transitTitle),
+      bodyHtml: active ? c.activeBody(location) : c.transitBody(location),
+      accent: "green"
+    }),
+    buildMinervaInventoryEmailPanel({
+      items,
+      copy: c
+    })
+  ].join("");
+  const actionsHtml = buildIntelEmailOpenAction(req, normalizedLang, "minerva");
+  const text = [
+    c.textTitle,
+    "",
+    `${c.routeState}: ${active ? c.availableNow : c.inTransit}`,
+    `${c.location}: ${location}`,
+    `${c.list}: ${listNumber ? `${c.list} ${String(listNumber).padStart(2, "0")}` : "--"}`,
+    `${active ? c.leaves : c.arrives}: ${formatIntelEmailDate(active ? payload?.eventEnd : payload?.eventStart)}`,
+    "",
+    `${c.textInventory}:`,
+    items.map((item) => {
+      const price = Number.isFinite(Number(item?.price)) ? ` (${Number(item.price).toLocaleString("en-US")} ${c.bullion})` : "";
+      return `- ${String(item?.name || "").trim() || "--"}${price}`;
+    }).join("\n") || c.inventoryUnavailable
+  ].join("\n");
+
+  return {
+    subject: c.subject({ active, location }),
+    text,
+    html: buildFalloutEmailShell({
+      req,
+      lang: normalizedLang,
+      preheader: escapeHtml(c.preheader({ active, location })),
+      badge: escapeHtml(c.badge),
+      headerEyebrow: escapeHtml(c.eyebrow),
+      title: escapeHtml(c.title({ active })),
+      lead: c.lead({ active }),
+      accent: "green",
+      cardsHtml,
+      sectionsHtml,
+      actionsTitle: escapeHtml(copy.terminalAction),
+      actionsHtml,
+      footerNote: c.footer
+    })
+  };
+}
+
+const intelEmailNotificationInFlight = new Set();
+
+async function notifyIntelEmailSubscribersForFeed(feed, payload, req) {
+  const normalizedFeed = normalizeIntelEmailFeed(feed);
+  if (!mailTransport || intelEmailNotificationInFlight.has(normalizedFeed)) {
+    return;
+  }
+
+  const fingerprint = normalizedFeed === "minerva"
+    ? serializeMinervaEmailFingerprint(payload)
+    : serializeSiloEmailFingerprint(payload);
+  const fingerprintKey = normalizedFeed === "minerva" ? "minervaFingerprint" : "siloFingerprint";
+  const notificationState = readIntelEmailNotificationState();
+  if (!fingerprint || notificationState[fingerprintKey] === fingerprint) {
+    return;
+  }
+
+  if (!notificationState[fingerprintKey]) {
+    notificationState[fingerprintKey] = fingerprint;
+    writeIntelEmailNotificationState(notificationState);
+    return;
+  }
+
+  notificationState[fingerprintKey] = fingerprint;
+  writeIntelEmailNotificationState(notificationState);
+
+  const subscribers = readIntelEmailSubscriptions()
+    .filter((entry) => entry.feeds.includes(normalizedFeed));
+  if (!subscribers.length) {
+    return;
+  }
+
+  intelEmailNotificationInFlight.add(normalizedFeed);
+  const contentByLang = new Map();
+  const getContentForLang = (lang) => {
+    const normalizedLang = normalizeIntelEmailLang(lang);
+    if (!contentByLang.has(normalizedLang)) {
+      contentByLang.set(
+        normalizedLang,
+        normalizedFeed === "minerva"
+          ? buildMinervaUpdateEmailContent({ payload, req, lang: normalizedLang })
+          : buildSiloUpdateEmailContent({ payload, req, lang: normalizedLang })
+      );
+    }
+    return contentByLang.get(normalizedLang);
+  };
+  const sentAt = new Date().toISOString();
+
+  try {
+    for (const subscriber of subscribers) {
+      try {
+        const content = getContentForLang(subscriber.lang);
+        await mailTransport.sendMail({
+          from: SMTP_FROM,
+          to: subscriber.email,
+          subject: content.subject,
+          text: content.text,
+          html: content.html
+        });
+        subscriber.lastSentAtByFeed = {
+          ...subscriber.lastSentAtByFeed,
+          [normalizedFeed]: sentAt
+        };
+      } catch (error) {
+        console.error(`[intel-email] failed to send ${normalizedFeed} alert to ${subscriber.email}:`, error.message);
+      }
+    }
+    writeIntelEmailSubscriptions(readIntelEmailSubscriptions().map((entry) => {
+      const matched = subscribers.find((subscriber) => subscriber.email === entry.email);
+      return matched || entry;
+    }));
+  } finally {
+    intelEmailNotificationInFlight.delete(normalizedFeed);
+  }
+}
+
+async function tickIntelEmailNotifications() {
+  if (!mailTransport) {
+    return;
+  }
+
+  const subscribers = readIntelEmailSubscriptions();
+  if (!subscribers.length) {
+    return;
+  }
+
+  const wantsSilo = subscribers.some((entry) => entry.feeds.includes("silo"));
+  const wantsMinerva = subscribers.some((entry) => entry.feeds.includes("minerva"));
+  const tasks = [];
+
+  if (wantsSilo) {
+    tasks.push((async () => {
+      const silo = await fetchSiloIntel();
+      await notifyIntelEmailSubscribersForFeed("silo", {
+        codes: silo.codes || {},
+        isExpired: Boolean(silo.isExpired),
+        resetTargetUtc: silo.resetTargetUtc instanceof Date ? silo.resetTargetUtc.toISOString() : null,
+        source: String(silo.source || "").trim() || "https://nukacrypt.com/"
+      }, null);
+    })());
+  }
+
+  if (wantsMinerva) {
+    tasks.push((async () => {
+      const minerva = await fetchMinervaIntel(SITE_ROOT);
+      await notifyIntelEmailSubscribersForFeed("minerva", {
+        location: String(minerva?.location || "").trim() || "--",
+        listNumber: Number.isFinite(Number(minerva?.listNumber)) ? Number(minerva.listNumber) : null,
+        active: Boolean(minerva?.active),
+        nextChange: String(minerva?.nextChange || "").trim() || null,
+        eventStart: minerva?.eventStart instanceof Date ? minerva.eventStart.toISOString() : null,
+        eventEnd: minerva?.eventEnd instanceof Date ? minerva.eventEnd.toISOString() : null,
+        items: Array.isArray(minerva?.items)
+          ? minerva.items.map((item) => ({
+            name: String(item?.name || "").trim() || "--",
+            price: item?.price == null || (typeof item?.price === "string" && !item.price.trim())
+              ? null
+              : (Number.isFinite(Number(item.price)) ? Number(item.price) : null),
+            url: String(item?.url || "").trim()
+          }))
+          : [],
+        source: String(minerva?.source || "").trim() || "fallback",
+        locationMapImage: String(minerva?.locationMapImage || "").trim()
+      }, null);
+    })());
+  }
+
+  const settled = await Promise.allSettled(tasks);
+  for (const result of settled) {
+    if (result.status === "rejected") {
+      console.error("[intel-email] poll error:", result.reason);
+    }
+  }
+}
+
+function buildIntelEmailTestSubscription({ email, feed, lang }) {
+  const now = new Date().toISOString();
+  return normalizeIntelEmailSubscriptionEntry({
+    id: crypto.randomUUID(),
+    email,
+    feeds: [normalizeIntelEmailFeed(feed)],
+    lang: normalizeIntelEmailLang(lang),
+    createdAt: now,
+    updatedAt: now,
+    confirmedAt: now,
+    lastSentAtByFeed: {}
+  });
+}
+
+async function buildCurrentIntelEmailTestContent({ feed, lang, req }) {
+  const normalizedFeed = normalizeIntelEmailFeed(feed);
+  const normalizedLang = normalizeIntelEmailLang(lang);
+
+  if (normalizedFeed === "minerva") {
+    const minerva = await fetchMinervaIntel(SITE_ROOT);
+    return buildMinervaUpdateEmailContent({
+      payload: {
+        location: String(minerva?.location || "").trim() || "--",
+        listNumber: Number.isFinite(Number(minerva?.listNumber)) ? Number(minerva.listNumber) : null,
+        active: Boolean(minerva?.active),
+        nextChange: String(minerva?.nextChange || "").trim() || null,
+        eventStart: minerva?.eventStart instanceof Date ? minerva.eventStart.toISOString() : null,
+        eventEnd: minerva?.eventEnd instanceof Date ? minerva.eventEnd.toISOString() : null,
+        items: Array.isArray(minerva?.items)
+          ? minerva.items.map((item) => ({
+            name: String(item?.name || "").trim() || "--",
+            price: item?.price == null || (typeof item?.price === "string" && !item.price.trim())
+              ? null
+              : (Number.isFinite(Number(item.price)) ? Number(item.price) : null),
+            url: String(item?.url || "").trim()
+          }))
+          : [],
+        source: String(minerva?.source || "").trim() || "fallback",
+        locationMapImage: String(minerva?.locationMapImage || "").trim()
+      },
+      req,
+      lang: normalizedLang
+    });
+  }
+
+  const silo = await fetchSiloIntel();
+  return buildSiloUpdateEmailContent({
+    payload: {
+      codes: silo?.codes || {},
+      isExpired: Boolean(silo?.isExpired),
+      resetTargetUtc: silo?.resetTargetUtc instanceof Date ? silo.resetTargetUtc.toISOString() : null,
+      source: String(silo?.source || "").trim() || "https://nukacrypt.com/"
+    },
+    req,
+    lang: normalizedLang
+  });
+}
+
+async function sendIntelEmailAdminTest({ email, feed, lang, kind, req }) {
+  if (!mailTransport) {
+    const error = new Error("Email relay is not configured");
+    error.status = 503;
+    throw error;
+  }
+
+  const normalizedEmail = normalizeIntelEmailAddress(email);
+  const normalizedFeed = normalizeIntelEmailFeed(feed);
+  const normalizedLang = normalizeIntelEmailLang(lang);
+  const normalizedKind = String(kind || "").trim().toLowerCase() === "intel" ? "intel" : "confirmation";
+
+  if (!isValidIntelEmailAddress(normalizedEmail)) {
+    const error = new Error("Enter a valid email address");
+    error.status = 400;
+    throw error;
+  }
+
+  if (normalizedKind === "confirmation") {
+    const subscription = buildIntelEmailTestSubscription({
+      email: normalizedEmail,
+      feed: normalizedFeed,
+      lang: normalizedLang
+    });
+    await sendIntelSubscriptionConfirmationEmail({
+      subscription,
+      feed: normalizedFeed,
+      req
+    });
+    return {
+      kind: normalizedKind,
+      feed: normalizedFeed,
+      email: normalizedEmail
+    };
+  }
+
+  const content = await buildCurrentIntelEmailTestContent({
+    feed: normalizedFeed,
+    lang: normalizedLang,
+    req
+  });
+  await mailTransport.sendMail({
+    from: SMTP_FROM,
+    to: normalizedEmail,
+    subject: content.subject,
+    text: content.text,
+    html: content.html
+  });
+  return {
+    kind: normalizedKind,
+    feed: normalizedFeed,
+    email: normalizedEmail
+  };
 }
 
 const uploadStorage = multer.diskStorage({
@@ -8557,16 +9916,18 @@ app.delete("/api/admin/temp-shares/:id", requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/api/intel/silo", async (_req, res) => {
+app.get("/api/intel/silo", async (req, res) => {
   try {
     const silo = await fetchSiloIntel();
-    res.setHeader("Cache-Control", "no-store");
-    res.json({
+    const payload = {
       codes: silo.codes || {},
       isExpired: Boolean(silo.isExpired),
       resetTargetUtc: silo.resetTargetUtc instanceof Date ? silo.resetTargetUtc.toISOString() : null,
       source: String(silo.source || "").trim() || "https://nukacrypt.com/"
-    });
+    };
+    res.setHeader("Cache-Control", "no-store");
+    res.json(payload);
+    void notifyIntelEmailSubscribersForFeed("silo", payload, req);
   } catch (error) {
     console.error("[intel] Failed to fetch silo data for web client.");
     console.error(error);
@@ -8576,11 +9937,10 @@ app.get("/api/intel/silo", async (_req, res) => {
   }
 });
 
-app.get("/api/intel/minerva", async (_req, res) => {
+app.get("/api/intel/minerva", async (req, res) => {
   try {
     const minerva = await fetchMinervaIntel(SITE_ROOT);
-    res.setHeader("Cache-Control", "no-store");
-    res.json({
+    const payload = {
       location: String(minerva?.location || "").trim() || "--",
       listNumber: Number.isFinite(Number(minerva?.listNumber)) ? Number(minerva.listNumber) : null,
       active: Boolean(minerva?.active),
@@ -8598,7 +9958,10 @@ app.get("/api/intel/minerva", async (_req, res) => {
         : [],
       source: String(minerva?.source || "").trim() || "fallback",
       locationMapImage: String(minerva?.locationMapImage || "").trim()
-    });
+    };
+    res.setHeader("Cache-Control", "no-store");
+    res.json(payload);
+    void notifyIntelEmailSubscribersForFeed("minerva", payload, req);
   } catch (error) {
     console.error("[intel] Failed to fetch Minerva data for web client.");
     console.error(error);
@@ -8701,6 +10064,147 @@ app.get("/api/public-config", (_req, res) => {
   res.json({
     botInviteLink: BOT_INVITE_LINK || ""
   });
+});
+
+app.post("/api/admin/intel/email-test", requireAdmin, async (req, res) => {
+  const email = normalizeIntelEmailAddress(req.body?.email);
+  const feed = normalizeIntelEmailFeed(req.body?.feed);
+  const lang = normalizeIntelEmailLang(req.body?.lang);
+  const kind = String(req.body?.kind || "").trim().toLowerCase() === "intel" ? "intel" : "confirmation";
+
+  try {
+    const result = await sendIntelEmailAdminTest({
+      email,
+      feed,
+      lang,
+      kind,
+      req
+    });
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      ok: true,
+      ...result
+    });
+  } catch (error) {
+    console.error("[intel-email] admin test error:", error);
+    res.status(error?.status || 500).json({
+      error: error?.message || "Unable to send test email"
+    });
+  }
+});
+
+app.get("/api/admin/intel/email-subscriptions", requireAdmin, (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(buildIntelEmailAdminSubscriptionsPayload());
+});
+
+app.delete("/api/admin/intel/email-subscriptions/:subscriptionId/:feed", requireAdmin, (req, res) => {
+  try {
+    const ok = removeIntelEmailSubscriptionByIdFeed(req.params.subscriptionId, req.params.feed);
+    if (!ok) {
+      res.status(404).json({ error: "Subscription not found" });
+      return;
+    }
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      ok: true,
+      ...buildIntelEmailAdminSubscriptionsPayload()
+    });
+  } catch (error) {
+    console.error("[intel-email] admin unsubscribe error:", error);
+    res.status(500).json({ error: "Unable to remove email subscription" });
+  }
+});
+
+app.get("/api/intel/email-subscriptions/me", requireDiscordLogin, (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(buildIntelEmailSubscriptionMePayload(req.currentUser));
+});
+
+app.post("/api/intel/email-subscriptions", requireDiscordLogin, async (req, res) => {
+  if (!mailTransport) {
+    res.status(503).json({ error: "Email relay is not configured" });
+    return;
+  }
+
+  const email = normalizeIntelEmailAddress(req.body?.email);
+  const feed = normalizeIntelEmailFeed(req.body?.feed);
+  const lang = normalizeIntelEmailLang(req.body?.lang);
+  if (!isValidIntelEmailAddress(email)) {
+    res.status(400).json({ error: "Enter a valid email address" });
+    return;
+  }
+
+  try {
+    const activeCooldown = getIntelEmailCooldownForUserFeed(req.currentUser, feed);
+    if (activeCooldown) {
+      res.status(429).json({
+        error: "Email relay cooldown active",
+        cooldownUntil: activeCooldown.cooldownUntil,
+        subscriptions: buildIntelEmailSubscriptionMePayload(req.currentUser).subscriptions,
+        cooldowns: buildIntelEmailSubscriptionMePayload(req.currentUser).cooldowns
+      });
+      return;
+    }
+
+    const subscription = upsertIntelEmailSubscription({
+      email,
+      feed,
+      lang,
+      user: req.currentUser
+    });
+    await sendIntelSubscriptionConfirmationEmail({
+      subscription,
+      feed,
+      req
+    });
+    res.setHeader("Cache-Control", "no-store");
+    res.status(201).json({
+      ok: true,
+      feed,
+      email: subscription.email,
+      ...buildIntelEmailSubscriptionMePayload(req.currentUser)
+    });
+  } catch (error) {
+    console.error("[intel-email] subscription error:", error);
+    res.status(500).json({ error: "Unable to create email relay" });
+  }
+});
+
+app.delete("/api/intel/email-subscriptions/:feed", requireDiscordLogin, async (req, res) => {
+  const feed = normalizeIntelEmailFeed(req.params.feed);
+  try {
+    const removedSubscription = removeIntelEmailSubscriptionForUserFeed(req.currentUser, feed);
+    const cooldown = removedSubscription
+      ? setIntelEmailResubscribeCooldown({
+          user: req.currentUser,
+          feed,
+          email: removedSubscription.email,
+          lang: removedSubscription.lang
+        })
+      : null;
+    if (removedSubscription && cooldown) {
+      try {
+        await sendIntelSubscriptionUnsubscribeEmail({
+          subscription: removedSubscription,
+          feed,
+          cooldown,
+          req
+        });
+      } catch (emailError) {
+        console.error("[intel-email] unsubscribe confirmation email error:", emailError);
+      }
+    }
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      ok: true,
+      feed,
+      ...buildIntelEmailSubscriptionMePayload(req.currentUser)
+    });
+  } catch (error) {
+    console.error("[intel-email] unsubscribe error:", error);
+    res.status(500).json({ error: "Unable to unsubscribe from email relay" });
+  }
 });
 
 app.post("/api/visits", (req, res) => {
@@ -9135,6 +10639,12 @@ async function startServer() {
   tempShareVirusTimer.unref?.();
   void tickTempShareVirusScans();
 
+  const intelEmailTimer = setInterval(() => {
+    void tickIntelEmailNotifications();
+  }, INTEL_EMAIL_POLL_INTERVAL_MS);
+  intelEmailTimer.unref?.();
+  void tickIntelEmailNotifications();
+
   const server = app.listen(PORT, () => {
     console.log(`[server] Fallout Codex listening on http://localhost:${PORT}`);
     console.log(`[server] Static root: ${SITE_ROOT}`);
@@ -9175,6 +10685,7 @@ async function startServer() {
     }
     clearInterval(tempShareCleanupTimer);
     clearInterval(tempShareVirusTimer);
+    clearInterval(intelEmailTimer);
     server.close(() => {
       process.exit(0);
     });

@@ -201,6 +201,12 @@ Configure SMTP in `server/.env`:
 
 Note: existing logged-in sessions created before this change may need a fresh logout/login so the full Discord profile payload is available for email reporting.
 
+### Public Intel Email Alerts
+
+The home page can collect email subscriptions for Silo Codes and Minerva Intel. These public relays use the same SMTP settings listed above and store subscribers in `STORAGE_DIR/intel-email-subscriptions.json`.
+
+When `/api/intel/silo`, `/api/intel/minerva`, or the background email poller detects a changed feed fingerprint, the server sends the matching subscribers a Fallout-themed update email. Notification fingerprints are tracked in `STORAGE_DIR/intel-email-notification-state.json` to avoid duplicate sends. The poller interval is controlled by optional `INTEL_EMAIL_POLL_INTERVAL_MS` (default `300000`, 5 minutes).
+
 ## Temporary Share Console
 
 The admin account now has a dedicated `Drops` tab for creating temporary public file links.

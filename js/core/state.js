@@ -29,6 +29,33 @@ const state = {
   intelBotInvite: {
     open: false
   },
+  intelEmail: {
+    open: false,
+    feed: "silo",
+    busy: false,
+    statusLoading: false,
+    statusLoaded: false,
+    unsubscribeBusy: false,
+    testBusyKind: "",
+    subscriptions: {
+      silo: null,
+      minerva: null
+    },
+    cooldowns: {
+      silo: null,
+      minerva: null
+    },
+    adminSubscriptions: {
+      open: false,
+      loading: false,
+      busyKey: "",
+      entries: [],
+      error: ""
+    },
+    message: "",
+    messageKind: "",
+    opener: null
+  },
   minervaLists: null,
   silo: {
     error: false,

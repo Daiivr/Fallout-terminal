@@ -40,7 +40,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="preload" as="image" href="assets/images/minerva-plan-fallback.png" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="css/styles.css?v=20260620-public-file-share-v4" />
+  <link rel="stylesheet" href="css/styles.css?v=20260620-intel-email-v1" />
 </head>
 <body class="is-booting">
   <noscript>
@@ -169,6 +169,88 @@
           >OPEN DISCORD INVITE</a>
         </div>
       </div>
+    </div>
+    <div id="intelEmailOverlay" class="intel-bot-modal-overlay intel-email-overlay" aria-hidden="true">
+      <form
+        id="intelEmailForm"
+        class="intel-bot-modal-core intel-email-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="intelEmailTitle"
+        aria-describedby="intelEmailBody"
+      >
+        <div class="intel-email-head">
+          <p id="intelEmailBadge" class="intel-bot-modal-badge intel-email-badge">EMAIL RELAY</p>
+          <button id="intelEmailCloseIconBtn" class="classified-intel-modal-x intel-email-x" type="button" aria-label="Close email modal">&times;</button>
+        </div>
+        <h2 id="intelEmailTitle" class="intel-bot-modal-title">GET SILO UPDATES BY EMAIL</h2>
+        <p id="intelEmailBody" class="intel-bot-modal-body">
+          Enter your email to receive Fallout Codex alerts when this intel changes.
+        </p>
+        <div id="intelEmailAccountPill" class="intel-email-account-pill" hidden>
+          <span id="intelEmailAccountLabel" class="intel-email-account-label">SIGNED IN AS</span>
+          <img id="intelEmailAccountAvatar" class="intel-email-account-avatar" src="" alt="" />
+          <strong id="intelEmailAccountName" class="intel-email-account-name">Discord user</strong>
+        </div>
+        <div class="intel-email-summary" aria-hidden="true">
+          <span id="intelEmailFeedLabel" class="intel-email-summary-label">FEED</span>
+          <span id="intelEmailFeedValue" class="intel-email-summary-value">SILO CODES</span>
+        </div>
+        <div id="intelEmailLoginPanel" class="intel-email-login-panel" hidden>
+          <p id="intelEmailLoginTitle" class="intel-email-state-title">DISCORD LOGIN REQUIRED</p>
+          <p id="intelEmailLoginBody" class="intel-email-state-body">Log in with Discord before arming an email relay.</p>
+          <button id="intelEmailLoginBtn" class="files-btn intel-email-login-btn" type="button">LOG IN WITH DISCORD</button>
+        </div>
+        <div id="intelEmailSubscribedPanel" class="intel-email-subscribed-panel" hidden>
+          <p id="intelEmailSubscribedTitle" class="intel-email-state-title">RELAY ALREADY ARMED</p>
+          <p id="intelEmailSubscribedBody" class="intel-email-state-body">You are already subscribed to this relay with:</p>
+          <p id="intelEmailSubscribedEmail" class="intel-email-subscribed-email" tabindex="0">vault.dweller@example.com</p>
+          <button id="intelEmailUnsubscribeBtn" class="files-btn intel-email-unsubscribe-btn" type="button">UNSUBSCRIBE</button>
+        </div>
+        <div id="intelEmailCooldownPanel" class="intel-email-cooldown-panel" hidden>
+          <p id="intelEmailCooldownTitle" class="intel-email-state-title">RELAY COOLDOWN ACTIVE</p>
+          <p id="intelEmailCooldownBody" class="intel-email-state-body">You can rearm this relay when the cooldown ends.</p>
+          <p id="intelEmailCooldownValue" class="intel-email-cooldown-value" aria-live="polite">0d 0h 0m 0s</p>
+        </div>
+        <label id="intelEmailInputLabel" class="intel-email-label" for="intelEmailInput">Email address</label>
+        <div id="intelEmailInputShell" class="intel-email-input-shell">
+          <span class="intel-email-input-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M3.75 6.75h16.5v10.5H3.75z" />
+              <path d="m4.2 7.35 7.8 6.15 7.8-6.15" />
+            </svg>
+          </span>
+          <input
+            id="intelEmailInput"
+            class="intel-email-input"
+            name="email"
+            type="email"
+            autocomplete="email"
+            inputmode="email"
+            placeholder="vault.dweller@example.com"
+            required
+          />
+        </div>
+        <p id="intelEmailHint" class="intel-email-hint">
+          We only use this address for the intel feed you choose.
+        </p>
+        <p id="intelEmailFeedback" class="intel-email-feedback" aria-live="polite" hidden></p>
+        <div id="intelEmailAdminTools" class="intel-email-admin-tools" hidden>
+          <p id="intelEmailAdminToolsLabel" class="intel-email-admin-tools-label">ADMIN TEST RELAY</p>
+          <div class="intel-email-admin-actions">
+            <button id="intelEmailTestConfirmationBtn" class="files-btn intel-email-admin-test-btn" type="button">TEST CONFIRMATION</button>
+            <button id="intelEmailTestIntelBtn" class="files-btn intel-email-admin-test-btn" type="button">TEST CURRENT INTEL</button>
+            <button id="intelEmailAdminSubscribersBtn" class="files-btn intel-email-admin-test-btn" type="button">VIEW SUBSCRIBERS</button>
+          </div>
+          <div id="intelEmailAdminSubscribersPanel" class="intel-email-admin-subscribers" hidden>
+            <div id="intelEmailAdminSubscribersList" class="intel-email-admin-subscribers-list"></div>
+          </div>
+        </div>
+        <div class="intel-bot-modal-actions intel-email-actions">
+          <button id="intelEmailCancelBtn" class="files-btn intel-bot-modal-cancel" type="button">CANCEL</button>
+          <button id="intelEmailSubmitBtn" class="files-btn intel-bot-modal-confirm" type="submit">SUBSCRIBE</button>
+        </div>
+      </form>
     </div>
     <div id="classifiedPlayersOverlay" class="intel-bot-modal-overlay classified-player-modal-overlay" aria-hidden="true">
       <div
@@ -1213,7 +1295,21 @@
 
     <section id="intelGrid" class="grid">
       <article class="panel silo-panel">
-        <h2 id="siloTitle">SILO CODES</h2>
+        <div class="intel-panel-head">
+          <h2 id="siloTitle">SILO CODES</h2>
+          <button
+            id="siloEmailBtn"
+            class="intel-email-trigger"
+            type="button"
+            data-subscription-feed="silo"
+            aria-label="Subscribe to silo code email alerts"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M3.75 6.75h16.5v10.5H3.75z" />
+              <path d="m4.2 7.35 7.8 6.15 7.8-6.15" />
+            </svg>
+          </button>
+        </div>
         <p id="siloHint" class="hint">Weekly reset target: Thursday 00:00 UTC</p>
         <div id="siloExpiry" class="expiry">Reset in: --</div>
         <div class="code-grid" id="siloCodes"></div>
@@ -1225,7 +1321,21 @@
       </article>
 
       <article id="minervaPanel" class="panel">
-        <h2 id="minervaTitle">MINERVA INTEL</h2>
+        <div class="intel-panel-head">
+          <h2 id="minervaTitle">MINERVA INTEL</h2>
+          <button
+            id="minervaEmailBtn"
+            class="intel-email-trigger"
+            type="button"
+            data-subscription-feed="minerva"
+            aria-label="Subscribe to Minerva email alerts"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M3.75 6.75h16.5v10.5H3.75z" />
+              <path d="m4.2 7.35 7.8 6.15 7.8-6.15" />
+            </svg>
+          </button>
+        </div>
         <div id="minervaSummary" class="summary">Scanning trade routes...</div>
         <div class="meta-grid">
           <button id="minervaLocationCardBtn" class="meta-card-btn" type="button">
@@ -2273,13 +2383,13 @@
 
   <script src="data/minerva-lists.js"></script>
   <script src="data/minerva-detail-fallback.js?v=20260408-minerva-mod-workshop-v5"></script>
-  <script src="js/i18n/en.js?v=20260620-public-file-share-v1"></script>
-  <script src="js/i18n/es.js?v=20260620-public-file-share-v1"></script>
+  <script src="js/i18n/en.js?v=20260620-intel-email-v1"></script>
+  <script src="js/i18n/es.js?v=20260620-intel-email-v1"></script>
   <script src="js/i18n/index.js?v=20260318-share-stop-alert-copy"></script>
-  <script src="js/dom/elements.js?v=20260620-public-file-share-v1"></script>
-  <script src="js/core/config.js?v=20260617-atomic-shop-r2-v1"></script>
-  <script src="js/core/state.js?v=20260620-public-file-share-v2"></script>
-  <script src="js/app.js?v=20260620-public-file-share-v4"></script>
+  <script src="js/dom/elements.js?v=20260620-intel-email-v1"></script>
+  <script src="js/core/config.js?v=20260620-intel-email-v1"></script>
+  <script src="js/core/state.js?v=20260620-intel-email-v1"></script>
+  <script src="js/app.js?v=20260620-intel-email-v1"></script>
   <script src="js/atomic-shop.js?v=20260617-atomic-filter-tabs-v1"></script>
 </body>
 </html>

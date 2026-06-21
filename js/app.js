@@ -1,8 +1,10 @@
 // app.js — main application logic
 // Depends on: js/core/config.js, js/core/state.js loaded before this file
 const CLASSIFIED_SEARCH_RENDER_DEBOUNCE_MS = 180;
+const INTEL_EMAIL_FEEDBACK_AUTO_DISMISS_MS = 4500;
 
 let classifiedSearchRenderTimer = 0;
+let intelEmailFeedbackDismissTimer = 0;
 
 function t(key, vars = {}) {
   const dictionary = STRINGS[state.lang] || STRINGS.en;
@@ -403,6 +405,769 @@ function closeIntelBotInviteModal() {
   state.intelBotInvite.open = false;
   elements.intelBotInviteOverlay.classList.remove("is-active");
   elements.intelBotInviteOverlay.setAttribute("aria-hidden", "true");
+}
+
+function normalizeIntelEmailFeed(feed) {
+  return String(feed || "").trim().toLowerCase() === "minerva" ? "minerva" : "silo";
+}
+
+function isValidIntelEmailAddress(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(value || "").trim());
+}
+
+function normalizeIntelEmailSubscriptionEntry(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const feed = normalizeIntelEmailFeed(payload.feed);
+  const email = String(payload.email || "").trim();
+  if (!email) {
+    return null;
+  }
+  return {
+    feed,
+    email,
+    lang: String(payload.lang || "").trim().toLowerCase() === "es" ? "es" : "en",
+    updatedAt: String(payload.updatedAt || ""),
+    confirmedAt: String(payload.confirmedAt || "")
+  };
+}
+
+function normalizeIntelEmailCooldownEntry(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const feed = normalizeIntelEmailFeed(payload.feed);
+  const cooldownUntil = String(payload.cooldownUntil || "").trim();
+  const cooldownUntilMs = Date.parse(cooldownUntil);
+  if (!Number.isFinite(cooldownUntilMs) || cooldownUntilMs <= Date.now()) {
+    return null;
+  }
+  return {
+    feed,
+    email: String(payload.email || "").trim(),
+    lang: String(payload.lang || "").trim().toLowerCase() === "es" ? "es" : "en",
+    cooldownUntil,
+    cooldownUntilMs
+  };
+}
+
+function syncIntelEmailSubscriptionsFromPayload(payload) {
+  const subscriptions = payload?.subscriptions && typeof payload.subscriptions === "object"
+    ? payload.subscriptions
+    : {};
+  const cooldowns = payload?.cooldowns && typeof payload.cooldowns === "object"
+    ? payload.cooldowns
+    : {};
+  state.intelEmail.subscriptions = {
+    silo: normalizeIntelEmailSubscriptionEntry(subscriptions.silo),
+    minerva: normalizeIntelEmailSubscriptionEntry(subscriptions.minerva)
+  };
+  state.intelEmail.cooldowns = {
+    silo: normalizeIntelEmailCooldownEntry(cooldowns.silo),
+    minerva: normalizeIntelEmailCooldownEntry(cooldowns.minerva)
+  };
+  state.intelEmail.statusLoaded = true;
+}
+
+function getIntelEmailCooldownRemainingMs(feed = state.intelEmail.feed, nowMs = Date.now()) {
+  const cooldown = state.intelEmail.cooldowns[normalizeIntelEmailFeed(feed)] || null;
+  if (!cooldown) {
+    return 0;
+  }
+  return Math.max(0, Number(cooldown.cooldownUntilMs) - nowMs);
+}
+
+function updateIntelEmailCooldownCountdown(nowMs = Date.now()) {
+  if (!state.intelEmail.open || !elements.intelEmailCooldownValue) {
+    return;
+  }
+
+  const feed = normalizeIntelEmailFeed(state.intelEmail.feed);
+  const remainingMs = getIntelEmailCooldownRemainingMs(feed, nowMs);
+  if (remainingMs <= 0) {
+    if (state.intelEmail.cooldowns[feed]) {
+      state.intelEmail.cooldowns[feed] = null;
+      renderIntelEmailModal();
+    }
+    return;
+  }
+
+  elements.intelEmailCooldownValue.textContent = formatMinervaCountdown(remainingMs);
+}
+
+function normalizeIntelEmailAdminSubscriptionEntry(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const id = String(payload.id || "").trim();
+  const feeds = Array.isArray(payload.feeds)
+    ? Array.from(new Set(payload.feeds.map((feed) => normalizeIntelEmailFeed(feed))))
+    : [];
+  if (!id || !feeds.length) {
+    return null;
+  }
+  return {
+    id,
+    email: String(payload.email || "").trim(),
+    discordId: String(payload.discordId || "").trim(),
+    discordUsername: String(payload.discordUsername || "").trim() || "Unknown Discord user",
+    avatarUrl: String(payload.avatarUrl || "").trim(),
+    feeds,
+    lang: String(payload.lang || "").trim().toLowerCase() === "es" ? "es" : "en",
+    updatedAt: String(payload.updatedAt || "")
+  };
+}
+
+function syncIntelEmailAdminSubscriptionsFromPayload(payload) {
+  const entries = Array.isArray(payload?.entries) ? payload.entries : [];
+  state.intelEmail.adminSubscriptions.entries = entries
+    .map((entry) => normalizeIntelEmailAdminSubscriptionEntry(entry))
+    .filter(Boolean);
+  state.intelEmail.adminSubscriptions.error = "";
+}
+
+function getIntelEmailFeedDisplayName(feed) {
+  return t(normalizeIntelEmailFeed(feed) === "minerva" ? "intel_email_feed_minerva" : "intel_email_feed_silo");
+}
+
+function renderIntelEmailAdminSubscribersList() {
+  const list = elements.intelEmailAdminSubscribersList;
+  if (!list) {
+    return;
+  }
+
+  list.replaceChildren();
+  const adminState = state.intelEmail.adminSubscriptions;
+  if (adminState.loading) {
+    const loading = document.createElement("p");
+    loading.className = "intel-email-admin-subscribers-note";
+    loading.textContent = t("intel_email_admin_subscribers_loading");
+    list.appendChild(loading);
+    return;
+  }
+  if (adminState.error) {
+    const error = document.createElement("p");
+    error.className = "intel-email-admin-subscribers-note is-error";
+    error.textContent = t("intel_email_admin_subscribers_error");
+    list.appendChild(error);
+    return;
+  }
+  if (!adminState.entries.length) {
+    const empty = document.createElement("p");
+    empty.className = "intel-email-admin-subscribers-note";
+    empty.textContent = t("intel_email_admin_subscribers_empty");
+    list.appendChild(empty);
+    return;
+  }
+
+  for (const entry of adminState.entries) {
+    const row = document.createElement("article");
+    row.className = "intel-email-admin-subscriber";
+    row.classList.toggle("has-no-avatar", !entry.avatarUrl);
+
+    const avatar = document.createElement("img");
+    avatar.className = "intel-email-admin-subscriber-avatar";
+    avatar.alt = "";
+    if (entry.avatarUrl) {
+      avatar.src = entry.avatarUrl;
+    } else {
+      avatar.hidden = true;
+    }
+
+    const identity = document.createElement("div");
+    identity.className = "intel-email-admin-subscriber-identity";
+
+    const name = document.createElement("strong");
+    name.className = "intel-email-admin-subscriber-name";
+    name.textContent = entry.discordUsername;
+
+    const meta = document.createElement("span");
+    meta.className = "intel-email-admin-subscriber-meta";
+    meta.textContent = entry.discordId || t("intel_email_admin_subscribers_unknown_id");
+
+    const email = document.createElement("span");
+    email.className = "intel-email-admin-subscriber-email";
+    email.textContent = entry.email || "--";
+
+    identity.append(name, meta, email);
+
+    const feeds = document.createElement("div");
+    feeds.className = "intel-email-admin-subscriber-feeds";
+    for (const feed of entry.feeds) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "files-btn intel-email-admin-remove-btn";
+      button.dataset.subscriptionId = entry.id;
+      button.dataset.feed = feed;
+      const busyKey = `${entry.id}:${feed}`;
+      button.disabled = adminState.busyKey === busyKey;
+      button.classList.toggle("is-disabled", button.disabled);
+      button.textContent = adminState.busyKey === busyKey
+        ? t("intel_email_admin_subscribers_removing")
+        : t("intel_email_admin_subscribers_remove_feed", { feed: getIntelEmailFeedDisplayName(feed) });
+      feeds.appendChild(button);
+    }
+
+    row.append(avatar, identity, feeds);
+    list.appendChild(row);
+  }
+}
+
+function clearIntelEmailFeedbackDismissTimer() {
+  if (intelEmailFeedbackDismissTimer) {
+    window.clearTimeout(intelEmailFeedbackDismissTimer);
+    intelEmailFeedbackDismissTimer = 0;
+  }
+}
+
+function setIntelEmailFeedback(message = "", kind = "", { autoDismiss = true } = {}) {
+  if (!elements.intelEmailFeedback) {
+    return;
+  }
+
+  const normalizedKind = kind === "success" || kind === "error" ? kind : "";
+  if (autoDismiss || !message) {
+    clearIntelEmailFeedbackDismissTimer();
+  }
+  elements.intelEmailFeedback.textContent = message;
+  elements.intelEmailFeedback.hidden = !message;
+  elements.intelEmailFeedback.classList.toggle("is-success", normalizedKind === "success");
+  elements.intelEmailFeedback.classList.toggle("is-error", normalizedKind === "error");
+  state.intelEmail.message = message;
+  state.intelEmail.messageKind = normalizedKind;
+  if (autoDismiss && normalizedKind === "success" && message) {
+    intelEmailFeedbackDismissTimer = window.setTimeout(() => {
+      if (state.intelEmail.message === message && state.intelEmail.messageKind === normalizedKind) {
+        setIntelEmailFeedback("", "", { autoDismiss: false });
+      }
+    }, INTEL_EMAIL_FEEDBACK_AUTO_DISMISS_MS);
+  }
+}
+
+function renderIntelEmailModal() {
+  if (!elements.intelEmailOverlay) {
+    return;
+  }
+
+  const feed = normalizeIntelEmailFeed(state.intelEmail.feed);
+  const isMinerva = feed === "minerva";
+  const me = normalizeFilesProfile(state.files.me);
+  const isLoggedIn = Boolean(me.loggedIn);
+  const isStatusPending = Boolean(isLoggedIn && state.intelEmail.statusLoading && !state.intelEmail.statusLoaded);
+  const activeSubscription = state.intelEmail.subscriptions[feed] || null;
+  const activeCooldown = state.intelEmail.cooldowns[feed] || null;
+  const cooldownRemainingMs = activeCooldown ? getIntelEmailCooldownRemainingMs(feed) : 0;
+  const isCooldownActive = Boolean(isLoggedIn && !activeSubscription && cooldownRemainingMs > 0);
+  const isSubscribed = Boolean(isLoggedIn && activeSubscription?.email);
+  const canSubscribe = Boolean(isLoggedIn && !isSubscribed && !isCooldownActive && !isStatusPending);
+  const canUseAdminEmailTests = Boolean(me.loggedIn && me.isAdmin);
+  const testBusyKind = String(state.intelEmail.testBusyKind || "");
+  const isTestingEmail = Boolean(testBusyKind);
+  if (elements.intelEmailBadge) {
+    elements.intelEmailBadge.textContent = t("intel_email_modal_badge");
+  }
+  if (elements.intelEmailTitle) {
+    elements.intelEmailTitle.textContent = t(isMinerva ? "intel_email_modal_title_minerva" : "intel_email_modal_title_silo");
+  }
+  if (elements.intelEmailBody) {
+    elements.intelEmailBody.textContent = t(isMinerva ? "intel_email_modal_body_minerva" : "intel_email_modal_body_silo");
+  }
+  if (elements.intelEmailFeedLabel) {
+    elements.intelEmailFeedLabel.textContent = t("intel_email_feed_label");
+  }
+  if (elements.intelEmailFeedValue) {
+    elements.intelEmailFeedValue.textContent = t(isMinerva ? "intel_email_feed_minerva" : "intel_email_feed_silo");
+  }
+  if (elements.intelEmailAccountPill) {
+    elements.intelEmailAccountPill.hidden = !isLoggedIn;
+  }
+  if (elements.intelEmailAccountLabel) {
+    elements.intelEmailAccountLabel.textContent = t("intel_email_account_label");
+  }
+  if (elements.intelEmailAccountName) {
+    elements.intelEmailAccountName.textContent = me.username || me.discordId || "Discord";
+  }
+  if (elements.intelEmailAccountAvatar instanceof HTMLImageElement) {
+    if (isLoggedIn && me.avatarUrl) {
+      elements.intelEmailAccountAvatar.src = me.avatarUrl;
+      elements.intelEmailAccountAvatar.hidden = false;
+    } else {
+      elements.intelEmailAccountAvatar.removeAttribute("src");
+      elements.intelEmailAccountAvatar.hidden = true;
+    }
+  }
+  if (elements.intelEmailLoginPanel) {
+    elements.intelEmailLoginPanel.hidden = isLoggedIn;
+  }
+  if (elements.intelEmailLoginTitle) {
+    elements.intelEmailLoginTitle.textContent = t("intel_email_login_title");
+  }
+  if (elements.intelEmailLoginBody) {
+    elements.intelEmailLoginBody.textContent = t("intel_email_login_body");
+  }
+  if (elements.intelEmailLoginBtn) {
+    elements.intelEmailLoginBtn.textContent = t("intel_email_login_button");
+  }
+  if (elements.intelEmailSubscribedPanel) {
+    elements.intelEmailSubscribedPanel.hidden = !isSubscribed;
+  }
+  if (elements.intelEmailSubscribedTitle) {
+    elements.intelEmailSubscribedTitle.textContent = t("intel_email_subscribed_title");
+  }
+  if (elements.intelEmailSubscribedBody) {
+    elements.intelEmailSubscribedBody.textContent = t(isMinerva ? "intel_email_subscribed_body_minerva" : "intel_email_subscribed_body_silo");
+  }
+  if (elements.intelEmailSubscribedEmail) {
+    elements.intelEmailSubscribedEmail.textContent = activeSubscription?.email || "";
+  }
+  if (elements.intelEmailUnsubscribeBtn) {
+    elements.intelEmailUnsubscribeBtn.textContent = state.intelEmail.unsubscribeBusy
+      ? t("intel_email_unsubscribe_busy")
+      : t("intel_email_unsubscribe");
+    elements.intelEmailUnsubscribeBtn.disabled = state.intelEmail.unsubscribeBusy || state.intelEmail.busy || isTestingEmail;
+    elements.intelEmailUnsubscribeBtn.classList.toggle("is-disabled", elements.intelEmailUnsubscribeBtn.disabled);
+  }
+  if (elements.intelEmailCooldownPanel) {
+    elements.intelEmailCooldownPanel.hidden = !isCooldownActive;
+  }
+  if (elements.intelEmailCooldownTitle) {
+    elements.intelEmailCooldownTitle.textContent = t("intel_email_cooldown_title");
+  }
+  if (elements.intelEmailCooldownBody) {
+    elements.intelEmailCooldownBody.textContent = t(isMinerva ? "intel_email_cooldown_body_minerva" : "intel_email_cooldown_body_silo");
+  }
+  if (elements.intelEmailCooldownValue) {
+    elements.intelEmailCooldownValue.textContent = cooldownRemainingMs > 0
+      ? formatMinervaCountdown(cooldownRemainingMs)
+      : t("intel_email_cooldown_ready");
+  }
+  if (elements.intelEmailInputLabel) {
+    elements.intelEmailInputLabel.textContent = t("intel_email_input_label");
+    elements.intelEmailInputLabel.hidden = !canSubscribe;
+  }
+  if (elements.intelEmailInputShell) {
+    elements.intelEmailInputShell.hidden = !canSubscribe;
+  }
+  if (elements.intelEmailInput) {
+    elements.intelEmailInput.placeholder = t("intel_email_input_placeholder");
+    elements.intelEmailInput.classList.remove("is-invalid");
+    elements.intelEmailInput.required = canSubscribe;
+    elements.intelEmailInput.disabled = !canSubscribe || state.intelEmail.busy;
+    if (isSubscribed && activeSubscription?.email) {
+      elements.intelEmailInput.value = activeSubscription.email;
+    }
+  }
+  if (elements.intelEmailHint) {
+    elements.intelEmailHint.textContent = isStatusPending
+      ? t("intel_email_status_loading")
+      : (isLoggedIn ? t("intel_email_hint") : t("intel_email_login_hint"));
+    elements.intelEmailHint.hidden = isSubscribed;
+  }
+  if (elements.intelEmailCancelBtn) {
+    elements.intelEmailCancelBtn.textContent = t("intel_email_cancel");
+  }
+  if (elements.intelEmailSubmitBtn) {
+    elements.intelEmailSubmitBtn.textContent = state.intelEmail.busy
+      ? t("intel_email_submit_busy")
+      : t("intel_email_submit");
+    elements.intelEmailSubmitBtn.hidden = !canSubscribe;
+    elements.intelEmailSubmitBtn.disabled = !canSubscribe || state.intelEmail.busy || isTestingEmail;
+    elements.intelEmailSubmitBtn.classList.toggle("is-disabled", state.intelEmail.busy || isTestingEmail);
+  }
+  if (elements.intelEmailAdminTools) {
+    elements.intelEmailAdminTools.hidden = !canUseAdminEmailTests;
+  }
+  if (elements.intelEmailAdminToolsLabel) {
+    elements.intelEmailAdminToolsLabel.textContent = t("intel_email_admin_tools_label");
+  }
+  if (elements.intelEmailTestConfirmationBtn) {
+    const isBusy = testBusyKind === "confirmation";
+    elements.intelEmailTestConfirmationBtn.textContent = isBusy
+      ? t("intel_email_test_confirmation_busy")
+      : t("intel_email_test_confirmation");
+    elements.intelEmailTestConfirmationBtn.disabled = !canUseAdminEmailTests || state.intelEmail.busy || isTestingEmail;
+    elements.intelEmailTestConfirmationBtn.classList.toggle("is-disabled", elements.intelEmailTestConfirmationBtn.disabled);
+  }
+  if (elements.intelEmailTestIntelBtn) {
+    const isBusy = testBusyKind === "intel";
+    elements.intelEmailTestIntelBtn.textContent = isBusy
+      ? t("intel_email_test_intel_busy")
+      : t("intel_email_test_intel");
+    elements.intelEmailTestIntelBtn.disabled = !canUseAdminEmailTests || state.intelEmail.busy || isTestingEmail;
+    elements.intelEmailTestIntelBtn.classList.toggle("is-disabled", elements.intelEmailTestIntelBtn.disabled);
+  }
+  if (!canUseAdminEmailTests) {
+    state.intelEmail.adminSubscriptions.open = false;
+  }
+  if (elements.intelEmailAdminSubscribersBtn) {
+    const adminSubscriptions = state.intelEmail.adminSubscriptions;
+    elements.intelEmailAdminSubscribersBtn.textContent = adminSubscriptions.loading
+      ? t("intel_email_admin_subscribers_loading_button")
+      : (adminSubscriptions.open ? t("intel_email_admin_subscribers_hide") : t("intel_email_admin_subscribers_show"));
+    elements.intelEmailAdminSubscribersBtn.disabled = !canUseAdminEmailTests || state.intelEmail.busy || isTestingEmail;
+    elements.intelEmailAdminSubscribersBtn.classList.toggle("is-disabled", elements.intelEmailAdminSubscribersBtn.disabled);
+  }
+  if (elements.intelEmailAdminSubscribersPanel) {
+    elements.intelEmailAdminSubscribersPanel.hidden = !canUseAdminEmailTests || !state.intelEmail.adminSubscriptions.open;
+  }
+  renderIntelEmailAdminSubscribersList();
+  if (elements.siloEmailBtn) {
+    const siloEmailLabel = t("intel_email_button_silo_label");
+    elements.siloEmailBtn.setAttribute("aria-label", siloEmailLabel);
+    elements.siloEmailBtn.setAttribute("data-tooltip", siloEmailLabel);
+    elements.siloEmailBtn.removeAttribute("title");
+  }
+  if (elements.minervaEmailBtn) {
+    const minervaEmailLabel = t("intel_email_button_minerva_label");
+    elements.minervaEmailBtn.setAttribute("aria-label", minervaEmailLabel);
+    elements.minervaEmailBtn.setAttribute("data-tooltip", minervaEmailLabel);
+    elements.minervaEmailBtn.removeAttribute("title");
+  }
+  setIntelEmailFeedback(state.intelEmail.message, state.intelEmail.messageKind, { autoDismiss: false });
+}
+
+function openIntelEmailModal(feed, opener = null) {
+  if (!elements.intelEmailOverlay) {
+    return;
+  }
+
+  state.intelEmail.open = true;
+  state.intelEmail.feed = normalizeIntelEmailFeed(feed);
+  state.intelEmail.busy = false;
+  state.intelEmail.unsubscribeBusy = false;
+  state.intelEmail.testBusyKind = "";
+  state.intelEmail.message = "";
+  state.intelEmail.messageKind = "";
+  state.intelEmail.opener = opener instanceof HTMLElement ? opener : document.activeElement;
+  state.intelEmail.statusLoading = normalizeFilesProfile(state.files.me).loggedIn && !state.intelEmail.statusLoaded;
+  if (elements.intelEmailInput instanceof HTMLInputElement) {
+    elements.intelEmailInput.value = "";
+  }
+  renderIntelEmailModal();
+  elements.intelEmailOverlay.classList.add("is-active");
+  elements.intelEmailOverlay.setAttribute("aria-hidden", "false");
+  if (normalizeFilesProfile(state.files.me).loggedIn) {
+    void refreshIntelEmailSubscriptions({ silent: true });
+  }
+  window.setTimeout(() => {
+    if (normalizeFilesProfile(state.files.me).loggedIn && !state.intelEmail.subscriptions[state.intelEmail.feed]) {
+      elements.intelEmailInput?.focus();
+    } else if (!normalizeFilesProfile(state.files.me).loggedIn) {
+      elements.intelEmailLoginBtn?.focus();
+    }
+  }, 60);
+}
+
+function closeIntelEmailModal({ restoreFocus = true } = {}) {
+  if (!elements.intelEmailOverlay) {
+    return;
+  }
+
+  state.intelEmail.open = false;
+  state.intelEmail.busy = false;
+  state.intelEmail.unsubscribeBusy = false;
+  state.intelEmail.testBusyKind = "";
+  state.intelEmail.adminSubscriptions.busyKey = "";
+  clearIntelEmailFeedbackDismissTimer();
+  elements.intelEmailOverlay.classList.remove("is-active");
+  elements.intelEmailOverlay.setAttribute("aria-hidden", "true");
+  renderIntelEmailModal();
+  if (restoreFocus && state.intelEmail.opener instanceof HTMLElement) {
+    state.intelEmail.opener.focus();
+  }
+}
+
+async function submitIntelEmailSubscription(event) {
+  event?.preventDefault();
+  if (state.intelEmail.busy || state.intelEmail.testBusyKind || !(elements.intelEmailInput instanceof HTMLInputElement)) {
+    return;
+  }
+  const me = normalizeFilesProfile(state.files.me);
+  if (!me.loggedIn) {
+    setIntelEmailFeedback(t("intel_email_login_required"), "error");
+    return;
+  }
+  if (state.intelEmail.subscriptions[normalizeIntelEmailFeed(state.intelEmail.feed)]) {
+    setIntelEmailFeedback(t("intel_email_already_subscribed"), "success");
+    return;
+  }
+  if (getIntelEmailCooldownRemainingMs(state.intelEmail.feed) > 0) {
+    renderIntelEmailModal();
+    setIntelEmailFeedback(t("intel_email_cooldown_feedback"), "error");
+    return;
+  }
+
+  const email = String(elements.intelEmailInput.value || "").trim();
+  if (!isValidIntelEmailAddress(email)) {
+    elements.intelEmailInput.classList.add("is-invalid");
+    setIntelEmailFeedback(t("intel_email_invalid"), "error");
+    elements.intelEmailInput.focus();
+    return;
+  }
+
+  state.intelEmail.busy = true;
+  state.intelEmail.message = "";
+  state.intelEmail.messageKind = "";
+  renderIntelEmailModal();
+
+  try {
+    const response = await fetch(INTEL_EMAIL_SUBSCRIBE_API_URL, {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify({
+        email,
+        feed: state.intelEmail.feed,
+        lang: state.lang
+      })
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      if (response.status === 429) {
+        syncIntelEmailSubscriptionsFromPayload(payload);
+        throw new Error("intel_email_cooldown_feedback");
+      }
+      const errorKey = response.status === 401
+        ? "intel_email_login_required"
+        : (response.status === 503 ? "intel_email_unavailable" : "intel_email_error");
+      throw new Error(errorKey);
+    }
+
+    const payload = await response.json().catch(() => null);
+    syncIntelEmailSubscriptionsFromPayload(payload);
+    state.intelEmail.busy = false;
+    renderIntelEmailModal();
+    setIntelEmailFeedback(
+      t(state.intelEmail.feed === "minerva" ? "intel_email_success_minerva" : "intel_email_success_silo"),
+      "success"
+    );
+  } catch (error) {
+    state.intelEmail.busy = false;
+    renderIntelEmailModal();
+    const errorKey = ["intel_email_unavailable", "intel_email_cooldown_feedback"].includes(error?.message)
+      ? error.message
+      : "intel_email_error";
+    setIntelEmailFeedback(t(errorKey), "error");
+  }
+}
+
+async function refreshIntelEmailSubscriptions({ silent = false } = {}) {
+  const me = normalizeFilesProfile(state.files.me);
+  if (!me.loggedIn) {
+    state.intelEmail.subscriptions = { silo: null, minerva: null };
+    state.intelEmail.cooldowns = { silo: null, minerva: null };
+    state.intelEmail.statusLoaded = false;
+    renderIntelEmailModal();
+    return;
+  }
+
+  state.intelEmail.statusLoading = true;
+  state.intelEmail.statusLoaded = false;
+  if (!silent) {
+    renderIntelEmailModal();
+  }
+
+  try {
+    const response = await fetch(INTEL_EMAIL_SUBSCRIPTIONS_ME_API_URL, {
+      method: "GET",
+      cache: "no-store",
+      headers: { Accept: "application/json" }
+    });
+    if (!response.ok) {
+      throw new Error(response.status === 401 ? "intel_email_login_required" : "intel_email_error");
+    }
+    const payload = await response.json();
+    syncIntelEmailSubscriptionsFromPayload(payload);
+  } catch {
+    if (!silent) {
+      setIntelEmailFeedback(t("intel_email_status_error"), "error");
+    }
+  } finally {
+    state.intelEmail.statusLoading = false;
+    renderIntelEmailModal();
+  }
+}
+
+async function unsubscribeIntelEmailSubscription() {
+  const feed = normalizeIntelEmailFeed(state.intelEmail.feed);
+  const me = normalizeFilesProfile(state.files.me);
+  if (!me.loggedIn) {
+    setIntelEmailFeedback(t("intel_email_login_required"), "error");
+    return;
+  }
+  if (!state.intelEmail.subscriptions[feed] || state.intelEmail.unsubscribeBusy) {
+    return;
+  }
+
+  state.intelEmail.unsubscribeBusy = true;
+  state.intelEmail.message = "";
+  state.intelEmail.messageKind = "";
+  renderIntelEmailModal();
+
+  try {
+    const response = await fetch(`${INTEL_EMAIL_SUBSCRIBE_API_URL}/${encodeURIComponent(feed)}`, {
+      method: "DELETE",
+      cache: "no-store",
+      headers: { Accept: "application/json" }
+    });
+    if (!response.ok) {
+      throw new Error(response.status === 401 ? "intel_email_login_required" : "intel_email_unsubscribe_error");
+    }
+    const payload = await response.json().catch(() => null);
+    syncIntelEmailSubscriptionsFromPayload(payload);
+    state.intelEmail.unsubscribeBusy = false;
+    renderIntelEmailModal();
+    setIntelEmailFeedback(t("intel_email_unsubscribe_success"), "success");
+  } catch (error) {
+    state.intelEmail.unsubscribeBusy = false;
+    renderIntelEmailModal();
+    const errorKey = String(error?.message || "") || "intel_email_unsubscribe_error";
+    setIntelEmailFeedback(t(errorKey), "error");
+  }
+}
+
+function loginForIntelEmailSubscription() {
+  const opened = openDiscordLoginPopup();
+  if (!opened) {
+    setIntelEmailFeedback(t("intel_email_login_popup_blocked"), "error");
+  }
+}
+
+async function refreshIntelEmailAdminSubscriptions() {
+  const me = normalizeFilesProfile(state.files.me);
+  if (!me.loggedIn || !me.isAdmin) {
+    setIntelEmailFeedback(t("intel_email_test_admin_only"), "error");
+    return;
+  }
+
+  state.intelEmail.adminSubscriptions.loading = true;
+  state.intelEmail.adminSubscriptions.error = "";
+  renderIntelEmailModal();
+
+  try {
+    const response = await fetch(INTEL_EMAIL_ADMIN_SUBSCRIPTIONS_API_URL, {
+      method: "GET",
+      cache: "no-store",
+      headers: { Accept: "application/json" }
+    });
+    if (!response.ok) {
+      throw new Error("intel_email_admin_subscribers_error");
+    }
+    const payload = await response.json();
+    syncIntelEmailAdminSubscriptionsFromPayload(payload);
+  } catch {
+    state.intelEmail.adminSubscriptions.error = "1";
+  } finally {
+    state.intelEmail.adminSubscriptions.loading = false;
+    renderIntelEmailModal();
+  }
+}
+
+function toggleIntelEmailAdminSubscribers() {
+  const adminState = state.intelEmail.adminSubscriptions;
+  adminState.open = !adminState.open;
+  renderIntelEmailModal();
+  if (adminState.open && !adminState.entries.length && !adminState.loading) {
+    void refreshIntelEmailAdminSubscriptions();
+  }
+}
+
+async function removeIntelEmailAdminSubscription(subscriptionId, feed) {
+  const normalizedId = String(subscriptionId || "").trim();
+  const normalizedFeed = normalizeIntelEmailFeed(feed);
+  if (!normalizedId || state.intelEmail.adminSubscriptions.busyKey) {
+    return;
+  }
+
+  const busyKey = `${normalizedId}:${normalizedFeed}`;
+  state.intelEmail.adminSubscriptions.busyKey = busyKey;
+  renderIntelEmailModal();
+
+  try {
+    const response = await fetch(`${INTEL_EMAIL_ADMIN_SUBSCRIPTIONS_API_URL}/${encodeURIComponent(normalizedId)}/${encodeURIComponent(normalizedFeed)}`, {
+      method: "DELETE",
+      cache: "no-store",
+      headers: { Accept: "application/json" }
+    });
+    if (!response.ok) {
+      throw new Error("intel_email_admin_subscribers_remove_error");
+    }
+    const payload = await response.json();
+    syncIntelEmailAdminSubscriptionsFromPayload(payload);
+    await refreshIntelEmailSubscriptions({ silent: true });
+    setIntelEmailFeedback(t("intel_email_admin_subscribers_remove_success"), "success");
+  } catch {
+    setIntelEmailFeedback(t("intel_email_admin_subscribers_remove_error"), "error");
+  } finally {
+    state.intelEmail.adminSubscriptions.busyKey = "";
+    renderIntelEmailModal();
+  }
+}
+
+async function sendIntelEmailAdminTest(kind) {
+  const normalizedKind = kind === "intel" ? "intel" : "confirmation";
+  const me = normalizeFilesProfile(state.files.me);
+  if (!me.loggedIn || !me.isAdmin) {
+    setIntelEmailFeedback(t("intel_email_test_admin_only"), "error");
+    return;
+  }
+  if (state.intelEmail.busy || state.intelEmail.testBusyKind || !(elements.intelEmailInput instanceof HTMLInputElement)) {
+    return;
+  }
+
+  const email = String(elements.intelEmailInput.value || "").trim();
+  if (!isValidIntelEmailAddress(email)) {
+    elements.intelEmailInput.classList.add("is-invalid");
+    setIntelEmailFeedback(t("intel_email_invalid"), "error");
+    elements.intelEmailInput.focus();
+    return;
+  }
+
+  state.intelEmail.testBusyKind = normalizedKind;
+  state.intelEmail.message = "";
+  state.intelEmail.messageKind = "";
+  renderIntelEmailModal();
+
+  try {
+    const response = await fetch(INTEL_EMAIL_ADMIN_TEST_API_URL, {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify({
+        email,
+        feed: state.intelEmail.feed,
+        kind: normalizedKind,
+        lang: state.lang
+      })
+    });
+
+    if (!response.ok) {
+      const errorKey = response.status === 403
+        ? "intel_email_test_admin_only"
+        : (response.status === 503 ? "intel_email_unavailable" : "intel_email_test_error");
+      throw new Error(errorKey);
+    }
+
+    state.intelEmail.testBusyKind = "";
+    renderIntelEmailModal();
+    setIntelEmailFeedback(
+      t(normalizedKind === "intel" ? "intel_email_test_success_intel" : "intel_email_test_success_confirmation"),
+      "success"
+    );
+  } catch (error) {
+    state.intelEmail.testBusyKind = "";
+    renderIntelEmailModal();
+    const errorKey = String(error?.message || "") || "intel_email_test_error";
+    setIntelEmailFeedback(t(errorKey), "error");
+  }
 }
 
 function syncTopTabForCurrentView() {
@@ -1212,6 +1977,7 @@ function normalizeFilesProfile(payload) {
     loggedIn: Boolean(payload.loggedIn),
     discordId: String(payload.discordId || ""),
     username: String(payload.username || ""),
+    avatarUrl: String(payload.avatarUrl || ""),
     isAdmin: Boolean(payload.isAdmin),
     isAuthorized: Boolean(payload.isAuthorized),
     accessRequestStatus: String(payload.accessRequestStatus || "none").trim().toLowerCase() || "none",
@@ -10140,7 +10906,11 @@ function stopDiscordAuthPopupWatch({ refreshIdentity = false } = {}) {
   }
   discordAuthPopupWindow = null;
   if (refreshIdentity) {
-    void refreshFilesIdentity({ loadFiles: true });
+    void refreshFilesIdentity({ loadFiles: true }).finally(() => {
+      if (state.intelEmail.open) {
+        void refreshIntelEmailSubscriptions({ silent: true });
+      }
+    });
   }
 }
 
@@ -10703,6 +11473,10 @@ async function handleFilesLogout() {
   }
 
   state.files.me = buildGuestFilesProfile();
+  state.intelEmail.subscriptions = { silo: null, minerva: null };
+  state.intelEmail.cooldowns = { silo: null, minerva: null };
+  state.intelEmail.statusLoaded = false;
+  state.intelEmail.statusLoading = false;
   syncClassifiedAccessState();
   state.files.list = [];
   state.files.activeGroupKey = "";
@@ -13250,6 +14024,7 @@ function updateClock() {
   }
   updateMinervaLocationCountdown(nowMs);
   updateFilesDeniedCountdown(nowMs);
+  updateIntelEmailCooldownCountdown(nowMs);
 }
 
 function setSignal(key) {
@@ -19213,6 +19988,7 @@ function applyLanguage(lang, persist = true) {
   elements.langLabel.textContent = t("lang_label");
   renderFilesDecisionTabBadge();
   renderIntelBotInviteModal();
+  renderIntelEmailModal();
 
   elements.labelUtc.textContent = t("label_utc");
   elements.labelLastSync.textContent = t("label_last_sync");
@@ -19928,6 +20704,7 @@ async function startBootSequence() {
 function wireEvents() {
   const hackInteractiveRoot = elements.hackOverlay?.querySelector(".hack-core") || null;
   const intelBotInviteRoot = elements.intelBotInviteCore || null;
+  const intelEmailRoot = elements.intelEmailForm || null;
   const classifiedPlayersModalRoot = elements.classifiedPlayersCore || null;
   const classifiedIntelModalRoot = elements.classifiedIntelCore || null;
   const filesBotAdminLeaveModalRoot = elements.filesBotAdminLeaveOverlay?.querySelector(".files-bot-admin-leave-core") || null;
@@ -19966,6 +20743,12 @@ function wireEvents() {
         return true;
       }
       return !intelBotInviteRoot.contains(target);
+    }
+    if (elements.intelEmailOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node) || !(intelEmailRoot instanceof Node)) {
+        return true;
+      }
+      return !intelEmailRoot.contains(target);
     }
     if (elements.filesBotAdminLeaveOverlay?.classList.contains("is-active")) {
       if (!(target instanceof Node) || !(filesBotAdminLeaveModalRoot instanceof Node)) {
@@ -20135,6 +20918,56 @@ function wireEvents() {
   elements.intelBotInviteOverlay?.addEventListener("click", (event) => {
     if (event.target === elements.intelBotInviteOverlay) {
       closeIntelBotInviteModal();
+    }
+  });
+  elements.siloEmailBtn?.addEventListener("click", () => {
+    openIntelEmailModal("silo", elements.siloEmailBtn);
+  });
+  elements.minervaEmailBtn?.addEventListener("click", () => {
+    openIntelEmailModal("minerva", elements.minervaEmailBtn);
+  });
+  elements.intelEmailForm?.addEventListener("submit", (event) => {
+    void submitIntelEmailSubscription(event);
+  });
+  elements.intelEmailInput?.addEventListener("input", () => {
+    elements.intelEmailInput?.classList.remove("is-invalid");
+    if (state.intelEmail.messageKind === "error") {
+      setIntelEmailFeedback("", "");
+    }
+  });
+  elements.intelEmailCancelBtn?.addEventListener("click", () => {
+    closeIntelEmailModal();
+  });
+  elements.intelEmailLoginBtn?.addEventListener("click", () => {
+    loginForIntelEmailSubscription();
+  });
+  elements.intelEmailUnsubscribeBtn?.addEventListener("click", () => {
+    void unsubscribeIntelEmailSubscription();
+  });
+  elements.intelEmailTestConfirmationBtn?.addEventListener("click", () => {
+    void sendIntelEmailAdminTest("confirmation");
+  });
+  elements.intelEmailTestIntelBtn?.addEventListener("click", () => {
+    void sendIntelEmailAdminTest("intel");
+  });
+  elements.intelEmailAdminSubscribersBtn?.addEventListener("click", () => {
+    toggleIntelEmailAdminSubscribers();
+  });
+  elements.intelEmailAdminSubscribersList?.addEventListener("click", (event) => {
+    const button = event.target instanceof Element
+      ? event.target.closest("[data-subscription-id][data-feed]")
+      : null;
+    if (!(button instanceof HTMLButtonElement)) {
+      return;
+    }
+    void removeIntelEmailAdminSubscription(button.dataset.subscriptionId || "", button.dataset.feed || "");
+  });
+  elements.intelEmailCloseIconBtn?.addEventListener("click", () => {
+    closeIntelEmailModal();
+  });
+  elements.intelEmailOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.intelEmailOverlay) {
+      closeIntelEmailModal();
     }
   });
   elements.classifiedPlayersBtn?.addEventListener("click", () => {
@@ -20837,6 +21670,11 @@ function wireEvents() {
 
     if (elements.intelBotInviteOverlay?.classList.contains("is-active")) {
       closeIntelBotInviteModal();
+      return;
+    }
+
+    if (elements.intelEmailOverlay?.classList.contains("is-active")) {
+      closeIntelEmailModal();
       return;
     }
 
