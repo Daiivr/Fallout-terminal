@@ -3302,6 +3302,123 @@ function getFilesTypeBadgeLabel(file) {
   return compactToken || "FILE";
 }
 
+function resolveFilesTypeIconKind(file) {
+  const extension = getFilesTypeBadgeLabel(file).toLowerCase();
+  const mimeType = String(file?.mimeType || file?.type || "").trim().toLowerCase();
+  if (mimeType.startsWith("image/") || ["png", "jpg", "jpeg", "gif", "webp", "avif", "svg"].includes(extension)) {
+    return "image";
+  }
+  if (mimeType.startsWith("video/") || ["mp4", "mov", "webm", "mkv"].includes(extension)) {
+    return "video";
+  }
+  if (mimeType.startsWith("audio/") || ["mp3", "wav", "ogg", "flac"].includes(extension)) {
+    return "audio";
+  }
+  if (mimeType.includes("zip") || mimeType.includes("rar") || ["zip", "rar", "7z", "tar", "gz"].includes(extension)) {
+    return "archive";
+  }
+  if (mimeType.includes("pdf") || extension === "pdf") {
+    return "pdf";
+  }
+  if (
+    mimeType.includes("spreadsheet")
+    || mimeType.includes("excel")
+    || ["xls", "xlsx", "csv", "tsv"].includes(extension)
+  ) {
+    return "sheet";
+  }
+  if (
+    mimeType.includes("document")
+    || mimeType.includes("word")
+    || ["doc", "docx", "rtf"].includes(extension)
+  ) {
+    return "document";
+  }
+  if (
+    mimeType.includes("json")
+    || mimeType.includes("javascript")
+    || mimeType.includes("xml")
+    || ["js", "ts", "tsx", "jsx", "json", "css", "html", "xml", "py", "lua", "ini", "yml", "yaml"].includes(extension)
+  ) {
+    return "code";
+  }
+  if (mimeType.startsWith("text/") || ["txt", "md", "log"].includes(extension)) {
+    return "text";
+  }
+  return "file";
+}
+
+function createFilesTypeIcon(file, { compact = false } = {}) {
+  const iconKind = resolveFilesTypeIconKind(file);
+  const extensionLabel = getFilesTypeBadgeLabel(file).slice(0, 5) || "FILE";
+  const icon = document.createElement("span");
+  icon.className = `files-detail-type-icon is-${iconKind}${compact ? " is-compact" : ""}`;
+  icon.setAttribute("aria-hidden", "true");
+  icon.dataset.fileExt = extensionLabel;
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 48 56");
+  svg.setAttribute("focusable", "false");
+  svg.classList.add("files-detail-type-icon-svg");
+
+  const appendShape = (tagName, attrs) => {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", tagName);
+    Object.entries(attrs).forEach(([name, value]) => {
+      node.setAttribute(name, value);
+    });
+    svg.appendChild(node);
+  };
+
+  appendShape("path", { class: "files-detail-type-icon-page", d: "M9 4h21l9 9v39H9z" });
+  appendShape("path", { class: "files-detail-type-icon-fold", d: "M30 4v10h9" });
+  if (iconKind === "image") {
+    appendShape("rect", { class: "files-detail-type-icon-mark", x: "15", y: "22", width: "18", height: "14", rx: "2" });
+    appendShape("path", { class: "files-detail-type-icon-line", d: "m16 34 6-6 4 4 3-3 5 5" });
+    appendShape("circle", { class: "files-detail-type-icon-dot", cx: "29", cy: "25", r: "1.8" });
+  } else if (iconKind === "archive") {
+    appendShape("path", { class: "files-detail-type-icon-line", d: "M18 19h12v20H18z" });
+    appendShape("path", { class: "files-detail-type-icon-line", d: "M23 19v20M25 19v20M21 24h6M21 31h6" });
+  } else if (iconKind === "code") {
+    appendShape("path", { class: "files-detail-type-icon-line", d: "m21 24-5 5 5 5M27 24l5 5-5 5" });
+    appendShape("path", { class: "files-detail-type-icon-line", d: "m26 22-4 14" });
+  } else if (iconKind === "pdf") {
+    appendShape("path", { class: "files-detail-type-icon-mark", d: "M17 22h14v16H17z" });
+    appendShape("path", { class: "files-detail-type-icon-line", d: "M20 27h8M20 31h8M20 35h5" });
+  } else if (iconKind === "sheet") {
+    appendShape("path", { class: "files-detail-type-icon-line", d: "M16 22h16v16H16zM16 27h16M16 32h16M21 22v16M27 22v16" });
+  } else if (iconKind === "audio") {
+    appendShape("path", { class: "files-detail-type-icon-mark", d: "M20 34h-4v-8h4l8-5v18z" });
+    appendShape("path", { class: "files-detail-type-icon-line", d: "M31 26a7 7 0 0 1 0 8" });
+  } else if (iconKind === "video") {
+    appendShape("rect", { class: "files-detail-type-icon-mark", x: "15", y: "23", width: "16", height: "13", rx: "2" });
+    appendShape("path", { class: "files-detail-type-icon-line", d: "m31 27 5-3v11l-5-3z" });
+  } else {
+    appendShape("path", { class: "files-detail-type-icon-line", d: "M16 23h16M16 29h16M16 35h10" });
+  }
+
+  const label = document.createElement("span");
+  label.className = "files-detail-type-icon-label";
+  label.textContent = extensionLabel;
+  icon.append(svg, label);
+  return icon;
+}
+
+function createFilesDetailStat(label, value) {
+  const item = document.createElement("span");
+  item.className = "files-detail-modal-stat";
+
+  const labelEl = document.createElement("span");
+  labelEl.className = "files-detail-modal-stat-label";
+  labelEl.textContent = label;
+
+  const valueEl = document.createElement("span");
+  valueEl.className = "files-detail-modal-stat-value";
+  valueEl.textContent = value || t("files_unknown_value");
+
+  item.append(labelEl, valueEl);
+  return item;
+}
+
 function normalizeFilesGroup(value) {
   return String(value || "")
     .replace(/\r\n/g, " ")
@@ -4335,6 +4452,25 @@ function normalizeFilesEntry(payload) {
     return null;
   }
 
+  const versions = Array.isArray(payload.versions)
+    ? payload.versions
+      .filter((version) => version && typeof version === "object")
+      .map((version) => ({
+        id: String(version.id || version.versionId || version.fileId || "").trim(),
+        versionId: String(version.versionId || version.id || "").trim(),
+        downloadId: String(version.downloadId || version.fileId || version.id || version.versionId || "").trim(),
+        label: String(version.label || version.version || "").trim(),
+        name: String(version.name || version.fileName || version.displayName || "").trim(),
+        displayName: String(version.displayName || "").trim(),
+        fileName: String(version.fileName || "").trim(),
+        mimeType: String(version.mimeType || version.type || "").trim(),
+        size: Math.max(0, Number(version.size) || 0),
+        uploadedAt: String(version.uploadedAt || version.uploaded_at || version.createdAt || version.created_at || "").trim(),
+        createdAt: String(version.createdAt || version.created_at || "").trim(),
+        current: normalizeFilesBooleanFlag(version.current ?? version.isCurrent)
+      }))
+    : [];
+
   return {
     id,
     name: String(payload.name || payload.originalName || "").trim(),
@@ -4357,7 +4493,8 @@ function normalizeFilesEntry(payload) {
     uploader: String(payload.uploader || payload.uploaderDiscordId || "").trim(),
     imageUrl: String(payload.imageUrl || "").trim(),
     imageName: String(payload.imageName || "").trim(),
-    hasImage: Boolean(payload.hasImage || payload.imageUrl)
+    hasImage: Boolean(payload.hasImage || payload.imageUrl),
+    versions
   };
 }
 
@@ -4403,6 +4540,10 @@ function setFilesUploadFeedback(message = "", kind = "") {
 }
 
 function clearFilesEditModalState() {
+  if (filesEditModalFeedbackTimer) {
+    clearTimeout(filesEditModalFeedbackTimer);
+    filesEditModalFeedbackTimer = null;
+  }
   state.files.editModal.fileId = "";
   state.files.editModal.message = "";
   state.files.editModal.messageKind = "";
@@ -4410,8 +4551,24 @@ function clearFilesEditModalState() {
 }
 
 function setFilesEditModalFeedback(message = "", kind = "") {
+  if (filesEditModalFeedbackTimer) {
+    clearTimeout(filesEditModalFeedbackTimer);
+    filesEditModalFeedbackTimer = null;
+  }
+
   state.files.editModal.message = String(message || "");
   state.files.editModal.messageKind = kind === "success" ? "success" : kind === "error" ? "error" : "";
+
+  if (!state.files.editModal.message) {
+    return;
+  }
+
+  filesEditModalFeedbackTimer = setTimeout(() => {
+    filesEditModalFeedbackTimer = null;
+    state.files.editModal.message = "";
+    state.files.editModal.messageKind = "";
+    renderFilesEditModal();
+  }, 4500);
 }
 
 function setFilesRestrictedRequestFeedback(message = "", kind = "") {
@@ -4776,6 +4933,13 @@ function renderFilesEditModal({ force = false } = {}) {
   if (elements.filesEditTargetName) {
     elements.filesEditTargetName.textContent = getFilesDisplayName(matchedFile);
   }
+  if (
+    elements.filesEditPanel instanceof HTMLElement
+    && elements.filesEditFeedback instanceof HTMLElement
+    && elements.filesEditFeedback.parentElement !== elements.filesEditPanel
+  ) {
+    elements.filesEditPanel.appendChild(elements.filesEditFeedback);
+  }
   const renderKey = [state.lang, focusField, buildFilesDetailRenderKey(matchedFile, { isAdmin: true })].join("|");
   const currentForm = elements.filesEditModalBody?.querySelector("[data-files-edit-modal-form]") || null;
   const needsRender = force || !(currentForm instanceof HTMLFormElement) || elements.filesEditPanel.dataset.renderKey !== renderKey;
@@ -4795,6 +4959,14 @@ function renderFilesEditModal({ force = false } = {}) {
 
   const form = elements.filesEditModalBody?.querySelector("[data-files-edit-modal-form]") || null;
   if (form instanceof HTMLFormElement) {
+    const editGrid = form.querySelector(".files-edit-grid, .files-edit-grid-single");
+    if (
+      elements.filesEditFeedback instanceof HTMLElement
+      && editGrid instanceof HTMLElement
+      && elements.filesEditFeedback.parentElement !== editGrid
+    ) {
+      editGrid.appendChild(elements.filesEditFeedback);
+    }
     setFilesEditFormBusy(form, Boolean(state.files.editModal.busy));
   }
 
@@ -5920,7 +6092,7 @@ function renderFilesCautionModal() {
   }
 }
 
-function openFilesCautionModal(fileId, { kind = "" } = {}) {
+function openFilesCautionModal(fileId, { kind = "", versionId = "" } = {}) {
   const matchedFile = state.files.list.find((entry) => String(entry.id || "") === String(fileId || ""));
   if (!matchedFile) {
     return;
@@ -5936,6 +6108,7 @@ function openFilesCautionModal(fileId, { kind = "" } = {}) {
 
   state.files.cautionModal.open = true;
   state.files.cautionModal.fileId = String(fileId);
+  state.files.cautionModal.versionId = String(versionId || "").trim().toLowerCase();
   state.files.cautionModal.fileName = getFilesDisplayName(matchedFile);
   state.files.cautionModal.kind = modalKind;
   renderFilesCautionModal();
@@ -5947,6 +6120,7 @@ function openFilesCautionModal(fileId, { kind = "" } = {}) {
 function closeFilesCautionModal() {
   state.files.cautionModal.open = false;
   state.files.cautionModal.fileId = "";
+  state.files.cautionModal.versionId = "";
   state.files.cautionModal.fileName = "";
   state.files.cautionModal.kind = "";
   renderFilesCautionModal();
@@ -5954,13 +6128,14 @@ function closeFilesCautionModal() {
 
 function confirmFilesCautionDownload() {
   const fileId = String(state.files.cautionModal.fileId || "").trim();
+  const versionId = String(state.files.cautionModal.versionId || "").trim().toLowerCase();
   if (!fileId) {
     closeFilesCautionModal();
     return;
   }
 
   closeFilesCautionModal();
-  startFilesDownload(fileId);
+  startFilesDownload(fileId, { versionId });
 }
 
 function setFilesShareFeedback(message = "", kind = "") {
@@ -6590,9 +6765,13 @@ async function confirmFilesDeleteModal() {
   }
 }
 
-function createFilesMetaItem(label, value) {
+function createFilesMetaItem(label, value, key = "") {
   const wrap = document.createElement("div");
   wrap.className = "files-meta-item";
+  const normalizedKey = String(key || "").trim();
+  if (normalizedKey) {
+    wrap.dataset.metaKey = normalizedKey;
+  }
 
   const labelEl = document.createElement("span");
   labelEl.className = "files-meta-label";
@@ -7021,7 +7200,8 @@ function buildFilesDetailRenderKey(file, { isAdmin = false } = {}) {
     String(safeFile.imageUrl || ""),
     String(safeFile.imageName || ""),
     safeFile.hasImage ? "1" : "0",
-    String(safeFile.functions || "")
+    String(safeFile.functions || ""),
+    JSON.stringify(Array.isArray(safeFile.versions) ? safeFile.versions : [])
   ].join("|");
 }
 
@@ -7523,6 +7703,360 @@ function renderFilesDetailCard(file) {
   elements.filesList.dataset.detailRenderKey = buildFilesDetailRenderKey(file, {
     isAdmin: Boolean(state.files.me?.isAdmin)
   });
+}
+
+function getFilesDetailVersionEntries(file) {
+  const fileId = String(file?.id || "").trim().toLowerCase();
+  const rawVersions = Array.isArray(file?.versions) ? file.versions : [];
+  const normalizedVersions = rawVersions
+    .map((version, index) => {
+      const versionId = String(version?.id || version?.versionId || fileId).trim().toLowerCase();
+      const downloadId = String(version?.downloadId || version?.fileId || versionId || fileId).trim().toLowerCase();
+      const isCurrent = Boolean(version?.current);
+      const label = String(version?.label || version?.version || "").trim()
+        || (isCurrent
+          ? t("files_detail_current_version")
+          : t("files_detail_version_label", { n: String(index + 1) }));
+      return {
+        id: versionId || fileId,
+        label,
+        name: String(version?.fileName || version?.displayName || version?.name || getFilesDisplayName(file)),
+        size: Math.max(0, Number(version?.size) || Number(file?.size) || 0),
+        mimeType: String(version?.mimeType || file?.mimeType || ""),
+        uploadedAt: String(version?.uploadedAt || version?.createdAt || file?.uploadedAt || ""),
+        current: isCurrent,
+        downloadId: downloadId || fileId,
+        versionId: isCurrent ? "" : String(version?.versionId || version?.id || "").trim().toLowerCase()
+      };
+    })
+    .filter((version) => version.id || version.downloadId);
+
+  if (!normalizedVersions.length) {
+    return [{
+      id: fileId,
+      label: t("files_detail_current_version"),
+      name: getFilesDisplayName(file),
+      size: Math.max(0, Number(file?.size) || 0),
+      mimeType: String(file?.mimeType || ""),
+      uploadedAt: String(file?.contentUpdatedAt || file?.updatedAt || file?.uploadedAt || ""),
+      current: true,
+      downloadId: fileId
+    }];
+  }
+
+  if (!normalizedVersions.some((version) => version.current)) {
+    normalizedVersions[0].current = true;
+  }
+  return normalizedVersions;
+}
+
+function createFilesDetailActions(file, { compact = false } = {}) {
+  const fileId = String(file?.id || "");
+  const isReplacing = String(state.files.replace.fileId || "") === fileId;
+  const isOutdated = normalizeFilesBooleanFlag(file?.outdated);
+  const hasCaution = normalizeFilesBooleanFlag(file?.caution);
+  const actions = document.createElement("div");
+  actions.className = `files-card-actions files-detail-actions${compact ? " files-detail-modal-actions" : ""}`;
+  if (compact) {
+    actions.dataset.actionsLabel = t("files_detail_actions_title");
+  }
+
+  const shareButton = document.createElement("button");
+  shareButton.type = "button";
+  shareButton.className = "files-card-action";
+  shareButton.setAttribute("data-files-action", "share");
+  shareButton.setAttribute("data-file-id", fileId);
+  decorateFilesActionIconButton(shareButton, t("files_share_button"), "share");
+  actions.appendChild(shareButton);
+
+  const downloadButton = document.createElement("button");
+  downloadButton.type = "button";
+  downloadButton.className = "files-card-action";
+  downloadButton.setAttribute("data-files-action", "download");
+  downloadButton.setAttribute("data-file-id", fileId);
+  if (isOutdated) {
+    downloadButton.setAttribute("aria-disabled", "true");
+  }
+  downloadButton.classList.toggle("is-outdated", isOutdated);
+  downloadButton.classList.toggle("is-caution", !isOutdated && hasCaution);
+  decorateFilesActionIconButton(
+    downloadButton,
+    isOutdated
+      ? t("files_outdated_badge")
+      : hasCaution
+        ? t("files_caution_badge")
+        : t("files_download_button"),
+    isOutdated ? "download-blocked" : "download"
+  );
+  actions.appendChild(downloadButton);
+
+  if (state.files.me?.isAdmin) {
+    const replaceInputId = `filesReplaceInput-${fileId}`;
+    const replaceInput = document.createElement("input");
+    replaceInput.id = replaceInputId;
+    replaceInput.type = "file";
+    replaceInput.hidden = true;
+    replaceInput.setAttribute("data-files-replace-input", "true");
+    replaceInput.setAttribute("data-file-id", fileId);
+
+    const replaceButton = document.createElement("button");
+    replaceButton.type = "button";
+    replaceButton.className = "files-card-action";
+    replaceButton.setAttribute("data-files-action", "replace");
+    replaceButton.setAttribute("data-file-id", fileId);
+    replaceButton.setAttribute("data-files-replace-input-id", replaceInputId);
+    replaceButton.disabled = isReplacing;
+    decorateFilesActionIconButton(
+      replaceButton,
+      isReplacing ? t("files_replace_button_busy") : t("files_replace_button"),
+      "replace",
+      { busy: isReplacing }
+    );
+    actions.appendChild(replaceButton);
+    actions.appendChild(replaceInput);
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "files-card-action is-delete";
+    deleteButton.setAttribute("data-files-action", "delete");
+    deleteButton.setAttribute("data-file-id", fileId);
+    decorateFilesActionIconButton(deleteButton, t("files_delete_button"), "delete");
+    actions.appendChild(deleteButton);
+  }
+
+  return actions;
+}
+
+function createFilesVersionPanel(file) {
+  const panel = document.createElement("section");
+  panel.className = "files-detail-versions-panel";
+  panel.setAttribute("aria-labelledby", "filesDetailVersionsTitle");
+
+  const head = document.createElement("div");
+  head.className = "files-detail-versions-head";
+
+  const title = document.createElement("h3");
+  title.id = "filesDetailVersionsTitle";
+  title.textContent = t("files_detail_versions_title");
+  head.appendChild(title);
+
+  const hint = document.createElement("p");
+  hint.textContent = t("files_detail_versions_hint");
+  head.appendChild(hint);
+  panel.appendChild(head);
+
+  const list = document.createElement("div");
+  list.className = "files-detail-version-list";
+
+  const isOutdated = normalizeFilesBooleanFlag(file?.outdated);
+  const versions = getFilesDetailVersionEntries(file);
+  versions.forEach((version, index) => {
+    const row = document.createElement("article");
+    row.className = "files-detail-version-row";
+    row.appendChild(createFilesTypeIcon(version, { compact: true }));
+
+    const copy = document.createElement("div");
+    copy.className = "files-detail-version-copy";
+
+    const label = document.createElement("p");
+    label.className = "files-detail-version-label";
+    label.textContent = version.current
+      ? `${version.label} / ${t("files_detail_version_current_tag")}`
+      : version.label;
+    copy.appendChild(label);
+
+    const meta = document.createElement("p");
+    meta.className = "files-detail-version-meta";
+    const dateText = formatFileDateTime(version.uploadedAt);
+    meta.textContent = [
+      version.name,
+      formatFileSize(version.size),
+      resolveFileTypeLabel(version),
+      dateText
+    ].filter(Boolean).join(" / ");
+    copy.appendChild(meta);
+    row.appendChild(copy);
+
+    const download = document.createElement("button");
+    download.type = "button";
+    download.className = "files-btn files-detail-version-download";
+    download.setAttribute("data-files-action", "download");
+    download.setAttribute("data-file-id", version.downloadId || file.id);
+    if (version.versionId) {
+      download.setAttribute("data-file-version-id", version.versionId);
+    }
+    download.textContent = isOutdated
+      ? t("files_download_blocked_button")
+      : index === 0
+        ? t("files_detail_download_current")
+        : t("files_detail_download_version");
+    download.disabled = isOutdated;
+    row.appendChild(download);
+
+    list.appendChild(row);
+  });
+
+  panel.appendChild(list);
+  return panel;
+}
+
+function closeFilesDetailModal({ clearLocation = true, render = true } = {}) {
+  const hadSelection = Boolean(String(state.files.selectedId || "").trim());
+  state.files.selectedId = "";
+  state.files.detailOrigin = "";
+  state.files.transition = "";
+  if (clearLocation) {
+    setFilesLocationSharedFile("");
+  }
+  if (render && hadSelection) {
+    renderFilesList();
+  } else if (render) {
+    renderFilesDetailModal();
+  }
+}
+
+function renderFilesDetailModal() {
+  const selectedId = String(state.files.selectedId || "").trim();
+  const selectedFile = selectedId
+    ? state.files.list.find((entry) => String(entry.id || "") === selectedId) || null
+    : null;
+  const isOpen = Boolean(selectedFile) && !state.files.groupManager.open;
+
+  if (elements.filesDetailOverlay) {
+    elements.filesDetailOverlay.classList.toggle("is-active", isOpen);
+    elements.filesDetailOverlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  }
+  if (elements.filesDetailModalPanel) {
+    elements.filesDetailModalPanel.hidden = !isOpen;
+  }
+  if (!elements.filesDetailModalBody) {
+    return;
+  }
+  elements.filesDetailModalBody.replaceChildren();
+  if (!isOpen || !selectedFile) {
+    return;
+  }
+
+  const fileId = String(selectedFile.id || "");
+  const fileName = getFilesDisplayName(selectedFile);
+  const fileType = resolveFileTypeLabel(selectedFile);
+  const fileSize = formatFileSize(selectedFile.size);
+  const timestampMeta = resolveFilesTimestampMeta(selectedFile);
+  const description = String(selectedFile.description || "").trim();
+  const functions = String(selectedFile.functions || "").trim();
+  const downloadCount = Math.max(0, Number(selectedFile.downloadCount) || 0);
+  const group = getFilesGroupDisplayLabel(selectedFile);
+  const uploader = String(selectedFile.uploader || selectedFile.uploaderDiscordId || t("files_unknown_value"));
+  const imageUrl = String(selectedFile.imageUrl || "").trim();
+  const imageName = String(selectedFile.imageName || "").trim();
+  const isOutdated = normalizeFilesBooleanFlag(selectedFile.outdated);
+  const isUntested = normalizeFilesBooleanFlag(selectedFile.untested);
+  const hasCaution = normalizeFilesBooleanFlag(selectedFile.caution);
+
+  const hero = document.createElement("header");
+  hero.className = "files-detail-modal-hero";
+  hero.dataset.fileKind = resolveFilesTypeIconKind(selectedFile);
+  hero.appendChild(createFilesTypeIcon(selectedFile));
+
+  const heroCopy = document.createElement("div");
+  heroCopy.className = "files-detail-modal-hero-copy";
+
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "files-detail-modal-eyebrow";
+  eyebrow.textContent = t("files_detail_modal_badge");
+  heroCopy.appendChild(eyebrow);
+
+  const title = document.createElement("h2");
+  title.id = "filesDetailModalTitle";
+  title.textContent = fileName;
+  heroCopy.appendChild(title);
+
+  const summary = document.createElement("div");
+  summary.id = "filesDetailModalSummary";
+  summary.className = "files-detail-modal-summary";
+  summary.appendChild(createFilesDetailStat(t("files_type_label"), fileType));
+  summary.appendChild(createFilesDetailStat(t("files_size_label"), fileSize));
+  summary.appendChild(createFilesDetailStat(t("files_downloads_label"), formatFilesDownloadCount(downloadCount)));
+  heroCopy.appendChild(summary);
+  hero.appendChild(heroCopy);
+
+  const heroStatus = document.createElement("div");
+  heroStatus.className = "files-detail-modal-status-stack";
+  [
+    isOutdated ? t("files_outdated_badge") : "",
+    !isOutdated && isUntested ? t("files_untested_badge") : "",
+    !isOutdated && hasCaution ? t("files_caution_badge") : ""
+  ].filter(Boolean).forEach((label) => {
+    const badge = document.createElement("span");
+    badge.className = "files-detail-modal-status-badge";
+    badge.textContent = label;
+    heroStatus.appendChild(badge);
+  });
+  if (!heroStatus.childElementCount) {
+    const badge = document.createElement("span");
+    badge.className = "files-detail-modal-status-badge is-stable";
+    badge.textContent = t("files_detail_status_ready");
+    heroStatus.appendChild(badge);
+  }
+  hero.appendChild(heroStatus);
+
+  const layout = document.createElement("div");
+  layout.className = "files-detail-modal-layout";
+
+  const main = document.createElement("div");
+  main.className = "files-detail-modal-main";
+
+  if (isOutdated) {
+    main.appendChild(createFilesOutdatedNotice());
+  } else {
+    if (isUntested) {
+      main.appendChild(createFilesUntestedNotice());
+    }
+    if (hasCaution) {
+      main.appendChild(createFilesCautionNotice());
+    }
+  }
+
+  main.appendChild(createFilesDescriptionBlock({
+    description,
+    imageUrl,
+    imageName,
+    fileName,
+    fileId,
+    functions,
+    editFileId: fileId,
+    allowEdit: Boolean(state.files.me?.isAdmin)
+  }));
+  main.appendChild(createFilesVersionPanel(selectedFile));
+
+  const aside = document.createElement("aside");
+  aside.className = "files-detail-modal-aside";
+
+  const asideTitle = document.createElement("p");
+  asideTitle.className = "files-detail-modal-side-title";
+  asideTitle.textContent = t("files_detail_info_title");
+  aside.appendChild(asideTitle);
+  aside.appendChild(createFilesDetailActions(selectedFile, { compact: true }));
+
+  const metadata = document.createElement("div");
+  metadata.className = "files-meta-grid files-detail-modal-meta";
+  metadata.appendChild(createFilesMetaItem(t("files_name_label"), fileName, "name"));
+  metadata.appendChild(createFilesMetaItem(t("files_type_label"), fileType, "type"));
+  metadata.appendChild(createFilesMetaItem(t("files_size_label"), fileSize, "size"));
+  metadata.appendChild(createFilesMetaItem(t("files_uploaded_label"), timestampMeta.uploadedDate, "uploaded"));
+  if (timestampMeta.hasUpdatedDate) {
+    metadata.appendChild(createFilesMetaItem(t("files_updated_label"), timestampMeta.updatedDate, "updated"));
+  }
+  metadata.appendChild(createFilesMetaItem(t("files_group_label"), group, "group"));
+  metadata.appendChild(createFilesMetaItem(t("files_uploader_label"), uploader, "uploader"));
+  metadata.appendChild(createFilesMetaItem(t("files_downloads_label"), formatFilesDownloadCount(downloadCount), "downloads"));
+  aside.appendChild(metadata);
+
+  layout.appendChild(main);
+  layout.appendChild(aside);
+
+  elements.filesDetailModalBody.appendChild(hero);
+  elements.filesDetailModalBody.appendChild(layout);
 }
 
 function setFilesSessionRankEffect(element, text, rank = "") {
@@ -8390,40 +8924,6 @@ function renderFilesList() {
   const accessExpired = Boolean(state.files.localAccessExpired || isFilesAccessExpired(me));
   const canReadFiles = hasFilesAuthorizedAccess(me);
   const showRestrictedNotice = me.loggedIn && !canReadFiles && !shouldShowFilesDisclaimerGate(me);
-  const pendingTransition = String(state.files.transition || "");
-  const reuseManagerMode = Boolean(state.files.groupManager.open && me.isAdmin);
-  const reuseSelectedId = String(state.files.selectedId || "");
-  const reuseSelectedFile = reuseSelectedId
-    ? state.files.list.find((entry) => String(entry.id || "") === reuseSelectedId) || null
-    : null;
-  if (canReadFiles && reuseSelectedFile && !reuseManagerMode && pendingTransition !== "to-detail") {
-    const currentDetailKey = String(elements.filesList.dataset.detailRenderKey || "");
-    const nextDetailKey = buildFilesDetailRenderKey(reuseSelectedFile, {
-      isAdmin: Boolean(me.isAdmin)
-    });
-    if (currentDetailKey && currentDetailKey === nextDetailKey && elements.filesList.classList.contains("is-detail-mode")) {
-      state.files.transition = "";
-      state.files.groupTransition = "";
-      elements.filesList.classList.remove(
-        "is-transition-to-detail",
-        "is-transition-to-list",
-        "is-transition-group-open",
-        "is-transition-group-close"
-      );
-      elements.filesList.classList.add("is-detail-mode");
-      elements.filesList.hidden = false;
-      elements.filesEmptyState.hidden = true;
-      elements.filesEmptyState.textContent = "";
-      elements.filesEmptyState.classList.remove("is-restricted");
-      elements.filesBrowserPanel?.classList.toggle("is-restricted", showRestrictedNotice);
-      setFilesSearchCount("");
-      if (elements.filesSearchResults) {
-        elements.filesSearchResults.innerHTML = "";
-        elements.filesSearchResults.hidden = true;
-      }
-      return;
-    }
-  }
   elements.filesList.replaceChildren();
   delete elements.filesList.dataset.detailRenderKey;
   elements.filesList.classList.remove(
@@ -8466,6 +8966,7 @@ function renderFilesList() {
       elements.filesSearchResults.innerHTML = "";
       elements.filesSearchResults.hidden = true;
     }
+    renderFilesDetailModal();
     return;
   }
 
@@ -8494,25 +8995,11 @@ function renderFilesList() {
     state.files.detailOrigin = "";
   }
 
-  if (selectedFile && !managerMode) {
-    elements.filesList.hidden = false;
-    if (elements.filesSearchResults) {
-      elements.filesSearchResults.innerHTML = "";
-      elements.filesSearchResults.hidden = true;
-    }
-    elements.filesList.classList.add("is-detail-mode");
-    if (transition === "to-detail") {
-      elements.filesList.classList.add("is-transition-to-detail");
-    }
-    elements.filesEmptyState.hidden = true;
-    renderFilesDetailCard(selectedFile);
-    return;
-  }
-
   if (isSearchMode && !managerMode) {
     elements.filesList.hidden = true;
     elements.filesEmptyState.hidden = true;
     renderFilesSearchResults();
+    renderFilesDetailModal();
     return;
   }
 
@@ -8535,6 +9022,7 @@ function renderFilesList() {
   if (emptyMessage) {
     elements.filesEmptyState.hidden = false;
     elements.filesEmptyState.textContent = emptyMessage;
+    renderFilesDetailModal();
     return;
   }
 
@@ -8617,6 +9105,7 @@ function renderFilesList() {
       elements.filesEmptyState.textContent = isSearchMode
         ? t("files_search_no_results")
         : t("files_group_manager_no_files");
+      renderFilesDetailModal();
       return;
     }
 
@@ -8741,6 +9230,7 @@ function renderFilesList() {
 
     fragment.appendChild(managerList);
     elements.filesList.appendChild(fragment);
+    renderFilesDetailModal();
     return;
   }
 
@@ -9074,6 +9564,7 @@ function renderFilesList() {
   }
 
   elements.filesList.appendChild(fragment);
+  renderFilesDetailModal();
 }
 
 function renderFilesAccessView() {
@@ -12305,8 +12796,9 @@ function scheduleFilesDownloadRefresh() {
   }, 1400);
 }
 
-function startFilesDownload(fileId) {
+function startFilesDownload(fileId, { versionId = "" } = {}) {
   const normalizedFileId = String(fileId || "").trim().toLowerCase();
+  const normalizedVersionId = String(versionId || "").trim().toLowerCase();
   if (!normalizedFileId) {
     return;
   }
@@ -12320,28 +12812,35 @@ function startFilesDownload(fileId) {
   frame.hidden = true;
   frame.setAttribute("aria-hidden", "true");
   frame.setAttribute("tabindex", "-1");
-  frame.src = `/api/files/${encodeURIComponent(normalizedFileId)}/download?ts=${Date.now()}`;
+  const params = new URLSearchParams({ ts: String(Date.now()) });
+  if (normalizedVersionId) {
+    params.set("version", normalizedVersionId);
+  }
+  frame.src = `/api/files/${encodeURIComponent(normalizedFileId)}/download?${params.toString()}`;
   document.body.appendChild(frame);
   window.setTimeout(() => {
     frame.remove();
   }, 45000);
 
-  state.files.list = (Array.isArray(state.files.list) ? state.files.list : []).map((file) => {
-    if (String(file?.id || "").trim().toLowerCase() !== normalizedFileId) {
-      return file;
-    }
-    return {
-      ...file,
-      downloadCount: Math.max(0, Number(file.downloadCount) || 0) + 1
-    };
-  });
+  if (!normalizedVersionId) {
+    state.files.list = (Array.isArray(state.files.list) ? state.files.list : []).map((file) => {
+      if (String(file?.id || "").trim().toLowerCase() !== normalizedFileId) {
+        return file;
+      }
+      return {
+        ...file,
+        downloadCount: Math.max(0, Number(file.downloadCount) || 0) + 1
+      };
+    });
+  }
 
   scheduleFilesDownloadRefresh();
   renderFilesList();
 }
 
-function handleFilesDownload(fileId) {
+function handleFilesDownload(fileId, { versionId = "" } = {}) {
   const normalizedFileId = String(fileId || "").trim().toLowerCase();
+  const normalizedVersionId = String(versionId || "").trim().toLowerCase();
   if (!normalizedFileId) {
     return;
   }
@@ -12356,15 +12855,15 @@ function handleFilesDownload(fileId) {
     return;
   }
   if (normalizeFilesBooleanFlag(matchedFile.caution)) {
-    openFilesCautionModal(normalizedFileId, { kind: "caution" });
+    openFilesCautionModal(normalizedFileId, { kind: "caution", versionId: normalizedVersionId });
     return;
   }
   if (normalizeFilesBooleanFlag(matchedFile.untested)) {
-    openFilesCautionModal(normalizedFileId, { kind: "untested" });
+    openFilesCautionModal(normalizedFileId, { kind: "untested", versionId: normalizedVersionId });
     return;
   }
 
-  startFilesDownload(normalizedFileId);
+  startFilesDownload(normalizedFileId, { versionId: normalizedVersionId });
 }
 
 function startFilesRename(fileId) {
@@ -12829,9 +13328,7 @@ function handleFilesListClick(event) {
 
   if (action === "back-to-index") {
     const returnToSearch = state.files.detailOrigin === "search" && String(state.files.search.query || "").trim();
-    state.files.selectedId = "";
-    state.files.detailOrigin = "";
-    setFilesLocationSharedFile("");
+    closeFilesDetailModal({ clearLocation: true, render: false });
     if (returnToSearch) {
       state.files.transition = "";
       setFilesSearchOpen(true, { clearQuery: false });
@@ -12839,6 +13336,11 @@ function handleFilesListClick(event) {
       state.files.transition = "to-list";
       renderFilesList();
     }
+    return;
+  }
+
+  if (action === "close-detail-modal") {
+    closeFilesDetailModal();
     return;
   }
 
@@ -12887,7 +13389,7 @@ function handleFilesListClick(event) {
     state.files.detailOrigin = "search";
     state.files.transition = "to-detail";
     setFilesSearchOpen(false, { clearQuery: false });
-    elements.filesList?.scrollTo({ top: 0 });
+    renderFilesList();
     return;
   }
 
@@ -12897,7 +13399,6 @@ function handleFilesListClick(event) {
     state.files.detailOrigin = "list";
     state.files.transition = "to-detail";
     renderFilesList();
-    elements.filesList?.scrollTo({ top: 0 });
     return;
   }
 
@@ -12907,7 +13408,8 @@ function handleFilesListClick(event) {
   }
 
   if (action === "download") {
-    handleFilesDownload(fileId);
+    const versionId = String(actionTarget.getAttribute("data-file-version-id") || "").trim();
+    handleFilesDownload(fileId, { versionId });
     return;
   }
 
@@ -21437,6 +21939,17 @@ function wireEvents() {
   elements.filesEditPanel?.addEventListener("click", handleFilesEditPanelClick);
   elements.filesEditPanel?.addEventListener("submit", handleFilesEditPanelSubmit);
   elements.filesUploadPanel?.addEventListener("click", handleFilesListClick);
+  elements.filesDetailOverlay?.addEventListener("click", (event) => {
+    if (event.target === elements.filesDetailOverlay) {
+      closeFilesDetailModal();
+      return;
+    }
+    handleFilesListClick(event);
+  });
+  elements.filesDetailOverlay?.addEventListener("change", handleFilesListChange);
+  elements.filesDetailModalCloseBtn?.addEventListener("click", () => {
+    closeFilesDetailModal();
+  });
   elements.filesList?.addEventListener("click", handleFilesListClick);
   elements.filesList?.addEventListener("keydown", handleFilesListKeydown);
   elements.filesList?.addEventListener("input", handleFilesListInput);
@@ -21721,6 +22234,11 @@ function wireEvents() {
 
     if (elements.filesShareOverlay?.classList.contains("is-active")) {
       closeFilesShareModal();
+      return;
+    }
+
+    if (elements.filesDetailOverlay?.classList.contains("is-active")) {
+      closeFilesDetailModal();
       return;
     }
 

@@ -2121,6 +2121,39 @@ function resolveTempShareFileTypeLabel(entry) {
   return (topLevelType || mimeType).toUpperCase();
 }
 
+function normalizeMetadataFileVersionEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const id = String(entry.id || entry.versionId || "").trim();
+  const storedName = String(entry.storedName || "").trim();
+  const name = sanitizeDisplayFilename(entry.name || entry.originalName || "");
+  if (!FILE_ID_PATTERN.test(id) || !storedName || !name) {
+    return null;
+  }
+
+  const mimeType = String(entry.mimeType || "application/octet-stream").trim() || "application/octet-stream";
+  const size = Number(entry.size);
+  const downloadCount = Number(entry.downloadCount);
+  const uploadedAt = String(entry.uploadedAt || entry.createdAt || "").trim();
+  const archivedAt = String(entry.archivedAt || entry.updatedAt || "").trim();
+
+  return {
+    id: id.toLowerCase(),
+    storedName,
+    name,
+    displayName: sanitizeFileDisplayName(entry.displayName),
+    mimeType,
+    size: Number.isFinite(size) && size >= 0 ? size : 0,
+    downloadCount: Number.isFinite(downloadCount) && downloadCount > 0 ? Math.floor(downloadCount) : 0,
+    uploadedAt: uploadedAt || new Date(0).toISOString(),
+    archivedAt: archivedAt || uploadedAt || "",
+    uploaderDiscordId: String(entry.uploaderDiscordId || "").trim(),
+    uploader: String(entry.uploader || "").trim()
+  };
+}
+
 function normalizeMetadataFileEntry(entry) {
   if (!entry || typeof entry !== "object") {
     return null;
@@ -2147,6 +2180,11 @@ function normalizeMetadataFileEntry(entry) {
   const outdated = parseBoolean(entry.outdated ?? entry.isOutdated, false);
   const untested = parseBoolean(entry.untested ?? entry.isUntested, false);
   const caution = parseBoolean(entry.caution ?? entry.hasCaution, false);
+  const versions = Array.isArray(entry.versions)
+    ? entry.versions
+      .map((version) => normalizeMetadataFileVersionEntry(version))
+      .filter(Boolean)
+    : [];
 
   return {
     id: id.toLowerCase(),
@@ -2170,7 +2208,8 @@ function normalizeMetadataFileEntry(entry) {
     imageStoredName: hasImage ? imageStoredName : "",
     imageMimeType: hasImage ? (imageMimeType || "application/octet-stream") : "",
     imageName,
-    imageSize
+    imageSize,
+    versions
   };
 }
 
@@ -2204,6 +2243,33 @@ function buildFileListEntry(entry) {
   const imageUrl = normalized.imageStoredName
     ? `/api/files/${encodeURIComponent(normalized.id)}/image`
     : "";
+  const versions = [
+    {
+      id: normalized.id,
+      downloadId: normalized.id,
+      fileId: normalized.id,
+      name: normalized.name,
+      displayName: normalized.displayName || normalized.name,
+      mimeType: normalized.mimeType,
+      size: normalized.size,
+      uploadedAt: normalized.contentUpdatedAt || normalized.updatedAt || normalized.uploadedAt,
+      current: true
+    },
+    ...normalized.versions.map((version) => ({
+      id: version.id,
+      versionId: version.id,
+      downloadId: normalized.id,
+      fileId: normalized.id,
+      name: version.name,
+      displayName: version.displayName || version.name,
+      mimeType: version.mimeType,
+      size: version.size,
+      uploadedAt: version.uploadedAt,
+      archivedAt: version.archivedAt,
+      downloadCount: version.downloadCount,
+      current: false
+    }))
+  ];
 
   return {
     id: normalized.id,
@@ -2224,7 +2290,8 @@ function buildFileListEntry(entry) {
     uploader: normalized.uploader || normalized.uploaderDiscordId || "",
     imageUrl,
     imageName: normalized.imageName,
-    hasImage: Boolean(imageUrl)
+    hasImage: Boolean(imageUrl),
+    versions
   };
 }
 
@@ -9311,9 +9378,25 @@ app.post("/api/files/:id/replace", requireAdmin, uploadFileOnly, (req, res) => {
       return;
     }
 
-    const currentEntry = entries[index];
-    const currentStoredName = String(currentEntry.storedName || "").trim();
+    const currentEntry = normalizeMetadataFileEntry(entries[index]);
+    if (!currentEntry) {
+      cleanupUploadedFile();
+      res.status(400).json({ error: "Invalid current file metadata" });
+      return;
+    }
     const now = new Date().toISOString();
+    const archivedVersion = normalizeMetadataFileVersionEntry({
+      id: crypto.randomUUID(),
+      storedName: currentEntry.storedName,
+      name: currentEntry.name,
+      displayName: currentEntry.displayName,
+      mimeType: currentEntry.mimeType,
+      size: currentEntry.size,
+      uploadedAt: currentEntry.contentUpdatedAt || currentEntry.updatedAt || currentEntry.uploadedAt,
+      archivedAt: now,
+      uploaderDiscordId: currentEntry.uploaderDiscordId,
+      uploader: currentEntry.uploader
+    });
     const nextEntry = {
       ...currentEntry,
       storedName: uploadedFile.filename,
@@ -9321,7 +9404,11 @@ app.post("/api/files/:id/replace", requireAdmin, uploadFileOnly, (req, res) => {
       mimeType: String(uploadedFile.mimetype || "application/octet-stream").trim() || "application/octet-stream",
       size: Math.max(0, Number(uploadedFile.size) || 0),
       updatedAt: now,
-      contentUpdatedAt: now
+      contentUpdatedAt: now,
+      versions: [
+        ...(archivedVersion ? [archivedVersion] : []),
+        ...currentEntry.versions
+      ]
     };
 
     const normalizedEntry = normalizeMetadataFileEntry(nextEntry);
@@ -9337,12 +9424,8 @@ app.post("/api/files/:id/replace", requireAdmin, uploadFileOnly, (req, res) => {
     } catch (error) {
       cleanupUploadedFile();
       console.error("[files] file replace error:", error);
-      res.status(500).json({ error: "Unable to replace file" });
+      res.status(500).json({ error: "Unable to update file" });
       return;
-    }
-
-    if (currentStoredName && currentStoredName !== normalizedEntry.storedName) {
-      deleteStoredUpload(currentStoredName);
     }
 
     const responseFile = buildFileListEntry(normalizedEntry);
@@ -9504,6 +9587,12 @@ app.delete("/api/files/:id", requireAdmin, (req, res) => {
     writeMetadataStore(entries);
 
     deleteStoredUpload(entry.storedName);
+    const normalizedEntry = normalizeMetadataFileEntry(entry);
+    if (normalizedEntry) {
+      normalizedEntry.versions.forEach((version) => {
+        deleteStoredUpload(version.storedName);
+      });
+    }
     deleteStoredUpload(entry.imageStoredName);
     deletePublicFileSharesForFileId(fileId);
 
@@ -9531,8 +9620,13 @@ app.get("/api/files/:id/image", requireAuthorized, (req, res) => {
 
 app.get("/api/files/:id/download", requireAuthorized, (req, res) => {
   const fileId = String(req.params.id || "").trim().toLowerCase();
+  const versionId = String(req.query?.version || "").trim().toLowerCase();
   if (!FILE_ID_PATTERN.test(fileId)) {
     res.status(400).json({ error: "Invalid file id" });
+    return;
+  }
+  if (versionId && !FILE_ID_PATTERN.test(versionId)) {
+    res.status(400).json({ error: "Invalid file version id" });
     return;
   }
 
@@ -9544,12 +9638,25 @@ app.get("/api/files/:id/download", requireAuthorized, (req, res) => {
   }
   const entry = entries[index];
   const normalizedEntryForDownload = normalizeMetadataFileEntry(entry);
+  if (!normalizedEntryForDownload) {
+    res.status(400).json({ error: "Invalid file metadata" });
+    return;
+  }
   if (normalizedEntryForDownload?.outdated) {
     res.status(410).json({ error: "This file is outdated and downloads are blocked." });
     return;
   }
 
-  const storedPath = resolveUploadStoredPath(entry.storedName);
+  const requestedVersion = versionId
+    ? normalizedEntryForDownload?.versions.find((version) => version.id === versionId) || null
+    : null;
+  if (versionId && !requestedVersion) {
+    res.status(404).json({ error: "File version not found" });
+    return;
+  }
+
+  const downloadTarget = requestedVersion || normalizedEntryForDownload;
+  const storedPath = resolveUploadStoredPath(downloadTarget.storedName);
   if (!storedPath) {
     res.status(400).json({ error: "Invalid storage path" });
     return;
@@ -9561,10 +9668,22 @@ app.get("/api/files/:id/download", requireAuthorized, (req, res) => {
   }
 
   try {
-    const normalizedEntry = normalizeMetadataFileEntry({
-      ...entry,
-      downloadCount: Math.max(0, Number(entry.downloadCount) || 0) + 1
-    });
+    const normalizedEntry = versionId
+      ? normalizeMetadataFileEntry({
+        ...normalizedEntryForDownload,
+        versions: normalizedEntryForDownload.versions.map((version) => (
+          version.id === versionId
+            ? {
+              ...version,
+              downloadCount: Math.max(0, Number(version.downloadCount) || 0) + 1
+            }
+            : version
+        ))
+      })
+      : normalizeMetadataFileEntry({
+        ...normalizedEntryForDownload,
+        downloadCount: Math.max(0, Number(normalizedEntryForDownload.downloadCount) || 0) + 1
+      });
     if (normalizedEntry) {
       entries[index] = normalizedEntry;
       writeMetadataStore(entries);
@@ -9574,8 +9693,8 @@ app.get("/api/files/:id/download", requireAuthorized, (req, res) => {
   }
 
   res.setHeader("Cache-Control", "no-store");
-  res.type(entry.mimeType || "application/octet-stream");
-  res.download(storedPath, entry.name);
+  res.type(downloadTarget.mimeType || "application/octet-stream");
+  res.download(storedPath, downloadTarget.name);
 });
 
 app.post("/api/files/:id/public-share", requireAuthorized, (req, res) => {

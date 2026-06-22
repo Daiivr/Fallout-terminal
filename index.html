@@ -40,7 +40,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="preload" as="image" href="assets/images/minerva-plan-fallback.png" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="css/styles.css?v=20260620-intel-email-v1" />
+  <link rel="stylesheet" href="css/styles.css?v=20260622-files-detail-modal-v4" />
 </head>
 <body class="is-booting">
   <noscript>
@@ -641,6 +641,22 @@
         <div class="files-delete-actions files-share-actions">
           <button id="filesShareCancelBtn" class="files-btn" type="button">CANCEL</button>
         </div>
+      </div>
+    </div>
+    <div id="filesDetailOverlay" class="files-admin-modal-overlay files-detail-modal-overlay" aria-hidden="true">
+      <div
+        class="files-admin-modal-core files-detail-modal-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filesDetailModalTitle"
+        aria-describedby="filesDetailModalSummary"
+      >
+        <div class="files-admin-modal-head files-detail-modal-close-row">
+          <button id="filesDetailModalCloseBtn" class="files-btn files-admin-modal-close" type="button">CLOSE</button>
+        </div>
+        <article id="filesDetailModalPanel" class="panel files-detail-modal-panel" hidden>
+          <div id="filesDetailModalBody" class="files-detail-modal-body"></div>
+        </article>
       </div>
     </div>
     <div id="filesBotAdminLeaveOverlay" class="files-delete-overlay files-bot-admin-leave-overlay" aria-hidden="true">
@@ -2383,13 +2399,13 @@
 
   <script src="data/minerva-lists.js"></script>
   <script src="data/minerva-detail-fallback.js?v=20260408-minerva-mod-workshop-v5"></script>
-  <script src="js/i18n/en.js?v=20260620-intel-email-v1"></script>
-  <script src="js/i18n/es.js?v=20260620-intel-email-v1"></script>
+  <script src="js/i18n/en.js?v=20260621-files-detail-modal-v2"></script>
+  <script src="js/i18n/es.js?v=20260621-files-detail-modal-v2"></script>
   <script src="js/i18n/index.js?v=20260318-share-stop-alert-copy"></script>
-  <script src="js/dom/elements.js?v=20260620-intel-email-v1"></script>
+  <script src="js/dom/elements.js?v=20260621-files-detail-modal-v1"></script>
   <script src="js/core/config.js?v=20260620-intel-email-v1"></script>
   <script src="js/core/state.js?v=20260620-intel-email-v1"></script>
-  <script src="js/app.js?v=20260620-intel-email-v1"></script>
+  <script src="js/app.js?v=20260622-files-detail-modal-v3"></script>
   <script src="js/atomic-shop.js?v=20260617-atomic-filter-tabs-v1"></script>
 </body>
 </html>

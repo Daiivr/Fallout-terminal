@@ -1,6 +1,7 @@
 let filesLiveIdentityPollTimer = null;
 let filesLiveIdentityPollInFlight = false;
 let filesAdminRequestsFeedbackTimer = null;
+let filesEditModalFeedbackTimer = null;
 let filesPublicSharesFeedbackTimer = null;
 let filesUploadFeedbackTimer = null;
 let filesDownloadRefreshTimer = null;
@@ -216,6 +217,7 @@ const state = {
     cautionModal: {
       open: false,
       fileId: "",
+      versionId: "",
       fileName: "",
       kind: ""
     },
