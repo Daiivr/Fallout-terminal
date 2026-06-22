@@ -10881,7 +10881,7 @@ body.is-files .files-group-list {
 
 body.is-files .files-group-section.is-open .files-group-list {
   margin-top: 2px;
-  padding-top: 18px;
+  padding: 18px 0 18px;
 }
 
 body.is-files .files-list.is-group-focus-mode {
@@ -11910,6 +11910,10 @@ body.is-files .files-file-card .files-file-badge {
   flex: 0 0 auto;
   max-width: 100%;
   white-space: nowrap;
+}
+
+body.is-files .files-group-section.is-open .files-group-list {
+  padding-bottom: 18px;
 }
 
 body.is-files .files-file-rename-wrap {
@@ -14163,7 +14167,7 @@ body.is-classified .classified-layout {
   body.is-files .files-group-list {
     grid-template-columns: minmax(0, 1fr);
     justify-items: center;
-    padding: 2px 0 0;
+    padding: 2px 0 18px;
   }
 
   body.is-files .files-group-manager-actions {
