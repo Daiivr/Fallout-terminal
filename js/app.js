@@ -2,9 +2,23 @@
 // Depends on: js/core/config.js, js/core/state.js loaded before this file
 const CLASSIFIED_SEARCH_RENDER_DEBOUNCE_MS = 180;
 const INTEL_EMAIL_FEEDBACK_AUTO_DISMISS_MS = 4500;
+const COMMAND_TERMINAL_COMMANDS = ["help", "clear", "daily", "weekly", "axolotl", "minerva", "silos"];
+const COMMAND_TERMINAL_TYPE_CHAR_MS = 7;
+const COMMAND_TERMINAL_TYPE_LINE_GAP_MS = 35;
+const COMMAND_TERMINAL_BLOCK_WIDTH = 48;
+const COMMAND_TERMINAL_OPEN_ANIMATION_MS = 560;
+const COMMAND_TERMINAL_BOOT_LINE_GAP_MS = 120;
+const COMMAND_TERMINAL_CLEAR_ANIMATION_MS = 420;
+const COMMAND_TERMINAL_ACCESS_ANIMATION_MS = 760;
 
 let classifiedSearchRenderTimer = 0;
 let intelEmailFeedbackDismissTimer = 0;
+let commandTerminalLastFocusedElement = null;
+let commandTerminalHasUserOutput = false;
+let commandTerminalCommandBusy = false;
+let commandTerminalIsBooting = false;
+let commandTerminalBootRunId = 0;
+const commandTerminalQueuedCommands = [];
 
 function t(key, vars = {}) {
   const dictionary = STRINGS[state.lang] || STRINGS.en;
@@ -19057,6 +19071,808 @@ function escapeRegExp(value) {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function isCommandTerminalOpen() {
+  return Boolean(elements.commandTerminalOverlay?.classList.contains("is-active"));
+}
+
+function isCommandTerminalElement(target) {
+  return Boolean(
+    target instanceof Node
+    && elements.commandTerminalOverlay instanceof HTMLElement
+    && elements.commandTerminalOverlay.contains(target)
+  );
+}
+
+function getCommandTerminalPromptUser() {
+  const me = normalizeFilesProfile(state.files?.me);
+  if (!me.loggedIn) {
+    return "user";
+  }
+
+  const username = String(me.username || "")
+    .trim()
+    .replace(/^@+/, "");
+  return username ? `user@${username}` : "user@discord";
+}
+
+function renderCommandTerminalIntro({ force = false } = {}) {
+  if (!elements.commandTerminalOutput || (commandTerminalHasUserOutput && !force)) {
+    return;
+  }
+
+  if (commandTerminalIsBooting) {
+    elements.commandTerminalOutput.replaceChildren();
+    return;
+  }
+
+  const intro = document.createElement("p");
+  intro.className = "command-terminal-line is-system";
+  intro.textContent = t("command_terminal_system_intro");
+
+  const hint = document.createElement("p");
+  hint.className = "command-terminal-line is-muted";
+  hint.textContent = t("command_terminal_system_hint");
+
+  elements.commandTerminalOutput.replaceChildren(intro, hint);
+}
+
+function syncCommandTerminalLanguage() {
+  if (elements.commandTerminalBadge) {
+    elements.commandTerminalBadge.textContent = t("command_terminal_badge");
+  }
+  if (elements.commandTerminalTitle) {
+    elements.commandTerminalTitle.textContent = t("command_terminal_title");
+  }
+  if (elements.commandTerminalCloseBtn) {
+    elements.commandTerminalCloseBtn.textContent = t("command_terminal_close");
+  }
+  if (elements.commandTerminalStatusReady) {
+    elements.commandTerminalStatusReady.textContent = t("command_terminal_status_ready");
+  }
+  if (elements.commandTerminalStatusEmpty) {
+    elements.commandTerminalStatusEmpty.textContent = t("command_terminal_status_empty");
+  }
+  if (elements.commandTerminalStatusExit) {
+    elements.commandTerminalStatusExit.textContent = t("command_terminal_status_exit");
+  }
+  if (elements.commandTerminalInputLabel) {
+    elements.commandTerminalInputLabel.textContent = t("command_terminal_input_label");
+    elements.commandTerminalInputLabel.dataset.bootLabel = t("command_terminal_boot_label");
+  }
+  if (elements.commandTerminalInput) {
+    elements.commandTerminalInput.placeholder = t("command_terminal_placeholder");
+  }
+  if (elements.commandTerminalTypedText) {
+    elements.commandTerminalTypedText.dataset.placeholder = t("command_terminal_placeholder");
+  }
+  if (elements.commandTerminalHint) {
+    elements.commandTerminalHint.textContent = t("command_terminal_shortcut_hint");
+  }
+  syncCommandTerminalPrompt();
+  renderCommandTerminalIntro();
+}
+
+function syncCommandTerminalPrompt() {
+  if (elements.commandTerminalPromptUser) {
+    elements.commandTerminalPromptUser.textContent = getCommandTerminalPromptUser();
+  }
+  if (elements.commandTerminalTypedText && elements.commandTerminalInput) {
+    elements.commandTerminalTypedText.textContent = elements.commandTerminalInput.value;
+  }
+}
+
+function waitCommandTerminal(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function shouldAnimateCommandTerminalOutput() {
+  return !window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+}
+
+function setCommandTerminalBooting(isBooting) {
+  commandTerminalIsBooting = Boolean(isBooting);
+  elements.commandTerminalOverlay?.classList.toggle("is-booting", commandTerminalIsBooting);
+  elements.commandTerminalCore?.setAttribute("aria-busy", commandTerminalIsBooting ? "true" : "false");
+
+  if (elements.commandTerminalInput) {
+    elements.commandTerminalInput.readOnly = commandTerminalIsBooting;
+    elements.commandTerminalInput.setAttribute("aria-disabled", commandTerminalIsBooting ? "true" : "false");
+  }
+}
+
+function shouldRunCommandTerminalBootSequence() {
+  return Boolean(
+    !commandTerminalHasUserOutput
+    && !commandTerminalCommandBusy
+    && commandTerminalQueuedCommands.length === 0
+  );
+}
+
+function getCommandTerminalBootLines() {
+  return [
+    t("command_terminal_boot_power"),
+    t("command_terminal_boot_display"),
+    t("command_terminal_boot_handshake"),
+    t("command_terminal_boot_uplink"),
+    t("command_terminal_boot_input"),
+    t("command_terminal_boot_ready")
+  ];
+}
+
+async function runCommandTerminalBootSequence() {
+  if (!elements.commandTerminalOutput || !shouldRunCommandTerminalBootSequence()) {
+    setCommandTerminalBooting(false);
+    return;
+  }
+
+  const bootRunId = ++commandTerminalBootRunId;
+  setCommandTerminalBooting(true);
+  clearCommandTerminalInputValue();
+
+  await waitCommandTerminal(COMMAND_TERMINAL_OPEN_ANIMATION_MS);
+  if (bootRunId !== commandTerminalBootRunId || !isCommandTerminalOpen()) {
+    return;
+  }
+
+  elements.commandTerminalOutput.replaceChildren();
+  elements.commandTerminalOutput.scrollTop = 0;
+
+  for (const line of getCommandTerminalBootLines()) {
+    if (bootRunId !== commandTerminalBootRunId || !isCommandTerminalOpen()) {
+      return;
+    }
+    await appendCommandTerminalLine(line, "is-boot", { animate: true });
+    await waitCommandTerminal(COMMAND_TERMINAL_BOOT_LINE_GAP_MS);
+  }
+
+  if (bootRunId !== commandTerminalBootRunId || !isCommandTerminalOpen()) {
+    return;
+  }
+
+  await animateCommandTerminalOutputClear({ keepUserOutputState: true });
+  if (bootRunId !== commandTerminalBootRunId || !isCommandTerminalOpen()) {
+    return;
+  }
+
+  await appendCommandTerminalLine(t("command_terminal_system_intro"), "is-system");
+  await appendCommandTerminalLine(t("command_terminal_system_hint"), "is-muted");
+  setCommandTerminalBooting(false);
+  focusCommandTerminalInput();
+}
+
+async function appendCommandTerminalLine(text, modifier = "", { animate = true } = {}) {
+  if (!elements.commandTerminalOutput) {
+    return;
+  }
+
+  const line = document.createElement("p");
+  line.className = `command-terminal-line${modifier ? ` ${modifier}` : ""}`;
+  const value = String(text ?? "");
+  const shouldAnimate = animate && shouldAnimateCommandTerminalOutput() && value.length > 0;
+  line.textContent = shouldAnimate ? "" : value;
+  elements.commandTerminalOutput.appendChild(line);
+
+  elements.commandTerminalOutput.scrollTop = elements.commandTerminalOutput.scrollHeight;
+
+  if (!shouldAnimate) {
+    return;
+  }
+
+  for (const char of value) {
+    line.textContent += char;
+    elements.commandTerminalOutput.scrollTop = elements.commandTerminalOutput.scrollHeight;
+    await waitCommandTerminal(COMMAND_TERMINAL_TYPE_CHAR_MS);
+  }
+
+  await waitCommandTerminal(COMMAND_TERMINAL_TYPE_LINE_GAP_MS);
+}
+
+async function appendCommandTerminalLines(lines, modifier = "") {
+  for (const line of lines) {
+    await appendCommandTerminalLine(line, modifier);
+  }
+}
+
+function buildCommandTerminalBlockFrame(title) {
+  const label = `[ ${String(title || "").trim().toUpperCase()} ]`;
+  const remaining = Math.max(4, COMMAND_TERMINAL_BLOCK_WIDTH - label.length);
+  const left = Math.floor(remaining / 2);
+  const right = remaining - left;
+  return `${"-".repeat(left)}${label}${"-".repeat(right)}`;
+}
+
+async function appendCommandTerminalBlock(title, lines = []) {
+  await appendCommandTerminalLine(buildCommandTerminalBlockFrame(title), "is-frame");
+  for (const line of lines) {
+    await appendCommandTerminalLine(`| ${line}`, "is-block-line");
+  }
+  await appendCommandTerminalLine("-".repeat(COMMAND_TERMINAL_BLOCK_WIDTH), "is-frame");
+}
+
+function clearCommandTerminalOutput() {
+  if (!elements.commandTerminalOutput) {
+    return;
+  }
+  elements.commandTerminalOutput.replaceChildren();
+  commandTerminalHasUserOutput = true;
+}
+
+async function animateCommandTerminalOutputClear({ keepUserOutputState = false } = {}) {
+  if (!elements.commandTerminalOutput) {
+    return;
+  }
+
+  const shouldAnimate = shouldAnimateCommandTerminalOutput()
+    && elements.commandTerminalOutput.childElementCount > 0;
+
+  if (shouldAnimate) {
+    elements.commandTerminalOutput.classList.add("is-clearing");
+    await waitCommandTerminal(COMMAND_TERMINAL_CLEAR_ANIMATION_MS);
+  }
+
+  elements.commandTerminalOutput.replaceChildren();
+  elements.commandTerminalOutput.scrollTop = 0;
+  elements.commandTerminalOutput.classList.remove("is-clearing");
+
+  if (!keepUserOutputState) {
+    commandTerminalHasUserOutput = true;
+  }
+}
+
+async function animateCommandTerminalAccessUnlock() {
+  if (!elements.commandTerminalCore || !elements.commandTerminalOutput || !shouldAnimateCommandTerminalOutput()) {
+    return;
+  }
+
+  elements.commandTerminalCore.classList.add("is-access-unlocking");
+  elements.commandTerminalOutput.classList.add("is-access-unlocking");
+  try {
+    await waitCommandTerminal(COMMAND_TERMINAL_ACCESS_ANIMATION_MS);
+  } finally {
+    elements.commandTerminalCore.classList.remove("is-access-unlocking");
+    elements.commandTerminalOutput.classList.remove("is-access-unlocking");
+  }
+}
+
+function appendCommandTerminalPromptLine(command) {
+  if (!elements.commandTerminalOutput) {
+    return;
+  }
+
+  const line = document.createElement("p");
+  line.className = "command-terminal-line is-command";
+
+  const user = document.createElement("span");
+  user.className = "command-terminal-output-user";
+  user.textContent = getCommandTerminalPromptUser();
+
+  const symbol = document.createElement("span");
+  symbol.className = "command-terminal-output-symbol";
+  symbol.textContent = "$";
+
+  const value = document.createElement("span");
+  value.className = "command-terminal-output-command";
+  value.textContent = command.startsWith("/") ? command : `/${command}`;
+
+  line.append(user, document.createTextNode(" "), symbol, document.createTextNode(" "), value);
+  elements.commandTerminalOutput.appendChild(line);
+
+  elements.commandTerminalOutput.scrollTop = elements.commandTerminalOutput.scrollHeight;
+}
+
+function normalizeCommandTerminalCommand(command) {
+  return String(command || "")
+    .trim()
+    .replace(/^\/+/, "")
+    .trim()
+    .toLowerCase();
+}
+
+function parseCommandTerminalTokens(command) {
+  const normalized = String(command || "").trim().replace(/^\/+/, "").trim();
+  return normalized ? normalized.split(/\s+/).filter(Boolean) : [];
+}
+
+function hasCommandTerminalSiloData() {
+  return Object.values(state.silo.codes || {}).some(Boolean);
+}
+
+function formatCommandTerminalResetLine() {
+  const resetTargetMs = getActiveSiloResetTargetMs();
+  const resetDate = new Date(resetTargetMs);
+  const remainingMs = resetTargetMs - Date.now();
+  const countdown = formatSiloCountdownValue(Math.max(0, Math.floor(remainingMs / 1000)));
+  return t("command_terminal_silos_reset", {
+    reset: formatSiloResetMoment(resetDate),
+    countdown
+  });
+}
+
+async function handleCommandTerminalSilosCommand() {
+  if (!hasCommandTerminalSiloData() && !state.silo.error) {
+    await appendCommandTerminalLine(t("command_terminal_fetching_silos"), "is-muted");
+    await refreshSiloPanel();
+  }
+
+  if (state.silo.error || !hasCommandTerminalSiloData()) {
+    await appendCommandTerminalLine(t("command_terminal_silos_unavailable"), "is-system");
+    return;
+  }
+
+  const codes = state.silo.codes || {};
+  const lines = [t("command_terminal_silos_header")];
+  lines.push(...["Alpha", "Bravo", "Charlie"].map((site) => {
+    const code = formatSiloCodeForDisplay(codes[site]);
+    return t("command_terminal_silos_code", { site, code });
+  }));
+  lines.push(formatCommandTerminalResetLine());
+  if (state.silo.isExpired) {
+    lines.push(t("command_terminal_silos_expired"));
+  }
+  await appendCommandTerminalBlock("SILOS", lines);
+}
+
+function formatCommandTerminalMinervaMoment(date) {
+  return formatMinervaLocationDate(date);
+}
+
+function formatCommandTerminalMinervaCountdown(targetDate) {
+  const validTarget = asValidDate(targetDate);
+  if (!validTarget) {
+    return "--";
+  }
+  return formatMinervaCountdown(validTarget.getTime() - Date.now());
+}
+
+async function handleCommandTerminalMinervaCommand() {
+  if (!state.minerva.data && !state.minerva.error) {
+    await appendCommandTerminalLine(t("command_terminal_fetching_minerva"), "is-muted");
+    await refreshMinervaPanel();
+  }
+
+  const data = state.minerva.data;
+  if (state.minerva.error || !data) {
+    await appendCommandTerminalLine(t("command_terminal_minerva_unavailable"), "is-system");
+    return;
+  }
+
+  const location = localizeLocation(data.location || "--");
+  const { eventStart, eventEnd } = resolveMinervaWindowDates(data);
+  const targetDate = data.active ? eventEnd : eventStart;
+  const actionKey = data.active
+    ? "command_terminal_minerva_active"
+    : "command_terminal_minerva_transit";
+  const countdownKey = data.active
+    ? "command_terminal_minerva_leaves_in"
+    : "command_terminal_minerva_arrives_in";
+
+  const lines = [
+    t(actionKey, { location }),
+    t("command_terminal_minerva_list", {
+    list: data.listNumber ? String(data.listNumber).padStart(2, "0") : "--"
+    }),
+    t(countdownKey, {
+      when: formatCommandTerminalMinervaMoment(targetDate),
+      countdown: formatCommandTerminalMinervaCountdown(targetDate)
+    })
+  ];
+
+  if (Array.isArray(data.items) && data.items.length) {
+    lines.push(t("command_terminal_minerva_items", {
+      count: data.items.length
+    }));
+  }
+
+  await appendCommandTerminalBlock("MINERVA", lines);
+}
+
+function formatCommandTerminalBullion(value) {
+  const price = parseOptionalPrice(value);
+  if (!Number.isFinite(price)) {
+    return "--";
+  }
+  return price.toLocaleString(state.lang === "es" ? "es-ES" : "en-US");
+}
+
+function formatCommandTerminalMinervaListLine(item, index) {
+  const name = String(item?.Name || item?.name || "").trim() || "--";
+  const price = formatCommandTerminalBullion(item?.Price ?? item?.price);
+  return t("command_terminal_minerva_list_item", {
+    n: String(index + 1).padStart(2, "0"),
+    name,
+    price
+  });
+}
+
+async function handleCommandTerminalMinervaListCommand(listNumberRaw) {
+  const listNumber = Number.parseInt(String(listNumberRaw || "").trim(), 10);
+  if (!Number.isFinite(listNumber)) {
+    await appendCommandTerminalLine(t("command_terminal_minerva_list_usage"), "is-muted");
+    return;
+  }
+
+  const lists = await loadMinervaLists();
+  const listData = Array.isArray(lists)
+    ? lists.find((entry) => Number(entry?.ListNumber) === listNumber)
+    : null;
+  const inventory = Array.isArray(listData?.Inventory) ? listData.Inventory : [];
+
+  if (!listData || !inventory.length) {
+    await appendCommandTerminalLine(t("command_terminal_minerva_list_not_found", {
+      list: String(listNumber).padStart(2, "0")
+    }), "is-system");
+    return;
+  }
+
+  const listLabel = String(listNumber).padStart(2, "0");
+  await appendCommandTerminalBlock(`MINERVA LIST ${listLabel}`, [
+    t("command_terminal_minerva_list_count", { count: inventory.length }),
+    ...inventory.map((item, index) => formatCommandTerminalMinervaListLine(item, index))
+  ]);
+}
+
+function formatCommandTerminalAxolotlDaysLeft(current) {
+  if (!current || !Number.isFinite(Number(current.daysLeft))) {
+    return "--";
+  }
+  if (current.daysLeft <= 0) {
+    return t("axolotl_modal_last_day");
+  }
+  if (current.daysLeft === 1) {
+    return t("axolotl_modal_day_left");
+  }
+  return t("axolotl_modal_days_left", { n: current.daysLeft });
+}
+
+async function handleCommandTerminalAxolotlCommand() {
+  const lang = state.lang === "es" ? "es" : "en";
+  const current = getCurrentAxolotl();
+  const entry = current.entry;
+
+  await appendCommandTerminalBlock("AXOLOTL", [
+    t("command_terminal_axolotl_month", {
+      month: formatAxolotlMonthLabel(current.activeYear, current.activeMonth, lang)
+    }),
+    t("command_terminal_axolotl_name", {
+      name: axolotlName(entry, lang)
+    }),
+    t("command_terminal_axolotl_regions", {
+      regions: axolotlRegionText(entry, lang)
+    }),
+    t("command_terminal_axolotl_window", {
+      start: formatAxolotlEasternDateTime(current.periodStart, lang),
+      end: formatAxolotlEasternDateTime(current.periodEnd - 60000, lang)
+    }),
+    t("command_terminal_axolotl_remaining", {
+      remaining: formatCommandTerminalAxolotlDaysLeft(current)
+    })
+  ]);
+}
+
+function formatCommandTerminalScore(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return "--";
+  }
+
+  return numericValue.toLocaleString(state.lang === "es" ? "es-ES" : "en-US");
+}
+
+async function ensureCommandTerminalNukaChallenges(key) {
+  hydrateClassifiedNukaIntelFromCache();
+  const normalizedKey = normalizeClassifiedNukaIntelKey(key);
+  const hasCurrentData = hasClassifiedNukaIntelForPanel(state.classifiedNukaIntel.data, normalizedKey);
+
+  if (!hasCurrentData) {
+    await appendCommandTerminalLine(t("command_terminal_fetching_challenges"), "is-muted");
+    const previousKey = state.classifiedNukaIntel.activeKey;
+    state.classifiedNukaIntel.activeKey = normalizedKey;
+    await fetchClassifiedNukaIntel({ force: true, silent: true });
+    state.classifiedNukaIntel.activeKey = previousKey;
+  }
+
+  return normalizeClassifiedNukaIntelPayload(state.classifiedNukaIntel.data || {})[normalizedKey];
+}
+
+function formatCommandTerminalChallengeLine(item, index) {
+  const name = translateClassifiedNukaChallengeName(item.name);
+  const score = formatCommandTerminalScore(item.score);
+  return t("command_terminal_challenge_item", {
+    n: String(index + 1).padStart(2, "0"),
+    name,
+    score
+  });
+}
+
+async function handleCommandTerminalChallengesCommand(key) {
+  const normalizedKey = key === "weeklyChallenges" ? "weeklyChallenges" : "dailyChallenges";
+  const section = await ensureCommandTerminalNukaChallenges(normalizedKey);
+  const items = normalizeClassifiedNukaItems(section?.items);
+
+  if (!items.length) {
+    await appendCommandTerminalLine(t("command_terminal_challenges_unavailable"), "is-system");
+    return;
+  }
+
+  const lines = [];
+  const endsIn = translateClassifiedNukaRelativeTime(section.endsIn || "");
+  if (endsIn) {
+    lines.push(t("command_terminal_challenges_ends_in", { endsIn }));
+  }
+  lines.push(...items.map((item, index) => formatCommandTerminalChallengeLine(item, index)));
+
+  await appendCommandTerminalBlock(
+    normalizedKey === "weeklyChallenges" ? "WEEKLY" : "DAILY",
+    lines
+  );
+}
+
+async function handleCommandTerminalClassifiedUnlockCommand() {
+  state.easterEgg.unlocked = true;
+  if (state.easterEgg.hack) {
+    state.easterEgg.hack.solved = true;
+    state.easterEgg.hack.locked = false;
+  }
+
+  await animateCommandTerminalAccessUnlock();
+  await appendCommandTerminalBlock("ACCESS", [
+    t("command_terminal_classified_unlock_granted"),
+    t("command_terminal_classified_unlock_hint")
+  ]);
+  showClassifiedPage();
+}
+
+async function handleCommandTerminalHelpCommand() {
+  await appendCommandTerminalBlock("HELP", [
+    t("command_terminal_help_help"),
+    t("command_terminal_help_clear"),
+    t("command_terminal_help_daily"),
+    t("command_terminal_help_weekly"),
+    t("command_terminal_help_axolotl"),
+    t("command_terminal_help_minerva"),
+    t("command_terminal_help_minerva_list"),
+    t("command_terminal_help_silos")
+  ]);
+}
+
+async function runCommandTerminalCommand(command) {
+  const tokens = parseCommandTerminalTokens(command);
+  const commandName = normalizeCommandTerminalCommand(tokens[0] || command);
+  if (!commandName) {
+    await appendCommandTerminalLine(t("command_terminal_empty"), "is-muted");
+    return;
+  }
+
+  if (commandName === "clear" || commandName === "cls") {
+    await animateCommandTerminalOutputClear();
+    await appendCommandTerminalLine(t("command_terminal_clear_done"), "is-muted", { animate: false });
+    return;
+  }
+
+  if (commandName === "help" || commandName === "?") {
+    await handleCommandTerminalHelpCommand();
+    return;
+  }
+
+  if (commandName === "overseer") {
+    await handleCommandTerminalClassifiedUnlockCommand();
+    return;
+  }
+
+  if (commandName === "axolotl" || commandName === "axoloth" || commandName === "ajolote") {
+    await handleCommandTerminalAxolotlCommand();
+    return;
+  }
+
+  if (commandName === "daily" || commandName === "dailies") {
+    await handleCommandTerminalChallengesCommand("dailyChallenges");
+    return;
+  }
+
+  if (commandName === "weekly" || commandName === "weeklies") {
+    await handleCommandTerminalChallengesCommand("weeklyChallenges");
+    return;
+  }
+
+  if (commandName === "silos" || commandName === "silo") {
+    await handleCommandTerminalSilosCommand();
+    return;
+  }
+
+  if (commandName === "mlist") {
+    await handleCommandTerminalMinervaListCommand(tokens[1]);
+    return;
+  }
+
+  if (commandName === "minerva" && String(tokens[1] || "").toLowerCase() === "list") {
+    await handleCommandTerminalMinervaListCommand(tokens[2]);
+    return;
+  }
+
+  if (commandName === "minerva") {
+    await handleCommandTerminalMinervaCommand();
+    return;
+  }
+
+  await appendCommandTerminalLine(t("command_terminal_unregistered", {
+    command,
+    commands: COMMAND_TERMINAL_COMMANDS.join(", ")
+  }), "is-system");
+}
+
+function focusCommandTerminalInput() {
+  if (!elements.commandTerminalInput) {
+    return;
+  }
+
+  elements.commandTerminalInput.click();
+  try {
+    elements.commandTerminalInput.focus({ preventScroll: true });
+  } catch {
+    elements.commandTerminalInput.focus();
+  }
+  elements.commandTerminalInput.select();
+}
+
+function openCommandTerminal() {
+  if (!elements.commandTerminalOverlay) {
+    return;
+  }
+
+  const wasOpen = isCommandTerminalOpen();
+  const shouldBoot = !wasOpen && shouldRunCommandTerminalBootSequence();
+
+  if (!isCommandTerminalOpen() && !isCommandTerminalElement(document.activeElement)) {
+    commandTerminalLastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  }
+
+  if (shouldBoot) {
+    setCommandTerminalBooting(true);
+  }
+  syncCommandTerminalLanguage();
+  syncCommandTerminalPrompt();
+  elements.commandTerminalOverlay.classList.add("is-active");
+  elements.commandTerminalOverlay.setAttribute("aria-hidden", "false");
+  document.body.classList.add("is-command-terminal-open");
+
+  focusCommandTerminalInput();
+  window.requestAnimationFrame(focusCommandTerminalInput);
+  window.setTimeout(focusCommandTerminalInput, 80);
+
+  if (shouldBoot) {
+    void runCommandTerminalBootSequence();
+  } else {
+    setCommandTerminalBooting(false);
+  }
+}
+
+function closeCommandTerminal({ restoreFocus = true } = {}) {
+  if (!elements.commandTerminalOverlay) {
+    return;
+  }
+
+  elements.commandTerminalOverlay.classList.remove("is-active");
+  elements.commandTerminalOverlay.classList.remove("is-booting");
+  elements.commandTerminalOverlay.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("is-command-terminal-open");
+  commandTerminalBootRunId += 1;
+  setCommandTerminalBooting(false);
+
+  if (isCommandTerminalElement(document.activeElement) && document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
+
+  if (
+    restoreFocus
+    && commandTerminalLastFocusedElement?.isConnected
+    && !isCommandTerminalElement(commandTerminalLastFocusedElement)
+  ) {
+    commandTerminalLastFocusedElement.focus();
+  }
+  commandTerminalLastFocusedElement = null;
+}
+
+function clearCommandTerminalInputValue() {
+  if (elements.commandTerminalInput) {
+    elements.commandTerminalInput.value = "";
+  }
+  syncCommandTerminalPrompt();
+}
+
+async function processCommandTerminalCommand(command) {
+  commandTerminalHasUserOutput = true;
+  appendCommandTerminalPromptLine(command);
+  await runCommandTerminalCommand(command);
+}
+
+async function drainCommandTerminalQueue() {
+  if (commandTerminalCommandBusy) {
+    return;
+  }
+
+  commandTerminalCommandBusy = true;
+  try {
+    while (commandTerminalQueuedCommands.length) {
+      const queuedCommand = commandTerminalQueuedCommands.shift();
+      await processCommandTerminalCommand(queuedCommand);
+    }
+  } finally {
+    commandTerminalCommandBusy = false;
+    focusCommandTerminalInput();
+  }
+}
+
+async function submitCommandTerminalInput() {
+  if (commandTerminalIsBooting) {
+    focusCommandTerminalInput();
+    return;
+  }
+
+  const rawCommand = String(elements.commandTerminalInput?.value || "");
+  const command = rawCommand.trim();
+  commandTerminalHasUserOutput = true;
+
+  if (!command) {
+    if (!commandTerminalCommandBusy) {
+      await appendCommandTerminalLine(t("command_terminal_empty"), "is-muted");
+    }
+    return;
+  }
+
+  commandTerminalQueuedCommands.push(command);
+  clearCommandTerminalInputValue();
+  await drainCommandTerminalQueue();
+}
+
+function handleCommandTerminalSubmit(event) {
+  event.preventDefault();
+  void submitCommandTerminalInput();
+}
+
+function handleCommandTerminalBufferedKeydown(event) {
+  if (!isCommandTerminalOpen() || event.ctrlKey || event.metaKey || event.altKey) {
+    return false;
+  }
+  if (commandTerminalIsBooting) {
+    event.preventDefault();
+    focusCommandTerminalInput();
+    return true;
+  }
+  if (event.target === elements.commandTerminalInput) {
+    return false;
+  }
+
+  const key = String(event.key || "");
+  if (key === "Enter") {
+    event.preventDefault();
+    void submitCommandTerminalInput();
+    focusCommandTerminalInput();
+    return true;
+  }
+  if (key === "Backspace") {
+    event.preventDefault();
+    if (elements.commandTerminalInput) {
+      elements.commandTerminalInput.value = elements.commandTerminalInput.value.slice(0, -1);
+      syncCommandTerminalPrompt();
+      focusCommandTerminalInput();
+    }
+    return true;
+  }
+  if (key.length !== 1) {
+    return false;
+  }
+
+  event.preventDefault();
+  if (elements.commandTerminalInput) {
+    elements.commandTerminalInput.value += key;
+    syncCommandTerminalPrompt();
+    focusCommandTerminalInput();
+  }
+  return true;
+}
+
 function normalizeWikiUrl(url) {
   const value = String(url || "").trim();
   if (!value) {
@@ -20444,6 +21260,7 @@ function applyLanguage(lang, persist = true) {
   elements.bootHint.textContent = t("boot_hint_initializing");
   elements.syncTitle.textContent = t("sync_title");
   elements.classifiedLoadTitle.textContent = t("classified_loading_title");
+  syncCommandTerminalLanguage();
   elements.hackTitle.textContent = t("hack_title");
   elements.hackSubtitle.textContent = t("hack_subtitle");
   elements.hackAttemptsLabel.textContent = t("hack_attempts_label");
@@ -21205,6 +22022,7 @@ async function startBootSequence() {
 
 function wireEvents() {
   const hackInteractiveRoot = elements.hackOverlay?.querySelector(".hack-core") || null;
+  const commandTerminalRoot = elements.commandTerminalCore || null;
   const intelBotInviteRoot = elements.intelBotInviteCore || null;
   const intelEmailRoot = elements.intelEmailForm || null;
   const classifiedPlayersModalRoot = elements.classifiedPlayersCore || null;
@@ -21227,6 +22045,12 @@ function wireEvents() {
     }
     if (document.body.classList.contains("is-classified-loading") && elements.classifiedLoadOverlay?.classList.contains("is-active")) {
       return true;
+    }
+    if (elements.commandTerminalOverlay?.classList.contains("is-active")) {
+      if (!(target instanceof Node) || !(commandTerminalRoot instanceof Node)) {
+        return true;
+      }
+      return !commandTerminalRoot.contains(target);
     }
     if (elements.classifiedPlayersOverlay?.classList.contains("is-active")) {
       if (!(target instanceof Node) || !(classifiedPlayersModalRoot instanceof Node)) {
@@ -21354,6 +22178,19 @@ function wireEvents() {
   }, { passive: true });
   document.addEventListener("keydown", () => {
     primeAudioContext();
+  });
+
+  elements.commandTerminalCloseBtn?.addEventListener("click", () => {
+    closeCommandTerminal();
+  });
+  elements.commandTerminalForm?.addEventListener("submit", handleCommandTerminalSubmit);
+  elements.commandTerminalInput?.addEventListener("input", syncCommandTerminalPrompt);
+  elements.commandTerminalInput?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.isComposing) {
+      return;
+    }
+    event.preventDefault();
+    void submitCommandTerminalInput();
   });
 
   elements.refreshBtn.addEventListener("click", () => {
@@ -22118,6 +22955,23 @@ function wireEvents() {
       playTypeTickSound();
     }
   });
+  document.addEventListener("keydown", (event) => {
+    if (handleCommandTerminalBufferedKeydown(event)) {
+      return;
+    }
+    if (event.key !== "/" || event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+    if (isTypingTarget(event.target)) {
+      return;
+    }
+    if (!document.body.classList.contains("is-ready")) {
+      return;
+    }
+
+    event.preventDefault();
+    openCommandTerminal();
+  });
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (elements.langDropdown && target instanceof Node && !elements.langDropdown.contains(target)) {
@@ -22148,6 +23002,11 @@ function wireEvents() {
   document.addEventListener("wheel", blockBackgroundForActiveOverlay, { passive: false });
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") {
+      return;
+    }
+
+    if (elements.commandTerminalOverlay?.classList.contains("is-active")) {
+      closeCommandTerminal();
       return;
     }
 
