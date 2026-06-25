@@ -5067,8 +5067,9 @@ function renderFilesEditModal({ force = false } = {}) {
 
 function renderFilesAdminModals() {
   const me = normalizeFilesProfile(state.files.me);
-  const canUseAdminTools = Boolean(me.isAuthorized && me.isAdmin);
-  const canUsePublicShares = Boolean(me.isAuthorized);
+  const hasAuthorizedAccess = hasFilesAuthorizedAccess(me);
+  const canUseAdminTools = Boolean(hasAuthorizedAccess && me.isAdmin);
+  const canUsePublicShares = hasAuthorizedAccess;
   const canUseBotAdmin = canUseFilesBotAdmin(me, { requireDesktop: true });
   let activeModal = normalizeFilesAdminModalType(state.files.adminModal.active);
   if ((activeModal === "upload" || activeModal === "edit" || activeModal === "requests") && !canUseAdminTools) {
@@ -5213,8 +5214,9 @@ function renderFilesAdminModals() {
 
 function setFilesAdminModalOpen(nextModal, { focus = true, publicSharesMode = "" } = {}) {
   const me = normalizeFilesProfile(state.files.me);
-  const canUseAdminTools = Boolean(me.isAuthorized && me.isAdmin);
-  const canUsePublicShares = Boolean(me.isAuthorized);
+  const hasAuthorizedAccess = hasFilesAuthorizedAccess(me);
+  const canUseAdminTools = Boolean(hasAuthorizedAccess && me.isAdmin);
+  const canUsePublicShares = hasAuthorizedAccess;
   let normalizedModal = normalizeFilesAdminModalType(nextModal);
   const normalizedPublicSharesMode = normalizeFilesPublicSharesMode(publicSharesMode || state.files.publicShares.mode);
   if ((normalizedModal === "upload" || normalizedModal === "edit" || normalizedModal === "requests") && !canUseAdminTools) {
@@ -5704,7 +5706,7 @@ function renderFilesPublicSharesPanel() {
   const me = normalizeFilesProfile(state.files.me);
   const mode = normalizeFilesPublicSharesMode(state.files.publicShares.mode);
   const adminMode = mode === "admin";
-  const showPanel = Boolean(me.isAuthorized && (!adminMode || me.isAdmin));
+  const showPanel = Boolean(hasFilesAuthorizedAccess(me) && (!adminMode || me.isAdmin));
   elements.filesPublicSharesPanel.hidden = !showPanel;
   if (!showPanel) {
     return;
