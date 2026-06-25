@@ -10,6 +10,6 @@
 @import "components/buttons.css";
 @import "components/cards.css";
 @import "components/atomic-shop.css";
-@import "components/command-terminal.css";
+@import "components/command-terminal.css?v=20260625-command-terminal-desktop-specific-v1";
 @import "pages/home.css?v=20260622-files-detail-modal-v4";
 @import "pages/error.css";

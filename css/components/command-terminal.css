@@ -542,10 +542,17 @@ body.is-command-terminal-open .files-visit-counter-mobile-card {
   font: inherit;
   font-size: 15px;
   caret-color: transparent;
+  opacity: 0;
   outline: none;
+  -webkit-text-fill-color: transparent;
 }
 
 .command-terminal-input::placeholder {
+  color: transparent;
+}
+
+.command-terminal-input::selection {
+  background: transparent;
   color: transparent;
 }
 
@@ -861,6 +868,12 @@ body.is-command-terminal-open .files-visit-counter-mobile-card {
 
   .command-terminal-prompt-user {
     max-width: 34%;
+  }
+}
+
+@media (max-width: 820px), (max-height: 620px), (hover: none), (pointer: coarse) {
+  .command-terminal-overlay {
+    display: none !important;
   }
 }
 

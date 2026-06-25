@@ -10,6 +10,68 @@ const COMMAND_TERMINAL_OPEN_ANIMATION_MS = 560;
 const COMMAND_TERMINAL_BOOT_LINE_GAP_MS = 120;
 const COMMAND_TERMINAL_CLEAR_ANIMATION_MS = 420;
 const COMMAND_TERMINAL_ACCESS_ANIMATION_MS = 760;
+const COMMAND_TERMINAL_DESKTOP_MEDIA = "(min-width: 821px) and (min-height: 621px) and (hover: hover) and (pointer: fine)";
+const COMMAND_TERMINAL_AI_MATCH_LIMIT = 5;
+const COMMAND_TERMINAL_AI_SELECTION_LIMIT = 20;
+const COMMAND_TERMINAL_AI_FUSE_THRESHOLD = 0.42;
+const COMMAND_TERMINAL_AI_STOPWORDS = new Set([
+  "a", "about", "al", "algo", "and", "any", "are", "buy", "can", "como", "conseguir",
+  "consigue", "conseguirlo", "conseguirla", "consigo", "compran", "comprar", "comprarlo",
+  "comprarla", "compro", "de", "del", "desbloquea", "desbloquean", "desbloqueo",
+  "donde", "do", "does", "el", "else", "en", "find", "for", "from", "get", "gets",
+  "getting", "how", "i", "is", "item", "la", "las", "lo", "los", "mas", "me",
+  "minerva", "obtain", "obtengo", "obtener", "other", "para", "plan", "plans",
+  "plano", "planos", "puedo", "que", "se", "sell", "sells", "sirve", "sirven",
+  "source", "sources", "tal", "the",
+  "to", "un", "una", "unlock", "unlocks", "vende", "venden", "vender", "what",
+  "where", "with"
+]);
+const COMMAND_TERMINAL_AI_SPANISH_PHRASE_ALIASES = [
+  ["arctic marine", "marino artico marina artica"],
+  ["armor", "armadura blindaje"],
+  ["backpack", "mochila"],
+  ["barrel", "canon canones barril"],
+  ["brotherhood of steel", "hermandad del acero"],
+  ["brotherhood recon", "reconocimiento hermandad"],
+  ["capacitor", "condensador capacitor"],
+  ["cattle prod", "picana ganado"],
+  ["chest piece", "pieza de pecho pieza del pecho pecho cofre torso"],
+  ["chinese stealth", "furtiva china sigilo chino"],
+  ["covert scout", "explorador encubierto scout encubierto"],
+  ["crusader pistol", "pistola cruzada"],
+  ["dirt tiles", "baldosas de tierra mosaicos de tierra tierra cultivable"],
+  ["dynamo", "dinamo"],
+  ["farmable", "cultivable cultivables"],
+  ["floater", "flotador"],
+  ["gauss minigun", "minigun gauss ametralladora gauss"],
+  ["gauss pistol", "pistola gauss"],
+  ["gauss shotgun", "escopeta gauss"],
+  ["gunner sights", "mira de artillero miras de artillero"],
+  ["helmet", "casco"],
+  ["jet pack", "jet pack mochila propulsora mochila cohete propulsor"],
+  ["left arm", "brazo izquierdo"],
+  ["left leg", "pierna izquierda"],
+  ["lining", "revestimiento forro"],
+  ["minigun", "minigun ametralladora"],
+  ["pocketed", "embolsado bolsillos"],
+  ["protective", "protector protectora"],
+  ["resistant", "resistente"],
+  ["right arm", "brazo derecho"],
+  ["right leg", "pierna derecha"],
+  ["secret service", "servicio secreto"],
+  ["shielded", "blindado protegido"],
+  ["stealth", "furtivo furtiva sigilo"],
+  ["t-65", "t65"],
+  ["tesla", "tesla"],
+  ["treated", "tratado tratada"],
+  ["triple", "triple"],
+  ["underarmor", "armadura interior ropa interior"],
+  ["war glaive", "aguja de guerra aguja guerra guja de guerra guja guerra alabarda de guerra alabarda guerra"],
+  ["war glaive cryo blade", "hoja criogenica aguja de guerra hoja crio aguja guerra cuchilla criogenica aguja guerra"],
+  ["war glaive flaming blade", "hoja ardiente aguja de guerra hoja en llamas aguja guerra cuchilla flamigera aguja guerra"],
+  ["war glaive plasma blade", "hoja de plasma aguja de guerra hoja plasma aguja guerra cuchilla de plasma aguja guerra"],
+  ["war glaive shock blade", "hoja electrica aguja de guerra hoja de choque aguja guerra cuchilla electrica aguja guerra"]
+];
 
 let classifiedSearchRenderTimer = 0;
 let intelEmailFeedbackDismissTimer = 0;
@@ -18,6 +80,11 @@ let commandTerminalHasUserOutput = false;
 let commandTerminalCommandBusy = false;
 let commandTerminalIsBooting = false;
 let commandTerminalBootRunId = 0;
+let commandTerminalAiIndexCache = null;
+let commandTerminalAiPendingSelection = null;
+let commandTerminalHistoryIndex = -1;
+let commandTerminalHistoryDraft = "";
+const commandTerminalHistory = [];
 const commandTerminalQueuedCommands = [];
 
 function t(key, vars = {}) {
@@ -19075,6 +19142,13 @@ function isCommandTerminalOpen() {
   return Boolean(elements.commandTerminalOverlay?.classList.contains("is-active"));
 }
 
+function isCommandTerminalDesktopAvailable() {
+  if (typeof window.matchMedia !== "function") {
+    return false;
+  }
+  return window.matchMedia(COMMAND_TERMINAL_DESKTOP_MEDIA).matches;
+}
+
 function isCommandTerminalElement(target) {
   return Boolean(
     target instanceof Node
@@ -19159,6 +19233,69 @@ function syncCommandTerminalPrompt() {
   if (elements.commandTerminalTypedText && elements.commandTerminalInput) {
     elements.commandTerminalTypedText.textContent = elements.commandTerminalInput.value;
   }
+}
+
+function setCommandTerminalInputValue(value, { preserveHistoryDraft = false } = {}) {
+  if (!elements.commandTerminalInput) {
+    return;
+  }
+
+  elements.commandTerminalInput.value = String(value || "");
+  const cursorPosition = elements.commandTerminalInput.value.length;
+  try {
+    elements.commandTerminalInput.setSelectionRange(cursorPosition, cursorPosition);
+  } catch {
+    // Some input states do not expose a selection range; the visual prompt is still synced.
+  }
+  if (!preserveHistoryDraft && commandTerminalHistoryIndex === -1) {
+    commandTerminalHistoryDraft = elements.commandTerminalInput.value;
+  }
+  syncCommandTerminalPrompt();
+}
+
+function addCommandTerminalHistoryEntry(command) {
+  const value = String(command || "").trim();
+  if (!value) {
+    return;
+  }
+
+  commandTerminalHistory.push(value);
+  commandTerminalHistoryIndex = -1;
+  commandTerminalHistoryDraft = "";
+}
+
+function beginCommandTerminalManualHistoryEdit() {
+  if (commandTerminalHistoryIndex !== -1) {
+    commandTerminalHistoryIndex = -1;
+  }
+}
+
+function handleCommandTerminalHistoryNavigation(direction) {
+  if (!elements.commandTerminalInput || !commandTerminalHistory.length) {
+    return false;
+  }
+
+  if (commandTerminalHistoryIndex === -1) {
+    commandTerminalHistoryDraft = elements.commandTerminalInput.value;
+  }
+
+  if (direction < 0) {
+    commandTerminalHistoryIndex = commandTerminalHistoryIndex === -1
+      ? commandTerminalHistory.length - 1
+      : Math.max(0, commandTerminalHistoryIndex - 1);
+  } else if (commandTerminalHistoryIndex !== -1) {
+    commandTerminalHistoryIndex += 1;
+    if (commandTerminalHistoryIndex >= commandTerminalHistory.length) {
+      commandTerminalHistoryIndex = -1;
+    }
+  }
+
+  const nextValue = commandTerminalHistoryIndex === -1
+    ? commandTerminalHistoryDraft
+    : commandTerminalHistory[commandTerminalHistoryIndex];
+  setCommandTerminalInputValue(nextValue, { preserveHistoryDraft: true });
+  focusCommandTerminalInput();
+  return true;
 }
 
 function waitCommandTerminal(ms) {
@@ -19373,6 +19510,599 @@ function normalizeCommandTerminalCommand(command) {
 function parseCommandTerminalTokens(command) {
   const normalized = String(command || "").trim().replace(/^\/+/, "").trim();
   return normalized ? normalized.split(/\s+/).filter(Boolean) : [];
+}
+
+function normalizeCommandTerminalAiText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function stripCommandTerminalPlanPrefix(name) {
+  return String(name || "")
+    .replace(/^plan:\s*/i, "")
+    .trim();
+}
+
+function buildCommandTerminalSpanishAliases(name) {
+  const normalizedName = normalizeCommandTerminalAiText(stripCommandTerminalPlanPrefix(name));
+  const aliases = new Set();
+
+  for (const [englishPhrase, spanishAliases] of COMMAND_TERMINAL_AI_SPANISH_PHRASE_ALIASES) {
+    if (normalizedName.includes(englishPhrase)) {
+      for (const alias of spanishAliases.split(/\s{2,}|,/).filter(Boolean)) {
+        aliases.add(alias.trim());
+      }
+      aliases.add(spanishAliases);
+    }
+  }
+
+  if (normalizedName === "secret service underarmor") {
+    aliases.add("armadura interior servicio secreto");
+    aliases.add("ropa interior servicio secreto");
+  }
+  if (normalizedName.includes("secret service underarmor") && normalizedName.includes("lining")) {
+    const liningAlias = normalizedName.includes("treated")
+      ? "revestimiento tratado"
+      : normalizedName.includes("resistant")
+        ? "revestimiento resistente"
+        : normalizedName.includes("protective")
+          ? "revestimiento protector"
+          : normalizedName.includes("shielded")
+            ? "revestimiento blindado"
+            : "revestimiento";
+    aliases.add(`${liningAlias} armadura interior servicio secreto`);
+    aliases.add(`${liningAlias} ropa interior servicio secreto`);
+  }
+  if (normalizedName === "war glaive") {
+    aliases.add("aguja de guerra");
+    aliases.add("aguja guerra");
+    aliases.add("guja de guerra");
+    aliases.add("guja guerra");
+    aliases.add("alabarda de guerra");
+    aliases.add("alabarda guerra");
+  }
+  if (normalizedName.includes("war glaive") && normalizedName.includes("blade")) {
+    const bladeAlias = normalizedName.includes("cryo")
+      ? "hoja criogenica"
+      : normalizedName.includes("flaming")
+        ? "hoja ardiente"
+        : normalizedName.includes("plasma")
+          ? "hoja de plasma"
+          : normalizedName.includes("shock")
+            ? "hoja electrica"
+            : "hoja";
+    aliases.add(`${bladeAlias} aguja de guerra`);
+    aliases.add(`${bladeAlias} aguja guerra`);
+  }
+
+  return Array.from(aliases).filter(Boolean);
+}
+
+function extractCommandTerminalSpanishDetailAliases(detailText) {
+  const normalizedDetail = normalizeCommandTerminalAiText(detailText);
+  if (!normalizedDetail) {
+    return [];
+  }
+
+  const aliases = new Set();
+  const patterns = [
+    /\b(?:elaboracion|fabricacion|creacion)\s+(?:de|del|de la|de los|de las)\s+(.+?)(?:\s+(?:en|al|a|para|con)\b|\.|$)/g,
+    /\b(?:desbloquea|desbloquean)\s+(?:la\s+)?(?:elaboracion|fabricacion|creacion)?\s*(?:de|del|de la|de los|de las)?\s+(.+?)(?:\s+(?:en|al|a|para|con)\b|\.|$)/g,
+    /\bmod\s+(?:de|del|de la|para)\s+(.+?)(?:\s+(?:en|al|a|para|con)\b|\.|$)/g
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of normalizedDetail.matchAll(pattern)) {
+      const alias = String(match[1] || "")
+        .replace(/\b(?:un|una|el|la|los|las|este|esta|plan|plano|mod)\b/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (alias.length >= 3 && alias.length <= 80) {
+        aliases.add(alias);
+      }
+    }
+  }
+
+  return Array.from(aliases);
+}
+
+function getCommandTerminalAiFallbackSearchPayload(wikiUrl, fallbackByKey) {
+  if (!wikiUrl || !fallbackByKey || typeof fallbackByKey !== "object") {
+    return { detailText: "", aliases: [] };
+  }
+
+  const keyCandidates = minervaDetailKeyCandidatesFromUrl(wikiUrl);
+  const entry = keyCandidates
+    .map((key) => fallbackByKey[key])
+    .find((candidate) => candidate && typeof candidate === "object");
+  if (!entry) {
+    return { detailText: "", aliases: [] };
+  }
+
+  const chunks = [];
+  for (const langKey of ["es", "en"]) {
+    const localized = entry[langKey] || {};
+    if (Array.isArray(localized.whereElse)) {
+      chunks.push(...localized.whereElse);
+    }
+    if (localized.unlocks) {
+      chunks.push(localized.unlocks);
+    }
+  }
+
+  const detailText = chunks
+    .map((line) => sanitizeDetailText(line))
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    detailText,
+    aliases: extractCommandTerminalSpanishDetailAliases(detailText)
+  };
+}
+
+function hasCommandTerminalQuestionShape(command) {
+  const raw = String(command || "").trim().replace(/^\/+/, "").trim();
+  const normalized = normalizeCommandTerminalAiText(raw);
+  if (!raw || !normalized) {
+    return false;
+  }
+
+  return raw.includes("?")
+    || /\b(about|buy|como|conseguir|consigo|comprar|desbloquea|donde|find|get|how|obtain|sell|unlock|vende|where)\b/.test(normalized)
+    || normalized.split(" ").length > 1;
+}
+
+function getCommandTerminalAiIntent(command) {
+  const normalized = normalizeCommandTerminalAiText(command);
+  if (/\b(desbloquea|desbloquean|desbloqueo|unlock|unlocks)\b/.test(normalized)) {
+    return "unlock";
+  }
+  if (/\b(comprar|donde mas|otra fuente|otras fuentes|other source|source|sources|where else|vende|venden)\b/.test(normalized)) {
+    return "sources";
+  }
+  return "acquire";
+}
+
+function extractCommandTerminalAiQuery(command) {
+  const raw = String(command || "").trim().replace(/^\/+/, "").trim();
+  const quoted = raw.match(/["']([^"']{2,})["']/);
+  if (quoted?.[1]) {
+    return quoted[1].trim();
+  }
+
+  const normalized = normalizeCommandTerminalAiText(raw);
+  const tokens = normalized
+    .split(" ")
+    .filter((token) => token.length > 1 && !COMMAND_TERMINAL_AI_STOPWORDS.has(token));
+
+  if (tokens.length) {
+    return tokens.join(" ");
+  }
+
+  return raw;
+}
+
+function buildCommandTerminalAiMinervaEntries(lists = [], fallbackByKey = null) {
+  const entries = [];
+  const source = Array.isArray(lists) ? lists : [];
+
+  for (const listData of source) {
+    const listNumber = Number(listData?.ListNumber);
+    if (!Number.isFinite(listNumber)) {
+      continue;
+    }
+
+    const inventory = Array.isArray(listData.Inventory) ? listData.Inventory : [];
+    for (const item of inventory) {
+      const name = String(item?.Name || "").trim();
+      if (!name) {
+        continue;
+      }
+
+      const shortName = stripCommandTerminalPlanPrefix(name);
+      const price = parseOptionalPrice(item?.Price);
+      const wikiUrl = normalizeWikiUrl(item?.WikiUrl || "");
+      const wikiTitle = decodeURIComponent(String(item?.WikiUrl || "").split("/").pop() || "")
+        .replace(/_/g, " ");
+      const fallbackPayload = getCommandTerminalAiFallbackSearchPayload(wikiUrl, fallbackByKey);
+      const aliases = [
+        ...buildCommandTerminalSpanishAliases(name),
+        ...fallbackPayload.aliases
+      ]
+        .map((alias) => normalizeCommandTerminalAiText(alias))
+        .filter(Boolean);
+      const aliasText = aliases.join(" ");
+
+      entries.push({
+        source: "minerva",
+        listNumber,
+        name,
+        shortName,
+        aliases,
+        aliasText,
+        price,
+        wikiUrl: wikiUrl || null,
+        searchText: normalizeCommandTerminalAiText(`${name} ${shortName} ${wikiTitle} ${aliasText} ${fallbackPayload.detailText}`)
+      });
+    }
+  }
+
+  return entries;
+}
+
+async function getCommandTerminalAiIndex() {
+  const lists = await loadMinervaLists();
+  const fallbackByKey = await loadMinervaDetailFallback();
+  if (commandTerminalAiIndexCache?.lists === lists && commandTerminalAiIndexCache?.fallbackByKey === fallbackByKey) {
+    return commandTerminalAiIndexCache;
+  }
+
+  const entries = buildCommandTerminalAiMinervaEntries(lists, fallbackByKey);
+  const fuse = typeof window.Fuse === "function"
+    ? new window.Fuse(entries, {
+      keys: [
+        { name: "name", weight: 0.36 },
+        { name: "shortName", weight: 0.28 },
+        { name: "aliasText", weight: 0.26 },
+        { name: "searchText", weight: 0.1 }
+      ],
+      includeScore: true,
+      ignoreLocation: true,
+      minMatchCharLength: 2,
+      threshold: COMMAND_TERMINAL_AI_FUSE_THRESHOLD
+    })
+    : null;
+
+  commandTerminalAiIndexCache = { lists, fallbackByKey, entries, fuse };
+  return commandTerminalAiIndexCache;
+}
+
+function scoreCommandTerminalAiFallbackEntry(entry, query) {
+  const normalizedQuery = normalizeCommandTerminalAiText(query);
+  if (!normalizedQuery) {
+    return 0;
+  }
+
+  const haystack = entry.searchText || normalizeCommandTerminalAiText(entry.name);
+  const shortName = normalizeCommandTerminalAiText(entry.shortName);
+  const aliases = Array.isArray(entry.aliases) ? entry.aliases : [];
+  const aliasText = normalizeCommandTerminalAiText(entry.aliasText || aliases.join(" "));
+  const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+  const shortNameTokens = shortName.split(" ").filter(Boolean);
+  const tokenHits = queryTokens.reduce((sum, token) => sum + (haystack.includes(token) ? 1 : 0), 0);
+  const aliasTokenHits = queryTokens.reduce((sum, token) => sum + (aliasText.includes(token) ? 1 : 0), 0);
+  const exactTokenSet = queryTokens.length > 1
+    && queryTokens.length === shortNameTokens.length
+    && queryTokens.every((token) => shortNameTokens.includes(token));
+  const exactAlias = aliases.some((alias) => alias === normalizedQuery);
+
+  if (shortName === normalizedQuery || haystack === normalizedQuery) {
+    return 120;
+  }
+  if (exactAlias) {
+    return 118;
+  }
+  if (exactTokenSet) {
+    return 116;
+  }
+  if (aliases.some((alias) => alias.startsWith(normalizedQuery))) {
+    return 94;
+  }
+  if (shortName.startsWith(normalizedQuery) || haystack.startsWith(normalizedQuery)) {
+    return 90;
+  }
+  if (aliases.some((alias) => alias.includes(normalizedQuery))) {
+    return 84;
+  }
+  if (shortName.includes(normalizedQuery) || haystack.includes(normalizedQuery)) {
+    return 70;
+  }
+  if (queryTokens.length > 1 && aliasTokenHits === queryTokens.length) {
+    return 86 + aliasTokenHits * 8;
+  }
+  if (queryTokens.length > 1 && tokenHits === queryTokens.length) {
+    const extraTokenPenalty = Math.max(0, shortNameTokens.length - queryTokens.length) * 3;
+    return 68 + tokenHits * 10 - extraTokenPenalty;
+  }
+  if (!tokenHits) {
+    return 0;
+  }
+
+  return 30 + tokenHits * 12;
+}
+
+function searchCommandTerminalAiFallbackEntries(entries = [], query) {
+  return entries
+    .map((entry) => ({
+      ...entry,
+      rankScore: scoreCommandTerminalAiFallbackEntry(entry, query)
+    }))
+    .filter((entry) => entry.rankScore > 0)
+    .sort((a, b) => b.rankScore - a.rankScore);
+}
+
+function searchCommandTerminalAiMinervaEntries(index, query) {
+  if (!query || !index?.entries?.length) {
+    return [];
+  }
+
+  const fallbackMatches = searchCommandTerminalAiFallbackEntries(index.entries, query);
+
+  if (index.fuse) {
+    const fuseMatches = index.fuse.search(query)
+      .filter((result) => {
+        const score = Number(result.score);
+        return !Number.isFinite(score) || score <= COMMAND_TERMINAL_AI_FUSE_THRESHOLD;
+      })
+      .map((result) => ({
+        ...result.item,
+        rankScore: 1 - (Number.isFinite(Number(result.score)) ? Number(result.score) : 0)
+      }));
+
+    const merged = new Map();
+    for (const match of [...fuseMatches, ...fallbackMatches]) {
+      const key = `${match.listNumber}:${normalizeCommandTerminalAiText(match.name)}`;
+      const existing = merged.get(key);
+      if (!existing || (match.rankScore || 0) > (existing.rankScore || 0)) {
+        merged.set(key, match);
+      }
+    }
+    return Array.from(merged.values())
+      .sort((a, b) => b.rankScore - a.rankScore);
+  }
+
+  return fallbackMatches;
+}
+
+function groupCommandTerminalAiMatches(matches, { limit = COMMAND_TERMINAL_AI_MATCH_LIMIT } = {}) {
+  const grouped = new Map();
+
+  for (const match of matches) {
+    const key = normalizeCommandTerminalAiText(match.shortName || match.name);
+    if (!key) {
+      continue;
+    }
+
+    const existing = grouped.get(key) || {
+      name: match.name,
+      shortName: match.shortName,
+      wikiUrl: match.wikiUrl,
+      rankScore: match.rankScore || 0,
+      listNumbers: new Set(),
+      prices: new Set()
+    };
+
+    existing.rankScore = Math.max(existing.rankScore, match.rankScore || 0);
+    existing.listNumbers.add(match.listNumber);
+    if (Number.isFinite(match.price)) {
+      existing.prices.add(match.price);
+    }
+    grouped.set(key, existing);
+  }
+
+  return Array.from(grouped.values())
+    .map((entry) => ({
+      ...entry,
+      listNumbers: Array.from(entry.listNumbers).sort((a, b) => a - b),
+      prices: Array.from(entry.prices).sort((a, b) => a - b)
+    }))
+    .sort((a, b) => b.rankScore - a.rankScore || a.name.localeCompare(b.name))
+    .slice(0, limit);
+}
+
+function formatCommandTerminalAiListNumbers(listNumbers = []) {
+  return listNumbers
+    .map((listNumber) => String(listNumber).padStart(2, "0"))
+    .join(", ");
+}
+
+function formatCommandTerminalAiPrices(prices = []) {
+  if (!prices.length) {
+    return "--";
+  }
+
+  return prices
+    .map((price) => formatCommandTerminalBullion(price))
+    .join(" / ");
+}
+
+async function getCommandTerminalAiDetail(match) {
+  if (!match?.wikiUrl) {
+    return null;
+  }
+
+  try {
+    return await resolveOfflineMinervaDetail({
+      name: match.name,
+      url: match.wikiUrl,
+      WikiUrl: match.wikiUrl
+    }, state.lang);
+  } catch (error) {
+    return null;
+  }
+}
+
+function formatCommandTerminalAiDetailLines(detail, intent) {
+  const lines = [];
+  const unlocks = sanitizeDetailText(detail?.unlocks || "");
+  const whereElse = Array.isArray(detail?.whereElse)
+    ? detail.whereElse.map((line) => sanitizeDetailText(line)).filter(Boolean).slice(0, 3)
+    : [];
+
+  if (intent === "unlock") {
+    lines.push(t("command_terminal_ai_unlocks", {
+      unlocks: unlocks || t("minerva_detail_no_unlocks")
+    }));
+    return lines;
+  }
+
+  if (intent === "sources") {
+    if (whereElse.length) {
+      lines.push(t("command_terminal_ai_other_sources_header"));
+      lines.push(...whereElse.map((line) => t("command_terminal_ai_other_source_line", { source: line })));
+    } else {
+      lines.push(t("command_terminal_ai_no_other_sources"));
+    }
+  }
+
+  return lines;
+}
+
+async function buildCommandTerminalAiSingleMatchLines(query, match, intent) {
+  const firstListNumber = match.listNumbers[0];
+  const nextWindow = nextAvailabilityForList(firstListNumber);
+  const sale = nextWindow
+    ? t(nextWindow.saleKey)
+    : "--";
+  const available = nextWindow
+    ? (nextWindow.isActive
+      ? t("classified_search_now")
+      : formatMinervaLocationDate(nextWindow.eventStart, "short"))
+    : "--";
+
+  const detail = await getCommandTerminalAiDetail(match);
+  const identityLines = [
+    t("command_terminal_ai_query", { query }),
+    t("command_terminal_ai_source_minerva"),
+    t("command_terminal_ai_item", { item: match.name })
+  ];
+  const acquisitionLines = [
+    t("command_terminal_ai_price", { price: formatCommandTerminalAiPrices(match.prices) }),
+    t("command_terminal_ai_lists", { lists: formatCommandTerminalAiListNumbers(match.listNumbers) }),
+    t("command_terminal_ai_next_sale", { sale, available }),
+    t("command_terminal_ai_minerva_answer")
+  ];
+
+  if (!detail) {
+    return intent === "unlock"
+      ? [...identityLines, t("command_terminal_ai_unlocks", { unlocks: t("minerva_detail_no_unlocks") })]
+      : [...identityLines, ...acquisitionLines];
+  }
+
+  const detailLines = formatCommandTerminalAiDetailLines(detail, intent);
+  return intent === "unlock"
+    ? [...identityLines, ...detailLines]
+    : intent === "sources"
+      ? [...identityLines, ...acquisitionLines, ...detailLines]
+      : [...identityLines, ...acquisitionLines];
+}
+
+function buildCommandTerminalAiMultipleMatchLines(query, matches) {
+  const lines = [
+    t("command_terminal_ai_query", { query }),
+    t("command_terminal_ai_multiple_header")
+  ];
+
+  lines.push(...matches.map((match, index) => t("command_terminal_ai_match_line", {
+    n: String(index + 1).padStart(2, "0"),
+    item: match.name,
+    lists: formatCommandTerminalAiListNumbers(match.listNumbers),
+    price: formatCommandTerminalAiPrices(match.prices)
+  })));
+  lines.push(t("command_terminal_ai_multiple_hint"));
+  return lines;
+}
+
+function getCommandTerminalAiSelectionMatches(matches) {
+  const topScore = matches[0]?.rankScore || 0;
+  if (!topScore) {
+    return [];
+  }
+
+  const tolerance = topScore > 1 ? 12 : 0.08;
+  return matches.filter((match) => topScore - (match.rankScore || 0) <= tolerance);
+}
+
+function setCommandTerminalAiPendingSelection(query, intent, matches) {
+  commandTerminalAiPendingSelection = {
+    query,
+    intent,
+    matches: matches.slice(0, COMMAND_TERMINAL_AI_SELECTION_LIMIT)
+  };
+}
+
+function clearCommandTerminalAiPendingSelection() {
+  commandTerminalAiPendingSelection = null;
+}
+
+function parseCommandTerminalAiSelectionNumber(command) {
+  const normalized = String(command || "").trim().replace(/^\/+/, "").trim();
+  if (!/^\d{1,2}$/.test(normalized)) {
+    return null;
+  }
+
+  const selection = Number.parseInt(normalized, 10);
+  return Number.isFinite(selection) ? selection : null;
+}
+
+async function handleCommandTerminalAiSelectionCommand(command) {
+  if (!commandTerminalAiPendingSelection) {
+    return false;
+  }
+
+  const selection = parseCommandTerminalAiSelectionNumber(command);
+  if (selection == null) {
+    clearCommandTerminalAiPendingSelection();
+    return false;
+  }
+
+  const pending = commandTerminalAiPendingSelection;
+  const match = pending.matches[selection - 1];
+  if (!match) {
+    await appendCommandTerminalLine(t("command_terminal_ai_selection_invalid", {
+      count: pending.matches.length
+    }), "is-muted");
+    return true;
+  }
+
+  clearCommandTerminalAiPendingSelection();
+  const lines = await buildCommandTerminalAiSingleMatchLines(pending.query, match, pending.intent);
+  await appendCommandTerminalBlock("LOCAL INTEL", lines);
+  return true;
+}
+
+async function handleCommandTerminalNaturalLanguageQuery(command) {
+  if (!hasCommandTerminalQuestionShape(command)) {
+    return false;
+  }
+
+  clearCommandTerminalAiPendingSelection();
+  const intent = getCommandTerminalAiIntent(command);
+  const query = extractCommandTerminalAiQuery(command);
+  const index = await getCommandTerminalAiIndex();
+  const matches = groupCommandTerminalAiMatches(
+    searchCommandTerminalAiMinervaEntries(index, query),
+    { limit: COMMAND_TERMINAL_AI_SELECTION_LIMIT }
+  );
+
+  if (!matches.length) {
+    await appendCommandTerminalBlock("LOCAL INTEL", [
+      t("command_terminal_ai_query", { query }),
+      t("command_terminal_ai_no_match"),
+      t("command_terminal_ai_scope"),
+      t("command_terminal_ai_no_match_hint")
+    ]);
+    return true;
+  }
+
+  const selectionMatches = getCommandTerminalAiSelectionMatches(matches);
+  const lines = selectionMatches.length > 1
+    ? buildCommandTerminalAiMultipleMatchLines(query, selectionMatches)
+    : await buildCommandTerminalAiSingleMatchLines(query, matches[0], intent);
+
+  if (selectionMatches.length > 1) {
+    setCommandTerminalAiPendingSelection(query, intent, selectionMatches);
+  }
+
+  await appendCommandTerminalBlock("LOCAL INTEL", lines);
+  return true;
 }
 
 function hasCommandTerminalSiloData() {
@@ -19633,7 +20363,8 @@ async function handleCommandTerminalHelpCommand() {
     t("command_terminal_help_axolotl"),
     t("command_terminal_help_minerva"),
     t("command_terminal_help_minerva_list"),
-    t("command_terminal_help_silos")
+    t("command_terminal_help_silos"),
+    t("command_terminal_help_ai")
   ]);
 }
 
@@ -19645,7 +20376,12 @@ async function runCommandTerminalCommand(command) {
     return;
   }
 
+  if (await handleCommandTerminalAiSelectionCommand(command)) {
+    return;
+  }
+
   if (commandName === "clear" || commandName === "cls") {
+    clearCommandTerminalAiPendingSelection();
     await animateCommandTerminalOutputClear();
     await appendCommandTerminalLine(t("command_terminal_clear_done"), "is-muted", { animate: false });
     return;
@@ -19696,6 +20432,10 @@ async function runCommandTerminalCommand(command) {
     return;
   }
 
+  if (await handleCommandTerminalNaturalLanguageQuery(command)) {
+    return;
+  }
+
   await appendCommandTerminalLine(t("command_terminal_unregistered", {
     command,
     commands: COMMAND_TERMINAL_COMMANDS.join(", ")
@@ -19713,11 +20453,16 @@ function focusCommandTerminalInput() {
   } catch {
     elements.commandTerminalInput.focus();
   }
-  elements.commandTerminalInput.select();
+  const cursorPosition = elements.commandTerminalInput.value.length;
+  try {
+    elements.commandTerminalInput.setSelectionRange(cursorPosition, cursorPosition);
+  } catch {
+    // The visual prompt controls the caret, so native selection is best-effort only.
+  }
 }
 
 function openCommandTerminal() {
-  if (!elements.commandTerminalOverlay) {
+  if (!elements.commandTerminalOverlay || !isCommandTerminalDesktopAvailable()) {
     return;
   }
 
@@ -19775,10 +20520,7 @@ function closeCommandTerminal({ restoreFocus = true } = {}) {
 }
 
 function clearCommandTerminalInputValue() {
-  if (elements.commandTerminalInput) {
-    elements.commandTerminalInput.value = "";
-  }
-  syncCommandTerminalPrompt();
+  setCommandTerminalInputValue("");
 }
 
 async function processCommandTerminalCommand(command) {
@@ -19821,12 +20563,39 @@ async function submitCommandTerminalInput() {
     return;
   }
 
+  addCommandTerminalHistoryEntry(command);
   commandTerminalQueuedCommands.push(command);
   clearCommandTerminalInputValue();
   await drainCommandTerminalQueue();
 }
 
 function handleCommandTerminalSubmit(event) {
+  event.preventDefault();
+  void submitCommandTerminalInput();
+}
+
+function handleCommandTerminalInputChange() {
+  beginCommandTerminalManualHistoryEdit();
+  commandTerminalHistoryDraft = String(elements.commandTerminalInput?.value || "");
+  syncCommandTerminalPrompt();
+}
+
+function handleCommandTerminalInputKeydown(event) {
+  if (event.isComposing) {
+    return;
+  }
+
+  if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+    if (handleCommandTerminalHistoryNavigation(event.key === "ArrowUp" ? -1 : 1)) {
+      event.preventDefault();
+    }
+    return;
+  }
+
+  if (event.key !== "Enter") {
+    return;
+  }
+
   event.preventDefault();
   void submitCommandTerminalInput();
 }
@@ -19845,6 +20614,14 @@ function handleCommandTerminalBufferedKeydown(event) {
   }
 
   const key = String(event.key || "");
+  if (key === "ArrowUp" || key === "ArrowDown") {
+    if (handleCommandTerminalHistoryNavigation(key === "ArrowUp" ? -1 : 1)) {
+      event.preventDefault();
+      return true;
+    }
+    return false;
+  }
+
   if (key === "Enter") {
     event.preventDefault();
     void submitCommandTerminalInput();
@@ -19854,8 +20631,8 @@ function handleCommandTerminalBufferedKeydown(event) {
   if (key === "Backspace") {
     event.preventDefault();
     if (elements.commandTerminalInput) {
-      elements.commandTerminalInput.value = elements.commandTerminalInput.value.slice(0, -1);
-      syncCommandTerminalPrompt();
+      beginCommandTerminalManualHistoryEdit();
+      setCommandTerminalInputValue(elements.commandTerminalInput.value.slice(0, -1));
       focusCommandTerminalInput();
     }
     return true;
@@ -19866,8 +20643,8 @@ function handleCommandTerminalBufferedKeydown(event) {
 
   event.preventDefault();
   if (elements.commandTerminalInput) {
-    elements.commandTerminalInput.value += key;
-    syncCommandTerminalPrompt();
+    beginCommandTerminalManualHistoryEdit();
+    setCommandTerminalInputValue(`${elements.commandTerminalInput.value}${key}`);
     focusCommandTerminalInput();
   }
   return true;
@@ -22184,14 +22961,8 @@ function wireEvents() {
     closeCommandTerminal();
   });
   elements.commandTerminalForm?.addEventListener("submit", handleCommandTerminalSubmit);
-  elements.commandTerminalInput?.addEventListener("input", syncCommandTerminalPrompt);
-  elements.commandTerminalInput?.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter" || event.isComposing) {
-      return;
-    }
-    event.preventDefault();
-    void submitCommandTerminalInput();
-  });
+  elements.commandTerminalInput?.addEventListener("input", handleCommandTerminalInputChange);
+  elements.commandTerminalInput?.addEventListener("keydown", handleCommandTerminalInputKeydown);
 
   elements.refreshBtn.addEventListener("click", () => {
     void refreshIntel();
@@ -22968,6 +23739,9 @@ function wireEvents() {
     if (!document.body.classList.contains("is-ready")) {
       return;
     }
+    if (!isCommandTerminalDesktopAvailable()) {
+      return;
+    }
 
     event.preventDefault();
     openCommandTerminal();
@@ -23159,6 +23933,9 @@ function wireEvents() {
     }
   });
   window.addEventListener("resize", () => {
+    if (isCommandTerminalOpen() && !isCommandTerminalDesktopAvailable()) {
+      closeCommandTerminal({ restoreFocus: false });
+    }
     renderFilesAdminModals();
     syncFilesAuthorizedVisitCounterMobileCard();
     if (state.classifiedSearch.open) {
