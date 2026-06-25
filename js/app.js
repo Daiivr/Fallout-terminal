@@ -9919,7 +9919,15 @@ function renderFilesAccessView() {
     state.files.groupManager.open = false;
     clearFilesGroupManagerState();
     clearFilesGroupRenameState();
-    state.files.adminModal.active = "";
+    const activeAdminModal = normalizeFilesAdminModalType(state.files.adminModal.active);
+    const keepPublicSharesMineOpen = Boolean(
+      authorized
+      && activeAdminModal === "publicShares"
+      && normalizeFilesPublicSharesMode(state.files.publicShares.mode) === "mine"
+    );
+    if (!keepPublicSharesMineOpen) {
+      state.files.adminModal.active = "";
+    }
   }
 
   renderFilesSessionProfile({
