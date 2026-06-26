@@ -5,15 +5,25 @@ const path = require("path");
 const {
   ActionRowBuilder,
   ActivityType,
+  ButtonBuilder,
+  ButtonStyle,
   ChannelType,
   Client,
-  EmbedBuilder,
+  ContainerBuilder,
   GatewayIntentBits,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
+  MessageFlags,
   PermissionFlagsBits,
   REST,
   Routes,
+  SectionBuilder,
+  SeparatorBuilder,
+  SeparatorSpacingSize,
   SlashCommandBuilder,
-  StringSelectMenuBuilder
+  StringSelectMenuBuilder,
+  TextDisplayBuilder,
+  ThumbnailBuilder
 } = require("discord.js");
 
 const { fetchCurrentIntel, parseBethesdaRawDateTime } = require("./intel");
@@ -34,29 +44,39 @@ const MINERVA_LISTS_FILE = "data/minerva-lists.json";
 const MINERVA_DETAIL_FALLBACK_FILE = "data/minerva-detail-fallback.json";
 const MINERVA_DETAIL_FALLBACK_IMAGE = "assets/images/minerva-plan-fallback.png";
 const SILO_EMBED_THUMBNAIL_IMAGE = "assets/images/silo-hacker.gif";
+const SILO_LIVE_ACCENT = 0x39ff14;
+const SILO_EXPIRED_ACCENT = 0xff7a59;
+const MINERVA_ARRIVAL_ACCENT = 0xf7c948;
+const MINERVA_TRANSIT_ACCENT = 0xffb347;
+const MINERVA_DEPARTURE_ACCENT = 0xff8f3f;
+const DISCORD_COMPONENT_TEXT_LIMIT = 4000;
 const MINERVA_ITEM_SELECT_PREFIX = "minerva-item-select";
 const WELCOME_LANGUAGE_SELECT_ID = "welcome-language-select";
 const LANGUAGE_OPTIONS = new Set(["en", "es"]);
 const STATUS_ROTATION_ACTIVITIES = Object.freeze([
   Object.freeze({
-    type: ActivityType.Playing,
+    type: ActivityType.Custom,
     name: "Fallout 76",
-    label: "Playing Fallout 76"
+    state: "Fallout 76",
+    label: "Fallout 76"
   }),
   Object.freeze({
-    type: ActivityType.Watching,
+    type: ActivityType.Custom,
     name: "Silo Codes",
-    label: "Watching Silo Codes"
+    state: "Silo Codes",
+    label: "Silo Codes"
   }),
   Object.freeze({
-    type: ActivityType.Watching,
+    type: ActivityType.Custom,
     name: "Minerva Sales",
-    label: "Watching Minerva Sales"
+    state: "Minerva Sales",
+    label: "Minerva Sales"
   }),
   Object.freeze({
-    type: ActivityType.Listening,
+    type: ActivityType.Custom,
     name: "Appalachia Radio",
-    label: "Listening to Appalachia Radio"
+    state: "Appalachia Radio",
+    label: "Appalachia Radio"
   })
 ]);
 let cachedMinervaListsSiteRoot = "";
@@ -73,7 +93,7 @@ const STRINGS = Object.freeze({
     cmd_no_subscriptions: "No subscribed channels are registered for this server yet. Use `/intel-subscribe` first.",
     cmd_subscriptions_title: "Current Fallout Codex subscriptions:",
     cmd_status_language: "Language: `{language}`",
-    cmd_preview_unavailable: "Unable to build a preview embed right now.",
+    cmd_preview_unavailable: "Unable to build a preview message right now.",
     cmd_failed: "Command failed. Check bot logs and verify the upstream intel sources are reachable.",
     cmd_language_set: "Bot language set to `{language}` for this server.",
     cmd_language_invalid_scope: "This command only works inside a Discord server.",
@@ -84,9 +104,9 @@ const STRINGS = Object.freeze({
     welcome_title: "Fallout Codex Is Online",
     welcome_description: "The relay is now active in **{server}**. Fallout Codex can broadcast silo code rotations, Minerva status updates, and interactive sale intel straight to your Discord server.",
     welcome_overview_label: "What The Bot Does",
-    welcome_overview_value: "• Tracks Appalachian silo codes\n• Posts Minerva transit, arrival, and departure updates\n• Lets users inspect Minerva sale items from arrival embeds",
+    welcome_overview_value: "• Tracks Appalachian silo codes\n• Posts Minerva transit, arrival, and departure updates\n• Lets users inspect Minerva sale items from arrival messages",
     welcome_setup_label: "Getting Started",
-    welcome_setup_value: "Use `/intel-subscribe` to choose a channel and the feed you want.\nUse `/intel-preview` to test the embeds before going live.",
+    welcome_setup_value: "Use `/intel-subscribe` to choose a channel and the feed you want.\nUse `/intel-preview` to test the component messages before going live.",
     welcome_commands_label: "Core Commands",
     welcome_commands_value: "`/intel-subscribe`\n`/intel-status`\n`/intel-preview`\n`/intel-language`",
     welcome_links_label: "Intel Links",
@@ -149,6 +169,7 @@ const STRINGS = Object.freeze({
     minerva_highest_price: "Highest Price",
     minerva_lowest_price: "Lowest Price",
     minerva_inventory: "Inventory",
+    minerva_inventory_more: "+{count} more in the item selector",
     minerva_inventory_part: "Inventory {index}",
     minerva_open_terminal: "Open Terminal",
     minerva_footer: "Fallout Codex | Wasteland Broadcast",
@@ -172,7 +193,7 @@ const STRINGS = Object.freeze({
     cmd_no_subscriptions: "Todavia no hay canales suscritos en este servidor. Usa `/intel-subscribe` primero.",
     cmd_subscriptions_title: "Suscripciones actuales de Fallout Codex:",
     cmd_status_language: "Idioma: `{language}`",
-    cmd_preview_unavailable: "No se pudo generar la vista previa del embed en este momento.",
+    cmd_preview_unavailable: "No se pudo generar la vista previa del mensaje en este momento.",
     cmd_failed: "El comando fallo. Revisa los logs del bot y verifica que las fuentes esten disponibles.",
     cmd_language_set: "El idioma del bot ahora es `{language}` para este servidor.",
     cmd_language_invalid_scope: "Este comando solo funciona dentro de un servidor de Discord.",
@@ -183,9 +204,9 @@ const STRINGS = Object.freeze({
     welcome_title: "Fallout Codex Ya Esta En Linea",
     welcome_description: "El relay ya esta activo en **{server}**. Fallout Codex puede emitir rotaciones de codigos de silo, actualizaciones del estado de Minerva e intel interactivo de ventas directo a tu servidor de Discord.",
     welcome_overview_label: "Que Hace El Bot",
-    welcome_overview_value: "• Rastrea los codigos de los silos de Appalachia\n• Publica actualizaciones de Minerva en transito, llegada y salida\n• Permite inspeccionar items de venta de Minerva desde los embeds de llegada",
+    welcome_overview_value: "• Rastrea los codigos de los silos de Appalachia\n• Publica actualizaciones de Minerva en transito, llegada y salida\n• Permite inspeccionar items de venta de Minerva desde los mensajes de llegada",
     welcome_setup_label: "Primeros Pasos",
-    welcome_setup_value: "Usa `/intel-subscribe` para elegir un canal y el feed que quieres.\nUsa `/intel-preview` para probar los embeds antes de activarlos.",
+    welcome_setup_value: "Usa `/intel-subscribe` para elegir un canal y el feed que quieres.\nUsa `/intel-preview` para probar los mensajes con componentes antes de activarlos.",
     welcome_commands_label: "Comandos Principales",
     welcome_commands_value: "`/intel-subscribe`\n`/intel-status`\n`/intel-preview`\n`/intel-language`",
     welcome_links_label: "Enlaces De Intel",
@@ -248,6 +269,7 @@ const STRINGS = Object.freeze({
     minerva_highest_price: "Precio Mas Alto",
     minerva_lowest_price: "Precio Mas Bajo",
     minerva_inventory: "Inventario",
+    minerva_inventory_more: "+{count} mas en el selector de objetos",
     minerva_inventory_part: "Inventario {index}",
     minerva_open_terminal: "Abrir terminal",
     minerva_footer: "Fallout Codex | Transmision del Yermo",
@@ -1004,18 +1026,18 @@ function createDiscordIntelBot(options = {}) {
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
     new SlashCommandBuilder()
       .setName("intel-preview")
-      .setDescription("Preview the current Fallout Codex intel embeds.")
+      .setDescription("Preview the current Fallout Codex intel messages.")
       .setDescriptionLocalizations({
-        "es-ES": "Muestra una vista previa de los embeds actuales de Fallout Codex.",
-        "es-419": "Muestra una vista previa de los embeds actuales de Fallout Codex."
+        "es-ES": "Muestra una vista previa de los mensajes actuales de Fallout Codex.",
+        "es-419": "Muestra una vista previa de los mensajes actuales de Fallout Codex."
       })
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
       .addStringOption((option) => option
         .setName("feed")
-        .setDescription("Which embed to preview.")
+        .setDescription("Which message to preview.")
         .setDescriptionLocalizations({
-          "es-ES": "Que embed quieres previsualizar.",
-          "es-419": "Que embed quieres previsualizar."
+          "es-ES": "Que mensaje quieres previsualizar.",
+          "es-419": "Que mensaje quieres previsualizar."
         })
         .addChoices(
           { name: "Both", value: "both" },
@@ -1025,7 +1047,7 @@ function createDiscordIntelBot(options = {}) {
         .setRequired(true))
       .addStringOption((option) => option
         .setName("minerva-state")
-        .setDescription("Choose which Minerva state embed to preview.")
+        .setDescription("Choose which Minerva state message to preview.")
         .setDescriptionLocalizations({
           "es-ES": "Elige que estado de Minerva quieres previsualizar.",
           "es-419": "Elige que estado de Minerva quieres previsualizar."
@@ -1096,7 +1118,8 @@ function createDiscordIntelBot(options = {}) {
       status: "online",
       activities: [{
         type: entry.type,
-        name: entry.name
+        name: entry.name,
+        state: entry.state
       }]
     });
 
@@ -1398,7 +1421,7 @@ function createDiscordIntelBot(options = {}) {
     try {
       await channel.send(buildWelcomePayload(guild, lang));
     } catch (error) {
-      log.error(`[discord-bot] Failed to post manual welcome embed in guild ${normalizedGuildId}.`);
+      log.error(`[discord-bot] Failed to post manual welcome component message in guild ${normalizedGuildId}.`);
       log.error(error);
       throw createStatusError("Unable to send a welcome message in this guild right now.", 502);
     }
@@ -1440,10 +1463,10 @@ function createDiscordIntelBot(options = {}) {
       const payload = buildMessagePayload(snapshot, subscription.feeds, lang, {
         minervaEventType: resolveCurrentMinervaEmbedType(snapshot?.minerva)
       });
-      if (!payload.embeds.length) {
+      if (!hasComponentsPayload(payload)) {
         continue;
       }
-      const sentMessage = await postEmbedsToSubscription(subscription, payload);
+      const sentMessage = await postComponentsToSubscription(subscription, payload);
       if (sentMessage) {
         postedChannelCount += 1;
         if (sentMessage.id && subscription.feeds.includes("silos")) {
@@ -1601,77 +1624,152 @@ function createDiscordIntelBot(options = {}) {
     log.info("[discord-bot] Registered global slash commands.");
   }
 
-  function buildSiloEmbed(data, lang) {
+  function createTextDisplay(content, maxLength = 900) {
+    return new TextDisplayBuilder().setContent(truncateForDiscord(
+      content,
+      Math.min(maxLength, DISCORD_COMPONENT_TEXT_LIMIT)
+    ));
+  }
+
+  function createSeparator(spacing = SeparatorSpacingSize.Small, divider = true) {
+    return new SeparatorBuilder()
+      .setDivider(divider)
+      .setSpacing(spacing);
+  }
+
+  function createThumbnail(url, description) {
+    if (!url) {
+      return null;
+    }
+    const thumbnail = new ThumbnailBuilder().setURL(url);
+    if (description) {
+      thumbnail.setDescription(truncateForDiscord(description, 80));
+    }
+    return thumbnail;
+  }
+
+  function createMediaGallery(url, description) {
+    if (!url) {
+      return null;
+    }
+    return new MediaGalleryBuilder().addItems(
+      new MediaGalleryItemBuilder()
+        .setURL(url)
+        .setDescription(truncateForDiscord(description || "Fallout Codex intel image", 80))
+    );
+  }
+
+  function createLinkButton(label, url) {
+    if (!url) {
+      return null;
+    }
+    return new ButtonBuilder()
+      .setStyle(ButtonStyle.Link)
+      .setLabel(truncateForDiscord(label, 80))
+      .setURL(url);
+  }
+
+  function createButtonRow(buttons = []) {
+    const safeButtons = buttons.filter(Boolean).slice(0, 5);
+    return safeButtons.length ? new ActionRowBuilder().addComponents(...safeButtons) : null;
+  }
+
+  function createComponentPayload(components = [], { includeEditNulls = false } = {}) {
+    const payload = {
+      components: components.filter(Boolean),
+      flags: MessageFlags.IsComponentsV2,
+      allowedMentions: { parse: [] }
+    };
+
+    if (includeEditNulls) {
+      payload.content = null;
+      payload.embeds = null;
+      payload.stickers = null;
+      payload.poll = null;
+    }
+
+    return payload;
+  }
+
+  function hasComponentsPayload(payload) {
+    return Array.isArray(payload?.components) && payload.components.length > 0;
+  }
+
+  function buildComponentFooter(text) {
+    return `-# ${text}`;
+  }
+
+  function buildLinkedHeadingText(label, url) {
+    const text = String(label || "").trim();
+    const href = String(url || "").trim();
+    return text && href ? `[${text}](${href})` : text;
+  }
+
+  function buildSiloComponents(data, lang) {
     const homeUrl = buildPageUrl(publicBaseUrl, "/");
     const dossierUrl = buildPageUrl(publicBaseUrl, "/silos/");
     const thumbnailUrl = buildAssetUrl(publicBaseUrl, SILO_EMBED_THUMBNAIL_IMAGE);
     const resetTarget = data?.resetTargetUtc instanceof Date ? data.resetTargetUtc : null;
-    const openTerminalValue = homeUrl
-      ? `[${t(lang, "silo_open_terminal")}](${homeUrl})`
-      : `\`${t(lang, "label_unknown")}\``;
-    const falloutCodexLink = dossierUrl
-      ? `[${t(lang, "silo_site_name")}](${dossierUrl})`
-      : `\`${t(lang, "silo_site_name")}\``;
-    const embed = new EmbedBuilder()
-      .setColor(data?.isExpired ? 0xff7a59 : 0x39ff14)
-      .setAuthor({
-        name: t(lang, "silo_author"),
-        url: homeUrl || undefined
-      })
-      .setTitle(t(lang, "silo_title"))
-      .setDescription(`> ${t(lang, data?.isExpired ? "silo_description_expired" : "silo_description_live")}`)
-      .addFields(
-        { name: t(lang, "silo_site_alpha"), value: `\`\`\`\n${formatCode(data?.codes?.Alpha)}\n\`\`\``, inline: true },
-        { name: t(lang, "silo_site_bravo"), value: `\`\`\`\n${formatCode(data?.codes?.Bravo)}\n\`\`\``, inline: true },
-        { name: t(lang, "silo_site_charlie"), value: `\`\`\`\n${formatCode(data?.codes?.Charlie)}\n\`\`\``, inline: true },
-        {
-          name: t(lang, "silo_reset_window"),
-          value: resetTarget
-            ? `${t(lang, "label_absolute")}: ${formatDiscordDate(resetTarget, "F")}\n${t(lang, "label_relative")}: ${formatDiscordDate(resetTarget, "R")}`
-            : `\`${t(lang, "label_unknown")}\``,
-          inline: false
-        },
-        {
-          name: t(lang, "silo_status"),
-          value: data?.isExpired ? `\`${t(lang, "silo_status_expired")}\`` : `\`${t(lang, "silo_status_live")}\``,
-          inline: true
-        },
-        {
-          name: t(lang, "source_label"),
-          value: falloutCodexLink,
-          inline: true
-        },
-        {
-          name: t(lang, "silo_open_terminal"),
-          value: openTerminalValue,
-          inline: true
-        }
-      )
-      .setTimestamp(new Date())
-      .setFooter({ text: `${t(lang, "silo_footer")} | ${t(lang, "label_last_broadcast")}` });
-
-    if (homeUrl) {
-      embed.setURL(homeUrl);
-    }
-    if (thumbnailUrl) {
-      embed.setThumbnail(thumbnailUrl);
+    const container = new ContainerBuilder()
+      .setAccentColor(data?.isExpired ? SILO_EXPIRED_ACCENT : SILO_LIVE_ACCENT);
+    const statusText = data?.isExpired ? t(lang, "silo_status_expired") : t(lang, "silo_status_live");
+    const header = new SectionBuilder().addTextDisplayComponents(
+      createTextDisplay([
+        `## ${buildLinkedHeadingText(t(lang, "silo_title"), dossierUrl || homeUrl)}`,
+        `**${t(lang, "silo_author")}**`,
+        `> ${t(lang, data?.isExpired ? "silo_description_expired" : "silo_description_live")}`
+      ].join("\n"), 700)
+    );
+    const thumbnail = createThumbnail(thumbnailUrl, t(lang, "silo_title"));
+    if (thumbnail) {
+      header.setThumbnailAccessory(thumbnail);
     }
 
-    return embed;
+    container
+      .addSectionComponents(header)
+      .addSeparatorComponents(createSeparator())
+      .addTextDisplayComponents(createTextDisplay(`### ${t(lang, "silo_site_name")} ${t(lang, "silo_status")}`, 120))
+      .addTextDisplayComponents(createTextDisplay([
+        `**${t(lang, "silo_site_alpha")}**`,
+        "```",
+        formatCode(data?.codes?.Alpha),
+        "```",
+        `**${t(lang, "silo_site_bravo")}**`,
+        "```",
+        formatCode(data?.codes?.Bravo),
+        "```",
+        `**${t(lang, "silo_site_charlie")}**`,
+        "```",
+        formatCode(data?.codes?.Charlie),
+        "```"
+      ].join("\n"), 900))
+      .addSeparatorComponents(createSeparator(SeparatorSpacingSize.Small, false))
+      .addTextDisplayComponents(createTextDisplay([
+        `**${t(lang, "silo_reset_window")}**`,
+        resetTarget
+          ? `${t(lang, "label_absolute")}: ${formatDiscordDate(resetTarget, "F")}\n${t(lang, "label_relative")}: ${formatDiscordDate(resetTarget, "R")}`
+          : `\`${t(lang, "label_unknown")}\``,
+        "",
+        `**${t(lang, "silo_status")}**: \`${statusText}\``
+      ].join("\n"), 650));
+
+    const buttonRow = createButtonRow([
+      createLinkButton(t(lang, "silo_open_terminal"), homeUrl),
+      createLinkButton(t(lang, "source_label"), dossierUrl)
+    ]);
+    if (buttonRow) {
+      container.addActionRowComponents(buttonRow);
+    }
+
+    container.addTextDisplayComponents(createTextDisplay(
+      buildComponentFooter(`${t(lang, "silo_footer")} | ${t(lang, "label_last_broadcast")}: ${formatDiscordDate(new Date(), "R")}`),
+      180
+    ));
+
+    return [container];
   }
 
-  function buildMinervaInventoryText(items = [], lang) {
-    return items.map((item) => {
-      const name = String(item?.name || "").trim() || t(lang, "label_unknown");
-      const price = Number(item?.price);
-      const priceText = Number.isFinite(price)
-        ? formatBullionValue(price, lang, { inline: true, code: false })
-        : `**${t(lang, "label_unknown")}**`;
-      return `• ${name}\n↳ ${priceText}`;
-    }).join("\n\n");
-  }
-
-  function buildMinervaEmbed(data, lang, eventType = "current") {
+  function buildMinervaComponents(data, lang, eventType = "current", { compact = false } = {}) {
     const dossierUrl = buildPageUrl(publicBaseUrl, `/minerva/?lang=${normalizeLanguage(lang)}`);
     const websiteUrl = buildWebsiteUrl(publicBaseUrl, "#intel");
     const portraitUrl = buildAssetUrl(publicBaseUrl, "assets/images/where-is-minerva.png");
@@ -1686,12 +1784,6 @@ function createDiscordIntelBot(options = {}) {
     const listValue = Number.isFinite(Number(data?.listNumber))
       ? t(lang, "minerva_list_value", { number: Number(data.listNumber) })
       : t(lang, "label_unknown");
-    const openTerminalValue = websiteUrl
-      ? `[${t(lang, "minerva_open_terminal")}](${websiteUrl})`
-      : `\`${t(lang, "label_unknown")}\``;
-    const falloutCodexLink = dossierUrl
-      ? `[${t(lang, "silo_site_name")}](${dossierUrl})`
-      : `\`${t(lang, "silo_site_name")}\``;
     const embedType = eventType === "arrival" || eventType === "departure" || eventType === "transit"
       ? eventType
       : resolveCurrentMinervaEmbedType(data);
@@ -1707,105 +1799,133 @@ function createDiscordIntelBot(options = {}) {
       ? t(lang, "minerva_status_restocking")
       : t(lang, isArrival ? "minerva_status_active" : "minerva_status_transit");
     const returnsAt = arrivesAt;
+    const accentColor = isArrival ? MINERVA_ARRIVAL_ACCENT : (isDeparture ? MINERVA_DEPARTURE_ACCENT : MINERVA_TRANSIT_ACCENT);
+    const highestPrice = displayItems.reduce((highest, item) => {
+      const price = Number(item?.price);
+      return Number.isFinite(price) ? Math.max(highest, price) : highest;
+    }, 0);
+    const lowestPrice = displayItems.reduce((lowest, item) => {
+      const price = Number(item?.price);
+      if (!Number.isFinite(price)) {
+        return lowest;
+      }
+      return lowest === null ? price : Math.min(lowest, price);
+    }, null);
 
     const routeIntelLines = [
       `${t(lang, "minerva_status")}: **${statusValue}**`,
       `${t(lang, "minerva_location")}: **${location}**`,
       `${t(lang, "minerva_list")}: **${listValue}**`
     ];
-    const fields = [];
+    let windowText = "";
 
     if (isArrival) {
       routeIntelLines.push(
         `${t(lang, "minerva_arrives")}: ${arrivesAt ? formatDiscordDate(arrivesAt, "F") : `\`${t(lang, "label_unknown")}\``}`,
         `${t(lang, "minerva_leaves")}: ${leavesAt ? formatDiscordDate(leavesAt, "F") : `\`${t(lang, "label_unknown")}\``}`
       );
-      fields.push({
-        name: t(lang, "minerva_sale_intel"),
-        value: routeIntelLines.join("\n"),
-        inline: false
-      });
     } else if (isDeparture) {
-      fields.push({
-        name: t(lang, "minerva_route_intel"),
-        value: routeIntelLines.join("\n"),
-        inline: false
-      });
-      fields.push({
-        name: t(lang, "minerva_return_window"),
-        value: returnsAt
-          ? `${t(lang, "label_absolute")}: ${formatDiscordDate(returnsAt, "F")}\n${t(lang, "label_relative")}: ${formatDiscordDate(returnsAt, "R")}`
-          : `\`${t(lang, "label_unknown")}\``,
-        inline: false
-      });
+      windowText = returnsAt
+        ? `${t(lang, "label_absolute")}: ${formatDiscordDate(returnsAt, "F")}\n${t(lang, "label_relative")}: ${formatDiscordDate(returnsAt, "R")}`
+        : `\`${t(lang, "label_unknown")}\``;
     } else {
-      fields.push({
-        name: t(lang, "minerva_route_intel"),
-        value: routeIntelLines.join("\n"),
-        inline: false
-      });
-      fields.push({
-        name: t(lang, "minerva_arrives"),
-        value: returnsAt
-          ? `${t(lang, "label_absolute")}: ${formatDiscordDate(returnsAt, "F")}\n${t(lang, "label_relative")}: ${formatDiscordDate(returnsAt, "R")}`
-          : `\`${t(lang, "label_unknown")}\``,
-        inline: false
-      });
+      windowText = returnsAt
+        ? `${t(lang, "label_absolute")}: ${formatDiscordDate(returnsAt, "F")}\n${t(lang, "label_relative")}: ${formatDiscordDate(returnsAt, "R")}`
+        : `\`${t(lang, "label_unknown")}\``;
     }
 
-    fields.push({
-      name: t(lang, "source_label"),
-      value: falloutCodexLink,
-      inline: true
-    });
-    fields.push({
-      name: t(lang, "minerva_open_terminal"),
-      value: openTerminalValue,
-      inline: true
-    });
-    const inventoryText = isArrival ? buildMinervaInventoryText(displayItems, lang) : "";
-
-    const descriptionText = truncateForDiscord(
-      isDeparture
-        ? [
-          `> ${t(lang, descriptionKey, { location, list: listValue, returns: returnsAt ? formatDiscordDate(returnsAt, "R") : `\`${t(lang, "label_unknown")}\`` })}`,
-          `> ${t(lang, "minerva_returns")}: ${returnsAt ? formatDiscordDate(returnsAt, "F") : `\`${t(lang, "label_unknown")}\``}`
-        ].join("\n")
-        : [
-          `> ${t(lang, descriptionKey, { location })}`,
-          isArrival
-            ? `> ${t(lang, "minerva_item_count")}: \`${formatNumber(itemCount, lang)}\` | ${t(lang, "minerva_total_bullion")}: ${formatBullionValue(totalBullion, lang)}`
-            : `> ${t(lang, "minerva_arrives")}: ${arrivesAt ? formatDiscordDate(arrivesAt, "R") : `\`${t(lang, "label_unknown")}\``}`,
-          isArrival && inventoryText
-            ? `\n**${t(lang, "minerva_inventory")}**\n${inventoryText}`
-            : ""
-        ].join("\n"),
-      3900
-    );
-
-    const embed = new EmbedBuilder()
-      .setColor(isArrival ? 0xf7c948 : (isDeparture ? 0xff8f3f : 0xffb347))
-      .setAuthor({
-        name: t(lang, "minerva_author"),
-        url: dossierUrl || websiteUrl || undefined
+    const container = new ContainerBuilder().setAccentColor(accentColor);
+    const descriptionText = isDeparture
+      ? t(lang, descriptionKey, {
+        location,
+        list: listValue,
+        returns: returnsAt ? formatDiscordDate(returnsAt, "R") : `\`${t(lang, "label_unknown")}\``
       })
-      .setTitle(t(lang, titleKey))
-      .setDescription(descriptionText)
-      .addFields(fields)
-      .setTimestamp(new Date())
-      .setFooter({ text: `${t(lang, "minerva_footer")} | ${t(lang, "label_last_broadcast")}` });
-
-    if (portraitUrl) {
-      embed.setThumbnail(portraitUrl);
-    }
-    if (routeMapUrl) {
-      embed.setImage(routeMapUrl);
-    }
-    if (dossierUrl || websiteUrl) {
-      embed.setURL(dossierUrl || websiteUrl);
+      : t(lang, descriptionKey, { location });
+    const header = new SectionBuilder().addTextDisplayComponents(
+      createTextDisplay([
+        `## ${buildLinkedHeadingText(t(lang, titleKey), dossierUrl || websiteUrl)}`,
+        `**${t(lang, "minerva_author")}**`,
+        `> ${descriptionText}`
+      ].join("\n"), 700)
+    );
+    const thumbnail = createThumbnail(portraitUrl, t(lang, titleKey));
+    if (thumbnail) {
+      header.setThumbnailAccessory(thumbnail);
     }
 
-    return embed;
+    const routeIntelText = createTextDisplay([
+      `### ${isArrival ? t(lang, "minerva_sale_intel") : t(lang, "minerva_route_intel")}`,
+      ...routeIntelLines
+    ].join("\n"), 800);
+    const routeMapThumbnail = createThumbnail(routeMapUrl, `${t(lang, "minerva_location")}: ${location}`);
+    const routeIntelSection = new SectionBuilder().addTextDisplayComponents(routeIntelText);
+    if (routeMapThumbnail && compact) {
+      routeIntelSection.setThumbnailAccessory(routeMapThumbnail);
+    }
+
+    container
+      .addSectionComponents(header)
+      .addSeparatorComponents(createSeparator());
+    if (compact && routeMapThumbnail) {
+      container.addSectionComponents(routeIntelSection);
+    } else {
+      container.addTextDisplayComponents(routeIntelText);
+    }
+
+    if (windowText) {
+      container.addTextDisplayComponents(createTextDisplay([
+        `**${isDeparture ? t(lang, "minerva_return_window") : t(lang, "minerva_arrives")}**`,
+        windowText
+      ].join("\n"), 360));
+    }
+
+    if (!compact) {
+      const mediaGallery = createMediaGallery(routeMapUrl, `${t(lang, "minerva_location")}: ${location}`);
+      if (mediaGallery) {
+        container.addMediaGalleryComponents(mediaGallery);
+      }
+    }
+
+    if (isArrival) {
+      const inventoryLines = displayItems.map((item) => {
+        const name = String(item?.name || "").trim() || t(lang, "label_unknown");
+        const price = Number(item?.price);
+        const priceText = Number.isFinite(price)
+          ? formatBullionValue(price, lang, { inline: true, code: false })
+          : `**${t(lang, "label_unknown")}**`;
+        return `- **${name}** - ${priceText}`;
+      });
+      container
+        .addSeparatorComponents(createSeparator(SeparatorSpacingSize.Small, false))
+        .addTextDisplayComponents(createTextDisplay([
+          `### ${t(lang, "minerva_inventory_stats")}`,
+          `${t(lang, "minerva_item_count")}: **${formatNumber(itemCount, lang)}**`,
+          `${t(lang, "minerva_total_bullion")}: ${formatBullionValue(totalBullion, lang, { code: false })}`,
+          `${t(lang, "minerva_highest_price")}: ${formatBullionValue(highestPrice, lang, { code: false })}`,
+          `${t(lang, "minerva_lowest_price")}: ${lowestPrice === null ? `**${t(lang, "label_unknown")}**` : formatBullionValue(lowestPrice, lang, { code: false })}`,
+          "",
+          `### ${t(lang, "minerva_inventory")}`,
+          inventoryLines.join("\n")
+        ].join("\n"), 3600));
+    }
+
+    if (!compact) {
+      const buttonRow = createButtonRow([
+        createLinkButton(t(lang, "minerva_open_terminal"), websiteUrl),
+        createLinkButton(t(lang, "source_label"), dossierUrl)
+      ]);
+      if (buttonRow) {
+        container.addActionRowComponents(buttonRow);
+      }
+
+      container.addTextDisplayComponents(createTextDisplay(
+        buildComponentFooter(`${t(lang, "minerva_footer")} | ${t(lang, "label_last_broadcast")}: ${formatDiscordDate(new Date(), "R")}`),
+        180
+      ));
+    }
+
+    return [container];
   }
 
   function buildMinervaItemSelectValue(item, listNumber, itemIndex) {
@@ -1867,21 +1987,21 @@ function createDiscordIntelBot(options = {}) {
   }
 
   function buildMessagePayload(snapshot, feedList = ["silos", "minerva"], lang = defaultLanguage, options = {}) {
-    const embeds = buildEmbeds(snapshot, feedList, lang, options);
-    const components = feedList.includes("minerva") && snapshot?.minerva
+    const displayComponents = buildComponents(snapshot, feedList, lang, options);
+    const interactiveComponents = feedList.includes("minerva") && snapshot?.minerva
       ? buildMinervaItemSelectRows(snapshot.minerva, lang, options.minervaEventType || "current")
       : [];
 
-    return {
-      embeds,
-      components
-    };
+    return createComponentPayload([
+      ...displayComponents,
+      ...interactiveComponents
+    ]);
   }
 
   function buildPreviewPayload(snapshot, feedList = ["silos", "minerva"], lang = defaultLanguage, options = {}) {
-    const embeds = buildPreviewEmbeds(snapshot, feedList, lang, options);
+    const displayComponents = buildPreviewComponents(snapshot, feedList, lang, options);
     const previewMode = normalizeMinervaPreviewMode(options.minervaPreviewMode || "current");
-    const components = feedList.includes("minerva") && snapshot?.minerva
+    const interactiveComponents = feedList.includes("minerva") && snapshot?.minerva
       ? buildMinervaItemSelectRows(
         snapshot.minerva,
         lang,
@@ -1891,10 +2011,10 @@ function createDiscordIntelBot(options = {}) {
       )
       : [];
 
-    return {
-      embeds,
-      components
-    };
+    return createComponentPayload([
+      ...displayComponents,
+      ...interactiveComponents
+    ]);
   }
 
   function findSelectedMinervaOption(interaction, selectedValue) {
@@ -1934,7 +2054,7 @@ function createDiscordIntelBot(options = {}) {
     return Number.isFinite(price) ? price : null;
   }
 
-  function buildMinervaDetailEmbed(item, detail, lang) {
+  function buildMinervaDetailComponents(item, detail, lang) {
     const planThumbnailUrl = buildAssetUrl(publicBaseUrl, MINERVA_DETAIL_FALLBACK_IMAGE);
     const wikiUrl = normalizeWikiUrl(detail?.wikiUrl || item?.url || item?.WikiUrl || "");
     const itemName = String(item?.name || item?.Name || t(lang, "label_unknown")).trim() || t(lang, "label_unknown");
@@ -1943,33 +2063,40 @@ function createDiscordIntelBot(options = {}) {
       ? detail.whereElse
       : [t(lang, "minerva_detail_no_other_sources")];
     const unlocks = sanitizeDetailText(detail?.unlocks || "") || t(lang, "minerva_detail_no_unlocks");
-
-    const embed = new EmbedBuilder()
-      .setColor(0xf7c948)
-      .setTitle(itemName)
-      .setDescription(`**${t(lang, "minerva_detail_unlocks_label")}**\n${unlocks}`)
-      .addFields(
-        {
-          name: t(lang, "minerva_detail_price"),
-          value: Number.isFinite(price) ? formatBullionValue(price, lang) : `\`${t(lang, "label_unknown")}\``,
-          inline: false
-        },
-        {
-          name: t(lang, "minerva_detail_where_label"),
-          value: whereElse.map((line) => `- ${line}`).join("\n").slice(0, 1024),
-          inline: false
-        }
-      )
-      .setFooter({ text: t(lang, "minerva_footer") });
-
-    if (planThumbnailUrl) {
-      embed.setThumbnail(planThumbnailUrl);
-    }
-    if (wikiUrl) {
-      embed.setURL(wikiUrl);
+    const container = new ContainerBuilder().setAccentColor(MINERVA_ARRIVAL_ACCENT);
+    const header = new SectionBuilder().addTextDisplayComponents(
+      createTextDisplay([
+        `## ${itemName}`,
+        `**${t(lang, "minerva_detail_price")}**: ${Number.isFinite(price) ? formatBullionValue(price, lang, { code: false }) : `**${t(lang, "label_unknown")}**`}`
+      ].join("\n"), 400)
+    );
+    const thumbnail = createThumbnail(planThumbnailUrl, itemName);
+    if (thumbnail) {
+      header.setThumbnailAccessory(thumbnail);
     }
 
-    return embed;
+    container
+      .addSectionComponents(header)
+      .addSeparatorComponents(createSeparator())
+      .addTextDisplayComponents(createTextDisplay([
+        `### ${t(lang, "minerva_detail_unlocks_label")}`,
+        unlocks
+      ].join("\n"), 1000))
+      .addTextDisplayComponents(createTextDisplay([
+        `### ${t(lang, "minerva_detail_where_label")}`,
+        whereElse.map((line) => `- ${line}`).join("\n")
+      ].join("\n"), 1000));
+
+    const buttonRow = createButtonRow([
+      createLinkButton(t(lang, "minerva_detail_open_source"), wikiUrl)
+    ]);
+    if (buttonRow) {
+      container.addActionRowComponents(buttonRow);
+    }
+
+    container.addTextDisplayComponents(createTextDisplay(buildComponentFooter(t(lang, "minerva_footer")), 120));
+
+    return [container];
   }
 
   function buildWelcomeLanguageComponents(lang) {
@@ -1995,7 +2122,7 @@ function createDiscordIntelBot(options = {}) {
     return [new ActionRowBuilder().addComponents(menu)];
   }
 
-  function buildWelcomeEmbed(guild, lang) {
+  function buildWelcomeComponents(guild, lang) {
     const normalizedLang = normalizeLanguage(lang, defaultLanguage);
     const guildName = String(guild?.name || "your server").trim() || "your server";
     const siteUrl = buildPageUrl(publicBaseUrl, "/");
@@ -2021,74 +2148,81 @@ function createDiscordIntelBot(options = {}) {
       linkParts.push(`[${t(normalizedLang, "welcome_links_terms")}](${termsUrl})`);
     }
 
-    const embed = new EmbedBuilder()
-      .setColor(0x39ff14)
-      .setAuthor({
-        name: t(normalizedLang, "welcome_author"),
-        url: siteUrl || undefined
-      })
-      .setTitle(t(normalizedLang, "welcome_title"))
-      .setDescription(t(normalizedLang, "welcome_description", { server: guildName }))
-      .addFields(
-        {
-          name: t(normalizedLang, "welcome_overview_label"),
-          value: t(normalizedLang, "welcome_overview_value"),
-          inline: false
-        },
-        {
-          name: t(normalizedLang, "welcome_setup_label"),
-          value: t(normalizedLang, "welcome_setup_value"),
-          inline: false
-        },
-        {
-          name: t(normalizedLang, "welcome_commands_label"),
-          value: t(normalizedLang, "welcome_commands_value"),
-          inline: true
-        },
-        {
-          name: t(normalizedLang, "welcome_language_field_label"),
-          value: t(normalizedLang, "welcome_language_field_value", {
-            language: t(normalizedLang, `language_name_${normalizedLang}`)
-          }),
-          inline: true
-        }
-      )
-      .setTimestamp(new Date())
-      .setFooter({ text: t(normalizedLang, "welcome_footer") });
+    const container = new ContainerBuilder().setAccentColor(SILO_LIVE_ACCENT);
+    const thumbnailUrl = buildAssetUrl(publicBaseUrl, "assets/images/vault-boy-terminal-peek.png");
+    const header = new SectionBuilder().addTextDisplayComponents(
+      createTextDisplay([
+        `## ${buildLinkedHeadingText(t(normalizedLang, "welcome_title"), siteUrl)}`,
+        `**${t(normalizedLang, "welcome_author")}**`,
+        t(normalizedLang, "welcome_description", { server: guildName })
+      ].join("\n"), 800)
+    );
+    const thumbnail = createThumbnail(thumbnailUrl, t(normalizedLang, "welcome_title"));
+    if (thumbnail) {
+      header.setThumbnailAccessory(thumbnail);
+    }
+
+    container
+      .addSectionComponents(header)
+      .addSeparatorComponents(createSeparator())
+      .addTextDisplayComponents(createTextDisplay([
+        `### ${t(normalizedLang, "welcome_overview_label")}`,
+        t(normalizedLang, "welcome_overview_value"),
+        "",
+        `### ${t(normalizedLang, "welcome_setup_label")}`,
+        t(normalizedLang, "welcome_setup_value")
+      ].join("\n"), 1100))
+      .addTextDisplayComponents(createTextDisplay([
+        `### ${t(normalizedLang, "welcome_commands_label")}`,
+        t(normalizedLang, "welcome_commands_value"),
+        "",
+        `### ${t(normalizedLang, "welcome_language_field_label")}`,
+        t(normalizedLang, "welcome_language_field_value", {
+          language: t(normalizedLang, `language_name_${normalizedLang}`)
+        })
+      ].join("\n"), 700));
 
     if (linkParts.length) {
-      embed.addFields({
-        name: t(normalizedLang, "welcome_links_label"),
-        value: linkParts.join(" • "),
-        inline: false
-      });
+      container.addTextDisplayComponents(createTextDisplay([
+        `### ${t(normalizedLang, "welcome_links_label")}`,
+        linkParts.join(" | ")
+      ].join("\n"), 500));
     }
 
-    if (siteUrl) {
-      embed.setURL(siteUrl);
+    const buttonRow = createButtonRow([
+      createLinkButton(t(normalizedLang, "welcome_links_site"), siteUrl),
+      createLinkButton(t(normalizedLang, "welcome_links_silos"), silosUrl),
+      createLinkButton(t(normalizedLang, "welcome_links_minerva"), minervaUrl)
+    ]);
+    if (buttonRow) {
+      container.addActionRowComponents(buttonRow);
     }
 
-    return embed;
+    container
+      .addSeparatorComponents(createSeparator(SeparatorSpacingSize.Small, false))
+      .addTextDisplayComponents(createTextDisplay(buildComponentFooter(t(normalizedLang, "welcome_footer")), 160));
+
+    return [container];
   }
 
   function buildWelcomePayload(guild, lang) {
-    return {
-      embeds: [buildWelcomeEmbed(guild, lang)],
-      components: buildWelcomeLanguageComponents(lang)
-    };
+    return createComponentPayload([
+      ...buildWelcomeComponents(guild, lang),
+      ...buildWelcomeLanguageComponents(lang)
+    ]);
   }
 
-  function buildEmbeds(snapshot, feedList = ["silos", "minerva"], lang = defaultLanguage, options = {}) {
-    const embeds = [];
+  function buildComponents(snapshot, feedList = ["silos", "minerva"], lang = defaultLanguage, options = {}) {
+    const components = [];
 
     if (feedList.includes("silos") && snapshot?.silo) {
-      embeds.push(buildSiloEmbed(snapshot.silo, lang));
+      components.push(...buildSiloComponents(snapshot.silo, lang));
     }
     if (feedList.includes("minerva") && snapshot?.minerva) {
-      embeds.push(buildMinervaEmbed(snapshot.minerva, lang, options.minervaEventType || "current"));
+      components.push(...buildMinervaComponents(snapshot.minerva, lang, options.minervaEventType || "current"));
     }
 
-    return embeds;
+    return components;
   }
 
   function canSendToGuildChannel(channel) {
@@ -2102,8 +2236,7 @@ function createDiscordIntelBot(options = {}) {
     }
 
     return permissions.has(PermissionFlagsBits.ViewChannel)
-      && permissions.has(PermissionFlagsBits.SendMessages)
-      && permissions.has(PermissionFlagsBits.EmbedLinks);
+      && permissions.has(PermissionFlagsBits.SendMessages);
   }
 
   async function resolveGuildWelcomeChannel(guild) {
@@ -2136,34 +2269,33 @@ function createDiscordIntelBot(options = {}) {
     return candidates[0] || null;
   }
 
-  function buildPreviewEmbeds(snapshot, feedList = ["silos", "minerva"], lang = defaultLanguage, options = {}) {
-    const embeds = [];
+  function buildPreviewComponents(snapshot, feedList = ["silos", "minerva"], lang = defaultLanguage, options = {}) {
+    const components = [];
 
     if (feedList.includes("silos") && snapshot?.silo) {
-      embeds.push(buildSiloEmbed(snapshot.silo, lang));
+      components.push(...buildSiloComponents(snapshot.silo, lang));
     }
 
     if (feedList.includes("minerva") && snapshot?.minerva) {
       const previewMode = normalizeMinervaPreviewMode(options.minervaPreviewMode || "current");
       if (previewMode === "all") {
-        embeds.push(buildMinervaEmbed(snapshot.minerva, lang, "transit"));
-        embeds.push(buildMinervaEmbed(snapshot.minerva, lang, "arrival"));
-        embeds.push(buildMinervaEmbed(snapshot.minerva, lang, "departure"));
+        components.push(...buildMinervaComponents(snapshot.minerva, lang, "transit", { compact: true }));
+        components.push(...buildMinervaComponents(snapshot.minerva, lang, "arrival", { compact: true }));
+        components.push(...buildMinervaComponents(snapshot.minerva, lang, "departure", { compact: true }));
       } else {
         const eventType = previewMode === "current"
           ? resolveCurrentMinervaEmbedType(snapshot?.minerva)
           : previewMode;
-        embeds.push(buildMinervaEmbed(snapshot.minerva, lang, eventType));
+        components.push(...buildMinervaComponents(snapshot.minerva, lang, eventType));
       }
     }
 
-    return embeds;
+    return components;
   }
 
-  async function postEmbedsToSubscription(subscription, payload) {
-    const embeds = Array.isArray(payload?.embeds) ? payload.embeds : [];
+  async function postComponentsToSubscription(subscription, payload) {
     const components = Array.isArray(payload?.components) ? payload.components : [];
-    if (!client || !embeds.length) {
+    if (!client || !components.length) {
       return null;
     }
 
@@ -2173,14 +2305,9 @@ function createDiscordIntelBot(options = {}) {
         return null;
       }
 
-      const messagePayload = { embeds };
-      if (components.length) {
-        messagePayload.components = components;
-      }
-
-      return await channel.send(messagePayload);
+      return await channel.send(payload);
     } catch (error) {
-      log.error(`[discord-bot] Failed to post intel embed to channel ${subscription.channelId}.`);
+      log.error(`[discord-bot] Failed to post intel component message to channel ${subscription.channelId}.`);
       log.error(error);
       return null;
     }
@@ -2197,6 +2324,73 @@ function createDiscordIntelBot(options = {}) {
     return names;
   }
 
+  function replaceTextDisplayContent(component, replacements) {
+    if (!component || typeof component !== "object") {
+      return false;
+    }
+
+    let modified = false;
+    if (typeof component.content === "string") {
+      let nextContent = component.content;
+      for (const [from, to] of replacements) {
+        nextContent = nextContent.split(from).join(to);
+      }
+      if (nextContent !== component.content) {
+        component.content = nextContent;
+        modified = true;
+      }
+    }
+
+    if (Array.isArray(component.components)) {
+      for (const child of component.components) {
+        if (replaceTextDisplayContent(child, replacements)) {
+          modified = true;
+        }
+      }
+    }
+
+    return modified;
+  }
+
+  function buildLegacySiloExpiredComponents(embeds, lang) {
+    const source = Array.isArray(embeds) && embeds.length ? embeds[0] : null;
+    if (!source) {
+      return [];
+    }
+
+    const json = typeof source.toJSON === "function" ? source.toJSON() : { ...source };
+    const statusFieldNames = getKnownSiloStatusFieldNames();
+    const fields = Array.isArray(json.fields) ? json.fields : [];
+    const lines = [];
+
+    for (const field of fields) {
+      const name = String(field?.name || "").trim();
+      const value = String(field?.value || "").trim();
+      if (!name || !value) {
+        continue;
+      }
+      const nextValue = statusFieldNames.has(name)
+        ? `\`${t(lang, "silo_status_expired")}\``
+        : value;
+      lines.push(`**${name}**\n${nextValue}`);
+    }
+
+    const container = new ContainerBuilder()
+      .setAccentColor(SILO_EXPIRED_ACCENT)
+      .addTextDisplayComponents(createTextDisplay([
+        `## ${String(json.title || t(lang, "silo_title")).trim()}`,
+        String(json.description || "").trim(),
+        "",
+        lines.join("\n\n")
+      ].filter(Boolean).join("\n"), 2200))
+      .addTextDisplayComponents(createTextDisplay(
+        buildComponentFooter(`${t(lang, "silo_footer")} | ${t(lang, "label_last_broadcast")}: ${formatDiscordDate(new Date(), "R")}`),
+        180
+      ));
+
+    return [container];
+  }
+
   async function markPreviousSiloEmbedExpired(subscription, lang) {
     const messageId = String(subscription?.lastSiloMessageId || "").trim();
     const channelId = String(subscription?.channelId || "").trim();
@@ -2211,34 +2405,29 @@ function createDiscordIntelBot(options = {}) {
       }
       const message = await channel.messages.fetch(messageId);
       if (!message || !Array.isArray(message.embeds) || !message.embeds.length) {
-        return;
-      }
-
-      const statusFieldNames = getKnownSiloStatusFieldNames();
-      const expiredValue = `\`${t(lang, "silo_status_expired")}\``;
-      let modified = false;
-      const nextEmbeds = message.embeds.map((embed) => {
-        const json = typeof embed.toJSON === "function" ? embed.toJSON() : { ...embed };
-        if (Array.isArray(json.fields)) {
-          json.fields = json.fields.map((field) => {
-            if (field && statusFieldNames.has(String(field.name || ""))) {
-              if (field.value !== expiredValue) {
-                modified = true;
-                return { ...field, value: expiredValue };
-              }
-            }
-            return field;
-          });
+        if (!Array.isArray(message?.components) || !message.components.length) {
+          return;
         }
-        return json;
-      });
+      }
 
-      if (!modified) {
+      const expiredValue = `\`${t(lang, "silo_status_expired")}\``;
+      const liveValue = `\`${t(lang, "silo_status_live")}\``;
+      const nextComponents = Array.isArray(message.components) && message.components.length
+        ? message.components.map((component) => (
+          typeof component.toJSON === "function" ? component.toJSON() : JSON.parse(JSON.stringify(component))
+        ))
+        : buildLegacySiloExpiredComponents(message.embeds, lang);
+      const modified = nextComponents.some((component) => replaceTextDisplayContent(component, [
+        [liveValue, expiredValue],
+        [t(lang, "silo_status_live"), t(lang, "silo_status_expired")]
+      ]));
+
+      if (!modified && (!Array.isArray(message.embeds) || !message.embeds.length)) {
         return;
       }
-      await message.edit({ embeds: nextEmbeds });
+      await message.edit(createComponentPayload(nextComponents, { includeEditNulls: true }));
     } catch (error) {
-      log.error(`[discord-bot] Failed to mark previous silo embed expired in channel ${channelId}.`);
+      log.error(`[discord-bot] Failed to mark previous silo component message expired in channel ${channelId}.`);
       log.error(error);
     }
   }
@@ -2298,7 +2487,24 @@ function createDiscordIntelBot(options = {}) {
       if (Array.isArray(message.components) && !message.components.length) {
         return;
       }
-      await message.edit({ components: [] });
+      const currentComponents = Array.isArray(message.components) ? message.components : [];
+      const nextComponents = currentComponents
+        .map((component) => (typeof component.toJSON === "function" ? component.toJSON() : JSON.parse(JSON.stringify(component))))
+        .filter((component) => {
+          const children = Array.isArray(component?.components) ? component.components : [];
+          return !children.some((child) => String(child?.custom_id || child?.customId || "").startsWith(MINERVA_ITEM_SELECT_PREFIX));
+        });
+
+      if (nextComponents.length === currentComponents.length) {
+        return;
+      }
+
+      const isComponentsV2Message = Number(message.flags?.bitfield || message.flags || 0) & MessageFlags.IsComponentsV2;
+      await message.edit(
+        isComponentsV2Message
+          ? createComponentPayload(nextComponents, { includeEditNulls: true })
+          : { components: nextComponents }
+      );
     } catch (error) {
       log.error(`[discord-bot] Failed to strip components from previous Minerva arrival message in channel ${channelId}.`);
       log.error(error);
@@ -2316,7 +2522,7 @@ function createDiscordIntelBot(options = {}) {
         ? getGuildLanguage(subscription.guildId, defaultLanguage)
         : defaultLanguage;
       const payload = buildMessagePayload(snapshot, [feedType], lang, options);
-      if (!payload.embeds.length) {
+      if (!hasComponentsPayload(payload)) {
         continue;
       }
       if (feedType === "silos") {
@@ -2325,7 +2531,7 @@ function createDiscordIntelBot(options = {}) {
       if (feedType === "minerva") {
         await removePreviousMinervaArrivalComponents(subscription);
       }
-      const sentMessage = await postEmbedsToSubscription(subscription, payload);
+      const sentMessage = await postComponentsToSubscription(subscription, payload);
       if (feedType === "silos" && sentMessage?.id) {
         recordSiloMessageId(subscription.channelId, sentMessage.id);
       }
@@ -2345,14 +2551,14 @@ function createDiscordIntelBot(options = {}) {
     const payload = buildMessagePayload(snapshot, feedList, lang, {
       minervaEventType
     });
-    if (!payload.embeds.length) {
+    if (!hasComponentsPayload(payload)) {
       return null;
     }
     const includesMinerva = Array.isArray(feedList) && feedList.includes("minerva");
     if (includesMinerva) {
       await removePreviousMinervaArrivalComponents(subscription);
     }
-    const sentMessage = await postEmbedsToSubscription(subscription, payload);
+    const sentMessage = await postComponentsToSubscription(subscription, payload);
     if (sentMessage?.id && Array.isArray(feedList) && feedList.includes("silos")) {
       recordSiloMessageId(subscription.channelId, sentMessage.id);
     }
@@ -2579,8 +2785,9 @@ function createDiscordIntelBot(options = {}) {
     }
 
     const detail = resolveMinervaDetailFallback(siteRoot, item, lang);
-    const embed = buildMinervaDetailEmbed(item, detail, lang);
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply(createComponentPayload(buildMinervaDetailComponents(item, detail, lang), {
+      includeEditNulls: true
+    }));
 
     if (userId) {
       minervaDetailReplyByUser.set(userId, {
@@ -2599,12 +2806,12 @@ function createDiscordIntelBot(options = {}) {
       minervaPreviewMode
     });
 
-    if (!payload.embeds.length) {
+    if (!hasComponentsPayload(payload)) {
       await interaction.editReply({ content: t(lang, "cmd_preview_unavailable") });
       return;
     }
 
-    await interaction.editReply(payload);
+    await interaction.editReply(createComponentPayload(payload.components, { includeEditNulls: true }));
   }
 
   async function handleLanguage(interaction) {
@@ -2650,7 +2857,7 @@ function createDiscordIntelBot(options = {}) {
     const selectedLanguage = normalizeLanguage(interaction.values?.[0], defaultLanguage);
     const nextLanguage = setGuildLanguage(guildId, selectedLanguage);
     const payload = buildWelcomePayload(interaction.guild, nextLanguage);
-    await interaction.update(payload);
+    await interaction.update(createComponentPayload(payload.components, { includeEditNulls: true }));
   }
 
   async function postWelcomeMessage(guild) {
@@ -2671,7 +2878,7 @@ function createDiscordIntelBot(options = {}) {
     try {
       await channel.send(buildWelcomePayload(guild, lang));
     } catch (error) {
-      log.error(`[discord-bot] Failed to post welcome embed in guild ${guildId}.`);
+      log.error(`[discord-bot] Failed to post welcome component message in guild ${guildId}.`);
       log.error(error);
     }
   }
