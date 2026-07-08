@@ -11,5 +11,7 @@
 @import "components/cards.css";
 @import "components/atomic-shop.css";
 @import "components/command-terminal.css?v=20260625-command-terminal-desktop-specific-v1";
-@import "pages/home.css?v=20260622-files-detail-modal-v4";
+@import "pages/home.css?v=20260708-fo76-events-icons-v2";
+@import "features/classified/classified.css?v=20260708-feature-split-v1";
+@import "features/events/events.css?v=20260708-events-classified-padding-v1";
 @import "pages/error.css";

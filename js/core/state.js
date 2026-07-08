@@ -133,6 +133,38 @@ const state = {
   classifiedAxolotl: {
     open: false
   },
+  fo76Events: {
+    open: false,
+    loading: false,
+    error: "",
+    data: null,
+    requestId: 0
+  },
+  fo76RoadMap: {
+    open: false,
+    lensZoom: 2.5
+  },
+  fo76MinervaList: {
+    open: false,
+    loading: false,
+    error: "",
+    listNumber: null,
+    eventTitle: "",
+    list: null,
+    opener: null,
+    detail: {
+      loading: false,
+      error: "",
+      item: null,
+      data: null,
+      requestId: 0
+    }
+  },
+  fo76EventInfo: {
+    open: false,
+    event: null,
+    detail: null
+  },
   files: {
     me: null,
     localAccessExpired: false,

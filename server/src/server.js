@@ -11,6 +11,7 @@ const { RedisStore } = require("connect-redis");
 const multer = require("multer");
 const nodemailer = require("nodemailer");
 const { fetchMinervaIntel, fetchNukaKnightsIntel, fetchPlayerCounts, fetchSiloIntel } = require("./intel");
+const { fetchFo76EventsCalendar } = require("./fo76Events");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -10119,6 +10120,23 @@ app.get("/api/intel/nukaknights", async (req, res) => {
     console.error(error);
     res.status(502).json({
       error: "Unable to fetch NukaKnights daily intel"
+    });
+  }
+});
+
+app.get("/api/fo76/events", async (req, res) => {
+  try {
+    const payload = await fetchFo76EventsCalendar({
+      storageDir: STORAGE_DIR,
+      force: String(req.query.force || "").trim() === "1"
+    });
+    res.setHeader("Cache-Control", "no-store");
+    res.json(payload);
+  } catch (error) {
+    console.error("[fo76-events] Failed to fetch Fallout 76 event calendar.");
+    console.error(error);
+    res.status(502).json({
+      error: "Unable to fetch Fallout 76 event calendar"
     });
   }
 });

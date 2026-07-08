@@ -40,7 +40,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
   <link rel="preload" as="image" href="assets/images/minerva-plan-fallback.png" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/terminal-favicon.svg" />
-  <link rel="stylesheet" href="css/styles.css?v=20260625-command-terminal-desktop-specific-v1" />
+  <link rel="stylesheet" href="css/styles.css?v=20260708-fo76-events-icons-v2" />
 </head>
 <body class="is-booting">
   <noscript>
@@ -469,6 +469,144 @@
             OPEN SOURCE PAGE
           </a>
           <button id="classifiedAxolotlCloseBtn" class="files-btn intel-bot-modal-confirm" type="button">CLOSE</button>
+        </div>
+      </div>
+    </div>
+    <div id="fo76EventsOverlay" class="intel-bot-modal-overlay classified-intel-modal-overlay fo76-events-modal-overlay" aria-hidden="true">
+      <div
+        id="fo76EventsCore"
+        class="intel-bot-modal-core classified-intel-modal-core fo76-events-modal-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fo76EventsTitle"
+        aria-describedby="fo76EventsBody"
+      >
+        <div class="classified-intel-modal-head fo76-events-modal-head">
+          <div>
+            <p id="fo76EventsBadge" class="intel-bot-modal-badge classified-intel-modal-badge">COMMUNITY CALENDAR</p>
+            <h2 id="fo76EventsTitle" class="intel-bot-modal-title classified-intel-modal-title">FALLOUT 76 EVENTS</h2>
+          </div>
+          <div class="fo76-events-head-actions">
+            <button id="fo76EventsRefreshBtn" class="files-btn classified-player-modal-refresh" type="button">REFRESH</button>
+            <button id="fo76RoadMapBtn" class="files-btn fo76-roadmap-trigger" type="button">ROAD MAP</button>
+            <button id="fo76EventsCloseIconBtn" class="classified-intel-modal-x" type="button" aria-label="Close event calendar">&times;</button>
+          </div>
+        </div>
+        <p id="fo76EventsBody" class="intel-bot-modal-body classified-intel-modal-body">
+          Upcoming Appalachia events cached by this terminal for faster access.
+        </p>
+        <div id="fo76EventsMeta" class="classified-intel-modal-meta fo76-events-meta">Last sync: --</div>
+        <p id="fo76EventsStatus" class="classified-intel-modal-status fo76-events-status" aria-live="polite">Loading event calendar...</p>
+        <div id="fo76EventsContent" class="classified-intel-modal-content fo76-events-content" hidden></div>
+        <div class="intel-bot-modal-actions classified-intel-modal-actions fo76-events-actions">
+          <button id="fo76EventsCloseBtn" class="files-btn intel-bot-modal-confirm" type="button">CLOSE</button>
+        </div>
+      </div>
+    </div>
+    <div id="fo76RoadMapOverlay" class="intel-bot-modal-overlay classified-intel-modal-overlay fo76-roadmap-overlay" aria-hidden="true">
+      <div
+        id="fo76RoadMapCore"
+        class="intel-bot-modal-core classified-intel-modal-core fo76-roadmap-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fo76RoadMapTitle"
+        aria-describedby="fo76RoadMapBody"
+      >
+        <div class="classified-intel-modal-head fo76-roadmap-head">
+          <div>
+            <p id="fo76RoadMapBadge" class="intel-bot-modal-badge classified-intel-modal-badge">OFFICIAL BETHESDA ROAD MAP</p>
+            <h2 id="fo76RoadMapTitle" class="intel-bot-modal-title classified-intel-modal-title">SEASON 25 ROAD MAP</h2>
+          </div>
+          <div class="fo76-roadmap-head-actions">
+            <div class="fo76-roadmap-lens-controls">
+              <label id="fo76RoadMapLensLabel" class="fo76-roadmap-lens-label" for="fo76RoadMapLensInput">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <circle cx="10.5" cy="10.5" r="5.75"></circle>
+                  <path d="m15.1 15.1 4.4 4.4"></path>
+                  <path d="M10.5 7.8v5.4"></path>
+                  <path d="M7.8 10.5h5.4"></path>
+                </svg>
+                <span>LENS</span>
+              </label>
+              <input
+                id="fo76RoadMapLensInput"
+                class="fo76-roadmap-lens-input"
+                type="range"
+                min="1.5"
+                max="4"
+                step="0.25"
+                value="2.5"
+              />
+              <output id="fo76RoadMapLensValue" class="fo76-roadmap-lens-value" for="fo76RoadMapLensInput">2.5x</output>
+            </div>
+            <button id="fo76RoadMapCloseIconBtn" class="classified-intel-modal-x" type="button" aria-label="Close road map">&times;</button>
+          </div>
+        </div>
+        <p id="fo76RoadMapBody" class="intel-bot-modal-body classified-intel-modal-body">
+          Official Bethesda community calendar for Fallout 76 Season 25: Appalachia Under Siege.
+        </p>
+        <figure id="fo76RoadMapFrame" class="fo76-roadmap-frame">
+          <img
+            id="fo76RoadMapImage"
+            src="assets/images/fallout-76-season-25-roadmap.jpg"
+            alt="Official Bethesda road map for Fallout 76 Season 25: Appalachia Under Siege"
+            decoding="async"
+          />
+          <div id="fo76RoadMapLens" class="fo76-roadmap-lens" aria-hidden="true" hidden></div>
+        </figure>
+        <div class="intel-bot-modal-actions classified-intel-modal-actions fo76-roadmap-actions">
+          <button id="fo76RoadMapCloseBtn" class="files-btn intel-bot-modal-confirm" type="button">CLOSE</button>
+        </div>
+      </div>
+    </div>
+    <div id="fo76MinervaListOverlay" class="intel-bot-modal-overlay classified-intel-modal-overlay fo76-minerva-list-overlay" aria-hidden="true">
+      <div
+        id="fo76MinervaListCore"
+        class="intel-bot-modal-core classified-intel-modal-core fo76-minerva-list-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fo76MinervaListTitle"
+        aria-describedby="fo76MinervaListBody"
+      >
+        <div class="classified-intel-modal-head fo76-minerva-list-head">
+          <div>
+            <p id="fo76MinervaListBadge" class="intel-bot-modal-badge classified-intel-modal-badge">MINERVA INVENTORY</p>
+            <h2 id="fo76MinervaListTitle" class="intel-bot-modal-title classified-intel-modal-title">MINERVA SALE LIST</h2>
+          </div>
+          <button id="fo76MinervaListCloseIconBtn" class="classified-intel-modal-x" type="button" aria-label="Close Minerva list">&times;</button>
+        </div>
+        <p id="fo76MinervaListBody" class="intel-bot-modal-body classified-intel-modal-body">
+          Select an item to inspect its plan details.
+        </p>
+        <p id="fo76MinervaListStatus" class="classified-intel-modal-status fo76-minerva-list-status" aria-live="polite" hidden></p>
+        <div id="fo76MinervaListContent" class="classified-intel-modal-content fo76-minerva-list-content" hidden></div>
+        <div class="intel-bot-modal-actions classified-intel-modal-actions fo76-minerva-list-actions">
+          <button id="fo76MinervaListCloseBtn" class="files-btn intel-bot-modal-confirm" type="button">CLOSE</button>
+        </div>
+      </div>
+    </div>
+    <div id="fo76EventInfoOverlay" class="intel-bot-modal-overlay classified-intel-modal-overlay fo76-event-info-overlay" aria-hidden="true">
+      <div
+        id="fo76EventInfoCore"
+        class="intel-bot-modal-core classified-intel-modal-core fo76-event-info-core"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fo76EventInfoTitle"
+        aria-describedby="fo76EventInfoBody"
+      >
+        <div class="classified-intel-modal-head fo76-event-info-head">
+          <div>
+            <p id="fo76EventInfoBadge" class="intel-bot-modal-badge classified-intel-modal-badge">EVENT INTEL</p>
+            <h2 id="fo76EventInfoTitle" class="intel-bot-modal-title classified-intel-modal-title">FALLOUT 76 EVENT</h2>
+          </div>
+          <button id="fo76EventInfoCloseIconBtn" class="classified-intel-modal-x" type="button" aria-label="Close event intel">&times;</button>
+        </div>
+        <p id="fo76EventInfoBody" class="intel-bot-modal-body classified-intel-modal-body">
+          Event details from the local calendar relay.
+        </p>
+        <div id="fo76EventInfoContent" class="classified-intel-modal-content fo76-event-info-content" hidden></div>
+        <div class="intel-bot-modal-actions classified-intel-modal-actions fo76-event-info-actions">
+          <button id="fo76EventInfoCloseBtn" class="files-btn intel-bot-modal-confirm" type="button">CLOSE</button>
         </div>
       </div>
     </div>
@@ -1312,7 +1450,7 @@
             <span id="tabStatusDecisionBadge" class="tab-notification-badge" hidden>1</span>
           </span>
           <span id="tabIntel" class="tab active">INTEL</span>
-          <span id="tabDrops" class="tab" hidden>DROPS</span>
+          <span id="tabDrops" class="tab">EVENTS</span>
           <span id="tabData" class="tab">DATA</span>
         </div>
         <div class="utility-controls">
@@ -1996,7 +2134,7 @@
         </article>
       </section>
     </section>
-    <section id="dropsPage" class="drops-page" hidden>
+    <section id="dropsPage" class="drops-page" hidden aria-hidden="true">
       <article id="dropsGatePanel" class="panel drops-gate-panel">
         <p id="dropsGateBadge" class="drops-gate-badge">ADMIN CLEARANCE</p>
         <h2 id="dropsGateTitle" class="drops-gate-title">TEMP SHARE CONSOLE LOCKED</h2>
@@ -2006,11 +2144,25 @@
       </article>
 
       <section id="dropsAdminView" class="drops-admin-view" hidden>
+        <div class="drops-modal-shell">
+          <header class="drops-modal-head">
+            <div class="drops-modal-title-wrap">
+              <p id="dropsModalBadge" class="drops-modal-badge">ADMIN LINK CONSOLE</p>
+              <h2 id="dropsModalTitle" class="drops-modal-title">TEMP SHARE OPERATIONS</h2>
+              <p id="dropsModalSubtitle" class="drops-modal-subtitle">Create, monitor, and revoke temporary file links from one sealed admin console.</p>
+            </div>
+            <button
+              id="dropsModalCloseBtn"
+              class="files-btn files-admin-modal-close drops-modal-close"
+              type="button"
+              aria-label="Close links console"
+            >CLOSE</button>
+          </header>
         <div class="drops-layout">
           <article class="panel drops-upload-panel">
             <div class="drops-panel-head">
               <div class="drops-panel-head-left">
-                <p class="drops-panel-kicker">PUBLIC LINK OPS</p>
+                <p id="dropsUploadKicker" class="drops-panel-kicker">PUBLIC LINK OPS</p>
                 <h2 id="dropsUploadTitle" class="drops-panel-title">CREATE TEMPORARY SHARE</h2>
               </div>
               <div class="drops-head-lang">
@@ -2043,7 +2195,7 @@
               <div class="drops-upload-grid">
 
                 <label class="drops-upload-field drops-upload-field-wide drops-file-field" for="dropsUploadInput">
-                  <span class="drops-upload-label">File</span>
+                  <span id="dropsFileLabel" class="drops-upload-label">File</span>
                   <div class="drops-file-picker">
                     <input id="dropsUploadInput" class="drops-upload-input-native" type="file" name="file" />
                     <button id="dropsUploadPickerBtn" class="files-btn drops-file-picker-btn" type="button">Choose file</button>
@@ -2052,7 +2204,7 @@
                 </label>
 
                 <label class="drops-upload-field drops-upload-field-wide" for="dropsDisplayNameInput">
-                  <span class="drops-upload-label">Display name</span>
+                  <span id="dropsDisplayNameLabel" class="drops-upload-label">Display name</span>
                   <input
                     id="dropsDisplayNameInput"
                     class="files-upload-text"
@@ -2066,7 +2218,7 @@
                 </label>
 
                 <label class="drops-upload-field" for="dropsMaxDownloadsInput">
-                  <span class="drops-upload-label">Max downloads</span>
+                  <span id="dropsMaxDownloadsLabel" class="drops-upload-label">Max downloads</span>
                   <input
                     id="dropsMaxDownloadsInput"
                     class="files-upload-text drops-number-input"
@@ -2123,7 +2275,7 @@
                 </section>
 
                 <label class="drops-upload-field drops-upload-field-wide" for="dropsDescriptionInput">
-                  <span class="drops-upload-label">Description</span>
+                  <span id="dropsDescriptionLabel" class="drops-upload-label">Description</span>
                   <textarea
                     id="dropsDescriptionInput"
                     class="files-upload-description drops-upload-description"
@@ -2146,7 +2298,7 @@
           <article class="panel drops-list-panel">
             <div class="drops-panel-head drops-list-head">
               <div>
-                <p class="drops-panel-kicker">LIVE LINKS</p>
+                <p id="dropsListKicker" class="drops-panel-kicker">LIVE LINKS</p>
                 <h2 id="dropsListTitle" class="drops-panel-title">ACTIVE TEMP SHARES</h2>
               </div>
               <button id="dropsRefreshBtn" class="files-btn" type="button">REFRESH</button>
@@ -2180,6 +2332,7 @@
             <p id="dropsEmptyState" class="drops-empty-state" hidden>No active temporary shares.</p>
             <div id="dropsList" class="drops-list" aria-live="polite"></div>
           </article>
+        </div>
         </div>
       </section>
     </section>
@@ -2404,6 +2557,28 @@
     </span>
   </button>
 
+  <button
+    id="dropsAdminFloatingBtn"
+    class="files-bot-admin-pill drops-admin-pill"
+    type="button"
+    aria-haspopup="dialog"
+    aria-expanded="false"
+    aria-controls="dropsPage"
+    hidden
+  >
+    <span class="files-bot-admin-pill-icon" aria-hidden="true">
+      <svg class="files-bot-admin-pill-icon-svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+        <path d="M10 7H7.5A4.5 4.5 0 0 0 3 11.5v0A4.5 4.5 0 0 0 7.5 16H10" />
+        <path d="M14 7h2.5A4.5 4.5 0 0 1 21 11.5v0A4.5 4.5 0 0 1 16.5 16H14" />
+        <path d="M8.5 12h7" />
+      </svg>
+    </span>
+    <span class="files-bot-admin-pill-copy" aria-hidden="true">
+      <span id="dropsAdminFloatingBtnLabel" class="files-bot-admin-pill-label">LINKS</span>
+      <span id="dropsAdminFloatingBtnHint" class="files-bot-admin-pill-hint">TEMP SHARES</span>
+    </span>
+  </button>
+
   <aside
     id="visitCounterBadge"
     class="visit-counter-badge"
@@ -2468,6 +2643,8 @@
   <script src="js/dom/elements.js?v=20260621-files-detail-modal-v1"></script>
   <script src="js/core/config.js?v=20260620-intel-email-v1"></script>
   <script src="js/core/state.js?v=20260620-intel-email-v1"></script>
+  <script src="js/features/classified/classified.js?v=20260708-feature-split-v1"></script>
+  <script src="js/features/events/events.js?v=20260708-roadmap-lens-v1"></script>
   <script src="js/app.js?v=20260625-public-shares-nonadmin-v2"></script>
   <script src="js/atomic-shop.js?v=20260617-atomic-filter-tabs-v1"></script>
 </body>

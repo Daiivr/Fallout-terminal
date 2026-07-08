@@ -1,0 +1,1613 @@
+/* events.css — Fallout 76 Events tab and roadmap modal */
+.fo76-events-modal-core.intel-bot-modal-core {
+  width: min(1040px, calc(100% - 28px));
+  max-height: min(90svh, 880px);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+}
+
+.fo76-roadmap-overlay {
+  z-index: 1240;
+}
+
+.fo76-roadmap-core.intel-bot-modal-core {
+  width: min(1180px, calc(100% - 24px));
+  max-height: min(92svh, 920px);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.fo76-roadmap-head {
+  align-items: flex-start;
+}
+
+.fo76-roadmap-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.fo76-roadmap-lens-controls {
+  display: grid;
+  grid-template-columns: auto minmax(96px, 150px) auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 34px;
+  border: 1px solid rgba(255, 225, 122, 0.32);
+  border-radius: 8px;
+  padding: 6px 9px;
+  background:
+    linear-gradient(to bottom, rgba(255, 225, 122, 0.1), rgba(0, 0, 0, 0.2)),
+    rgba(0, 0, 0, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.32);
+}
+
+.fo76-roadmap-lens-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #fff3bf;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.fo76-roadmap-lens-label svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 auto;
+}
+
+.fo76-roadmap-lens-input {
+  appearance: none;
+  width: 100%;
+  height: 18px;
+  margin: 0;
+  background: transparent;
+  cursor: ew-resize;
+}
+
+.fo76-roadmap-lens-input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background:
+    linear-gradient(to right, rgba(139, 255, 139, 0.72), rgba(255, 225, 122, 0.76)),
+    rgba(0, 0, 0, 0.36);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.42);
+}
+
+.fo76-roadmap-lens-input::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border: 1px solid rgba(255, 247, 204, 0.78);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.94), rgba(255, 225, 122, 0.72) 48%, rgba(139, 255, 139, 0.42));
+  box-shadow:
+    0 0 0 3px rgba(255, 225, 122, 0.12),
+    0 4px 10px rgba(0, 0, 0, 0.42);
+}
+
+.fo76-roadmap-lens-input::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background:
+    linear-gradient(to right, rgba(139, 255, 139, 0.72), rgba(255, 225, 122, 0.76)),
+    rgba(0, 0, 0, 0.36);
+}
+
+.fo76-roadmap-lens-input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(255, 247, 204, 0.78);
+  border-radius: 50%;
+  background: rgba(255, 225, 122, 0.82);
+  box-shadow: 0 0 0 3px rgba(255, 225, 122, 0.12);
+}
+
+.fo76-roadmap-lens-input:focus-visible {
+  outline: none;
+}
+
+.fo76-roadmap-lens-input:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 4px rgba(139, 255, 139, 0.18),
+    0 0 0 1px rgba(139, 255, 139, 0.68);
+}
+
+.fo76-roadmap-lens-value {
+  min-width: 40px;
+  color: rgba(202, 255, 202, 0.9);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-align: right;
+}
+
+.fo76-roadmap-frame {
+  position: relative;
+  z-index: 1;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgba(139, 255, 139, 0.26);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.34);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.58) inset,
+    0 18px 54px rgba(0, 0, 0, 0.34);
+  touch-action: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 225, 122, 0.34) rgba(0, 0, 0, 0.2);
+}
+
+.fo76-roadmap-frame.is-lens-active {
+  cursor: none;
+}
+
+.fo76-roadmap-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(92svh - 210px);
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.42);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.fo76-roadmap-lens {
+  position: absolute;
+  z-index: 3;
+  width: clamp(190px, 24vw, 286px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(225, 241, 234, 0.56);
+  border-radius: 50%;
+  background-repeat: no-repeat;
+  background-color: rgba(232, 255, 236, 0.08);
+  box-shadow:
+    inset 16px 18px 34px rgba(255, 255, 255, 0.16),
+    inset -18px -22px 36px rgba(0, 0, 0, 0.38),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 18px 54px rgba(0, 0, 0, 0.58),
+    0 0 0 1px rgba(0, 0, 0, 0.54);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.92);
+  transition: opacity 120ms ease, transform 120ms ease;
+  backdrop-filter: saturate(1.16) contrast(1.08);
+  -webkit-backdrop-filter: saturate(1.16) contrast(1.08);
+}
+
+.fo76-roadmap-lens::before,
+.fo76-roadmap-lens::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.fo76-roadmap-lens::before {
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background:
+    radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.34), transparent 0 16%, transparent 44%),
+    linear-gradient(128deg, rgba(255, 255, 255, 0.16), transparent 28%, rgba(255, 255, 255, 0.08) 52%, transparent 70%);
+  mix-blend-mode: screen;
+}
+
+.fo76-roadmap-lens::after {
+  inset: -1px;
+  border: 1px solid rgba(209, 255, 209, 0.24);
+  box-shadow:
+    inset 0 0 22px rgba(255, 255, 255, 0.16),
+    inset 0 0 42px rgba(139, 255, 139, 0.08);
+}
+
+.fo76-roadmap-lens.is-active {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.fo76-roadmap-lens[hidden] {
+  display: none !important;
+}
+
+.fo76-roadmap-actions.intel-bot-modal-actions {
+  justify-content: center;
+}
+
+.fo76-roadmap-trigger {
+  border-color: rgba(255, 225, 122, 0.42);
+  color: #fff3bf;
+  background:
+    linear-gradient(to bottom, rgba(255, 225, 122, 0.12), rgba(0, 0, 0, 0.22)),
+    rgba(0, 0, 0, 0.24);
+}
+
+.fo76-roadmap-trigger:hover,
+.fo76-roadmap-trigger:focus-visible {
+  border-color: rgba(255, 225, 122, 0.62);
+  background:
+    linear-gradient(to bottom, rgba(255, 225, 122, 0.18), rgba(0, 0, 0, 0.24)),
+    rgba(0, 0, 0, 0.28);
+}
+
+.fo76-events-modal-head {
+  align-items: flex-start;
+}
+
+.fo76-events-content {
+  gap: 16px;
+  padding-right: 6px;
+}
+
+.fo76-events-agenda {
+  display: grid;
+  gap: 9px;
+}
+
+.fo76-events-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(255, 239, 175, 0.72);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.fo76-events-section-head strong {
+  display: inline-grid;
+  place-items: center;
+  min-width: 30px;
+  min-height: 22px;
+  border: 1px solid rgba(139, 255, 139, 0.32);
+  border-radius: 999px;
+  color: #caffca;
+  background: rgba(0, 0, 0, 0.28);
+  font-size: 0.72rem;
+}
+
+.fo76-events-agenda-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.fo76-events-agenda-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  min-height: 92px;
+  padding: 11px;
+  border: 1px solid color-mix(in srgb, var(--event-color, #8bff8b) 42%, rgba(255, 225, 122, 0.22));
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--event-color, #8bff8b) 16%, transparent), rgba(255, 225, 122, 0.05) 48%, rgba(0, 0, 0, 0.18)),
+    rgba(0, 0, 0, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 225, 122, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28);
+}
+
+.fo76-events-agenda-item h3 {
+  margin: 7px 0 0;
+  color: #fff5cc;
+  font-family: var(--font-main);
+  font-size: 0.9rem;
+  line-height: 1.14;
+  letter-spacing: 0.02em;
+}
+
+.fo76-events-agenda-media {
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: 1px solid color-mix(in srgb, var(--event-color, #8bff8b) 48%, rgba(255, 225, 122, 0.2));
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 50% 32%, color-mix(in srgb, var(--event-color, #8bff8b) 22%, transparent), transparent 76%),
+    rgba(0, 0, 0, 0.32);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 225, 122, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.32);
+  color: color-mix(in srgb, var(--event-color, #8bff8b) 72%, #fff6d4);
+  font-size: 1.05rem;
+}
+
+.fo76-events-agenda-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.fo76-events-agenda-item p {
+  margin: 6px 0 0;
+  color: rgba(255, 239, 175, 0.68);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.fo76-events-agenda-state {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  padding: 3px 8px 2px;
+  border: 1px solid color-mix(in srgb, var(--event-color, #8bff8b) 42%, rgba(255, 225, 122, 0.18));
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--event-color, #8bff8b) 74%, #fff6d4);
+  background: rgba(0, 0, 0, 0.28);
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.fo76-events-agenda-state::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--event-color, #8bff8b);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--event-color, #8bff8b) 80%, transparent);
+}
+
+.fo76-events-agenda-item.is-active {
+  border-color: color-mix(in srgb, var(--event-color, #8bff8b) 76%, rgba(255, 225, 122, 0.28));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--event-color, #8bff8b) 27%, transparent), rgba(255, 225, 122, 0.06) 50%, rgba(0, 0, 0, 0.18)),
+    rgba(0, 0, 0, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 225, 122, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28),
+    0 0 16px color-mix(in srgb, var(--event-color, #8bff8b) 22%, transparent);
+}
+
+.fo76-events-agenda-item.is-active .fo76-events-agenda-state {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--event-color, #8bff8b) 82%, #fff6d4);
+  color: rgba(5, 18, 8, 0.96);
+}
+
+.fo76-events-agenda-item.is-active .fo76-events-agenda-state::before {
+  background: rgba(5, 18, 8, 0.92);
+  box-shadow: none;
+  animation: fo76-events-state-dot 1.6s ease-in-out infinite;
+}
+
+@keyframes fo76-events-state-dot {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fo76-events-agenda-item.is-active .fo76-events-agenda-state::before,
+  .fo76-event-info-meta span.is-state.is-active::before {
+    animation: none;
+  }
+}
+
+.fo76-events-agenda-action {
+  align-self: end;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px 4px;
+  border: 1px solid rgba(255, 225, 122, 0.24);
+  border-radius: 7px;
+  color: rgba(255, 239, 175, 0.86);
+  background: rgba(0, 0, 0, 0.24);
+  font: inherit;
+  font-size: 0.64rem;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.fo76-events-agenda-action:hover,
+.fo76-events-agenda-action:focus-visible {
+  border-color: rgba(255, 225, 122, 0.58);
+  color: #fff6d4;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.fo76-events-agenda-action.is-static {
+  cursor: default;
+  color: rgba(255, 239, 175, 0.56);
+}
+
+.fo76-events-agenda-action.is-static:hover {
+  border-color: rgba(255, 225, 122, 0.24);
+  color: rgba(255, 239, 175, 0.56);
+  transform: none;
+}
+
+.fo76-events-calendar {
+  display: grid;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 225, 122, 0.34) rgba(0, 0, 0, 0.2);
+}
+
+.fo76-events-calendar::-webkit-scrollbar {
+  height: 8px;
+}
+
+.fo76-events-calendar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 999px;
+}
+
+.fo76-events-calendar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 225, 122, 0.34);
+}
+
+.fo76-events-weekdays,
+.fo76-events-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(124px, 1fr));
+  min-width: 868px;
+  column-gap: 5px;
+}
+
+.fo76-events-weekdays span {
+  padding: 2px 8px 5px;
+  border-bottom: 1px solid rgba(255, 225, 122, 0.14);
+  color: rgba(255, 239, 175, 0.62);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-align: right;
+}
+
+.fo76-events-weekdays span.is-today {
+  color: #caffca;
+  border-bottom: 2px solid rgba(139, 255, 139, 0.6);
+}
+
+.fo76-events-weeks {
+  display: grid;
+  gap: 5px;
+}
+
+.fo76-events-week {
+  position: relative;
+  grid-template-rows: 28px repeat(var(--event-rows, 1), 32px);
+  row-gap: 4px;
+  min-height: calc(28px + (var(--event-rows, 1) * 36px) + 10px);
+  height: calc(28px + (var(--event-rows, 1) * 36px) + 10px);
+}
+
+.fo76-events-day {
+  grid-column: var(--day-col) / span 1;
+  grid-row: 1 / -1;
+  display: grid;
+  grid-template-rows: 28px minmax(86px, 1fr);
+  min-height: 100%;
+  border: 1px solid rgba(255, 225, 122, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 225, 122, 0.045), rgba(0, 0, 0, 0.2)),
+    rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+.fo76-events-day.is-past {
+  opacity: 0.52;
+}
+
+.fo76-events-day.is-weekend {
+  background:
+    linear-gradient(180deg, rgba(255, 225, 122, 0.09), rgba(0, 0, 0, 0.22)),
+    rgba(0, 0, 0, 0.24);
+}
+
+.fo76-events-day.is-today {
+  border-color: rgba(139, 255, 139, 0.62);
+  background:
+    linear-gradient(180deg, rgba(139, 255, 139, 0.12), rgba(0, 0, 0, 0.2)),
+    rgba(0, 0, 0, 0.24);
+  box-shadow:
+    inset 0 0 0 1px rgba(139, 255, 139, 0.22),
+    0 0 14px rgba(139, 255, 139, 0.14);
+}
+
+.fo76-events-day-label {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-height: 25px;
+  padding: 6px 7px 4px;
+  color: rgba(255, 239, 175, 0.68);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.fo76-events-day.is-month-start .fo76-events-day-label {
+  color: rgba(255, 225, 122, 0.95);
+}
+
+.fo76-events-day.is-today .fo76-events-day-label {
+  color: #dfffdf;
+}
+
+.fo76-events-day-today {
+  padding: 2px 6px 1px;
+  border-radius: 999px;
+  background: rgba(139, 255, 139, 0.92);
+  color: #052008;
+  font-size: 0.54rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.fo76-events-bar {
+  position: relative;
+  z-index: 2;
+  grid-column: var(--start-col) / var(--end-col);
+  grid-row: var(--event-row) / span 1;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 26px;
+  margin: 0;
+  padding: 5px 8px 4px;
+  border: 1px solid rgba(0, 0, 0, 0.28);
+  border-radius: 10px;
+  color: rgba(5, 16, 8, 0.94);
+  background: color-mix(in srgb, var(--event-color, #8bff8b) 82%, #fff6d4);
+  font: inherit;
+  font-size: 0.73rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-decoration: none;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.24);
+  cursor: pointer;
+  appearance: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.16);
+  overflow: visible;
+}
+
+.fo76-events-bar-label {
+  display: block;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fo76-events-event-icon {
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+.fo76-events-bar-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin: 0 8px 0 -4px;
+}
+
+.fo76-events-floating-tooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1300;
+  display: grid;
+  gap: 5px;
+  width: max-content;
+  min-width: 190px;
+  max-width: min(310px, calc(100vw - 52px));
+  padding: 9px 10px 8px;
+  border: 1px solid color-mix(in srgb, var(--event-color, #8bff8b) 38%, rgba(255, 225, 122, 0.32));
+  border-radius: 8px;
+  color: #eaffea;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--event-color, #8bff8b) 13%, transparent), transparent 58%),
+    rgba(4, 13, 7, 0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 14px 28px rgba(0, 0, 0, 0.42);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px) scale(0.98);
+  transform-origin: left bottom;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.fo76-events-floating-tooltip[hidden] {
+  display: none;
+}
+
+.fo76-events-floating-tooltip::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  border-right: 1px solid color-mix(in srgb, var(--event-color, #8bff8b) 34%, rgba(255, 225, 122, 0.3));
+  border-bottom: 1px solid color-mix(in srgb, var(--event-color, #8bff8b) 34%, rgba(255, 225, 122, 0.3));
+  background: rgba(4, 13, 7, 0.96);
+  transform: rotate(45deg);
+}
+
+.fo76-events-floating-tooltip[data-placement="bottom"] {
+  transform-origin: left top;
+}
+
+.fo76-events-floating-tooltip[data-placement="bottom"]::after {
+  top: -6px;
+  bottom: auto;
+  transform: rotate(225deg);
+}
+
+.fo76-events-floating-tooltip.fo76-events-floating-tooltip.is-active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.fo76-events-floating-tooltip-title,
+.fo76-events-floating-tooltip-meta,
+.fo76-events-floating-tooltip-action {
+  display: block;
+  min-width: 0;
+}
+
+.fo76-events-floating-tooltip-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fo76-events-floating-tooltip-icon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+.fo76-events-floating-tooltip-title {
+  color: #fff6d4;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.16;
+  white-space: normal;
+}
+
+.fo76-events-floating-tooltip-meta {
+  color: rgba(202, 255, 202, 0.76);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: normal;
+}
+
+.fo76-events-floating-tooltip-action {
+  justify-self: start;
+  margin-top: 1px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 225, 122, 0.18);
+  color: color-mix(in srgb, var(--event-color, #8bff8b) 66%, #fff6d4);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.fo76-events-bar:hover,
+.fo76-events-bar:focus-visible {
+  z-index: 30;
+}
+
+.fo76-events-bar.is-carry-in:not(.is-start) {
+  border-left-color: transparent;
+}
+
+.fo76-events-bar.is-carry-out:not(.is-end) {
+  border-right-color: transparent;
+}
+
+.fo76-events-bar.is-past {
+  filter: saturate(0.84) brightness(0.88);
+}
+
+.fo76-events-bar:hover,
+.fo76-events-bar:focus-visible {
+  color: rgba(0, 0, 0, 0.92);
+  filter: brightness(1.06) saturate(1.06);
+  outline: none;
+}
+
+.fo76-events-empty {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid rgba(255, 225, 122, 0.22);
+  border-radius: 10px;
+  color: rgba(255, 239, 175, 0.72);
+  background: rgba(0, 0, 0, 0.24);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.fo76-minerva-list-overlay {
+  z-index: 1350;
+}
+
+.fo76-event-info-overlay {
+  z-index: 1350;
+}
+
+.fo76-event-info-core.intel-bot-modal-core {
+  width: min(840px, calc(100% - 28px));
+  max-height: min(86svh, 760px);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.fo76-event-info-content {
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.fo76-event-info-content[hidden] {
+  display: none;
+}
+
+.fo76-event-info-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.fo76-event-info-layout.is-no-image {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.fo76-event-info-figure {
+  position: relative;
+  margin: 0;
+  min-width: 0;
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--event-color, #8bff8b) 34%, rgba(255, 225, 122, 0.22));
+  border-radius: 10px;
+  background:
+    radial-gradient(260px 180px at 50% 44%, rgba(255, 225, 122, 0.12), transparent 72%),
+    linear-gradient(180deg, rgba(139, 255, 139, 0.06), rgba(0, 0, 0, 0.28)),
+    rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.42);
+}
+
+.fo76-event-info-figure img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.96) contrast(1.04);
+}
+
+.fo76-event-info-figure.is-icon {
+  min-height: 220px;
+  background:
+    radial-gradient(190px 190px at 50% 50%, color-mix(in srgb, var(--event-color, #8bff8b) 22%, transparent), transparent 74%),
+    linear-gradient(180deg, rgba(255, 225, 122, 0.05), rgba(0, 0, 0, 0.3)),
+    rgba(0, 0, 0, 0.3);
+}
+
+.fo76-event-info-figure.is-icon::before {
+  content: "";
+  position: absolute;
+  width: 132px;
+  height: 132px;
+  border: 1px dashed color-mix(in srgb, var(--event-color, #8bff8b) 52%, transparent);
+  border-radius: 50%;
+}
+
+.fo76-event-info-figure.is-icon::after {
+  content: "";
+  position: absolute;
+  width: 106px;
+  height: 106px;
+  border: 1px solid color-mix(in srgb, var(--event-color, #8bff8b) 34%, transparent);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 34%, color-mix(in srgb, var(--event-color, #8bff8b) 14%, transparent), transparent 72%),
+    rgba(0, 0, 0, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* The falloutbuilds event icons are 64px sources — render 1:1 to stay crisp. */
+.fo76-event-info-figure .fo76-events-hero-icon {
+  position: relative;
+  z-index: 1;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+}
+
+.fo76-events-title-icon {
+  width: 26px;
+  height: 26px;
+  margin-right: 9px;
+  vertical-align: -6px;
+}
+
+.fo76-event-info-copy {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.fo76-event-info-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.fo76-event-info-meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 9px 3px;
+  border: 1px solid rgba(255, 225, 122, 0.22);
+  border-radius: 999px;
+  color: rgba(202, 255, 202, 0.78);
+  background: rgba(0, 0, 0, 0.24);
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fo76-event-info-meta span.is-type {
+  border-color: color-mix(in srgb, var(--event-color, #8bff8b) 46%, rgba(255, 225, 122, 0.22));
+  color: color-mix(in srgb, var(--event-color, #8bff8b) 62%, #fff6d4);
+}
+
+.fo76-event-info-meta span.is-state::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--event-color, #8bff8b);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--event-color, #8bff8b) 80%, transparent);
+}
+
+.fo76-event-info-meta span.is-state.is-active::before {
+  animation: fo76-events-state-dot 1.6s ease-in-out infinite;
+}
+
+.fo76-event-info-notes {
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--event-color, #8bff8b) 24%, rgba(255, 225, 122, 0.18));
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--event-color, #8bff8b) 9%, transparent), transparent 56%),
+    rgba(0, 0, 0, 0.24);
+}
+
+.fo76-event-info-notes h3 {
+  margin: 0 0 8px;
+  color: #fff4cb;
+  font-family: var(--font-main);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fo76-event-info-notes p {
+  margin: 0;
+  color: rgba(255, 239, 175, 0.82);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.fo76-minerva-list-core.intel-bot-modal-core {
+  box-sizing: border-box;
+  width: min(1000px, calc(100% - 32px));
+  height: auto;
+  max-height: calc(100svh - 34px);
+  grid-template-rows: auto auto auto minmax(0, auto) auto;
+  gap: 10px;
+  padding: clamp(14px, 1.8vw, 20px);
+  overflow: hidden;
+}
+
+.fo76-minerva-list-content {
+  overflow: hidden;
+  min-height: 0;
+  height: min(var(--fo76-minerva-content-size, 560px), 62svh);
+  max-height: 62svh;
+}
+
+.fo76-minerva-list-content[hidden] {
+  display: none;
+}
+
+.fo76-minerva-list-content {
+  align-items: stretch;
+  grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.18fr);
+  gap: 12px;
+}
+
+.fo76-minerva-list-panel,
+.fo76-minerva-detail-panel {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid rgba(255, 225, 122, 0.22);
+  border-radius: 10px;
+  background:
+    radial-gradient(420px 260px at 0% 0%, rgba(139, 255, 139, 0.055), transparent 62%),
+    linear-gradient(180deg, rgba(255, 225, 122, 0.055), rgba(0, 0, 0, 0.24)),
+    rgba(0, 0, 0, 0.26);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.42);
+}
+
+.fo76-minerva-list-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.fo76-minerva-list-summary {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px 9px;
+  border-bottom: 1px solid rgba(255, 225, 122, 0.16);
+  background:
+    linear-gradient(90deg, rgba(255, 225, 122, 0.07), transparent 72%),
+    rgba(0, 0, 0, 0.1);
+}
+
+.fo76-minerva-list-summary span {
+  color: rgba(202, 255, 202, 0.66);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fo76-minerva-list-summary strong {
+  min-width: 0;
+  color: #fff4cb;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  line-height: 1.18;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fo76-minerva-items {
+  display: grid;
+  align-content: start;
+  min-height: 0;
+  overflow: auto;
+  padding: 7px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 225, 122, 0.34) rgba(0, 0, 0, 0.18);
+}
+
+.fo76-minerva-item-trigger {
+  appearance: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: rgba(255, 239, 175, 0.84);
+  background: transparent;
+  font: inherit;
+  font-size: 0.72rem;
+  line-height: 1.18;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.fo76-minerva-item-trigger:hover,
+.fo76-minerva-item-trigger:focus-visible,
+.fo76-minerva-item-trigger.is-selected {
+  border-color: rgba(255, 225, 122, 0.36);
+  color: #fff8df;
+  background:
+    linear-gradient(90deg, rgba(255, 225, 122, 0.1), rgba(139, 255, 139, 0.035)),
+    rgba(0, 0, 0, 0.12);
+  outline: none;
+}
+
+.fo76-minerva-item-name,
+.fo76-minerva-item-price {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fo76-minerva-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fo76-minerva-item-price {
+  color: #ffe8a0;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  justify-self: end;
+  padding: 2px 5px 1px;
+  border-radius: 999px;
+  background: rgba(255, 225, 122, 0.08);
+}
+
+.fo76-minerva-detail-panel {
+  overflow: auto;
+  padding: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 225, 122, 0.34) rgba(0, 0, 0, 0.18);
+}
+
+.fo76-minerva-detail-state {
+  min-height: 100%;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  color: rgba(255, 239, 175, 0.72);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  text-align: center;
+  border: 1px dashed rgba(255, 225, 122, 0.18);
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(to bottom, rgba(139, 255, 139, 0.035) 0 1px, transparent 1px 6px),
+    rgba(0, 0, 0, 0.12);
+}
+
+.fo76-minerva-detail-state.is-error {
+  color: #ffd0d0;
+}
+
+.fo76-minerva-detail-card {
+  display: grid;
+  gap: 13px;
+}
+
+.fo76-minerva-detail-top {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.fo76-minerva-detail-image {
+  width: 116px;
+  height: 116px;
+  border: 1px solid rgba(255, 225, 122, 0.2);
+  border-radius: 10px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.42);
+}
+
+.fo76-minerva-detail-heading {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.fo76-minerva-detail-heading span {
+  color: rgba(202, 255, 202, 0.68);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.fo76-minerva-detail-heading h3 {
+  margin: 0;
+  color: #fff4cb;
+  font-family: var(--font-main);
+  font-size: 1rem;
+  line-height: 1.14;
+  letter-spacing: 0.03em;
+}
+
+.fo76-minerva-detail-heading p {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #ffe8a0;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.fo76-minerva-detail-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.fo76-minerva-detail-grid section {
+  padding: 10px;
+  border: 1px solid rgba(255, 225, 122, 0.16);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.fo76-minerva-detail-grid h4 {
+  margin: 0 0 7px;
+  color: rgba(202, 255, 202, 0.7);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fo76-minerva-detail-grid ul,
+.fo76-minerva-detail-grid p {
+  margin: 0;
+  color: rgba(255, 239, 175, 0.78);
+  font-size: 0.76rem;
+  line-height: 1.42;
+}
+
+.fo76-minerva-detail-grid ul {
+  padding-left: 17px;
+}
+
+.fo76-minerva-list-actions.intel-bot-modal-actions {
+  position: static;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-height: 42px;
+  box-sizing: border-box;
+  margin-top: 0;
+  padding: 8px 0 0;
+  justify-content: flex-end;
+  border-top-color: rgba(255, 225, 122, 0.18);
+  background: transparent;
+}
+
+.fo76-minerva-list-actions .files-btn {
+  min-width: 96px;
+  min-height: 34px;
+  justify-content: center;
+  line-height: 1;
+}
+
+@media (max-width: 900px) {
+  .fo76-events-agenda-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fo76-events-agenda-item {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .fo76-events-modal-core.intel-bot-modal-core {
+    display: grid;
+    height: calc(100svh - 20px);
+    max-height: calc(100svh - 20px);
+  }
+
+  .fo76-events-weekdays,
+  .fo76-events-week {
+    grid-template-columns: repeat(7, minmax(112px, 1fr));
+    min-width: 784px;
+  }
+
+  .fo76-events-day {
+    grid-template-rows: 28px minmax(74px, 1fr);
+  }
+
+  .fo76-events-actions.intel-bot-modal-actions {
+    flex-direction: column;
+    justify-content: stretch;
+  }
+
+  .fo76-events-actions .files-btn {
+    width: 100%;
+  }
+
+  .fo76-event-info-core.intel-bot-modal-core {
+    height: calc(100svh - 20px);
+    max-height: calc(100svh - 20px);
+  }
+
+  .fo76-event-info-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fo76-event-info-figure {
+    min-height: 210px;
+  }
+
+  .fo76-minerva-list-core.intel-bot-modal-core {
+    height: auto;
+    max-height: calc(100svh - 20px);
+  }
+
+  .fo76-minerva-list-content {
+    grid-template-columns: minmax(0, 1fr);
+    height: min(var(--fo76-minerva-content-size, 560px), 58svh);
+    max-height: 58svh;
+    overflow: auto;
+  }
+
+  .fo76-minerva-list-panel {
+    min-height: 280px;
+  }
+
+  .fo76-minerva-detail-top {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .fo76-minerva-detail-image {
+    width: 88px;
+    height: 88px;
+  }
+}
+
+/* Axolotl of the month modal */
+
+/* Events page layout */
+body.is-events .pipboy-terminal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  width: min(1240px, calc(100vw - 28px));
+  max-width: min(1240px, calc(100vw - 28px));
+  min-height: 0;
+  margin: 0 auto;
+  padding: 10px 0;
+  overflow: hidden;
+}
+
+body.is-ready.is-events:not(.error-page) .pipboy-terminal {
+  height: 100svh;
+  height: 100dvh;
+  overflow: hidden;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  overscroll-behavior: contain;
+  transform: none;
+}
+
+body.is-ready.is-events:not(.error-page):not(.is-classified):not(.is-files):not(.is-classified-loading) .pipboy-terminal {
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  gap: 8px !important;
+  height: 100svh !important;
+  height: 100dvh !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+  transform: none !important;
+}
+
+body.is-events .topbar {
+  margin: 0;
+}
+
+body.is-events #intelGrid,
+body.is-events #statusStrip,
+body.is-events #classifiedPage,
+body.is-events #filesPage,
+body.is-events #dropsPage:not(.is-page-view),
+body.is-events .footer-note {
+  display: none !important;
+}
+
+body.is-events #fo76EventsOverlay.fo76-events-modal-overlay {
+  position: relative;
+  inset: auto;
+  z-index: 1;
+  display: grid;
+  align-items: stretch;
+  width: min(100%, 1220px);
+  max-width: 1220px;
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  padding: 0;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  overflow: visible;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body.is-events #fo76EventsOverlay.fo76-events-modal-overlay::before,
+body.is-events #fo76EventsOverlay.fo76-events-modal-overlay::after {
+  content: none;
+}
+
+body.is-events #fo76EventsCore.fo76-events-modal-core.intel-bot-modal-core {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  min-height: 0;
+  margin: 0;
+  padding-top: 16px;
+  padding-bottom: 12px;
+  transform: none;
+  overflow: hidden;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  gap: 8px;
+}
+
+body.is-events #fo76EventsCore.fo76-events-modal-core.intel-bot-modal-core::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+  border: 1px solid rgba(255, 225, 122, 0.44);
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.52);
+}
+
+body.is-events #fo76EventsCore.fo76-events-modal-core.intel-bot-modal-core > * {
+  position: relative;
+  z-index: 1;
+}
+
+.fo76-events-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+body.is-events .fo76-events-modal-head.classified-intel-modal-head {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+body.is-events #fo76EventsTitle.classified-intel-modal-title {
+  font-size: clamp(1.24rem, 2.05vw, 1.56rem);
+  line-height: 0.98;
+}
+
+body.is-events #fo76EventsBody.classified-intel-modal-body {
+  margin-block: 0;
+  max-width: 64ch;
+  line-height: 1.36;
+}
+
+body.is-events #fo76EventsMeta.classified-intel-modal-meta,
+body.is-events #fo76EventsStatus.classified-intel-modal-status {
+  margin-block: 0;
+}
+
+body.is-events:has(#fo76EventsOverlay.is-page-view.is-active):not(:has(#fo76RoadMapOverlay.is-active)):not(:has(#fo76MinervaListOverlay.is-active)):not(:has(#fo76EventInfoOverlay.is-active)) #visitCounterBadge.visit-counter-badge:not([hidden]) {
+  display: flex !important;
+}
+
+body.is-events #fo76EventsCloseIconBtn,
+body.is-events #fo76EventsCloseBtn {
+  display: none !important;
+}
+
+body.is-events #fo76EventsContent.fo76-events-content {
+  min-height: 0;
+  height: 100%;
+  max-height: none;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+body.is-events .fo76-events-actions.intel-bot-modal-actions {
+  display: none !important;
+}
+
+#fo76EventsRefreshBtn,
+#fo76RoadMapBtn {
+  box-sizing: border-box;
+  min-width: 146px;
+  min-height: 42px;
+  width: auto;
+  padding-inline: 20px;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: visible;
+  line-height: 1;
+}
+
+body.is-events .fo76-events-calendar {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 10px;
+  padding-bottom: 16px;
+  margin-bottom: 0;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+body.is-events .fo76-events-weekdays {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  padding-top: 2px;
+  background:
+    linear-gradient(180deg, rgba(5, 16, 8, 0.98), rgba(5, 16, 8, 0.88)),
+    rgba(0, 0, 0, 0.38);
+}
+
+@media (max-width: 980px) {
+  body.is-drops-modal-open #dropsPage.drops-page {
+    align-items: start;
+    overflow-y: auto;
+  }
+
+  body.is-drops-modal-open #dropsPage > .drops-gate-panel,
+  body.is-drops-modal-open #dropsPage > .drops-admin-view {
+    position: relative;
+    transform: none;
+  }
+
+  body.is-drops-modal-open #dropsPage .drops-layout {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.is-drops-modal-open #dropsPage .drops-modal-shell {
+    height: auto;
+    min-height: 0;
+  }
+
+  body.is-drops-modal-open #dropsPage > .drops-admin-view {
+    max-height: none;
+  }
+
+  body.is-events #fo76EventsCore.fo76-events-modal-core.intel-bot-modal-core {
+    min-height: 0;
+    height: 100%;
+    max-height: none;
+  }
+
+}
+
+@media (max-width: 720px) {
+  .drops-admin-pill {
+    top: calc(env(safe-area-inset-top, 0px) + 82px);
+  }
+
+  body.is-drops-modal-open #dropsPage.drops-page {
+    padding: 12px;
+  }
+
+  body.is-drops-modal-open .drops-modal-close {
+    min-width: 86px;
+  }
+
+  body.is-drops-modal-open #dropsPage .drops-modal-head,
+  .fo76-events-modal-head {
+    flex-wrap: wrap;
+  }
+
+  .fo76-events-head-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  body.is-drops-modal-open #dropsPage > .drops-gate-panel,
+  body.is-drops-modal-open #dropsPage > .drops-admin-view {
+    width: 100%;
+  }
+
+  #fo76EventsRefreshBtn,
+  #fo76RoadMapBtn {
+    flex: 1 1 128px;
+    min-width: 128px;
+  }
+
+  .fo76-roadmap-core.intel-bot-modal-core {
+    width: calc(100% - 18px);
+    max-height: calc(100svh - 18px);
+    padding: 14px;
+  }
+
+  .fo76-roadmap-head {
+    gap: 10px;
+  }
+
+  .fo76-roadmap-head-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .fo76-roadmap-lens-controls {
+    grid-template-columns: auto minmax(92px, 1fr) auto;
+    width: min(100%, 360px);
+  }
+
+  .fo76-roadmap-lens {
+    width: clamp(150px, 54vw, 220px);
+  }
+
+  .fo76-roadmap-frame img {
+    max-height: calc(100svh - 238px);
+  }
+}
