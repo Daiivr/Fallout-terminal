@@ -722,7 +722,7 @@ function renderFo76EventsModal() {
       statusText = t("fo76_events_loading");
     } else if (modalState.error) {
       statusText = modalState.error;
-    } else if (data?.error) {
+    } else if (!hasData && data?.error) {
       statusText = data.error;
     }
     elements.fo76EventsStatus.hidden = !statusText;
@@ -1394,6 +1394,28 @@ async function fetchFo76Events({ force = false } = {}) {
     state.fo76Events.error = "";
     renderFo76EventsModal();
   } catch (error) {
+    try {
+      const fallbackPayload = await requestJson(FO76_EVENTS_FALLBACK_URL, {
+        method: "GET",
+        cache: "no-store"
+      });
+      if (state.fo76Events.requestId !== requestId) {
+        return;
+      }
+      state.fo76Events.data = normalizeFo76EventsPayload({
+        ...fallbackPayload,
+        cached: true,
+        stale: true,
+        error: fallbackPayload?.error || "Live event calendar sync failed; serving bundled fallback data."
+      });
+      state.fo76Events.loading = false;
+      state.fo76Events.error = "";
+      renderFo76EventsModal();
+      return;
+    } catch {
+      // Fall through to the visible error state.
+    }
+
     if (state.fo76Events.requestId !== requestId) {
       return;
     }

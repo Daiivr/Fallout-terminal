@@ -6,6 +6,7 @@ const path = require("path");
 const DEFAULT_SOURCE_URL = `https://www.${["fallout", "builds.com"].join("")}/fo76/events/`;
 const DEFAULT_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const DEFAULT_FETCH_TIMEOUT_MS = 18000;
+const DEFAULT_FALLBACK_PATH = path.resolve(__dirname, "..", "..", "data", "fo76-events-fallback.json");
 const USER_AGENT = "FalloutCodex/1.0 (FO76 calendar relay)";
 
 function parsePositiveInteger(value, fallback) {
@@ -388,6 +389,10 @@ function readCache(cachePath) {
   return null;
 }
 
+function readBundledFallback(fallbackPath = DEFAULT_FALLBACK_PATH) {
+  return readCache(fallbackPath);
+}
+
 function writeCache(cachePath, payload) {
   fs.mkdirSync(path.dirname(cachePath), { recursive: true });
   const tempPath = `${cachePath}.tmp`;
@@ -400,7 +405,8 @@ async function fetchFo76EventsCalendar({
   force = false,
   sourceUrl = process.env.FO76_EVENTS_SOURCE_URL || DEFAULT_SOURCE_URL,
   ttlMs = parsePositiveInteger(process.env.FO76_EVENTS_CACHE_TTL_MS, DEFAULT_CACHE_TTL_MS),
-  timeoutMs = parsePositiveInteger(process.env.FO76_EVENTS_FETCH_TIMEOUT_MS, DEFAULT_FETCH_TIMEOUT_MS)
+  timeoutMs = parsePositiveInteger(process.env.FO76_EVENTS_FETCH_TIMEOUT_MS, DEFAULT_FETCH_TIMEOUT_MS),
+  fallbackPath = process.env.FO76_EVENTS_FALLBACK_PATH || DEFAULT_FALLBACK_PATH
 } = {}) {
   const cachePath = path.join(storageDir || process.cwd(), "fo76-events-cache.json");
   const cached = readCache(cachePath);
@@ -432,6 +438,17 @@ async function fetchFo76EventsCalendar({
         error: "Live event calendar sync failed; serving cached data."
       };
     }
+
+    const fallback = readBundledFallback(fallbackPath);
+    if (fallback) {
+      return {
+        ...fallback,
+        cached: true,
+        stale: true,
+        error: "Live event calendar sync failed; serving bundled fallback data."
+      };
+    }
+
     throw error;
   }
 }

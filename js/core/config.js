@@ -7,6 +7,7 @@ const INTEL_EMAIL_ADMIN_SUBSCRIPTIONS_API_URL = "/api/admin/intel/email-subscrip
 const PLAYER_COUNTS_API_URL = "/api/intel/player-counts";
 const NUKAKNIGHTS_INTEL_API_URL = "/api/intel/nukaknights";
 const FO76_EVENTS_API_URL = "/api/fo76/events";
+const FO76_EVENTS_FALLBACK_URL = "data/fo76-events-fallback.json";
 const SILO_RESET_DAY_UTC = 4;
 const SOURCE_URLS = {
   silo: [

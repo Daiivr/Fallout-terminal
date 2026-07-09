@@ -1,0 +1,1650 @@
+{
+  "source": "Community calendar",
+  "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+  "fetchedAt": "2026-07-08T22:54:53.556Z",
+  "range": {
+    "startDate": "2026-06-29",
+    "endDate": "2026-08-23"
+  },
+  "days": [
+    {
+      "date": "2026-06-29",
+      "events": [
+        {
+          "id": "meat-week-rgba-245-245-220-1-2026-06-29",
+          "title": "Meat Week",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/meat-week/",
+          "isStart": true,
+          "isEnd": false
+        },
+        {
+          "id": "minerva-super-sale-16-rgba-250-235-215-1-2026-06-29",
+          "title": "Minerva Super Sale #16",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-16",
+          "isStart": true,
+          "isEnd": true
+        }
+      ]
+    },
+    {
+      "date": "2026-06-30",
+      "events": [
+        {
+          "id": "meat-week-rgba-245-245-220-1-2026-06-29",
+          "title": "Meat Week",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/meat-week/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-01",
+      "events": [
+        {
+          "id": "meat-week-rgba-245-245-220-1-2026-06-29",
+          "title": "Meat Week",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/meat-week/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-02",
+      "events": [
+        {
+          "id": "meat-week-rgba-245-245-220-1-2026-06-29",
+          "title": "Meat Week",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/meat-week/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-mutations-rgba-240-248-255-1-2026-07-02",
+          "title": "Double Mutations",
+          "color": "rgba(240,248,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": true,
+          "isEnd": false
+        },
+        {
+          "id": "double-xp-rgba-142-177-240-1-2026-07-02",
+          "title": "Double XP",
+          "color": "rgba(142,177,240,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "events": [
+        {
+          "id": "meat-week-rgba-245-245-220-1-2026-06-29",
+          "title": "Meat Week",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/meat-week/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-mutations-rgba-240-248-255-1-2026-07-02",
+          "title": "Double Mutations",
+          "color": "rgba(240,248,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-xp-rgba-142-177-240-1-2026-07-02",
+          "title": "Double XP",
+          "color": "rgba(142,177,240,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-04",
+      "events": [
+        {
+          "id": "meat-week-rgba-245-245-220-1-2026-06-29",
+          "title": "Meat Week",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/meat-week/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-mutations-rgba-240-248-255-1-2026-07-02",
+          "title": "Double Mutations",
+          "color": "rgba(240,248,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-xp-rgba-142-177-240-1-2026-07-02",
+          "title": "Double XP",
+          "color": "rgba(142,177,240,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-05",
+      "events": [
+        {
+          "id": "meat-week-rgba-245-245-220-1-2026-06-29",
+          "title": "Meat Week",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/meat-week/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-mutations-rgba-240-248-255-1-2026-07-02",
+          "title": "Double Mutations",
+          "color": "rgba(240,248,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-xp-rgba-142-177-240-1-2026-07-02",
+          "title": "Double XP",
+          "color": "rgba(142,177,240,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-06",
+      "events": [
+        {
+          "id": "meat-week-rgba-245-245-220-1-2026-06-29",
+          "title": "Meat Week",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/meat-week/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-mutations-rgba-240-248-255-1-2026-07-02",
+          "title": "Double Mutations",
+          "color": "rgba(240,248,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "double-xp-rgba-142-177-240-1-2026-07-02",
+          "title": "Double XP",
+          "color": "rgba(142,177,240,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "minerva-sale-17-rgba-250-235-215-1-2026-07-06",
+          "title": "Minerva Sale #17",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-17",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-07",
+      "events": [
+        {
+          "id": "meat-week-rgba-245-245-220-1-2026-06-29",
+          "title": "Meat Week",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/meat-week/",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "minerva-sale-17-rgba-250-235-215-1-2026-07-06",
+          "title": "Minerva Sale #17",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-17",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-08",
+      "events": [
+        {
+          "id": "minerva-sale-17-rgba-250-235-215-1-2026-07-06",
+          "title": "Minerva Sale #17",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-17",
+          "isStart": false,
+          "isEnd": true
+        }
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "events": []
+    },
+    {
+      "date": "2026-07-10",
+      "events": []
+    },
+    {
+      "date": "2026-07-11",
+      "events": []
+    },
+    {
+      "date": "2026-07-12",
+      "events": []
+    },
+    {
+      "date": "2026-07-13",
+      "events": [
+        {
+          "id": "minerva-sale-18-rgba-250-235-215-1-2026-07-13",
+          "title": "Minerva Sale #18",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-18",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-14",
+      "events": [
+        {
+          "id": "minerva-sale-18-rgba-250-235-215-1-2026-07-13",
+          "title": "Minerva Sale #18",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-18",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "mutated-public-events-rgba-240-255-255-1-2026-07-14",
+          "title": "Mutated Public Events",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-15",
+      "events": [
+        {
+          "id": "minerva-sale-18-rgba-250-235-215-1-2026-07-13",
+          "title": "Minerva Sale #18",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-18",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "mutated-public-events-rgba-240-255-255-1-2026-07-14",
+          "title": "Mutated Public Events",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-16",
+      "events": [
+        {
+          "id": "mutated-public-events-rgba-240-255-255-1-2026-07-14",
+          "title": "Mutated Public Events",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-17",
+      "events": [
+        {
+          "id": "mutated-public-events-rgba-240-255-255-1-2026-07-14",
+          "title": "Mutated Public Events",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-18",
+      "events": [
+        {
+          "id": "mutated-public-events-rgba-240-255-255-1-2026-07-14",
+          "title": "Mutated Public Events",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-19",
+      "events": [
+        {
+          "id": "mutated-public-events-rgba-240-255-255-1-2026-07-14",
+          "title": "Mutated Public Events",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-20",
+      "events": [
+        {
+          "id": "mutated-public-events-rgba-240-255-255-1-2026-07-14",
+          "title": "Mutated Public Events",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "minerva-sale-19-rgba-250-235-215-1-2026-07-20",
+          "title": "Minerva Sale #19",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-19",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-21",
+      "events": [
+        {
+          "id": "mutated-public-events-rgba-240-255-255-1-2026-07-14",
+          "title": "Mutated Public Events",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "minerva-sale-19-rgba-250-235-215-1-2026-07-20",
+          "title": "Minerva Sale #19",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-19",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-22",
+      "events": [
+        {
+          "id": "minerva-sale-19-rgba-250-235-215-1-2026-07-20",
+          "title": "Minerva Sale #19",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-19",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-23",
+      "events": [
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "treasure-hunter-rgba-245-245-220-1-2026-07-23",
+          "title": "Treasure Hunter",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/treasure-hunter/",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-24",
+      "events": [
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "treasure-hunter-rgba-245-245-220-1-2026-07-23",
+          "title": "Treasure Hunter",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/treasure-hunter/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-25",
+      "events": [
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "treasure-hunter-rgba-245-245-220-1-2026-07-23",
+          "title": "Treasure Hunter",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/treasure-hunter/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-26",
+      "events": [
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "treasure-hunter-rgba-245-245-220-1-2026-07-23",
+          "title": "Treasure Hunter",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/treasure-hunter/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-27",
+      "events": [
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "treasure-hunter-rgba-245-245-220-1-2026-07-23",
+          "title": "Treasure Hunter",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/treasure-hunter/",
+          "isStart": false,
+          "isEnd": true
+        }
+      ]
+    },
+    {
+      "date": "2026-07-28",
+      "events": [
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-29",
+      "events": [
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-30",
+      "events": [
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "minerva-super-sale-20-rgba-250-235-215-1-2026-07-30",
+          "title": "Minerva Super Sale #20",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-20",
+          "isStart": true,
+          "isEnd": false
+        },
+        {
+          "id": "caps-a-plenty-rgba-255-228-225-1-2026-07-30",
+          "title": "Caps-A-Plenty",
+          "color": "rgba(255,228,225,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-07-31",
+      "events": [
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "minerva-super-sale-20-rgba-250-235-215-1-2026-07-30",
+          "title": "Minerva Super Sale #20",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-20",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "caps-a-plenty-rgba-255-228-225-1-2026-07-30",
+          "title": "Caps-A-Plenty",
+          "color": "rgba(255,228,225,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-01",
+      "events": [
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "minerva-super-sale-20-rgba-250-235-215-1-2026-07-30",
+          "title": "Minerva Super Sale #20",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-20",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "caps-a-plenty-rgba-255-228-225-1-2026-07-30",
+          "title": "Caps-A-Plenty",
+          "color": "rgba(255,228,225,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-02",
+      "events": [
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "minerva-super-sale-20-rgba-250-235-215-1-2026-07-30",
+          "title": "Minerva Super Sale #20",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-20",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "caps-a-plenty-rgba-255-228-225-1-2026-07-30",
+          "title": "Caps-A-Plenty",
+          "color": "rgba(255,228,225,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-03",
+      "events": [
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "minerva-super-sale-20-rgba-250-235-215-1-2026-07-30",
+          "title": "Minerva Super Sale #20",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-20",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "caps-a-plenty-rgba-255-228-225-1-2026-07-30",
+          "title": "Caps-A-Plenty",
+          "color": "rgba(255,228,225,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": true
+        }
+      ]
+    },
+    {
+      "date": "2026-08-04",
+      "events": [
+        {
+          "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+          "title": "Summer Sock Hop Mini Season",
+          "color": "rgba(240,255,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-05",
+      "events": [
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-06",
+      "events": [
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-score-rgba-230-230-250-1-2026-08-06",
+          "title": "Double Score",
+          "color": "rgba(230,230,250,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": true,
+          "isEnd": false
+        },
+        {
+          "id": "murmrgh-s-special-pick-rgba-255-255-197-1-2026-08-06",
+          "title": "Murmrgh's Special Pick",
+          "color": "rgba(255,255,197,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-07",
+      "events": [
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-score-rgba-230-230-250-1-2026-08-06",
+          "title": "Double Score",
+          "color": "rgba(230,230,250,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "murmrgh-s-special-pick-rgba-255-255-197-1-2026-08-06",
+          "title": "Murmrgh's Special Pick",
+          "color": "rgba(255,255,197,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-08",
+      "events": [
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-score-rgba-230-230-250-1-2026-08-06",
+          "title": "Double Score",
+          "color": "rgba(230,230,250,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "murmrgh-s-special-pick-rgba-255-255-197-1-2026-08-06",
+          "title": "Murmrgh's Special Pick",
+          "color": "rgba(255,255,197,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-09",
+      "events": [
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-score-rgba-230-230-250-1-2026-08-06",
+          "title": "Double Score",
+          "color": "rgba(230,230,250,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "murmrgh-s-special-pick-rgba-255-255-197-1-2026-08-06",
+          "title": "Murmrgh's Special Pick",
+          "color": "rgba(255,255,197,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-10",
+      "events": [
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-score-rgba-230-230-250-1-2026-08-06",
+          "title": "Double Score",
+          "color": "rgba(230,230,250,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "murmrgh-s-special-pick-rgba-255-255-197-1-2026-08-06",
+          "title": "Murmrgh's Special Pick",
+          "color": "rgba(255,255,197,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "minerva-sale-21-rgba-250-235-215-1-2026-08-10",
+          "title": "Minerva Sale #21",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-21",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-11",
+      "events": [
+        {
+          "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+          "title": "Fasnacht Event",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "minerva-sale-21-rgba-250-235-215-1-2026-08-10",
+          "title": "Minerva Sale #21",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-21",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-12",
+      "events": [
+        {
+          "id": "minerva-sale-21-rgba-250-235-215-1-2026-08-10",
+          "title": "Minerva Sale #21",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-21",
+          "isStart": false,
+          "isEnd": true
+        }
+      ]
+    },
+    {
+      "date": "2026-08-13",
+      "events": [
+        {
+          "id": "gold-rush-rgba-250-250-210-1-2026-08-13",
+          "title": "Gold Rush",
+          "color": "rgba(250,250,210,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": true,
+          "isEnd": false
+        },
+        {
+          "id": "double-mutations-rgba-240-248-255-1-2026-08-13-2",
+          "title": "Double Mutations",
+          "color": "rgba(240,248,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-14",
+      "events": [
+        {
+          "id": "gold-rush-rgba-250-250-210-1-2026-08-13",
+          "title": "Gold Rush",
+          "color": "rgba(250,250,210,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-mutations-rgba-240-248-255-1-2026-08-13-2",
+          "title": "Double Mutations",
+          "color": "rgba(240,248,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-15",
+      "events": [
+        {
+          "id": "gold-rush-rgba-250-250-210-1-2026-08-13",
+          "title": "Gold Rush",
+          "color": "rgba(250,250,210,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-mutations-rgba-240-248-255-1-2026-08-13-2",
+          "title": "Double Mutations",
+          "color": "rgba(240,248,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-16",
+      "events": [
+        {
+          "id": "gold-rush-rgba-250-250-210-1-2026-08-13",
+          "title": "Gold Rush",
+          "color": "rgba(250,250,210,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-mutations-rgba-240-248-255-1-2026-08-13-2",
+          "title": "Double Mutations",
+          "color": "rgba(240,248,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-17",
+      "events": [
+        {
+          "id": "gold-rush-rgba-250-250-210-1-2026-08-13",
+          "title": "Gold Rush",
+          "color": "rgba(250,250,210,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "double-mutations-rgba-240-248-255-1-2026-08-13-2",
+          "title": "Double Mutations",
+          "color": "rgba(240,248,255,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "minerva-sale-22-rgba-250-235-215-1-2026-08-17",
+          "title": "Minerva Sale #22",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-22",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-18",
+      "events": [
+        {
+          "id": "minerva-sale-22-rgba-250-235-215-1-2026-08-17",
+          "title": "Minerva Sale #22",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-22",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "invaders-from-beyond-rgba-245-245-220-1-2026-08-18",
+          "title": "Invaders From Beyond",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/invaders-from-beyond/",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-19",
+      "events": [
+        {
+          "id": "minerva-sale-22-rgba-250-235-215-1-2026-08-17",
+          "title": "Minerva Sale #22",
+          "color": "rgba(250,235,215,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-22",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "invaders-from-beyond-rgba-245-245-220-1-2026-08-18",
+          "title": "Invaders From Beyond",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/invaders-from-beyond/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-20",
+      "events": [
+        {
+          "id": "invaders-from-beyond-rgba-245-245-220-1-2026-08-18",
+          "title": "Invaders From Beyond",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/invaders-from-beyond/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-xp-rgba-142-177-240-1-2026-08-20-2",
+          "title": "Double XP",
+          "color": "rgba(142,177,240,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": true,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-21",
+      "events": [
+        {
+          "id": "invaders-from-beyond-rgba-245-245-220-1-2026-08-18",
+          "title": "Invaders From Beyond",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/invaders-from-beyond/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-xp-rgba-142-177-240-1-2026-08-20-2",
+          "title": "Double XP",
+          "color": "rgba(142,177,240,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-22",
+      "events": [
+        {
+          "id": "invaders-from-beyond-rgba-245-245-220-1-2026-08-18",
+          "title": "Invaders From Beyond",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/invaders-from-beyond/",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "id": "double-xp-rgba-142-177-240-1-2026-08-20-2",
+          "title": "Double XP",
+          "color": "rgba(142,177,240,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": false
+        }
+      ]
+    },
+    {
+      "date": "2026-08-23",
+      "events": [
+        {
+          "id": "invaders-from-beyond-rgba-245-245-220-1-2026-08-18",
+          "title": "Invaders From Beyond",
+          "color": "rgba(245,245,220,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/invaders-from-beyond/",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
+          "id": "double-xp-rgba-142-177-240-1-2026-08-20-2",
+          "title": "Double XP",
+          "color": "rgba(142,177,240,1)",
+          "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+          "isStart": false,
+          "isEnd": true
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "meat-week-rgba-245-245-220-1-2026-06-29",
+      "key": "Meat Week|rgba(245,245,220,1)",
+      "title": "Meat Week",
+      "startDate": "2026-06-29",
+      "endDate": "2026-07-07",
+      "color": "rgba(245,245,220,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/events/meat-week/",
+      "image": "https://www.falloutbuilds.com/fo76db/icons/paperbag.webp",
+      "imageAlt": "Meat Week",
+      "detailKey": "meat-week",
+      "detailType": "seasonal"
+    },
+    {
+      "id": "minerva-super-sale-16-rgba-250-235-215-1-2026-06-29",
+      "key": "Minerva Super Sale #16|rgba(250,235,215,1)",
+      "title": "Minerva Super Sale #16",
+      "startDate": "2026-06-29",
+      "endDate": "2026-06-29",
+      "color": "rgba(250,235,215,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-16",
+      "image": "https://www.falloutbuilds.com/wp-content/themes/vault76/static/minerva-head.webp",
+      "imageAlt": "Minerva Super Sale #16",
+      "detailKey": "",
+      "detailType": ""
+    },
+    {
+      "id": "double-mutations-rgba-240-248-255-1-2026-07-02",
+      "key": "Double Mutations|rgba(240,248,255,1)",
+      "title": "Double Mutations",
+      "startDate": "2026-07-02",
+      "endDate": "2026-07-06",
+      "color": "rgba(240,248,255,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+      "image": "https://www.falloutbuilds.com/fo76db/icons/dailyops.webp",
+      "imageAlt": "Double Mutations",
+      "detailKey": "double-mutations",
+      "detailType": "weekend"
+    },
+    {
+      "id": "double-xp-rgba-142-177-240-1-2026-07-02",
+      "key": "Double XP|rgba(142,177,240,1)",
+      "title": "Double XP",
+      "startDate": "2026-07-02",
+      "endDate": "2026-07-06",
+      "color": "rgba(142,177,240,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+      "image": "https://www.falloutbuilds.com/fo76db/icons/teammates.webp",
+      "imageAlt": "Double XP",
+      "detailKey": "double-xp",
+      "detailType": "weekend"
+    },
+    {
+      "id": "minerva-sale-17-rgba-250-235-215-1-2026-07-06",
+      "key": "Minerva Sale #17|rgba(250,235,215,1)",
+      "title": "Minerva Sale #17",
+      "startDate": "2026-07-06",
+      "endDate": "2026-07-08",
+      "color": "rgba(250,235,215,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-17",
+      "image": "https://www.falloutbuilds.com/wp-content/themes/vault76/static/minerva-head.webp",
+      "imageAlt": "Minerva Sale #17",
+      "detailKey": "",
+      "detailType": ""
+    },
+    {
+      "id": "minerva-sale-18-rgba-250-235-215-1-2026-07-13",
+      "key": "Minerva Sale #18|rgba(250,235,215,1)",
+      "title": "Minerva Sale #18",
+      "startDate": "2026-07-13",
+      "endDate": "2026-07-15",
+      "color": "rgba(250,235,215,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-18",
+      "image": "https://www.falloutbuilds.com/wp-content/themes/vault76/static/minerva-head.webp",
+      "imageAlt": "Minerva Sale #18",
+      "detailKey": "",
+      "detailType": ""
+    },
+    {
+      "id": "mutated-public-events-rgba-240-255-255-1-2026-07-14",
+      "key": "Mutated Public Events|rgba(240,255,255,1)",
+      "title": "Mutated Public Events",
+      "startDate": "2026-07-14",
+      "endDate": "2026-07-21",
+      "color": "rgba(240,255,255,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+      "image": "https://www.falloutbuilds.com/fo76db/icons/paperbag.webp",
+      "imageAlt": "Mutated Public Events",
+      "detailKey": "",
+      "detailType": ""
+    },
+    {
+      "id": "minerva-sale-19-rgba-250-235-215-1-2026-07-20",
+      "key": "Minerva Sale #19|rgba(250,235,215,1)",
+      "title": "Minerva Sale #19",
+      "startDate": "2026-07-20",
+      "endDate": "2026-07-22",
+      "color": "rgba(250,235,215,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-19",
+      "image": "https://www.falloutbuilds.com/wp-content/themes/vault76/static/minerva-head.webp",
+      "imageAlt": "Minerva Sale #19",
+      "detailKey": "",
+      "detailType": ""
+    },
+    {
+      "id": "summer-sock-hop-mini-season-rgba-240-255-255-1-2026-07-21",
+      "key": "Summer Sock Hop Mini Season|rgba(240,255,255,1)",
+      "title": "Summer Sock Hop Mini Season",
+      "startDate": "2026-07-21",
+      "endDate": "2026-08-04",
+      "color": "rgba(240,255,255,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+      "image": "https://www.falloutbuilds.com/fo76db/icons/seasons.webp",
+      "imageAlt": "Summer Sock Hop Mini Season",
+      "detailKey": "",
+      "detailType": ""
+    },
+    {
+      "id": "treasure-hunter-rgba-245-245-220-1-2026-07-23",
+      "key": "Treasure Hunter|rgba(245,245,220,1)",
+      "title": "Treasure Hunter",
+      "startDate": "2026-07-23",
+      "endDate": "2026-07-27",
+      "color": "rgba(245,245,220,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/events/treasure-hunter/",
+      "image": "https://www.falloutbuilds.com/fo76db/icons/paperbag.webp",
+      "imageAlt": "Treasure Hunter",
+      "detailKey": "treasure-hunter",
+      "detailType": "seasonal"
+    },
+    {
+      "id": "fasnacht-event-rgba-245-245-220-1-2026-07-28",
+      "key": "Fasnacht Event|rgba(245,245,220,1)",
+      "title": "Fasnacht Event",
+      "startDate": "2026-07-28",
+      "endDate": "2026-08-11",
+      "color": "rgba(245,245,220,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/events/fasnacht/",
+      "image": "https://www.falloutbuilds.com/fo76db/icons/paperbag.webp",
+      "imageAlt": "Fasnacht Event",
+      "detailKey": "fasnacht",
+      "detailType": "seasonal"
+    },
+    {
+      "id": "caps-a-plenty-rgba-255-228-225-1-2026-07-30",
+      "key": "Caps-A-Plenty|rgba(255,228,225,1)",
+      "title": "Caps-A-Plenty",
+      "startDate": "2026-07-30",
+      "endDate": "2026-08-03",
+      "color": "rgba(255,228,225,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+      "image": "https://www.falloutbuilds.com/fo76db/icons/caps.webp",
+      "imageAlt": "Caps-A-Plenty",
+      "detailKey": "caps-a-plenty",
+      "detailType": "weekend"
+    },
+    {
+      "id": "minerva-super-sale-20-rgba-250-235-215-1-2026-07-30",
+      "key": "Minerva Super Sale #20|rgba(250,235,215,1)",
+      "title": "Minerva Super Sale #20",
+      "startDate": "2026-07-30",
+      "endDate": "2026-08-03",
+      "color": "rgba(250,235,215,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-20",
+      "image": "https://www.falloutbuilds.com/wp-content/themes/vault76/static/minerva-head.webp",
+      "imageAlt": "Minerva Super Sale #20",
+      "detailKey": "",
+      "detailType": ""
+    },
+    {
+      "id": "double-score-rgba-230-230-250-1-2026-08-06",
+      "key": "Double Score|rgba(230,230,250,1)",
+      "title": "Double Score",
+      "startDate": "2026-08-06",
+      "endDate": "2026-08-10",
+      "color": "rgba(230,230,250,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+      "image": "https://www.falloutbuilds.com/fo76db/icons/score.webp",
+      "imageAlt": "Double Score",
+      "detailKey": "double-score",
+      "detailType": "weekend"
+    },
+    {
+      "id": "murmrgh-s-special-pick-rgba-255-255-197-1-2026-08-06",
+      "key": "Murmrgh's Special Pick|rgba(255,255,197,1)",
+      "title": "Murmrgh's Special Pick",
+      "startDate": "2026-08-06",
+      "endDate": "2026-08-10",
+      "color": "rgba(255,255,197,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+      "image": "https://www.falloutbuilds.com/fo76db/icons/present.webp",
+      "imageAlt": "Murmrgh's Special Pick",
+      "detailKey": "murmrgh-s-special-pick",
+      "detailType": "weekend"
+    },
+    {
+      "id": "minerva-sale-21-rgba-250-235-215-1-2026-08-10",
+      "key": "Minerva Sale #21|rgba(250,235,215,1)",
+      "title": "Minerva Sale #21",
+      "startDate": "2026-08-10",
+      "endDate": "2026-08-12",
+      "color": "rgba(250,235,215,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-21",
+      "image": "https://www.falloutbuilds.com/wp-content/themes/vault76/static/minerva-head.webp",
+      "imageAlt": "Minerva Sale #21",
+      "detailKey": "",
+      "detailType": ""
+    },
+    {
+      "id": "double-mutations-rgba-240-248-255-1-2026-08-13-2",
+      "key": "Double Mutations|rgba(240,248,255,1)",
+      "title": "Double Mutations",
+      "startDate": "2026-08-13",
+      "endDate": "2026-08-17",
+      "color": "rgba(240,248,255,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+      "image": "https://www.falloutbuilds.com/fo76db/icons/dailyops.webp",
+      "imageAlt": "Double Mutations",
+      "detailKey": "double-mutations",
+      "detailType": "weekend"
+    },
+    {
+      "id": "gold-rush-rgba-250-250-210-1-2026-08-13",
+      "key": "Gold Rush|rgba(250,250,210,1)",
+      "title": "Gold Rush",
+      "startDate": "2026-08-13",
+      "endDate": "2026-08-17",
+      "color": "rgba(250,250,210,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+      "image": "https://www.falloutbuilds.com/fo76db/icons/gold-bullion.webp",
+      "imageAlt": "Gold Rush",
+      "detailKey": "gold-rush",
+      "detailType": "weekend"
+    },
+    {
+      "id": "minerva-sale-22-rgba-250-235-215-1-2026-08-17",
+      "key": "Minerva Sale #22|rgba(250,235,215,1)",
+      "title": "Minerva Sale #22",
+      "startDate": "2026-08-17",
+      "endDate": "2026-08-19",
+      "color": "rgba(250,235,215,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/minerva/#sale-22",
+      "image": "https://www.falloutbuilds.com/wp-content/themes/vault76/static/minerva-head.webp",
+      "imageAlt": "Minerva Sale #22",
+      "detailKey": "",
+      "detailType": ""
+    },
+    {
+      "id": "invaders-from-beyond-rgba-245-245-220-1-2026-08-18",
+      "key": "Invaders From Beyond|rgba(245,245,220,1)",
+      "title": "Invaders From Beyond",
+      "startDate": "2026-08-18",
+      "endDate": "2026-08-23",
+      "color": "rgba(245,245,220,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/events/invaders-from-beyond/",
+      "image": "https://www.falloutbuilds.com/fo76db/icons/paperbag.webp",
+      "imageAlt": "Invaders From Beyond",
+      "detailKey": "invaders-from-beyond",
+      "detailType": "seasonal"
+    },
+    {
+      "id": "double-xp-rgba-142-177-240-1-2026-08-20-2",
+      "key": "Double XP|rgba(142,177,240,1)",
+      "title": "Double XP",
+      "startDate": "2026-08-20",
+      "endDate": "2026-08-23",
+      "color": "rgba(142,177,240,1)",
+      "sourceUrl": "https://www.falloutbuilds.com/fo76/events/",
+      "image": "https://www.falloutbuilds.com/fo76db/icons/teammates.webp",
+      "imageAlt": "Double XP",
+      "detailKey": "double-xp",
+      "detailType": "weekend"
+    }
+  ],
+  "eventInfo": {
+    "seasonalIntro": [
+      "Seasonal Events in Fallout 76 are rotating events available for a short time, usually one or two weeks. Seasonal Events are scheduled in advance and are announced on the Fo76 Community Calendar. Some of these events coincide with real holidays, such as the Holiday Scorched event around Christmas or Spooky Scorched around Halloween.",
+      "Certain Seasonal Events, like Fasnacht Day or Mothman Equinox, feature a thematically appropriate Public Event. Others, such as Spooky Scorched or Treasure Hunter, introduce special types of enemies that drop event rewards.",
+      "Here you will find a list of all Seasonal Events in Fallout 76:"
+    ],
+    "weekendIntro": [
+      "Weekend Events in Fallout 76 are small events that typically run from Thursday to Monday. Unlike Seasonal Events, these do not feature special Public Events or unique opponents. Instead, players receive various bonuses, such as double XP during Double XP weekends or double Gold Bullion during Gold Rush weekends.",
+      "Here you will find a list of all Weekend Events in Fallout 76:"
+    ],
+    "details": [
+      {
+        "key": "fasnacht",
+        "type": "seasonal",
+        "title": "Fasnacht Day",
+        "description": "Fasnacht Day is a seasonal event in Fallout 76 that is happening once or twice a year. During the event period, the Public Event “Fasnacht Day” takes place once every hour in Helvetia.",
+        "image": "https://www.falloutbuilds.com/wp-content/uploads/sites/41/fallout-76-fasnacht-day-event-guide-1200x675.webp",
+        "imageAlt": "Fallout 76 Fasnacht Day Event Guide"
+      },
+      {
+        "key": "the-big-bloom",
+        "type": "seasonal",
+        "title": "The Big Bloom",
+        "description": "The Big Bloom is a seasonal event in Fallout 76, normally occurring once a year in the springtime. During the event period, the Public Event “The Big Bloom” takes place once every hour at Susan’s Cabin in Skyline Valley.",
+        "image": "https://www.falloutbuilds.com/wp-content/uploads/sites/41/fallout-76-the-big-bloom-event.webp",
+        "imageAlt": "The Big Bloom event in Fallout 76"
+      },
+      {
+        "key": "meat-week",
+        "type": "seasonal",
+        "title": "Meat Week",
+        "description": "Meat Week is a seasonal event in Fallout 76 normally occurring once a year. During the event period, the Public Event “Grahm’s Meat Cook” takes place once every hour and the Public Event “Primal Cuts” takes place every 15 minutes.",
+        "image": "https://www.falloutbuilds.com/wp-content/uploads/sites/41/fallout-76-meat-week-event-1200x675.webp",
+        "imageAlt": "Fallout 76 Meat Week Event"
+      },
+      {
+        "key": "spooky-scorched",
+        "type": "seasonal",
+        "title": "Spooky Scorched",
+        "description": "Spooky Scorched is the annual Halloween Event in Fallout 76. During the event, you have a chance to encounter legendary Spooky Scorched carrying rare rewards. Trick or Treat is also part of the event.",
+        "image": "https://www.falloutbuilds.com/wp-content/uploads/sites/41/06401f25179f.jpeg",
+        "imageAlt": "Spooky Scorched event in Fo76"
+      },
+      {
+        "key": "holiday-scorched",
+        "type": "seasonal",
+        "title": "Holiday Scorched",
+        "description": "Holiday Scorched is the annual Christmas Event in Fallout 76. During the event, you have a chance to encounter legendary Holiday Scorched carrying gifts that contain special Holiday rewards.",
+        "image": "https://www.falloutbuilds.com/wp-content/uploads/sites/41/fallout-76-holiday-scorched.webp",
+        "imageAlt": "Holiday Scorched event in Fo76"
+      },
+      {
+        "key": "mothman-equinox",
+        "type": "seasonal",
+        "title": "Mothman Equinox",
+        "description": "The Mothman Equinox is a seasonal event occurring once a year. During the event period, the Public Event “The Mothman Equinox” takes place once every hour in Point Pleasant.",
+        "image": "https://www.falloutbuilds.com/wp-content/uploads/sites/41/the-mothman-equinox-summoned-mothman-1200x675.jpg",
+        "imageAlt": "The Mothman Equinox event in Fo76"
+      },
+      {
+        "key": "invaders-from-beyond",
+        "type": "seasonal",
+        "title": "Invaders from Beyond",
+        "description": "Invaders from Beyond is a season event occurring once a year. During the event period, the Public Event “Invaders from Beyond” takes place in one of 6 possible locations.",
+        "image": "https://www.falloutbuilds.com/wp-content/uploads/sites/41/fallout-76-invaders-from-beyond-seasonal-event.webp",
+        "imageAlt": "Fallout 76 Invaders from Beyond Seasonal Event"
+      },
+      {
+        "key": "treasure-hunter",
+        "type": "seasonal",
+        "title": "The Hunt for the Treasure Hunter",
+        "description": "The Hunt for the Treasure Hunter is a series of limited-time Fallout 76 events, that take place several times a year. During the event, you can hunt down legendary Treasure Hunter Mole Miners and claim their loot.",
+        "image": "https://www.falloutbuilds.com/wp-content/uploads/sites/41/fallout-76-treasure-hunter-mole-miner.jpg",
+        "imageAlt": "Treasure Hunter event in Fo76"
+      },
+      {
+        "key": "scrip-surplus",
+        "type": "weekend",
+        "title": "Scrip Surplus",
+        "description": "You’ll get double the daily Scrip from Legendary Exchange Machines.",
+        "image": "",
+        "imageAlt": "Scrip Surplus"
+      },
+      {
+        "key": "double-score",
+        "type": "weekend",
+        "title": "Double Score",
+        "description": "You’ll get double the Score points from Daily Challenges.",
+        "image": "",
+        "imageAlt": "Double Score"
+      },
+      {
+        "key": "gold-rush",
+        "type": "weekend",
+        "title": "Gold Rush",
+        "description": "You’ll get double the daily Gold Bullion from turning in Treasury Notes.",
+        "image": "",
+        "imageAlt": "Gold Rush"
+      },
+      {
+        "key": "murmrgh-s-special-pick",
+        "type": "weekend",
+        "title": "Murmrgh’s Special Pick",
+        "description": "Buy “Murmrgh’s Special Pick” from Purveyor Murmrgh at the Rusty Pick to get a randomly selected 3-star weapon and armor.",
+        "image": "",
+        "imageAlt": "Murmrgh’s Special Pick"
+      },
+      {
+        "key": "legendary-vendor-sale",
+        "type": "weekend",
+        "title": "Legendary Vendor Sale",
+        "description": "25% off at Purveyor Murmrgh’s in the Rusty Pick.",
+        "image": "",
+        "imageAlt": "Legendary Vendor Sale"
+      },
+      {
+        "key": "double-xp",
+        "type": "weekend",
+        "title": "Double XP",
+        "description": "You’ll get double the XP from all XP-granting activities.",
+        "image": "",
+        "imageAlt": "Double XP"
+      },
+      {
+        "key": "double-mutations",
+        "type": "weekend",
+        "title": "Double Mutations",
+        "description": "Daily Ops enemies have a unique combination of two different mutations. Daily Ops give better rewards and double XP.",
+        "image": "",
+        "imageAlt": "Double Mutations"
+      },
+      {
+        "key": "caps-a-plenty",
+        "type": "weekend",
+        "title": "Caps-A-Plenty",
+        "description": "You’ll get double the daily Caps from vendors.",
+        "image": "",
+        "imageAlt": "Caps-A-Plenty"
+      }
+    ]
+  },
+  "cached": true,
+  "stale": true,
+  "error": "Bundled fallback event calendar."
+}
