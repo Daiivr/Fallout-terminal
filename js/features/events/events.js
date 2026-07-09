@@ -694,9 +694,7 @@ function renderFo76EventsModal() {
     const syncText = hasData && data.fetchedAt
       ? t("fo76_events_meta_updated", { time: formatFileDateTime(data.fetchedAt), range: rangeText })
       : t("fo76_events_meta_loading");
-    elements.fo76EventsMeta.textContent = data?.stale
-      ? `${syncText} / ${t("fo76_events_stale")}`
-      : syncText;
+    elements.fo76EventsMeta.textContent = syncText;
   }
   if (elements.fo76EventsRefreshBtn) {
     elements.fo76EventsRefreshBtn.textContent = modalState.loading ? t("fo76_events_refreshing") : t("fo76_events_refresh");
